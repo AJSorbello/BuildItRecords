@@ -18,7 +18,7 @@ import {
 
 const drawerWidth = 240;
 
-const StyledDrawer = styled(Drawer)({
+const StyledDrawer = styled(Drawer)(({ theme }) => ({
   width: drawerWidth,
   flexShrink: 0,
   '& .MuiDrawer-paper': {
@@ -26,9 +26,14 @@ const StyledDrawer = styled(Drawer)({
     boxSizing: 'border-box',
     backgroundColor: '#121212',
     borderRight: '1px solid rgba(255, 255, 255, 0.12)',
-    marginTop: '180px', // Account for both headers
+    marginTop: '180px',
+    position: 'fixed',
+    height: 'calc(100vh - 180px)',
   },
-});
+  '& .MuiDrawer-docked': {
+    width: 0,
+  },
+}));
 
 const StyledListItem = styled(ListItem)<{ active?: boolean }>(({ active }) => ({
   marginBottom: '8px',

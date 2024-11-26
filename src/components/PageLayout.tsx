@@ -12,10 +12,8 @@ const Main = styled('main')({
   flexGrow: 1,
   padding: '24px',
   backgroundColor: '#121212',
-  minHeight: 'calc(100vh - 180px)', 
-  marginLeft: drawerWidth,
-  marginTop: '180px', 
-  width: `calc(100% - ${drawerWidth}px)`,
+  minHeight: 'calc(100vh - 180px)',
+  marginTop: '180px',
 });
 
 const FullLogo = styled('img')({
@@ -31,7 +29,7 @@ const LogoHeader = styled(Box)({
   backgroundColor: '#121212',
   borderBottom: '1px solid rgba(255, 255, 255, 0.12)',
   position: 'fixed',
-  top: '64px', 
+  top: '64px',
   left: 0,
   right: 0,
   zIndex: 1200,
@@ -40,7 +38,6 @@ const LogoHeader = styled(Box)({
 const ContentWrapper = styled(Box)({
   display: 'flex',
   minHeight: '100vh',
-  marginTop: '180px', 
   position: 'relative',
 });
 
