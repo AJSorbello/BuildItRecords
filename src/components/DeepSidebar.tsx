@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Platform, Image, Linking } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Platform, Image, Linking, TouchableOpacity } from 'react-native';
 import { Drawer, List, ListItem, ListItemIcon, ListItemText, styled, Divider, ListSubheader } from '@mui/material';
 import { FaSpotify, FaSoundcloud } from 'react-icons/fa';
 import { SiBeatport } from 'react-icons/si';
@@ -14,6 +14,8 @@ const StyledDrawer = styled(Drawer)({
   '& .MuiDrawer-paper': {
     width: drawerWidth,
     boxSizing: 'border-box',
+    backgroundColor: '#121212',
+    color: '#FFFFFF',
   },
 });
 
@@ -26,8 +28,8 @@ const deepData = {
     soundcloud: 'https://soundcloud.com/builditdeeprecords'
   },
   playlists: [
-    { id: '1', name: 'Deep House Vibes', url: 'https://open.spotify.com/playlist/37i9dQZF1DX2TRYkJECvfC' },
-    { id: '2', name: 'Deep Tech House', url: 'https://open.spotify.com/playlist/37i9dQZF1DX8Uebhn9wzrS' }
+    { id: '1', name: 'Deep House Essentials', url: 'https://open.spotify.com/playlist/37i9dQZF1DX2TRYkJECvfC' },
+    { id: '2', name: 'Deep House Mix', url: 'https://open.spotify.com/playlist/37i9dQZF1DX8Uebhn9wzrS' }
   ],
   bandcamp: [
     { id: '1', name: 'Latest Releases', url: 'https://builditdeeprecords.bandcamp.com' },
@@ -131,32 +133,20 @@ export const DeepSidebar = () => {
       variant="permanent"
       anchor="left"
       sx={{
-        width: drawerWidth,
         '& .MuiDrawer-paper': {
-          width: drawerWidth,
           backgroundColor: '#121212',
           borderRight: '1px solid rgba(255, 255, 255, 0.12)',
+          color: '#FFFFFF',
           '& .MuiListItem-root': {
             '&:hover': {
               backgroundColor: 'rgba(2, 255, 149, 0.25)',
             },
           },
-          '& .MuiListItemText-primary, & .MuiListItemText-secondary': {
-            color: '#FFFFFF',
-          },
-          '& .MuiTypography-root': {
-            color: '#FFFFFF',
-          },
           '& .MuiListItemIcon-root': {
-            minWidth: '40px',
             color: '#FFFFFF',
-            '& svg': {
-              color: '#FFFFFF',
-              transition: 'color 0.2s ease',
-            },
-            '&:hover svg': {
-              color: 'rgba(2, 255, 149, 0.25) !important',
-            },
+          },
+          '& .MuiListItemText-primary': {
+            color: '#FFFFFF',
           },
           '& .MuiDivider-root': {
             borderColor: 'rgba(255, 255, 255, 0.12)',
@@ -171,38 +161,41 @@ export const DeepSidebar = () => {
           </ListItemIcon>
           <ListItemText 
             primary={deepData.title}
-            primaryTypographyProps={{ variant: 'h6' }}
+            primaryTypographyProps={{ variant: 'h6', style: { color: '#FFFFFF' } }}
           />
         </ListItem>
 
         <Divider />
 
-        {/* Platform Links */}
         <ListItem button onClick={() => handlePlatformClick(deepData.links.spotify)}>
           <ListItemIcon>
-            <FaSpotify />
+            <FaSpotify size={24} />
           </ListItemIcon>
           <ListItemText primary="Spotify" />
         </ListItem>
 
         <ListItem button onClick={() => handlePlatformClick(deepData.links.beatport)}>
           <ListItemIcon>
-            <SiBeatport />
+            <SiBeatport size={24} />
           </ListItemIcon>
           <ListItemText primary="Beatport" />
         </ListItem>
 
         <ListItem button onClick={() => handlePlatformClick(deepData.links.soundcloud)}>
           <ListItemIcon>
-            <FaSoundcloud />
+            <FaSoundcloud size={24} />
           </ListItemIcon>
           <ListItemText primary="SoundCloud" />
         </ListItem>
 
         <Divider />
 
-        {/* Artists Section */}
-        <ListSubheader sx={{ backgroundColor: '#121212', color: '#FFFFFF' }}>
+        <ListSubheader
+          sx={{
+            backgroundColor: '#121212',
+            color: '#FFFFFF',
+          }}
+        >
           Artists
         </ListSubheader>
         {labelArtists.map((artist) => (
@@ -211,14 +204,21 @@ export const DeepSidebar = () => {
             key={artist.id}
             onClick={() => handlePlatformClick(artist.spotifyUrl)}
           >
+            <ListItemIcon>
+              <Ionicons name="person" size={20} color="#FFFFFF" />
+            </ListItemIcon>
             <ListItemText primary={artist.name} />
           </ListItem>
         ))}
 
         <Divider />
 
-        {/* Playlists Section */}
-        <ListSubheader sx={{ backgroundColor: '#121212', color: '#FFFFFF' }}>
+        <ListSubheader
+          sx={{
+            backgroundColor: '#121212',
+            color: '#FFFFFF',
+          }}
+        >
           Playlists
         </ListSubheader>
         {deepData.playlists.map((playlist) => (
@@ -227,14 +227,21 @@ export const DeepSidebar = () => {
             key={playlist.id}
             onClick={() => handlePlatformClick(playlist.url)}
           >
+            <ListItemIcon>
+              <Ionicons name="musical-notes" size={20} color="#FFFFFF" />
+            </ListItemIcon>
             <ListItemText primary={playlist.name} />
           </ListItem>
         ))}
 
         <Divider />
 
-        {/* Bandcamp Section */}
-        <ListSubheader sx={{ backgroundColor: '#121212', color: '#FFFFFF' }}>
+        <ListSubheader
+          sx={{
+            backgroundColor: '#121212',
+            color: '#FFFFFF',
+          }}
+        >
           Bandcamp
         </ListSubheader>
         {deepData.bandcamp.map((item) => (
@@ -243,6 +250,9 @@ export const DeepSidebar = () => {
             key={item.id}
             onClick={() => handlePlatformClick(item.url)}
           >
+            <ListItemIcon>
+              <Ionicons name="cart" size={20} color="#FFFFFF" />
+            </ListItemIcon>
             <ListItemText primary={item.name} />
           </ListItem>
         ))}
@@ -254,12 +264,14 @@ export const DeepSidebar = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    width: 280,
+    width: drawerWidth,
   },
   header: {
     padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.12)',
   },
   labelIcon: {
     width: 40,
@@ -283,10 +295,7 @@ const styles = StyleSheet.create({
   platformButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
-    marginBottom: 8,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    paddingVertical: 8,
   },
   platformButtonText: {
     marginLeft: 12,
@@ -295,8 +304,7 @@ const styles = StyleSheet.create({
   item: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
-    marginBottom: 8,
+    paddingVertical: 8,
   },
   itemText: {
     marginLeft: 12,

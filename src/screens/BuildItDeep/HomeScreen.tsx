@@ -26,9 +26,17 @@ export const HomeScreen = () => {
           </Text>
         </View>
 
-        <View style={styles.content}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Latest Releases</Text>
-          <ReleasesGrid releases={releases.slice(0, 1)} loading={loading} error={error} />
+        <View style={styles.latestRelease}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Latest Release</Text>
+          {releases && releases.length > 0 && (
+            <View style={[styles.featuredCard, { backgroundColor: colors.card }]}>
+              <Image source={{ uri: releases[0].imageUrl }} style={styles.featuredImage} />
+              <View style={styles.featuredInfo}>
+                <Text style={[styles.featuredTitle, { color: colors.text }]}>{releases[0].title}</Text>
+                <Text style={[styles.featuredArtist, { color: colors.textSecondary }]}>{releases[0].artist}</Text>
+              </View>
+            </View>
+          )}
         </View>
 
         <View style={styles.content}>
@@ -46,30 +54,32 @@ export const HomeScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    flexDirection: 'row',
-    backgroundColor: '#121212',
+    flexDirection: Platform.OS === 'web' ? 'row' : 'column',
   },
   mainContent: {
     flex: 1,
   },
   hero: {
-    height: 250,
-    justifyContent: 'center',
+    padding: 40,
     alignItems: 'center',
-    padding: 20,
   },
   logo: {
-    width: 120,
-    height: 120,
-    marginBottom: 20,
+    width: 200,
+    height: 100,
+    resizeMode: 'contain',
   },
   title: {
     fontSize: 32,
     fontWeight: 'bold',
+    marginTop: 20,
     marginBottom: 10,
   },
   subtitle: {
     fontSize: 18,
+    color: '#B3B3B3',
+  },
+  latestRelease: {
+    padding: 20,
   },
   content: {
     padding: 20,
@@ -78,5 +88,27 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 20,
+  },
+  featuredCard: {
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginBottom: 20,
+  },
+  featuredImage: {
+    width: '100%',
+    height: 300,
+    resizeMode: 'cover',
+  },
+  featuredInfo: {
+    padding: 20,
+  },
+  featuredTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  featuredArtist: {
+    fontSize: 16,
+    marginBottom: 16,
   },
 });

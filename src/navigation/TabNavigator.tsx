@@ -42,8 +42,8 @@ export default function TabNavigator() {
             textTransform: 'none',
           },
           tabBarIconStyle: {
-            width: 24,
-            height: 24,
+            width: 32,
+            height: 32,
           },
           tabBarShowIcon: true,
           animationEnabled: Platform.OS !== 'web',
@@ -56,12 +56,11 @@ export default function TabNavigator() {
           options={{
             tabBarIcon: ({ focused }) => (
               <Image
-                source={require('../assets/png/records/BuildIt_Records_Square.png')}
+                source={require('../assets/png/records/BuildIt_Records.png')}
                 style={[
                   styles.tabIcon,
                   {
                     opacity: focused ? 1 : 0.7,
-                    tintColor: focused ? colors.primary : colors.textSecondary,
                   },
                 ]}
               />
@@ -74,12 +73,11 @@ export default function TabNavigator() {
           options={{
             tabBarIcon: ({ focused }) => (
               <Image
-                source={require('../assets/png/tech/BuildIt_Tech_Square.png')}
+                source={require('../assets/png/tech/BuildIt_Tech.png')}
                 style={[
                   styles.tabIcon,
                   {
                     opacity: focused ? 1 : 0.7,
-                    tintColor: focused ? colors.primary : colors.textSecondary,
                   },
                 ]}
               />
@@ -92,12 +90,11 @@ export default function TabNavigator() {
           options={{
             tabBarIcon: ({ focused }) => (
               <Image
-                source={require('../assets/png/deep/BuildIt_Deep_Square.png')}
+                source={require('../assets/png/deep/BuildIt_Deep.png')}
                 style={[
                   styles.tabIcon,
                   {
                     opacity: focused ? 1 : 0.7,
-                    tintColor: focused ? colors.primary : colors.textSecondary,
                   },
                 ]}
               />
@@ -130,8 +127,7 @@ export default function TabNavigator() {
 
 const styles = StyleSheet.create({
   tabIcon: {
-    width: 24,
-    height: 24,
-    resizeMode: 'contain',
+    width: 32,
+    height: 32,
   },
 });
