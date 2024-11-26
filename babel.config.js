@@ -18,12 +18,15 @@ module.exports = function(api) {
         {
           moduleName: "@env",
           path: ".env",
-          blacklist: null,
-          whitelist: ["SPOTIFY_CLIENT_ID", "SPOTIFY_CLIENT_SECRET"],
-          safe: false,
-          allowUndefined: true,
-        },
-      ],
+          allowlist: [
+            "SPOTIFY_CLIENT_ID",
+            "SPOTIFY_CLIENT_SECRET",
+            "SOUNDCLOUD_CLIENT_ID"
+          ],
+          safe: true,
+          allowUndefined: false
+        }
+      ]
     ],
   };
 };
