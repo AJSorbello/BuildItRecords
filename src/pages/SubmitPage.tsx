@@ -4,348 +4,349 @@ import {
   Typography,
   TextField,
   Button,
-  Grid,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
-  Paper,
+  Grid,
+  Card,
+  CardContent,
   IconButton,
-  styled
+  styled,
 } from '@mui/material';
-import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import { Add as AddIcon, Remove as RemoveIcon } from '@mui/icons-material';
 import PageLayout from '../components/PageLayout';
+import { useParams } from 'react-router-dom';
 
-const StyledPaper = styled(Paper)({
+const StyledCard = styled(Card)({
   backgroundColor: 'rgba(255, 255, 255, 0.05)',
-  padding: '24px',
   marginBottom: '24px',
 });
 
-const StyledForm = styled('form')({
-  width: '100%',
-  '& .MuiTextField-root': {
-    marginBottom: '16px',
+const StyledButton = styled(Button)({
+  backgroundColor: '#02FF95',
+  color: '#121212',
+  '&:hover': {
+    backgroundColor: '#00CC76',
   },
 });
 
-interface Artist {
-  fullName: string;
-  artistName: string;
+interface Track {
+  title: string;
+  soundCloudLink: string;
+  genre: string;
 }
 
-interface FormData {
-  label: string;
-  artists: Artist[];
+interface Artist {
+  name: string;
+  email: string;
   country: string;
   province: string;
-  trackTitles: string;
-  soundcloudLink: string;
-  socialMedia: {
-    facebook: string;
-    twitter: string;
-    soundcloud: string;
-    spotify: string;
-    appleMusic: string;
-  };
+  facebook: string;
+  twitter: string;
+  instagram: string;
+  soundcloud: string;
+  spotify: string;
+  appleMusic: string;
 }
 
-const initialFormData: FormData = {
-  label: 'records',
-  artists: [{ fullName: '', artistName: '' }],
-  country: '',
-  province: '',
-  trackTitles: '',
-  soundcloudLink: '',
-  socialMedia: {
+const SubmitPage = () => {
+  const { label = 'records' } = useParams<{ label?: string }>();
+  const [artists, setArtists] = useState<Artist[]>([{
+    name: '',
+    email: '',
+    country: '',
+    province: '',
     facebook: '',
     twitter: '',
+    instagram: '',
     soundcloud: '',
     spotify: '',
     appleMusic: '',
-  },
-};
+  }]);
 
-const SubmitPage = () => {
-  const [formData, setFormData] = useState<FormData>(initialFormData);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    if (name.startsWith('socialMedia.')) {
-      const socialMediaField = name.split('.')[1];
-      setFormData(prev => ({
-        ...prev,
-        socialMedia: {
-          ...prev.socialMedia,
-          [socialMediaField]: value
-        }
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: value
-      }));
-    }
-  };
-
-  const handleSelectChange = (e: any) => {
-    setFormData(prev => ({
-      ...prev,
-      [e.target.name]: e.target.value
-    }));
-  };
+  const [tracks, setTracks] = useState<Track[]>([{
+    title: '',
+    soundCloudLink: '',
+    genre: '',
+  }]);
 
   const handleArtistChange = (index: number, field: keyof Artist, value: string) => {
-    setFormData(prev => {
-      const newArtists = [...prev.artists];
-      newArtists[index] = { ...newArtists[index], [field]: value };
-      return { ...prev, artists: newArtists };
-    });
+    const newArtists = [...artists];
+    newArtists[index] = { ...newArtists[index], [field]: value };
+    setArtists(newArtists);
+  };
+
+  const handleTrackChange = (index: number, field: keyof Track, value: string) => {
+    const newTracks = [...tracks];
+    newTracks[index] = { ...newTracks[index], [field]: value };
+    setTracks(newTracks);
   };
 
   const addArtist = () => {
-    setFormData(prev => ({
-      ...prev,
-      artists: [...prev.artists, { fullName: '', artistName: '' }]
-    }));
+    setArtists([...artists, {
+      name: '',
+      email: '',
+      country: '',
+      province: '',
+      facebook: '',
+      twitter: '',
+      instagram: '',
+      soundcloud: '',
+      spotify: '',
+      appleMusic: '',
+    }]);
   };
 
   const removeArtist = (index: number) => {
-    if (formData.artists.length > 1) {
-      setFormData(prev => ({
-        ...prev,
-        artists: prev.artists.filter((_, i) => i !== index)
-      }));
+    if (artists.length > 1) {
+      setArtists(artists.filter((_, i) => i !== index));
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log('Form submitted:', formData);
-    alert('Thank you for your submission! We will review your demo and get back to you soon.');
-    setFormData(initialFormData);
+  const addTrack = () => {
+    setTracks([...tracks, { title: '', soundCloudLink: '', genre: '' }]);
   };
 
+  const removeTrack = (index: number) => {
+    if (tracks.length > 1) {
+      setTracks(tracks.filter((_, i) => i !== index));
+    }
+  };
+
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    // Handle form submission here
+    console.log({ artists, tracks, label });
+  };
+
+  const labelDisplay = label.charAt(0).toUpperCase() + label.slice(1);
+
   return (
-    <PageLayout label="records">
-      <Box mb={4}>
-        <Typography variant="h4" gutterBottom sx={{ color: 'text.primary' }}>
-          Submit Your Demo
-        </Typography>
-        <Typography variant="h6" sx={{ color: 'text.secondary', mb: 4 }}>
-          Share Your Music with Build It Records
+    <PageLayout label={label as 'records' | 'tech' | 'deep'}>
+      <Box component="form" onSubmit={handleSubmit} sx={{ maxWidth: 800, mx: 'auto', mb: 4 }}>
+        <Typography variant="h4" gutterBottom sx={{ color: 'text.primary', mb: 2 }}>
+          Submit Demo to Build It {labelDisplay}
         </Typography>
 
-        <StyledPaper>
-          <Typography variant="body1" sx={{ color: 'text.secondary', mb: 3 }}>
-            Please fill out the form below to submit your demo. We listen to every submission and will contact you if we&apos;re interested in releasing your music.
-          </Typography>
+        <Typography variant="body1" sx={{ color: 'text.secondary', mb: 4 }}>
+          Build It Records is dedicated to showcasing emerging and accomplished underground house music producers. 
+          We&apos;re constantly seeking fresh, innovative sounds that push the boundaries of underground electronic music.
+        </Typography>
 
-          <StyledForm onSubmit={handleSubmit}>
-            <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <FormControl fullWidth variant="outlined">
-                  <InputLabel>Label</InputLabel>
-                  <Select
-                    name="label"
-                    value={formData.label}
-                    onChange={handleSelectChange}
-                    label="Label"
+        {/* Artist Information */}
+        <Typography variant="h5" gutterBottom sx={{ color: 'text.primary', mt: 4 }}>
+          Artist Information
+        </Typography>
+        
+        {artists.map((artist, index) => (
+          <StyledCard key={index}>
+            <CardContent>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6">Artist {index + 1}</Typography>
+                {artists.length > 1 && (
+                  <IconButton onClick={() => removeArtist(index)} color="error">
+                    <RemoveIcon />
+                  </IconButton>
+                )}
+              </Box>
+              
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Artist Name"
+                    value={artist.name}
+                    onChange={(e) => handleArtistChange(index, 'name', e.target.value)}
                     required
-                  >
-                    <MenuItem value="records">Build It Records</MenuItem>
-                    <MenuItem value="tech">Build It Tech</MenuItem>
-                    <MenuItem value="deep">Build It Deep</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-
-              {formData.artists.map((artist, index) => (
-                <Grid item xs={12} key={index} container spacing={2}>
-                  <Grid item xs={12} sm={5}>
-                    <TextField
-                      required
-                      fullWidth
-                      label="Full Name"
-                      value={artist.fullName}
-                      onChange={(e) => handleArtistChange(index, 'fullName', e.target.value)}
-                      variant="outlined"
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={5}>
-                    <TextField
-                      required
-                      fullWidth
-                      label="Artist Name"
-                      value={artist.artistName}
-                      onChange={(e) => handleArtistChange(index, 'artistName', e.target.value)}
-                      variant="outlined"
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={2} sx={{ display: 'flex', alignItems: 'center' }}>
-                    {index > 0 && (
-                      <IconButton onClick={() => removeArtist(index)} color="error">
-                        <DeleteIcon />
-                      </IconButton>
-                    )}
-                    {index === formData.artists.length - 1 && (
-                      <IconButton onClick={addArtist} color="primary">
-                        <AddIcon />
-                      </IconButton>
-                    )}
-                  </Grid>
+                  />
                 </Grid>
-              ))}
-
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  required
-                  fullWidth
-                  label="Country"
-                  name="country"
-                  value={formData.country}
-                  onChange={handleChange}
-                  variant="outlined"
-                />
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Email"
+                    type="email"
+                    value={artist.email}
+                    onChange={(e) => handleArtistChange(index, 'email', e.target.value)}
+                    required
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Country"
+                    value={artist.country}
+                    onChange={(e) => handleArtistChange(index, 'country', e.target.value)}
+                    required
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Province/State"
+                    value={artist.province}
+                    onChange={(e) => handleArtistChange(index, 'province', e.target.value)}
+                    required
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <Typography variant="subtitle1" gutterBottom>
+                    Social Media Links
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Facebook"
+                    value={artist.facebook}
+                    onChange={(e) => handleArtistChange(index, 'facebook', e.target.value)}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Twitter/X"
+                    value={artist.twitter}
+                    onChange={(e) => handleArtistChange(index, 'twitter', e.target.value)}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Instagram"
+                    value={artist.instagram}
+                    onChange={(e) => handleArtistChange(index, 'instagram', e.target.value)}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="SoundCloud"
+                    value={artist.soundcloud}
+                    onChange={(e) => handleArtistChange(index, 'soundcloud', e.target.value)}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Spotify"
+                    value={artist.spotify}
+                    onChange={(e) => handleArtistChange(index, 'spotify', e.target.value)}
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Apple Music"
+                    value={artist.appleMusic}
+                    onChange={(e) => handleArtistChange(index, 'appleMusic', e.target.value)}
+                  />
+                </Grid>
               </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  required
-                  fullWidth
-                  label="Province/State"
-                  name="province"
-                  value={formData.province}
-                  onChange={handleChange}
-                  variant="outlined"
-                />
-              </Grid>
+            </CardContent>
+          </StyledCard>
+        ))}
 
-              <Grid item xs={12}>
-                <TextField
-                  required
-                  fullWidth
-                  label="Track Titles (separate multiple tracks with commas)"
-                  name="trackTitles"
-                  value={formData.trackTitles}
-                  onChange={handleChange}
-                  variant="outlined"
-                  multiline
-                  rows={2}
-                />
-              </Grid>
+        <Box sx={{ mb: 4 }}>
+          <StyledButton
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={addArtist}
+          >
+            Add Artist
+          </StyledButton>
+        </Box>
 
-              <Grid item xs={12}>
-                <TextField
-                  required
-                  fullWidth
-                  label="SoundCloud Private Link"
-                  name="soundcloudLink"
-                  value={formData.soundcloudLink}
-                  onChange={handleChange}
-                  variant="outlined"
-                  placeholder="https://soundcloud.com/your-track/private"
-                />
-              </Grid>
+        {/* Track Information */}
+        <Typography variant="h5" gutterBottom sx={{ color: 'text.primary', mt: 4 }}>
+          Track Information
+        </Typography>
 
-              <Grid item xs={12}>
-                <Typography variant="h6" gutterBottom>
-                  Social Media Links
-                </Typography>
+        {tracks.map((track, index) => (
+          <StyledCard key={index}>
+            <CardContent>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6">Track {index + 1}</Typography>
+                {tracks.length > 1 && (
+                  <IconButton onClick={() => removeTrack(index)} color="error">
+                    <RemoveIcon />
+                  </IconButton>
+                )}
+              </Box>
+              
+              <Grid container spacing={2}>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Track Title"
+                    value={track.title}
+                    onChange={(e) => handleTrackChange(index, 'title', e.target.value)}
+                    required
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Genre"
+                    value={track.genre}
+                    onChange={(e) => handleTrackChange(index, 'genre', e.target.value)}
+                    required
+                    helperText="e.g., Deep House, Tech House, Progressive House"
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="SoundCloud Private Link"
+                    value={track.soundCloudLink}
+                    onChange={(e) => handleTrackChange(index, 'soundCloudLink', e.target.value)}
+                    required
+                    helperText="Please provide a private SoundCloud link for your track"
+                  />
+                </Grid>
               </Grid>
+            </CardContent>
+          </StyledCard>
+        ))}
 
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Facebook"
-                  name="socialMedia.facebook"
-                  value={formData.socialMedia.facebook}
-                  onChange={handleChange}
-                  variant="outlined"
-                  placeholder="https://facebook.com/your-profile"
-                />
-              </Grid>
+        <Box sx={{ mb: 4 }}>
+          <StyledButton
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={addTrack}
+          >
+            Add Track
+          </StyledButton>
+        </Box>
 
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="X (Twitter)"
-                  name="socialMedia.twitter"
-                  value={formData.socialMedia.twitter}
-                  onChange={handleChange}
-                  variant="outlined"
-                  placeholder="https://x.com/your-profile"
-                />
-              </Grid>
+        <Box sx={{ mt: 6, mb: 4 }}>
+          <StyledCard>
+            <CardContent>
+              <Typography variant="h6" gutterBottom sx={{ color: 'text.primary' }}>
+                Submission Guidelines & Terms
+              </Typography>
+              <Typography variant="body2" component="div" sx={{ color: 'text.secondary' }}>
+                • Please allow up to 7 days for us to review your submission<br />
+                • All submissions must be 100% royalty-free or will be rejected immediately<br />
+                • Royalties are split 50/50 between artists and label<br />
+                • Only submit unreleased, original material<br />
+                • We accept demos in WAV format only - premasters no limiters on master/stereo bus<br />
+                • By submitting, you confirm that this is original work and you own all rights
+              </Typography>
+            </CardContent>
+          </StyledCard>
+        </Box>
 
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="SoundCloud Profile"
-                  name="socialMedia.soundcloud"
-                  value={formData.socialMedia.soundcloud}
-                  onChange={handleChange}
-                  variant="outlined"
-                  placeholder="https://soundcloud.com/your-profile"
-                />
-              </Grid>
-
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Spotify Artist"
-                  name="socialMedia.spotify"
-                  value={formData.socialMedia.spotify}
-                  onChange={handleChange}
-                  variant="outlined"
-                  placeholder="https://open.spotify.com/artist/your-id"
-                />
-              </Grid>
-
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Apple Music Artist"
-                  name="socialMedia.appleMusic"
-                  value={formData.socialMedia.appleMusic}
-                  onChange={handleChange}
-                  variant="outlined"
-                  placeholder="https://music.apple.com/artist/your-id"
-                />
-              </Grid>
-
-              <Grid item xs={12}>
-                <Button
-                  type="submit"
-                  variant="contained"
-                  size="large"
-                  sx={{
-                    mt: 2,
-                    backgroundColor: '#02FF95',
-                    color: '#000000',
-                    '&:hover': {
-                      backgroundColor: '#00CC76',
-                    },
-                  }}
-                >
-                  Submit Demo
-                </Button>
-              </Grid>
-            </Grid>
-          </StyledForm>
-        </StyledPaper>
-
-        <StyledPaper>
-          <Typography variant="h6" gutterBottom sx={{ color: 'text.primary' }}>
-            Submission Guidelines
-          </Typography>
-          <Typography variant="body1" sx={{ color: 'text.secondary' }}>
-            • Only submit unreleased, original material<br />
-            • Make sure your SoundCloud links are private and accessible<br />
-            • We accept all forms of House Music, Tech House, and Deep House<br />
-            • Please allow 2-3 weeks for a response<br />
-            • Due to the high volume of submissions, we can only respond to tracks we&apos;re interested in releasing
-          </Typography>
-        </StyledPaper>
+        <Box sx={{ mt: 4 }}>
+          <StyledButton
+            type="submit"
+            variant="contained"
+            size="large"
+            fullWidth
+          >
+            Submit Demo
+          </StyledButton>
+        </Box>
       </Box>
     </PageLayout>
   );

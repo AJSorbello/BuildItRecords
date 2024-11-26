@@ -1,34 +1,49 @@
 import React from 'react';
-import { Drawer, List, ListItem, ListItemText, styled } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
+import {
+  Drawer,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  styled,
+} from '@mui/material';
+import { useNavigate, useLocation } from 'react-router-dom';
+import {
+  Home as HomeIcon,
+  Person as PersonIcon,
+  Album as AlbumIcon,
+  PlaylistPlay as PlaylistIcon,
+  Send as SendIcon,
+} from '@mui/icons-material';
 
 const drawerWidth = 240;
 
-const StyledDrawer = styled(Drawer)(({ theme }) => ({
+const StyledDrawer = styled(Drawer)({
   width: drawerWidth,
   flexShrink: 0,
   '& .MuiDrawer-paper': {
     width: drawerWidth,
     boxSizing: 'border-box',
     backgroundColor: '#121212',
-    color: '#FFFFFF',
     borderRight: '1px solid rgba(255, 255, 255, 0.12)',
-    marginTop: '116px',
-    height: 'calc(100% - 116px)',
-    top: '116px',
+    marginTop: '180px', // Account for both headers
+  },
+});
+
+const StyledListItem = styled(ListItem)<{ active?: boolean }>(({ active }) => ({
+  marginBottom: '8px',
+  borderRadius: '4px',
+  backgroundColor: active ? 'rgba(2, 255, 149, 0.1)' : 'transparent',
+  '&:hover': {
+    backgroundColor: 'rgba(2, 255, 149, 0.1)',
+  },
+  '& .MuiListItemIcon-root': {
+    color: active ? '#02FF95' : '#FFFFFF',
+  },
+  '& .MuiListItemText-primary': {
+    color: active ? '#02FF95' : '#FFFFFF',
   },
 }));
-
-const StyledList = styled(List)({
-  padding: 0,
-});
-
-const StyledListItem = styled(ListItem)({
-  borderBottom: '1px solid rgba(255, 255, 255, 0.12)',
-  '&:hover': {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-  },
-});
 
 interface SidebarProps {
   label: 'records' | 'tech' | 'deep';
@@ -36,34 +51,31 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ label }) => {
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const handleArtistsClick = () => {
-    navigate(`/${label}/artists`);
-  };
-
-  const handleReleasesClick = () => {
-    navigate(`/${label}/releases`);
-  };
-
-  const handleDemoClick = () => {
-    navigate(`/${label}/submit-demo`);
-  };
+  const menuItems = [
+    { text: 'Home', icon: <HomeIcon />, path: `/${label === 'records' ? '' : label}` },
+    { text: 'Artists', icon: <PersonIcon />, path: `/${label}/artists` },
+    { text: 'Releases', icon: <AlbumIcon />, path: `/${label}/releases` },
+    { text: 'Playlists', icon: <PlaylistIcon />, path: `/${label}/playlists` },
+    { text: 'Submit Demo', icon: <SendIcon />, path: `/${label}/submit` },
+  ];
 
   return (
-    <StyledDrawer variant="permanent">
-      <StyledList>
-        <StyledListItem button onClick={handleArtistsClick}>
-          <ListItemText primary="Artists" />
-        </StyledListItem>
-
-        <StyledListItem button onClick={handleReleasesClick}>
-          <ListItemText primary="Releases" />
-        </StyledListItem>
-
-        <StyledListItem button onClick={handleDemoClick}>
-          <ListItemText primary="Submit Demo" />
-        </StyledListItem>
-      </StyledList>
+    <StyledDrawer variant="permanent" anchor="left">
+      <List>
+        {menuItems.map((item) => (
+          <StyledListItem
+            button
+            key={item.text}
+            onClick={() => navigate(item.path)}
+            active={location.pathname === item.path}
+          >
+            <ListItemIcon>{item.icon}</ListItemIcon>
+            <ListItemText primary={item.text} />
+          </StyledListItem>
+        ))}
+      </List>
     </StyledDrawer>
   );
 };
