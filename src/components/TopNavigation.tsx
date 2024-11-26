@@ -1,6 +1,9 @@
 import React from 'react';
 import { AppBar, Tabs, Tab, Box, styled } from '@mui/material';
 import { useLocation, useNavigate } from 'react-router-dom';
+import RecordsSquareLogo from '../assets/png/records/BuildIt_Records_Square.png';
+import TechSquareLogo from '../assets/png/tech/BuildIt_Tech_Square.png';
+import DeepSquareLogo from '../assets/png/deep/BuildIt_Deep_Square.png';
 
 const StyledAppBar = styled(AppBar)({
   backgroundColor: '#121212',
@@ -29,7 +32,7 @@ const StyledTabs = styled(Tabs)({
   },
 });
 
-const StyledTab = styled(Tab)({
+const StyledTab = styled(Tab)<{ tabtype: string }>(({ tabtype }) => ({
   flex: 1,
   maxWidth: 'none',
   color: '#FFFFFF',
@@ -39,24 +42,28 @@ const StyledTab = styled(Tab)({
   fontSize: '14px',
   fontWeight: 500,
   '&.Mui-selected': {
-    color: '#02FF95',
+    color: '#FFFFFF',
   },
   '&:hover': {
-    color: '#02FF95',
+    color: tabtype === 'records' ? '#02FF95' : 
+          tabtype === 'tech' ? '#FF0000' : 
+          '#00BFFF',
     opacity: 1,
   },
-});
+}));
 
-const Logo = styled('img')({
+const Logo = styled('img')<{ tabtype: string }>(({ tabtype }) => ({
   width: '32px',
   height: '32px',
   filter: 'brightness(0) invert(1)',
   transition: 'all 0.3s ease',
-  '.Mui-selected &': {
-    filter: 'brightness(0) invert(0.9) sepia(1) saturate(5) hue-rotate(70deg)',
+  '.MuiTab-root:hover &': {
+    filter: tabtype === 'records' ? 'brightness(0) invert(0.9) sepia(1) saturate(5) hue-rotate(70deg)' :
+           tabtype === 'tech' ? 'brightness(0) invert(0.2) sepia(1) saturate(10000%) hue-rotate(0deg)' :
+           'brightness(0) invert(0.75) sepia(1) saturate(5000%) hue-rotate(175deg)',
   },
   marginBottom: '2px',
-});
+}));
 
 const TabContent = styled(Box)({
   display: 'flex',
@@ -80,17 +87,17 @@ const TopNavigation = () => {
   const tabs = [
     {
       value: '/',
-      logo: require('../assets/png/records/BuildIt_Records_Square.png'),
+      logo: RecordsSquareLogo,
       label: 'Records'
     },
     {
       value: '/tech',
-      logo: require('../assets/png/tech/BuildIt_Tech_Square.png'),
+      logo: TechSquareLogo,
       label: 'Tech'
     },
     {
       value: '/deep',
-      logo: require('../assets/png/deep/BuildIt_Deep_Square.png'),
+      logo: DeepSquareLogo,
       label: 'Deep'
     }
   ];
@@ -107,12 +114,14 @@ const TopNavigation = () => {
             <StyledTab
               key={tab.value}
               value={tab.value}
+              tabtype={tab.label.toLowerCase()}
               label={
                 <TabContent>
-                  <Logo src={tab.logo} alt={tab.label} />
+                  <Logo src={tab.logo} alt={tab.label} tabtype={tab.label.toLowerCase()} />
                   <span>{tab.label}</span>
                 </TabContent>
               }
+              component="div"
             />
           ))}
         </StyledTabs>
