@@ -2,9 +2,9 @@ import React from 'react';
 import { Image, StyleSheet } from 'react-native';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import { Ionicons } from '@expo/vector-icons';
-import BuildItRecordsHome from '../screens/BuildItRecords/HomeScreen';
-import BuildItTechHome from '../screens/BuildItTech/HomeScreen';
-import BuildItDeepHome from '../screens/BuildItDeep/HomeScreen';
+import { HomeScreen as BuildItRecordsHome } from '../screens/BuildItRecords/HomeScreen';
+import { HomeScreen as BuildItTechHome } from '../screens/BuildItTech/HomeScreen';
+import { HomeScreen as BuildItDeepHome } from '../screens/BuildItDeep/HomeScreen';
 import SearchLabels from '../screens/Debug/SearchLabels';
 import { useTheme } from '../contexts/ThemeContext';
 
