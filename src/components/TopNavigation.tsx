@@ -12,15 +12,20 @@ const StyledAppBar = styled(AppBar)({
   left: 0,
   right: 0,
   zIndex: 1300,
+  display: 'flex',
+  alignItems: 'center',
 });
 
 const StyledTabs = styled(Tabs)({
   width: '100%',
+  height: '64px',
   '& .MuiTabs-indicator': {
     backgroundColor: '#02FF95',
   },
   '& .MuiTabs-flexContainer': {
     justifyContent: 'space-between',
+    height: '100%',
+    alignItems: 'center',
   },
 });
 
@@ -28,6 +33,11 @@ const StyledTab = styled(Tab)({
   flex: 1,
   maxWidth: 'none',
   color: '#FFFFFF',
+  height: '64px',
+  padding: 0,
+  textTransform: 'none',
+  fontSize: '14px',
+  fontWeight: 500,
   '&.Mui-selected': {
     color: '#02FF95',
   },
@@ -38,8 +48,23 @@ const StyledTab = styled(Tab)({
 });
 
 const Logo = styled('img')({
-  height: '40px',
-  marginRight: '8px',
+  width: '32px',
+  height: '32px',
+  filter: 'brightness(0) invert(1)',
+  transition: 'all 0.3s ease',
+  '.Mui-selected &': {
+    filter: 'brightness(0) invert(0.9) sepia(1) saturate(5) hue-rotate(70deg)',
+  },
+  marginBottom: '2px',
+});
+
+const TabContent = styled(Box)({
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  height: '100%',
+  gap: '2px',
 });
 
 const TopNavigation = () => {
@@ -55,17 +80,17 @@ const TopNavigation = () => {
   const tabs = [
     {
       value: '/',
-      logo: require('../png/records/BuildItRecords.png'),
+      logo: require('../assets/png/records/BuildIt_Records_Square.png'),
       label: 'Records'
     },
     {
       value: '/tech',
-      logo: require('../png/tech/BuildIt_Tech.png'),
+      logo: require('../assets/png/tech/BuildIt_Tech_Square.png'),
       label: 'Tech'
     },
     {
       value: '/deep',
-      logo: require('../png/deep/BuildIt_Deep.png'),
+      logo: require('../assets/png/deep/BuildIt_Deep_Square.png'),
       label: 'Deep'
     }
   ];
@@ -83,9 +108,10 @@ const TopNavigation = () => {
               key={tab.value}
               value={tab.value}
               label={
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <TabContent>
                   <Logo src={tab.logo} alt={tab.label} />
-                </Box>
+                  <span>{tab.label}</span>
+                </TabContent>
               }
             />
           ))}
