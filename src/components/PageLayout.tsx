@@ -16,6 +16,8 @@ const Main = styled('main')({
   marginTop: '180px',
   marginLeft: 240,
   width: 'calc(100% - 240px)',
+  position: 'relative',
+  top: '64px', // Adjust for TopNavigation height
 });
 
 const FullLogo = styled('img')({
@@ -33,7 +35,7 @@ const LogoHeader = styled(Box)({
   backgroundColor: '#121212',
   borderBottom: '1px solid rgba(255, 255, 255, 0.12)',
   position: 'fixed',
-  top: '64px',
+  top: '64px', // Adjust for TopNavigation height
   left: 0,
   right: 0,
   zIndex: 1200,
@@ -51,44 +53,42 @@ interface PageLayoutProps {
   label: 'records' | 'tech' | 'deep';
 }
 
+const getLogo = (label: 'records' | 'tech' | 'deep') => {
+  switch (label) {
+    case 'tech':
+      return BuildItTechLogo;
+    case 'deep':
+      return BuildItDeepLogo;
+    default:
+      return BuildItRecordsLogo;
+  }
+};
+
+const getSidebar = (label: 'records' | 'tech' | 'deep') => {
+  switch (label) {
+    case 'tech':
+      return <TechSidebar />;
+    case 'deep':
+      return <DeepSidebar />;
+    default:
+      return <RecordsSidebar />;
+  }
+};
+
 const PageLayout: React.FC<PageLayoutProps> = ({ children, label }) => {
-  const getLogo = () => {
-    switch (label) {
-      case 'tech':
-        return BuildItTechLogo;
-      case 'deep':
-        return BuildItDeepLogo;
-      default:
-        return BuildItRecordsLogo;
-    }
-  };
-
-  const getSidebar = () => {
-    switch (label) {
-      case 'tech':
-        return <TechSidebar />;
-      case 'deep':
-        return <DeepSidebar />;
-      default:
-        return <RecordsSidebar />;
-    }
-  };
-
+  const logoSrc = getLogo(label);
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#121212' }}>
-      <TopNavigation />
-      <LogoHeader>
-        <FullLogo src={getLogo()} alt={`Build It ${label} Logo`} />
-      </LogoHeader>
-      <ContentWrapper>
-        {getSidebar()}
-        <Main>
-          <Container maxWidth="lg">
-            {children}
-          </Container>
-        </Main>
-      </ContentWrapper>
-    </Box>
+    <ContentWrapper>
+      {getSidebar(label)}
+      <Main>
+        <LogoHeader>
+          <FullLogo src={logoSrc} alt={`${label} logo`} />
+        </LogoHeader>
+        <Container maxWidth="lg">
+          {children}
+        </Container>
+      </Main>
+    </ContentWrapper>
   );
 };
 

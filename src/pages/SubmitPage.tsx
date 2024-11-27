@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   TextField,
@@ -8,16 +8,21 @@ import {
   Button,
   Card,
   CardContent,
+  Modal,
 } from '@mui/material';
 import RemoveIcon from '@mui/icons-material/Remove';
+import AddIcon from '@mui/icons-material/Add';
+import emailjs from 'emailjs-com';
+import { useNavigate } from 'react-router-dom';
 
 interface Track {
   title: string;
-  soundCloudLink: string;
+  soundCloudPrivateLink: string;
   genre: string;
 }
 
 interface Artist {
+  fullName: string;
   name: string;
   email: string;
   country: string;
@@ -60,7 +65,10 @@ const buttonStyle = {
 };
 
 const SubmitPage: React.FC<SubmitPageProps> = ({ label }) => {
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
   const [artists, setArtists] = React.useState<Artist[]>([{
+    fullName: '',
     name: '',
     email: '',
     country: '',
@@ -75,7 +83,7 @@ const SubmitPage: React.FC<SubmitPageProps> = ({ label }) => {
 
   const [tracks, setTracks] = React.useState<Track[]>([{
     title: '',
-    soundCloudLink: '',
+    soundCloudPrivateLink: '',
     genre: '',
   }]);
 
@@ -93,6 +101,7 @@ const SubmitPage: React.FC<SubmitPageProps> = ({ label }) => {
 
   const addArtist = () => {
     setArtists([...artists, {
+      fullName: '',
       name: '',
       email: '',
       country: '',
@@ -113,7 +122,7 @@ const SubmitPage: React.FC<SubmitPageProps> = ({ label }) => {
   };
 
   const addTrack = () => {
-    setTracks([...tracks, { title: '', soundCloudLink: '', genre: '' }]);
+    setTracks([...tracks, { title: '', soundCloudPrivateLink: '', genre: '' }]);
   };
 
   const removeTrack = (index: number) => {
@@ -122,9 +131,57 @@ const SubmitPage: React.FC<SubmitPageProps> = ({ label }) => {
     }
   };
 
+  const isValidSoundCloudUrl = (url: string) => {
+    const regex = /^(https?:\/\/)?(www\.)?(soundcloud\.com|snd\.sc)\/[\w-]+\/[\w-]+$/;
+    return regex.test(url);
+  };
+
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
-    console.log({ artists, tracks, label });
+
+    const artist = artists[0]; // Assuming single artist for simplicity
+    const track = tracks[0]; // Assuming single track for simplicity
+
+    if (!isValidSoundCloudUrl(track.soundCloudPrivateLink)) {
+      alert('Please enter a valid SoundCloud URL.');
+      return;
+    }
+
+    const templateParams = {
+      to_name: 'aj@builditrecords.com, anmol@builditrecords.com',
+      from_name: artist.fullName,
+      subject: `${artist.name} - ${track.genre} Demo`,
+      message: `Hello,
+
+You got a new demo submission from ${artist.fullName} (${artist.name}):
+
+Genre: ${track.genre}
+
+Links:
+SoundCloud: ${artist.soundcloud}
+Spotify: ${artist.spotify}
+Apple Music: ${artist.appleMusic}
+
+Thank you for your submission, we will review it for consideration.
+
+Best wishes,
+Build It Records Team`,
+    };
+
+    console.log('Sending email with params:', templateParams);
+
+    emailjs.send('service_gpfw0y4', 'template_6e0uiti', templateParams, 'mYG6-dFf7ymn__f8U')
+      .then((response) => {
+        console.log('Email sent successfully!', response.status, response.text);
+        setOpen(true); // Open modal on success
+        setTimeout(() => {
+          console.log('Closing modal and redirecting to home.');
+          setOpen(false);
+          navigate('/'); // Redirect to home
+        }, 3000);
+      }, (err) => {
+        console.log('Failed to send email:', err);
+      });
   };
 
   const labelDisplay = label.charAt(0).toUpperCase() + label.slice(1);
@@ -158,6 +215,15 @@ const SubmitPage: React.FC<SubmitPageProps> = ({ label }) => {
             </Box>
             
             <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Full Name"
+                  value={artist.fullName}
+                  onChange={(e) => handleArtistChange(index, 'fullName', e.target.value)}
+                  required
+                />
+              </Grid>
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
@@ -256,7 +322,7 @@ const SubmitPage: React.FC<SubmitPageProps> = ({ label }) => {
       <Box sx={{ mb: 4 }}>
         <Button
           variant="contained"
-          startIcon={<RemoveIcon />}
+          startIcon={<AddIcon />}
           onClick={addArtist}
           sx={buttonStyle}
         >
@@ -305,8 +371,8 @@ const SubmitPage: React.FC<SubmitPageProps> = ({ label }) => {
                 <TextField
                   fullWidth
                   label="SoundCloud Private Link"
-                  value={track.soundCloudLink}
-                  onChange={(e) => handleTrackChange(index, 'soundCloudLink', e.target.value)}
+                  value={track.soundCloudPrivateLink}
+                  onChange={(e) => handleTrackChange(index, 'soundCloudPrivateLink', e.target.value)}
                   required
                   helperText="Please provide a private SoundCloud link for your track"
                 />
@@ -319,7 +385,7 @@ const SubmitPage: React.FC<SubmitPageProps> = ({ label }) => {
       <Box sx={{ mb: 4 }}>
         <Button
           variant="contained"
-          startIcon={<RemoveIcon />}
+          startIcon={<AddIcon />}
           onClick={addTrack}
           sx={buttonStyle}
         >
@@ -356,6 +422,32 @@ const SubmitPage: React.FC<SubmitPageProps> = ({ label }) => {
           Submit Demo
         </Button>
       </Box>
+
+      <Modal
+        open={open}
+        onClose={() => setOpen(false)}
+        aria-labelledby="modal-modal-title"
+        aria-describedby="modal-modal-description"
+      >
+        <Box sx={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: 400,
+          bgcolor: 'background.paper',
+          border: '2px solid #000',
+          boxShadow: 24,
+          p: 4,
+        }}>
+          <Typography id="modal-modal-title" variant="h6" component="h2">
+            Demo Submission Successful
+          </Typography>
+          <Typography id="modal-modal-description" sx={{ mt: 2 }}>
+            Your demo has been submitted successfully. We will review it and get back to you within 7 days.
+          </Typography>
+        </Box>
+      </Modal>
     </Box>
   );
 };
