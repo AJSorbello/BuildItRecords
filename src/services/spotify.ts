@@ -1,5 +1,7 @@
 import SpotifyWebApi from 'spotify-web-api-node';
-import { SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET } from '@env';
+
+const SPOTIFY_CLIENT_ID = process.env.REACT_APP_SPOTIFY_CLIENT_ID;
+const SPOTIFY_CLIENT_SECRET = process.env.REACT_APP_SPOTIFY_CLIENT_SECRET;
 
 class SpotifyService {
   private spotifyApi: SpotifyWebApi;

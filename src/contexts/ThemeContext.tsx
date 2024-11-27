@@ -1,60 +1,65 @@
-import React, { createContext, useContext, ReactNode } from 'react';
-import { useColorScheme } from 'react-native';
+import React, { createContext, useContext, ReactNode, useState } from 'react';
 
 interface ThemeColors {
   primary: string;
   background: string;
+  card: string;
   text: string;
   textSecondary: string;
+  textTertiary: string;
   border: string;
-  error: string;
-  success: string;
+  shadow: string;
 }
-
-const lightColors: ThemeColors = {
-  primary: '#FF5722',
-  background: '#FFFFFF',
-  text: '#000000',
-  textSecondary: '#757575',
-  border: '#E0E0E0',
-  error: '#FF0000',
-  success: '#4CAF50',
-};
-
-const darkColors: ThemeColors = {
-  primary: '#FF5722',
-  background: '#121212',
-  text: '#FFFFFF',
-  textSecondary: '#B3B3B3',
-  border: '#333333',
-  error: '#FF5252',
-  success: '#69F0AE',
-};
 
 interface ThemeContextType {
-  isDark: boolean;
   colors: ThemeColors;
+  isDark: boolean;
+  toggleTheme: () => void;
 }
 
-const ThemeContext = createContext<ThemeContextType>({
-  isDark: true,
-  colors: darkColors,
-});
+const defaultColors: ThemeColors = {
+  primary: '#1DB954',
+  background: '#121212',
+  card: '#181818',
+  text: '#FFFFFF',
+  textSecondary: 'rgba(255, 255, 255, 0.7)',
+  textTertiary: 'rgba(255, 255, 255, 0.5)',
+  border: 'rgba(255, 255, 255, 0.1)',
+  shadow: 'rgba(0, 0, 0, 0.3)',
+};
 
-export const useTheme = () => useContext(ThemeContext);
+const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
+export const useTheme = () => {
+  const context = useContext(ThemeContext);
+  if (!context) {
+    throw new Error('useTheme must be used within a ThemeProvider');
+  }
+  return context;
+};
 
-  const theme = {
+interface ThemeProviderProps {
+  children: ReactNode;
+}
+
+export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
+  const [isDark, setIsDark] = useState(true); // Default to dark theme
+
+  const toggleTheme = () => {
+    setIsDark(!isDark);
+  };
+
+  const value = {
+    colors: defaultColors,
     isDark,
-    colors: isDark ? darkColors : lightColors,
+    toggleTheme,
   };
 
   return (
-    <ThemeContext.Provider value={theme}>
+    <ThemeContext.Provider value={value}>
       {children}
     </ThemeContext.Provider>
   );
 };
+
+export default ThemeContext;

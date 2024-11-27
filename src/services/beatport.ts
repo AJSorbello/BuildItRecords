@@ -1,5 +1,6 @@
 import axios from 'axios';
-import { BEATPORT_API_KEY } from '@env';
+
+const BEATPORT_API_KEY = process.env.REACT_APP_BEATPORT_API_KEY;
 
 class BeatportService {
   private static instance: BeatportService;

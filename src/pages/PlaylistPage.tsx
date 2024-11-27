@@ -1,6 +1,7 @@
 import React from 'react';
 import { Box, Typography, Card, CardContent, CardMedia, Grid, Link, styled } from '@mui/material';
-import { FaSpotify, FaSoundcloud } from 'react-icons/fa';
+import { FaSpotify } from 'react-icons/fa';
+import { labelColors } from '../theme/theme';
 import PageLayout from '../components/PageLayout';
 
 const PlaylistCard = styled(Card)({
@@ -28,52 +29,83 @@ interface Playlist {
   title: string;
   description: string;
   coverImage: string;
-  spotifyUrl?: string;
-  soundcloudUrl?: string;
+  spotifyUrl: string;
 }
 
 interface PlaylistPageProps {
   label: 'records' | 'tech' | 'deep';
 }
 
-const PlaylistPage: React.FC<PlaylistPageProps> = ({ label }) => {
-  // Mock data - replace with actual data from your backend
-  const playlists: Playlist[] = [
+const mockPlaylists: Record<string, Playlist[]> = {
+  records: [
     {
       id: '1',
-      title: `Build It ${label.charAt(0).toUpperCase() + label.slice(1)} Essential Mix`,
-      description: 'Latest tracks and classic selections',
-      coverImage: 'https://via.placeholder.com/300x300.png?text=Essential+Mix',
-      spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZF1DX2TRYkJECvfC',
+      title: 'House Essentials',
+      description: 'The finest selection of underground house music',
+      coverImage: 'https://via.placeholder.com/300x300?text=House+Essentials',
+      spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZF1DXa8NOEUWPn9W',
     },
     {
       id: '2',
-      title: `${label.charAt(0).toUpperCase() + label.slice(1)} House Selections`,
-      description: 'Current favorites and upcoming releases',
-      coverImage: 'https://via.placeholder.com/300x300.png?text=House+Selections',
+      title: 'Deep House Vibes',
+      description: 'Smooth and groovy deep house selections',
+      coverImage: 'https://via.placeholder.com/300x300?text=Deep+House+Vibes',
       spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZF1DX2TRYkJECvfC',
     },
     {
       id: '3',
-      title: 'Artist Spotlight',
-      description: 'Featured artist selections',
-      coverImage: 'https://via.placeholder.com/300x300.png?text=Artist+Spotlight',
+      title: 'Underground House',
+      description: 'Raw and unfiltered house music from the underground',
+      coverImage: 'https://via.placeholder.com/300x300?text=Underground+House',
+      spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZF1DX8jqZp3XHOt3',
+    },
+  ],
+  tech: [
+    {
+      id: '1',
+      title: 'Techno Warehouse',
+      description: 'Hard-hitting techno selections',
+      coverImage: 'https://via.placeholder.com/300x300?text=Techno+Warehouse',
+      spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZF1DX6J5NfMJS675',
+    },
+    {
+      id: '2',
+      title: 'Industrial Techno',
+      description: 'Dark and industrial techno cuts',
+      coverImage: 'https://via.placeholder.com/300x300?text=Industrial+Techno',
+      spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZF1DX1DWK5pyjPIb',
+    },
+  ],
+  deep: [
+    {
+      id: '1',
+      title: 'Deep House Sessions',
+      description: 'Atmospheric deep house selections',
+      coverImage: 'https://via.placeholder.com/300x300?text=Deep+House+Sessions',
       spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZF1DX2TRYkJECvfC',
     },
-    // Add more playlists as needed
-  ];
+    {
+      id: '2',
+      title: 'Melodic Deep',
+      description: 'Emotional and melodic deep house',
+      coverImage: 'https://via.placeholder.com/300x300?text=Melodic+Deep',
+      spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZF1DX2TRYkJECvfC',
+    },
+  ],
+};
+
+const PlaylistPage: React.FC<PlaylistPageProps> = ({ label }) => {
+  const color = labelColors[label];
+  const playlists = mockPlaylists[label] || [];
 
   return (
     <PageLayout label={label}>
-      <Box mb={4}>
-        <Typography variant="h4" gutterBottom sx={{ color: 'text.primary' }}>
+      <Box sx={{ p: 3 }}>
+        <Typography variant="h4" sx={{ mb: 4, color }}>
           Playlists
         </Typography>
-        <Typography variant="h6" sx={{ color: 'text.secondary', mb: 4 }}>
-          {label.charAt(0).toUpperCase() + label.slice(1)} House Selections
-        </Typography>
 
-        <Grid container spacing={3}>
+        <Grid container spacing={4}>
           {playlists.map((playlist) => (
             <Grid item xs={12} sm={6} md={4} key={playlist.id}>
               <PlaylistCard>
@@ -84,23 +116,16 @@ const PlaylistPage: React.FC<PlaylistPageProps> = ({ label }) => {
                   alt={playlist.title}
                 />
                 <CardContent sx={{ flexGrow: 1 }}>
-                  <Typography variant="h6" gutterBottom>
+                  <Typography variant="h5" gutterBottom sx={{ color: '#FFFFFF' }}>
                     {playlist.title}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary" paragraph>
+                  <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)', mb: 2 }}>
                     {playlist.description}
                   </Typography>
-                  <Box mt={2}>
-                    {playlist.spotifyUrl && (
-                      <IconLink href={playlist.spotifyUrl} target="_blank">
-                        <FaSpotify size={24} />
-                      </IconLink>
-                    )}
-                    {playlist.soundcloudUrl && (
-                      <IconLink href={playlist.soundcloudUrl} target="_blank">
-                        <FaSoundcloud size={24} />
-                      </IconLink>
-                    )}
+                  <Box sx={{ mt: 'auto' }}>
+                    <IconLink href={playlist.spotifyUrl} target="_blank">
+                      <FaSpotify size={24} />
+                    </IconLink>
                   </Box>
                 </CardContent>
               </PlaylistCard>

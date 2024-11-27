@@ -1,4 +1,3 @@
-import * as FileSystem from 'expo-file-system';
 import Papa from 'papaparse';
 
 export interface SymphonicRelease {
@@ -36,9 +35,15 @@ class CSVService {
     return CSVService.instance;
   }
 
+  // Using browser's File API instead of expo-file-system
+  private async readFile(filePath: string): Promise<string> {
+    const response = await fetch(filePath);
+    return response.text();
+  }
+
   public async importCSV(fileUri: string): Promise<void> {
     try {
-      const csvContent = await FileSystem.readAsStringAsync(fileUri);
+      const csvContent = await this.readFile(fileUri);
       const result = Papa.parse(csvContent, {
         header: true,
         skipEmptyLines: true,

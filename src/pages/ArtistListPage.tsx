@@ -1,27 +1,61 @@
-import React, { useEffect, useState } from 'react';
-import { Grid, Card, CardContent, Typography, Box, styled } from '@mui/material';
-import PageLayout from '../components/PageLayout';
+import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { Artist, parseCSV, groupByArtists, filterByLabel } from '../utils/csvParser';
+import { Box, Typography, Card, styled, Grid, CardContent } from '@mui/material';
+import PageLayout from '../components/PageLayout';
+import { Release } from '../types/release';
 
-const ArtistCard = styled(Card)({
+interface Artist {
+  name: string;
+  releases: Release[];
+  genres: string[];
+}
+
+const groupByArtists = (releases: Release[]): Artist[] => {
+  const artistMap = new Map<string, Artist>();
+
+  releases.forEach(release => {
+    if (!artistMap.has(release.artist)) {
+      artistMap.set(release.artist, {
+        name: release.artist,
+        releases: [],
+        genres: [],
+      });
+    }
+    const artist = artistMap.get(release.artist)!;
+    artist.releases.push(release);
+  });
+
+  return Array.from(artistMap.values());
+};
+
+const filterByLabel = (artists: Artist[], label: 'records' | 'tech' | 'deep'): Artist[] => {
+  return artists.filter(artist => 
+    artist.releases.some(release => 
+      release.beatportUrl?.includes(label) || 
+      release.soundcloudUrl?.includes(label)
+    )
+  );
+};
+
+const StyledCard = styled(Card)(({ theme }) => ({
   backgroundColor: 'rgba(255, 255, 255, 0.05)',
   transition: 'transform 0.2s',
   '&:hover': {
     transform: 'scale(1.02)',
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
   },
-});
+}));
 
-const ArtistListPage = () => {
-  const { label } = useParams<{ label: string }>();
+const ArtistListPage: React.FC = () => {
+  const { label } = useParams<{ label: 'records' | 'tech' | 'deep' }>();
   const [artists, setArtists] = useState<Artist[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadArtists = async () => {
       try {
-        const releases = await parseCSV('');  // The path is now handled in parseCSV
+        setLoading(true);
+        const releases = await fetch('/api/releases').then(res => res.json());
         const allArtists = groupByArtists(releases);
         const filteredArtists = filterByLabel(allArtists, label || 'records');
         setArtists(filteredArtists);
@@ -52,7 +86,7 @@ const ArtistListPage = () => {
         <Grid container spacing={3}>
           {artists.map((artist) => (
             <Grid item xs={12} sm={6} md={4} key={artist.name}>
-              <ArtistCard>
+              <StyledCard>
                 <CardContent>
                   <Typography variant="h6" component="div" sx={{ color: 'text.primary' }}>
                     {artist.name}
@@ -64,7 +98,7 @@ const ArtistListPage = () => {
                     Releases: {artist.releases.length}
                   </Typography>
                 </CardContent>
-              </ArtistCard>
+              </StyledCard>
             </Grid>
           ))}
         </Grid>

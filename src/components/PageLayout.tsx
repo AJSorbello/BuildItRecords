@@ -1,7 +1,9 @@
 import React from 'react';
 import { Box, Container, styled } from '@mui/material';
 import TopNavigation from './TopNavigation';
-import Sidebar from './Sidebar';
+import RecordsSidebar from './RecordsSidebar';
+import TechSidebar from './TechSidebar';
+import DeepSidebar from './DeepSidebar';
 import BuildItRecordsLogo from '../assets/png/records/BuildItRecords.png';
 import BuildItTechLogo from '../assets/png/tech/BuildIt_Tech.png';
 import BuildItDeepLogo from '../assets/png/deep/BuildIt_Deep.png';
@@ -14,12 +16,16 @@ const Main = styled('main')({
   backgroundColor: '#121212',
   minHeight: 'calc(100vh - 180px)',
   marginTop: '180px',
+  marginLeft: drawerWidth,
+  width: `calc(100% - ${drawerWidth}px)`,
 });
 
 const FullLogo = styled('img')({
-  height: '100px',
-  marginLeft: '24px',
+  height: '100%',
+  width: 'auto',
+  objectFit: 'contain',
   filter: 'brightness(0) invert(1)',
+  marginLeft: '24px',
 });
 
 const LogoHeader = styled(Box)({
@@ -39,6 +45,7 @@ const ContentWrapper = styled(Box)({
   display: 'flex',
   minHeight: '100vh',
   position: 'relative',
+  backgroundColor: '#121212',
 });
 
 interface PageLayoutProps {
@@ -58,14 +65,25 @@ const PageLayout: React.FC<PageLayoutProps> = ({ children, label }) => {
     }
   };
 
+  const getSidebar = () => {
+    switch (label) {
+      case 'tech':
+        return <TechSidebar />;
+      case 'deep':
+        return <DeepSidebar />;
+      default:
+        return <RecordsSidebar />;
+    }
+  };
+
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#121212' }}>
       <TopNavigation />
       <LogoHeader>
         <FullLogo src={getLogo()} alt={`Build It ${label} Logo`} />
       </LogoHeader>
       <ContentWrapper>
-        <Sidebar label={label} />
+        {getSidebar()}
         <Main>
           <Container maxWidth="lg">
             {children}

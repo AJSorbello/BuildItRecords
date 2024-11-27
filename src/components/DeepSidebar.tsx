@@ -1,313 +1,73 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Platform, Image, Linking, TouchableOpacity } from 'react-native';
-import { Drawer, List, ListItem, ListItemIcon, ListItemText, styled, Divider, ListSubheader } from '@mui/material';
-import { FaSpotify, FaSoundcloud } from 'react-icons/fa';
-import { SiBeatport } from 'react-icons/si';
-import { Ionicons } from '@expo/vector-icons';
-import { getArtistsByLabel } from '../data/artists';
+import { Drawer, List, ListItem, ListItemIcon, ListItemText } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
+import { labelColors } from '../theme/theme';
+import HomeIcon from '@mui/icons-material/Home';
+import AlbumIcon from '@mui/icons-material/Album';
+import PeopleIcon from '@mui/icons-material/People';
+import QueueMusicIcon from '@mui/icons-material/QueueMusic';
+import SendIcon from '@mui/icons-material/Send';
 
-const drawerWidth = 280;
+const drawerWidth = 240;
 
-const StyledDrawer = styled(Drawer)({
-  width: drawerWidth,
-  flexShrink: 0,
-  '& .MuiDrawer-paper': {
-    width: drawerWidth,
-    boxSizing: 'border-box',
-    backgroundColor: '#121212',
-    color: '#FFFFFF',
-  },
-});
+const DeepSidebar: React.FC = () => {
+  const navigate = useNavigate();
+  const color = labelColors.deep;
 
-const deepData = {
-  title: 'Build It Deep',
-  icon: require('../assets/png/deep/BuildIt_Deep_Square.png'),
-  links: {
-    spotify: 'https://open.spotify.com/user/builditdeeprecords',
-    beatport: 'https://www.beatport.com/label/build-it-deep/89647',
-    soundcloud: 'https://soundcloud.com/builditdeeprecords'
-  },
-  playlists: [
-    { id: '1', name: 'Deep House Essentials', url: 'https://open.spotify.com/playlist/37i9dQZF1DX2TRYkJECvfC' },
-    { id: '2', name: 'Deep House Mix', url: 'https://open.spotify.com/playlist/37i9dQZF1DX8Uebhn9wzrS' }
-  ],
-  bandcamp: [
-    { id: '1', name: 'Latest Releases', url: 'https://builditdeeprecords.bandcamp.com' },
-    { id: '2', name: 'Featured Artists', url: 'https://builditdeeprecords.bandcamp.com/artists' }
-  ]
-};
-
-export const DeepSidebar = () => {
-  const labelArtists = getArtistsByLabel('deep');
-
-  const handlePlatformClick = (url: string) => {
-    if (Platform.OS === 'web') {
-      window.open(url, '_blank');
-    } else {
-      Linking.openURL(url);
-    }
-  };
-
-  if (Platform.OS !== 'web') {
-    return (
-      <ScrollView style={[styles.container, { backgroundColor: '#121212' }]}>
-        <View style={styles.header}>
-          <Image source={deepData.icon} style={styles.labelIcon} />
-          <Text style={[styles.headerTitle, { color: '#FFFFFF' }]}>{deepData.title}</Text>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: '#FFFFFF' }]}>Platforms</Text>
-          <TouchableOpacity
-            style={styles.platformButton}
-            onPress={() => handlePlatformClick(deepData.links.spotify)}
-          >
-            <Ionicons name="musical-notes" size={24} color="#FFFFFF" />
-            <Text style={[styles.platformButtonText, { color: '#FFFFFF' }]}>Spotify</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.platformButton}
-            onPress={() => handlePlatformClick(deepData.links.beatport)}
-          >
-            <Ionicons name="cart" size={24} color="#FFFFFF" />
-            <Text style={[styles.platformButtonText, { color: '#FFFFFF' }]}>Beatport</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.platformButton}
-            onPress={() => handlePlatformClick(deepData.links.soundcloud)}
-          >
-            <Ionicons name="cloud" size={24} color="#FFFFFF" />
-            <Text style={[styles.platformButtonText, { color: '#FFFFFF' }]}>SoundCloud</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: '#FFFFFF' }]}>Artists</Text>
-          {labelArtists.map((artist) => (
-            <TouchableOpacity
-              key={artist.id}
-              style={styles.item}
-              onPress={() => handlePlatformClick(artist.spotifyUrl)}
-            >
-              <Ionicons name="person" size={20} color="#FFFFFF" />
-              <Text style={[styles.itemText, { color: '#FFFFFF' }]}>{artist.name}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: '#FFFFFF' }]}>Playlists</Text>
-          {deepData.playlists.map((playlist) => (
-            <TouchableOpacity
-              key={playlist.id}
-              style={styles.item}
-              onPress={() => handlePlatformClick(playlist.url)}
-            >
-              <Ionicons name="musical-notes" size={20} color="#FFFFFF" />
-              <Text style={[styles.itemText, { color: '#FFFFFF' }]}>{playlist.name}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: '#FFFFFF' }]}>Bandcamp</Text>
-          {deepData.bandcamp.map((item) => (
-            <TouchableOpacity
-              key={item.id}
-              style={styles.item}
-              onPress={() => handlePlatformClick(item.url)}
-            >
-              <Ionicons name="cart" size={20} color="#FFFFFF" />
-              <Text style={[styles.itemText, { color: '#FFFFFF' }]}>{item.name}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </ScrollView>
-    );
-  }
+  const menuItems = [
+    { text: 'Home', icon: <HomeIcon />, path: '/deep' },
+    { text: 'Releases', icon: <AlbumIcon />, path: '/deep/releases' },
+    { text: 'Artists', icon: <PeopleIcon />, path: '/deep/artists' },
+    { text: 'Playlists', icon: <QueueMusicIcon />, path: '/deep/playlists' },
+    { text: 'Submit', icon: <SendIcon />, path: '/deep/submit' },
+  ];
 
   return (
-    <StyledDrawer
+    <Drawer
       variant="permanent"
-      anchor="left"
       sx={{
+        width: drawerWidth,
+        flexShrink: 0,
         '& .MuiDrawer-paper': {
+          width: drawerWidth,
+          boxSizing: 'border-box',
           backgroundColor: '#121212',
           borderRight: '1px solid rgba(255, 255, 255, 0.12)',
-          color: '#FFFFFF',
-          '& .MuiListItem-root': {
-            '&:hover': {
-              backgroundColor: 'rgba(2, 255, 149, 0.25)',
-            },
-          },
-          '& .MuiListItemIcon-root': {
-            color: '#FFFFFF',
-          },
-          '& .MuiListItemText-primary': {
-            color: '#FFFFFF',
-          },
-          '& .MuiDivider-root': {
-            borderColor: 'rgba(255, 255, 255, 0.12)',
-          },
+          marginTop: '180px',
         },
       }}
     >
       <List>
-        <ListItem>
-          <ListItemIcon>
-            <Image source={deepData.icon} style={{ width: 40, height: 40 }} />
-          </ListItemIcon>
-          <ListItemText 
-            primary={deepData.title}
-            primaryTypographyProps={{ variant: 'h6', style: { color: '#FFFFFF' } }}
-          />
-        </ListItem>
-
-        <Divider />
-
-        <ListItem button onClick={() => handlePlatformClick(deepData.links.spotify)}>
-          <ListItemIcon>
-            <FaSpotify size={24} />
-          </ListItemIcon>
-          <ListItemText primary="Spotify" />
-        </ListItem>
-
-        <ListItem button onClick={() => handlePlatformClick(deepData.links.beatport)}>
-          <ListItemIcon>
-            <SiBeatport size={24} />
-          </ListItemIcon>
-          <ListItemText primary="Beatport" />
-        </ListItem>
-
-        <ListItem button onClick={() => handlePlatformClick(deepData.links.soundcloud)}>
-          <ListItemIcon>
-            <FaSoundcloud size={24} />
-          </ListItemIcon>
-          <ListItemText primary="SoundCloud" />
-        </ListItem>
-
-        <Divider />
-
-        <ListSubheader
-          sx={{
-            backgroundColor: '#121212',
-            color: '#FFFFFF',
-          }}
-        >
-          Artists
-        </ListSubheader>
-        {labelArtists.map((artist) => (
-          <ListItem 
-            button 
-            key={artist.id}
-            onClick={() => handlePlatformClick(artist.spotifyUrl)}
+        {menuItems.map((item) => (
+          <ListItem
+            button
+            key={item.text}
+            onClick={() => navigate(item.path)}
+            sx={{
+              color: '#FFFFFF',
+              height: '48px',
+              '&:hover': {
+                backgroundColor: 'rgba(0, 191, 255, 0.08)',
+              },
+              '& .MuiListItemIcon-root': {
+                minWidth: '40px',
+                marginLeft: '12px',
+              },
+              '& .MuiListItemText-primary': {
+                fontSize: '0.875rem',
+                fontWeight: 500,
+              },
+            }}
           >
-            <ListItemIcon>
-              <Ionicons name="person" size={20} color="#FFFFFF" />
+            <ListItemIcon sx={{ color: color }}>
+              {item.icon}
             </ListItemIcon>
-            <ListItemText primary={artist.name} />
-          </ListItem>
-        ))}
-
-        <Divider />
-
-        <ListSubheader
-          sx={{
-            backgroundColor: '#121212',
-            color: '#FFFFFF',
-          }}
-        >
-          Playlists
-        </ListSubheader>
-        {deepData.playlists.map((playlist) => (
-          <ListItem 
-            button 
-            key={playlist.id}
-            onClick={() => handlePlatformClick(playlist.url)}
-          >
-            <ListItemIcon>
-              <Ionicons name="musical-notes" size={20} color="#FFFFFF" />
-            </ListItemIcon>
-            <ListItemText primary={playlist.name} />
-          </ListItem>
-        ))}
-
-        <Divider />
-
-        <ListSubheader
-          sx={{
-            backgroundColor: '#121212',
-            color: '#FFFFFF',
-          }}
-        >
-          Bandcamp
-        </ListSubheader>
-        {deepData.bandcamp.map((item) => (
-          <ListItem 
-            button 
-            key={item.id}
-            onClick={() => handlePlatformClick(item.url)}
-          >
-            <ListItemIcon>
-              <Ionicons name="cart" size={20} color="#FFFFFF" />
-            </ListItemIcon>
-            <ListItemText primary={item.name} />
+            <ListItemText primary={item.text} />
           </ListItem>
         ))}
       </List>
-    </StyledDrawer>
+    </Drawer>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    width: drawerWidth,
-  },
-  header: {
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.12)',
-  },
-  labelIcon: {
-    width: 40,
-    height: 40,
-    marginRight: 12,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  section: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.12)',
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 12,
-  },
-  platformButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  platformButtonText: {
-    marginLeft: 12,
-    fontSize: 16,
-  },
-  item: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  itemText: {
-    marginLeft: 12,
-    fontSize: 14,
-  },
-});
+export default DeepSidebar;

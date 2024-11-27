@@ -1,5 +1,6 @@
 import axios from 'axios';
-import { SOUNDCLOUD_CLIENT_ID } from '@env';
+
+const SOUNDCLOUD_CLIENT_ID = process.env.REACT_APP_SOUNDCLOUD_CLIENT_ID || '';
 
 class SoundCloudService {
   private static instance: SoundCloudService;
@@ -7,6 +8,9 @@ class SoundCloudService {
   private clientId: string;
 
   private constructor() {
+    if (!SOUNDCLOUD_CLIENT_ID) {
+      console.warn('SoundCloud client ID not provided');
+    }
     this.clientId = SOUNDCLOUD_CLIENT_ID;
   }
 
@@ -17,28 +21,36 @@ class SoundCloudService {
     return SoundCloudService.instance;
   }
 
-  public async getTrackByISRC(isrc: string) {
+  private getHeaders() {
+    return {
+      'Authorization': `OAuth ${this.clientId}`,
+    };
+  }
+
+  public async getTrack(trackId: string) {
+    try {
+      const response = await axios.get(`${this.baseUrl}/tracks/${trackId}`, {
+        headers: this.getHeaders(),
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching SoundCloud track:', error);
+      throw error;
+    }
+  }
+
+  public async searchTracks(query: string) {
     try {
       const response = await axios.get(`${this.baseUrl}/tracks`, {
+        headers: this.getHeaders(),
         params: {
+          q: query,
           client_id: this.clientId,
-          q: isrc,
         },
       });
-
-      if (response.data.length) {
-        const track = response.data[0];
-        return {
-          title: track.title,
-          artist: track.user.username,
-          imageUrl: track.artwork_url?.replace('large', 't500x500'),
-          releaseDate: track.created_at,
-          soundcloudUrl: track.permalink_url,
-        };
-      }
-      throw new Error('Track not found on SoundCloud');
+      return response.data;
     } catch (error) {
-      console.error('Error fetching track from SoundCloud:', error);
+      console.error('Error searching SoundCloud tracks:', error);
       throw error;
     }
   }

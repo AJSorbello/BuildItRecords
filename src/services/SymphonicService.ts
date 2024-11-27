@@ -11,6 +11,7 @@ interface SymphonicRelease {
   stores: {
     beatport?: string;
     spotify?: string;
+    soundcloud?: string;
   };
   tracks: Array<{
     id: string;
@@ -107,18 +108,18 @@ class SymphonicService {
       artist: item.artist,
       artwork: item.artwork_url,
       releaseDate: new Date(item.release_date).toISOString().split('T')[0],
-      genre: item.genre,
-      beatportLink: item.stores?.beatport,
-      spotifyLink: item.stores?.spotify,
       tracks: item.tracks.map(track => ({
         id: track.id,
         title: track.title,
         artist: track.artist,
         duration: track.duration,
-        spotifyId: track.spotify_id,
-        previewUrl: track.preview_url,
+        spotifyId: track.spotify_id || undefined,
+        previewUrl: track.preview_url || null,
       })),
       label: this.determineLabel(item.label_name),
+      spotifyUrl: item.stores?.spotify || '',
+      beatportUrl: item.stores?.beatport || '',
+      soundcloudUrl: item.stores?.soundcloud || '',
     }));
   }
 

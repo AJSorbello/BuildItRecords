@@ -1,8 +1,18 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity, Linking } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import {
+  Box,
+  Typography,
+  Button,
+  Card,
+  CardMedia,
+  CardContent,
+  Stack,
+} from '@mui/material';
+import MusicNoteIcon from '@mui/icons-material/MusicNote';
+import AlbumIcon from '@mui/icons-material/Album';
+import CloudQueueIcon from '@mui/icons-material/CloudQueue';
 import { useTheme } from '../contexts/ThemeContext';
-import { Release } from '../types/Release';
+import { Release } from '../types/release';
 
 interface FeaturedReleaseProps {
   release: Release;
@@ -12,103 +22,126 @@ export default function FeaturedRelease({ release }: FeaturedReleaseProps) {
   const { colors } = useTheme();
 
   const openLink = (url: string) => {
-    Linking.openURL(url);
+    window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Text style={[styles.label, { color: colors.textSecondary }]}>Latest Release</Text>
-      <View style={styles.content}>
-        <Image source={{ uri: release.artwork }} style={styles.artwork} />
-        <View style={styles.info}>
-          <Text style={[styles.artist, { color: colors.text }]}>{release.artist}</Text>
-          <Text style={[styles.title, { color: colors.text }]}>{release.title}</Text>
-          <Text style={[styles.date, { color: colors.textSecondary }]}>
+    <Card sx={{ 
+      bgcolor: colors.background,
+      p: 3,
+      my: 3,
+      borderRadius: 2,
+    }}>
+      <Typography
+        variant="overline"
+        sx={{
+          color: colors.textSecondary,
+          display: 'block',
+          mb: 2,
+        }}
+      >
+        Latest Release
+      </Typography>
+      
+      <Box sx={{ 
+        display: 'flex',
+        flexDirection: { xs: 'column', md: 'row' },
+        gap: 3,
+      }}>
+        <CardMedia
+          component="img"
+          image={release.artwork}
+          alt={`${release.title} by ${release.artist}`}
+          sx={{
+            width: { xs: '100%', md: '300px' },
+            height: { xs: '300px', md: '300px' },
+            objectFit: 'cover',
+            borderRadius: 1,
+          }}
+        />
+        
+        <CardContent sx={{ 
+          flex: 1,
+          p: 0,
+          '&:last-child': { pb: 0 },
+        }}>
+          <Typography
+            variant="h4"
+            component="h2"
+            sx={{
+              color: colors.text,
+              mb: 1,
+              fontWeight: 'bold',
+            }}
+          >
+            {release.artist}
+          </Typography>
+          
+          <Typography
+            variant="h5"
+            sx={{
+              color: colors.text,
+              mb: 2,
+            }}
+          >
+            {release.title}
+          </Typography>
+          
+          <Typography
+            variant="body1"
+            sx={{
+              color: colors.textSecondary,
+              mb: 3,
+            }}
+          >
             {new Date(release.releaseDate).toLocaleDateString()}
-          </Text>
-          <View style={styles.buttons}>
-            <TouchableOpacity
-              style={[styles.button, { backgroundColor: '#1DB954' }]}
-              onPress={() => openLink(release.spotifyUrl)}
+          </Typography>
+          
+          <Stack direction="row" spacing={2} sx={{ flexWrap: 'wrap', gap: 2 }}>
+            <Button
+              variant="contained"
+              startIcon={<MusicNoteIcon />}
+              onClick={() => openLink(release.spotifyUrl)}
+              sx={{
+                bgcolor: '#1DB954',
+                '&:hover': {
+                  bgcolor: '#1aa34a',
+                },
+              }}
             >
-              <Ionicons name="logo-spotify" size={20} color="#FFFFFF" />
-              <Text style={styles.buttonText}>Spotify</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.button, { backgroundColor: '#FF6B00' }]}
-              onPress={() => openLink(release.beatportUrl)}
+              Spotify
+            </Button>
+            
+            <Button
+              variant="contained"
+              startIcon={<AlbumIcon />}
+              onClick={() => openLink(release.beatportUrl)}
+              sx={{
+                bgcolor: '#FF6B00',
+                '&:hover': {
+                  bgcolor: '#e66000',
+                },
+              }}
             >
-              <Text style={styles.buttonText}>Beatport</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.button, { backgroundColor: '#FF5500' }]}
-              onPress={() => openLink(release.soundcloudUrl)}
+              Beatport
+            </Button>
+            
+            <Button
+              variant="contained"
+              startIcon={<CloudQueueIcon />}
+              onClick={() => openLink(release.soundcloudUrl)}
+              sx={{
+                bgcolor: '#FF5500',
+                '&:hover': {
+                  bgcolor: '#e64d00',
+                },
+              }}
             >
-              <Ionicons name="logo-soundcloud" size={20} color="#FFFFFF" />
-              <Text style={styles.buttonText}>SoundCloud</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    </View>
+              SoundCloud
+            </Button>
+          </Stack>
+        </CardContent>
+      </Box>
+    </Card>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    padding: 20,
-    marginVertical: 20,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  label: {
-    fontSize: 14,
-    marginBottom: 15,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  content: {
-    alignItems: 'center',
-    width: '100%',
-  },
-  artwork: {
-    width: 300,
-    height: 300,
-    borderRadius: 10,
-    marginBottom: 20,
-  },
-  info: {
-    alignItems: 'center',
-  },
-  artist: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 5,
-  },
-  title: {
-    fontSize: 18,
-    marginBottom: 5,
-  },
-  date: {
-    fontSize: 14,
-    marginBottom: 20,
-  },
-  buttons: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 10,
-  },
-  button: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 20,
-    gap: 5,
-  },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-});
