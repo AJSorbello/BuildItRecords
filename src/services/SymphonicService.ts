@@ -60,8 +60,8 @@ class SymphonicService {
         hasMore = data.has_more || data.next_page;
         page++;
 
-        // Optional: Add a small delay to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Add delay between requests to avoid rate limiting
+        await this.delay(1000);
       }
 
       return allReleases;
@@ -151,6 +151,13 @@ class SymphonicService {
     if (name.includes('tech')) return 'tech';
     if (name.includes('deep')) return 'deep';
     return 'records';
+  }
+
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => {
+      const timeoutId = window.setTimeout(resolve, ms);
+      return () => window.clearTimeout(timeoutId);
+    });
   }
 }
 

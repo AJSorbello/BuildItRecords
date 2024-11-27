@@ -1,21 +1,21 @@
 import React, { useState } from 'react';
 import {
   Box,
-  TextField,
-  Typography,
-  Grid,
-  IconButton,
   Button,
   Card,
-  CardContent,
-  Modal,
   Checkbox,
+  Grid,
+  IconButton,
+  TextField,
+  Typography,
+  Modal,
   FormControlLabel,
   Link,
+  BoxProps,
+  styled,
 } from '@mui/material';
 import RemoveIcon from '@mui/icons-material/Remove';
 import AddIcon from '@mui/icons-material/Add';
-import emailjs from 'emailjs-com';
 import { useNavigate } from 'react-router-dom';
 
 interface Track {
@@ -46,17 +46,21 @@ interface StyledCardProps extends React.ComponentProps<typeof Card> {
   children: React.ReactNode;
 }
 
-const StyledCard = ({ children, ...props }: StyledCardProps) => (
-  <Card 
-    {...props} 
-    sx={{ 
-      backgroundColor: 'rgba(255, 255, 255, 0.05)',
+const StyledCard = styled(Card)({
+  backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  borderRadius: '8px',
+  padding: '24px',
+});
+
+const FormSection = ({ children, ...props }: { children: React.ReactNode } & BoxProps) => (
+  <StyledCard
+    sx={{
       marginBottom: '24px',
       ...props.sx
     }}
   >
     {children}
-  </Card>
+  </StyledCard>
 );
 
 const buttonStyle = {
@@ -90,6 +94,9 @@ const SubmitPage: React.FC<SubmitPageProps> = ({ label }) => {
     soundCloudPrivateLink: '',
     genre: '',
   }]);
+
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   const handleArtistChange = (index: number, field: keyof Artist, value: string) => {
     const newArtists = [...artists];
@@ -140,60 +147,102 @@ const SubmitPage: React.FC<SubmitPageProps> = ({ label }) => {
     return regex.test(url);
   };
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!termsAccepted) {
-      alert('Please accept the terms and conditions to proceed.');
+      setError('You must accept the terms and conditions to submit.');
       return;
     }
 
-    const artist = artists[0]; // Assuming single artist for simplicity
-    const track = tracks[0]; // Assuming single track for simplicity
+    try {
+      const artist = artists[0]; // Assuming single artist for simplicity
+      const track = tracks[0]; // Assuming single track for simplicity
 
-    if (!isValidSoundCloudUrl(track.soundCloudPrivateLink)) {
-      alert('Please enter a valid SoundCloud URL.');
-      return;
-    }
+      if (!isValidSoundCloudUrl(track.soundCloudPrivateLink)) {
+        setError('Please enter a valid SoundCloud URL.');
+        return;
+      }
 
-    const templateParams = {
-      fullName: artist.fullName,
-      artistName: artist.name,
-      email: artist.email,
-      country: artist.country,
-      province: artist.province,
-      facebook: artist.facebook,
-      twitter: artist.twitter,
-      instagram: artist.instagram,
-      soundcloud: artist.soundcloud,
-      spotify: artist.spotify,
-      appleMusic: artist.appleMusic,
-      trackTitle: track.title,
-      trackGenre: track.genre,
-      soundCloudLink: track.soundCloudPrivateLink,
-      label: label
-    };
-
-    console.log('Sending email with params:', templateParams);
-
-    emailjs.send('service_gpfw0y4', 'template_6e0uiti', templateParams, 'mYG6-dFf7ymn__f8U')
-      .then((response) => {
-        console.log('Email sent successfully!', response.status, response.text);
-        setOpen(true); // Open modal on success
-        setTimeout(() => {
-          console.log('Closing modal and redirecting to home.');
-          setOpen(false);
-          navigate('/'); // Redirect to home
-        }, 3000);
-      }, (err) => {
-        console.log('Failed to send email:', err);
+      const response = await fetch('/api/submit-demo', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          artist: {
+            fullName: artist.fullName,
+            name: artist.name,
+            email: artist.email,
+            country: artist.country,
+            province: artist.province,
+            facebook: artist.facebook,
+            twitter: artist.twitter,
+            instagram: artist.instagram,
+            soundcloud: artist.soundcloud,
+            spotify: artist.spotify,
+            appleMusic: artist.appleMusic
+          },
+          track: {
+            title: track.title,
+            genre: track.genre,
+            soundCloudPrivateLink: track.soundCloudPrivateLink
+          }
+        }),
       });
+
+      if (!response.ok) {
+        throw new Error('Failed to submit form');
+      }
+
+      // Clear form
+      setArtists([{
+        fullName: '',
+        name: '',
+        email: '',
+        country: '',
+        province: '',
+        facebook: '',
+        twitter: '',
+        instagram: '',
+        soundcloud: '',
+        spotify: '',
+        appleMusic: '',
+      }]);
+      setTracks([{
+        title: '',
+        soundCloudPrivateLink: '',
+        genre: '',
+      }]);
+      setTermsAccepted(false);
+      setError('');
+      setSuccess('Form submitted successfully! We will review your submission and get back to you soon.');
+      setOpen(true); // Open modal on success
+      setTimeout(() => {
+        console.log('Closing modal and redirecting to home.');
+        setOpen(false);
+        navigate('/'); // Redirect to home
+      }, 3000);
+    } catch (error) {
+      console.error('Submission error:', error);
+      setError('Failed to submit form. Please try again later.');
+    }
   };
 
   const labelDisplay = label.charAt(0).toUpperCase() + label.slice(1);
 
   return (
-    <Box component="form" onSubmit={handleSubmit} sx={{ maxWidth: 800, mx: 'auto', p: 3 }}>
+    <Box 
+      component="form" 
+      onSubmit={handleSubmit} 
+      sx={{ 
+        maxWidth: 800, 
+        mx: 'auto', 
+        p: 3,
+        mt: '80px', 
+        mb: 4,
+      }}
+    >
       <Typography variant="h3" component="h1" gutterBottom sx={{ color: 'text.primary', mb: 4 }}>
         Submit Demo to Build It {labelDisplay}
       </Typography>
@@ -209,142 +258,140 @@ const SubmitPage: React.FC<SubmitPageProps> = ({ label }) => {
       </Typography>
         
       {artists.map((artist, index) => (
-        <StyledCard key={index}>
-          <CardContent>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6">Artist {index + 1}</Typography>
-              {artists.length > 1 && (
-                <IconButton onClick={() => removeArtist(index)} color="error">
-                  <RemoveIcon />
-                </IconButton>
-              )}
-            </Box>
+        <FormSection key={index}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="h6">Artist {index + 1}</Typography>
+            {artists.length > 1 && (
+              <IconButton onClick={() => removeArtist(index)} color="error">
+                <RemoveIcon />
+              </IconButton>
+            )}
+          </Box>
             
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Full Name"
-                  value={artist.fullName}
-                  onChange={(e) => handleArtistChange(index, 'fullName', e.target.value)}
-                  required
-                  id={`artist-fullname-${index}`}
-                  name={`artist-fullname-${index}`}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Artist Name"
-                  value={artist.name}
-                  onChange={(e) => handleArtistChange(index, 'name', e.target.value)}
-                  required
-                  id={`artist-name-${index}`}
-                  name={`artist-name-${index}`}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Email"
-                  type="email"
-                  value={artist.email}
-                  onChange={(e) => handleArtistChange(index, 'email', e.target.value)}
-                  required
-                  id={`artist-email-${index}`}
-                  name={`artist-email-${index}`}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Country"
-                  value={artist.country}
-                  onChange={(e) => handleArtistChange(index, 'country', e.target.value)}
-                  required
-                  id={`artist-country-${index}`}
-                  name={`artist-country-${index}`}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Province/State"
-                  value={artist.province}
-                  onChange={(e) => handleArtistChange(index, 'province', e.target.value)}
-                  required
-                  id={`artist-province-${index}`}
-                  name={`artist-province-${index}`}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <Typography variant="subtitle1" gutterBottom>
-                  Social Media Links
-                </Typography>
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Facebook"
-                  value={artist.facebook}
-                  onChange={(e) => handleArtistChange(index, 'facebook', e.target.value)}
-                  id={`artist-facebook-${index}`}
-                  name={`artist-facebook-${index}`}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Twitter/X"
-                  value={artist.twitter}
-                  onChange={(e) => handleArtistChange(index, 'twitter', e.target.value)}
-                  id={`artist-twitter-${index}`}
-                  name={`artist-twitter-${index}`}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Instagram"
-                  value={artist.instagram}
-                  onChange={(e) => handleArtistChange(index, 'instagram', e.target.value)}
-                  id={`artist-instagram-${index}`}
-                  name={`artist-instagram-${index}`}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="SoundCloud"
-                  value={artist.soundcloud}
-                  onChange={(e) => handleArtistChange(index, 'soundcloud', e.target.value)}
-                  id={`artist-soundcloud-${index}`}
-                  name={`artist-soundcloud-${index}`}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Spotify"
-                  value={artist.spotify}
-                  onChange={(e) => handleArtistChange(index, 'spotify', e.target.value)}
-                  id={`artist-spotify-${index}`}
-                  name={`artist-spotify-${index}`}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Apple Music"
-                  value={artist.appleMusic}
-                  onChange={(e) => handleArtistChange(index, 'appleMusic', e.target.value)}
-                  id={`artist-applemusic-${index}`}
-                  name={`artist-applemusic-${index}`}
-                />
-              </Grid>
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Full Name"
+                value={artist.fullName}
+                onChange={(e) => handleArtistChange(index, 'fullName', e.target.value)}
+                required
+                id={`artist-fullname-${index}`}
+                name={`artist-fullname-${index}`}
+              />
             </Grid>
-          </CardContent>
-        </StyledCard>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Artist Name"
+                value={artist.name}
+                onChange={(e) => handleArtistChange(index, 'name', e.target.value)}
+                required
+                id={`artist-name-${index}`}
+                name={`artist-name-${index}`}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Email"
+                type="email"
+                value={artist.email}
+                onChange={(e) => handleArtistChange(index, 'email', e.target.value)}
+                required
+                id={`artist-email-${index}`}
+                name={`artist-email-${index}`}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Country"
+                value={artist.country}
+                onChange={(e) => handleArtistChange(index, 'country', e.target.value)}
+                required
+                id={`artist-country-${index}`}
+                name={`artist-country-${index}`}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Province/State"
+                value={artist.province}
+                onChange={(e) => handleArtistChange(index, 'province', e.target.value)}
+                required
+                id={`artist-province-${index}`}
+                name={`artist-province-${index}`}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <Typography variant="subtitle1" gutterBottom>
+                Social Media Links
+              </Typography>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Facebook"
+                value={artist.facebook}
+                onChange={(e) => handleArtistChange(index, 'facebook', e.target.value)}
+                id={`artist-facebook-${index}`}
+                name={`artist-facebook-${index}`}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Twitter/X"
+                value={artist.twitter}
+                onChange={(e) => handleArtistChange(index, 'twitter', e.target.value)}
+                id={`artist-twitter-${index}`}
+                name={`artist-twitter-${index}`}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Instagram"
+                value={artist.instagram}
+                onChange={(e) => handleArtistChange(index, 'instagram', e.target.value)}
+                id={`artist-instagram-${index}`}
+                name={`artist-instagram-${index}`}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="SoundCloud"
+                value={artist.soundcloud}
+                onChange={(e) => handleArtistChange(index, 'soundcloud', e.target.value)}
+                id={`artist-soundcloud-${index}`}
+                name={`artist-soundcloud-${index}`}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Spotify"
+                value={artist.spotify}
+                onChange={(e) => handleArtistChange(index, 'spotify', e.target.value)}
+                id={`artist-spotify-${index}`}
+                name={`artist-spotify-${index}`}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Apple Music"
+                value={artist.appleMusic}
+                onChange={(e) => handleArtistChange(index, 'appleMusic', e.target.value)}
+                id={`artist-applemusic-${index}`}
+                name={`artist-applemusic-${index}`}
+              />
+            </Grid>
+          </Grid>
+        </FormSection>
       ))}
 
       <Box sx={{ mb: 4 }}>
@@ -364,56 +411,54 @@ const SubmitPage: React.FC<SubmitPageProps> = ({ label }) => {
       </Typography>
 
       {tracks.map((track, index) => (
-        <StyledCard key={index}>
-          <CardContent>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6">Track {index + 1}</Typography>
-              {tracks.length > 1 && (
-                <IconButton onClick={() => removeTrack(index)} color="error">
-                  <RemoveIcon />
-                </IconButton>
-              )}
-            </Box>
+        <FormSection key={index}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="h6">Track {index + 1}</Typography>
+            {tracks.length > 1 && (
+              <IconButton onClick={() => removeTrack(index)} color="error">
+                <RemoveIcon />
+              </IconButton>
+            )}
+          </Box>
             
-            <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Track Title"
-                  value={track.title}
-                  onChange={(e) => handleTrackChange(index, 'title', e.target.value)}
-                  required
-                  id={`track-title-${index}`}
-                  name={`track-title-${index}`}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Genre"
-                  value={track.genre}
-                  onChange={(e) => handleTrackChange(index, 'genre', e.target.value)}
-                  required
-                  helperText="e.g., Deep House, Tech House, Progressive House"
-                  id={`track-genre-${index}`}
-                  name={`track-genre-${index}`}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="SoundCloud Private Link"
-                  value={track.soundCloudPrivateLink}
-                  onChange={(e) => handleTrackChange(index, 'soundCloudPrivateLink', e.target.value)}
-                  required
-                  helperText="Please provide a private SoundCloud link for your track"
-                  id={`track-soundcloud-${index}`}
-                  name={`track-soundcloud-${index}`}
-                />
-              </Grid>
+          <Grid container spacing={2}>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Track Title"
+                value={track.title}
+                onChange={(e) => handleTrackChange(index, 'title', e.target.value)}
+                required
+                id={`track-title-${index}`}
+                name={`track-title-${index}`}
+              />
             </Grid>
-          </CardContent>
-        </StyledCard>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Genre"
+                value={track.genre}
+                onChange={(e) => handleTrackChange(index, 'genre', e.target.value)}
+                required
+                helperText="e.g., Deep House, Tech House, Progressive House"
+                id={`track-genre-${index}`}
+                name={`track-genre-${index}`}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="SoundCloud Private Link"
+                value={track.soundCloudPrivateLink}
+                onChange={(e) => handleTrackChange(index, 'soundCloudPrivateLink', e.target.value)}
+                required
+                helperText="Please provide a private SoundCloud link for your track"
+                id={`track-soundcloud-${index}`}
+                name={`track-soundcloud-${index}`}
+              />
+            </Grid>
+          </Grid>
+        </FormSection>
       ))}
 
       <Box sx={{ mb: 4 }}>
@@ -428,21 +473,19 @@ const SubmitPage: React.FC<SubmitPageProps> = ({ label }) => {
       </Box>
 
       <Box sx={{ mt: 6, mb: 4 }}>
-        <StyledCard>
-          <CardContent>
-            <Typography variant="h6" gutterBottom sx={{ color: 'text.primary' }}>
-              Submission Guidelines & Terms
-            </Typography>
-            <Typography variant="body2" component="div" sx={{ color: 'text.secondary' }}>
-              • Please allow up to 7 days for us to review your submission<br />
-              • All submissions must be 100% royalty-free or will be rejected immediately<br />
-              • Royalties are split 50/50 between artists and label<br />
-              • Only submit unreleased, original material<br />
-              • We accept demos in WAV format only - premasters no limiters on master/stereo bus<br />
-              • By submitting, you confirm that this is original work and you own all rights
-            </Typography>
-          </CardContent>
-        </StyledCard>
+        <FormSection>
+          <Typography variant="h6" gutterBottom sx={{ color: 'text.primary' }}>
+            Submission Guidelines & Terms
+          </Typography>
+          <Typography variant="body2" component="div" sx={{ color: 'text.secondary' }}>
+            • Please allow up to 7 days for us to review your submission<br />
+            • All submissions must be 100% royalty-free or will be rejected immediately<br />
+            • Royalties are split 50/50 between artists and label<br />
+            • Only submit unreleased, original material<br />
+            • We accept demos in WAV format only - premasters no limiters on master/stereo bus<br />
+            • By submitting, you confirm that this is original work and you own all rights
+          </Typography>
+        </FormSection>
       </Box>
 
       <Box sx={{ mt: 4 }}>
@@ -450,7 +493,7 @@ const SubmitPage: React.FC<SubmitPageProps> = ({ label }) => {
           control={
             <Checkbox 
               checked={termsAccepted}
-              onChange={(e) => setTermsAccepted(e.target.checked)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTermsAccepted(e.target.checked)}
               sx={{
                 color: '#02FF95',
                 '&.Mui-checked': {
@@ -494,6 +537,16 @@ const SubmitPage: React.FC<SubmitPageProps> = ({ label }) => {
         >
           Submit Demo
         </Button>
+        {error && (
+          <Typography variant="body2" sx={{ color: 'error.main', mt: 2 }}>
+            {error}
+          </Typography>
+        )}
+        {success && (
+          <Typography variant="body2" sx={{ color: 'success.main', mt: 2 }}>
+            {success}
+          </Typography>
+        )}
       </Box>
 
       <Modal

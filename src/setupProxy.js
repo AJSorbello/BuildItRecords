@@ -6,8 +6,8 @@ module.exports = function(app) {
       res.setHeader(
         'Content-Security-Policy',
         "default-src 'self'; " +
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.emailjs.com; " +
-        "connect-src 'self' https://api.emailjs.com; " +
+        "script-src 'self' 'unsafe-inline'; " +
+        "connect-src 'self' http://localhost:3000; " +
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
         "font-src 'self' https://fonts.gstatic.com; " +
         "img-src 'self' data: https:; " +
@@ -16,5 +16,14 @@ module.exports = function(app) {
       );
       next();
     }
+  );
+
+  // Add proxy for API requests
+  app.use(
+    '/api',
+    createProxyMiddleware({
+      target: 'http://localhost:3000',
+      changeOrigin: true,
+    })
   );
 };
