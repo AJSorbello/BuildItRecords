@@ -1,157 +1,317 @@
-import React, { useState } from 'react';
+import React, { useState, FormEvent } from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-} from 'react-native';
-import { useTheme } from '../hooks/useTheme';
-import DateTimePicker from '@react-native-community/datetimepicker';
+  Box,
+  TextField,
+  Button,
+  Typography,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Paper,
+  SelectChangeEvent,
+} from '@mui/material';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { useFormSubmission, ReleaseFormData } from '../hooks/useFormSubmission';
 
-interface ReleaseFormData {
-  title: string;
-  artist: string;
-  imageUrl: string;
-  releaseDate: Date;
-  spotifyUrl: string;
-  beatportUrl: string;
-  soundcloudUrl: string;
-  label: string;
-  genre: string;
+interface ReleaseFormProps {
+  label: 'records' | 'tech' | 'deep';
 }
 
-export const ReleaseForm = () => {
-  const { colors } = useTheme();
+export const ReleaseForm: React.FC<ReleaseFormProps> = ({ label }) => {
+  const [releaseDate, setReleaseDate] = useState<Date | null>(null);
+  const { handleSubmit, isSubmitting, submitError } = useFormSubmission();
   const [formData, setFormData] = useState<ReleaseFormData>({
     title: '',
     artist: '',
     imageUrl: '',
-    releaseDate: new Date(),
+    releaseDate: new Date().toISOString(),
     spotifyUrl: '',
     beatportUrl: '',
     soundcloudUrl: '',
-    label: '',
+    label,
     genre: '',
   });
 
-  const handleSubmit = () => {
-    // TODO: Implement submission logic
-    console.log('Form submitted:', formData);
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleSelectChange = (e: SelectChangeEvent<string>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    try {
+      await handleSubmit({
+        ...formData,
+        releaseDate: releaseDate?.toISOString() || new Date().toISOString(),
+      });
+      // Reset form after successful submission
+      setFormData({
+        title: '',
+        artist: '',
+        imageUrl: '',
+        releaseDate: new Date().toISOString(),
+        spotifyUrl: '',
+        beatportUrl: '',
+        soundcloudUrl: '',
+        label,
+        genre: '',
+      });
+      setReleaseDate(null);
+    } catch (error) {
+      // Error is handled by the hook
+      console.error('Form submission failed:', error);
+    }
   };
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
-      <Text style={[styles.title, { color: colors.text }]}>New Release</Text>
-      
-      <View style={styles.formGroup}>
-        <Text style={[styles.label, { color: colors.text }]}>Title</Text>
-        <TextInput
-          style={[styles.input, { backgroundColor: colors.card, color: colors.text }]}
-          value={formData.title}
-          onChangeText={(text) => setFormData({ ...formData, title: text })}
-          placeholder="Release Title"
-          placeholderTextColor={colors.textSecondary}
-        />
-      </View>
+    <Paper 
+      elevation={3}
+      sx={{
+        p: 3,
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        borderRadius: 2,
+      }}
+    >
+      <form onSubmit={onSubmit}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Typography variant="h5" component="h2" sx={{ mb: 2 }}>
+            Submit Release
+          </Typography>
 
-      <View style={styles.formGroup}>
-        <Text style={[styles.label, { color: colors.text }]}>Artist</Text>
-        <TextInput
-          style={[styles.input, { backgroundColor: colors.card, color: colors.text }]}
-          value={formData.artist}
-          onChangeText={(text) => setFormData({ ...formData, artist: text })}
-          placeholder="Artist Name"
-          placeholderTextColor={colors.textSecondary}
-        />
-      </View>
+          <TextField
+            required
+            name="title"
+            label="Title"
+            value={formData.title}
+            onChange={handleInputChange}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                '& fieldset': {
+                  borderColor: 'rgba(255, 255, 255, 0.23)',
+                },
+                '&:hover fieldset': {
+                  borderColor: 'rgba(255, 255, 255, 0.5)',
+                },
+              },
+              '& .MuiInputLabel-root': {
+                color: 'rgba(255, 255, 255, 0.7)',
+              },
+              '& .MuiInputBase-input': {
+                color: '#FFFFFF',
+              },
+            }}
+          />
 
-      <View style={styles.formGroup}>
-        <Text style={[styles.label, { color: colors.text }]}>Cover Art URL</Text>
-        <TextInput
-          style={[styles.input, { backgroundColor: colors.card, color: colors.text }]}
-          value={formData.imageUrl}
-          onChangeText={(text) => setFormData({ ...formData, imageUrl: text })}
-          placeholder="Image URL"
-          placeholderTextColor={colors.textSecondary}
-        />
-      </View>
+          <TextField
+            required
+            name="artist"
+            label="Artist"
+            value={formData.artist}
+            onChange={handleInputChange}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                '& fieldset': {
+                  borderColor: 'rgba(255, 255, 255, 0.23)',
+                },
+                '&:hover fieldset': {
+                  borderColor: 'rgba(255, 255, 255, 0.5)',
+                },
+              },
+              '& .MuiInputLabel-root': {
+                color: 'rgba(255, 255, 255, 0.7)',
+              },
+              '& .MuiInputBase-input': {
+                color: '#FFFFFF',
+              },
+            }}
+          />
 
-      <View style={styles.formGroup}>
-        <Text style={[styles.label, { color: colors.text }]}>Spotify URL</Text>
-        <TextInput
-          style={[styles.input, { backgroundColor: colors.card, color: colors.text }]}
-          value={formData.spotifyUrl}
-          onChangeText={(text) => setFormData({ ...formData, spotifyUrl: text })}
-          placeholder="Spotify URL"
-          placeholderTextColor={colors.textSecondary}
-        />
-      </View>
+          <LocalizationProvider dateAdapter={AdapterDateFns}>
+            <DatePicker
+              label="Release Date"
+              value={releaseDate}
+              onChange={(newValue) => {
+                setReleaseDate(newValue);
+              }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  '& fieldset': {
+                    borderColor: 'rgba(255, 255, 255, 0.23)',
+                  },
+                  '&:hover fieldset': {
+                    borderColor: 'rgba(255, 255, 255, 0.5)',
+                  },
+                },
+                '& .MuiInputLabel-root': {
+                  color: 'rgba(255, 255, 255, 0.7)',
+                },
+                '& .MuiInputBase-input': {
+                  color: '#FFFFFF',
+                },
+              }}
+            />
+          </LocalizationProvider>
 
-      <View style={styles.formGroup}>
-        <Text style={[styles.label, { color: colors.text }]}>Beatport URL</Text>
-        <TextInput
-          style={[styles.input, { backgroundColor: colors.card, color: colors.text }]}
-          value={formData.beatportUrl}
-          onChangeText={(text) => setFormData({ ...formData, beatportUrl: text })}
-          placeholder="Beatport URL"
-          placeholderTextColor={colors.textSecondary}
-        />
-      </View>
+          <TextField
+            name="imageUrl"
+            label="Artwork URL"
+            value={formData.imageUrl}
+            onChange={handleInputChange}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                '& fieldset': {
+                  borderColor: 'rgba(255, 255, 255, 0.23)',
+                },
+                '&:hover fieldset': {
+                  borderColor: 'rgba(255, 255, 255, 0.5)',
+                },
+              },
+              '& .MuiInputLabel-root': {
+                color: 'rgba(255, 255, 255, 0.7)',
+              },
+              '& .MuiInputBase-input': {
+                color: '#FFFFFF',
+              },
+            }}
+          />
 
-      <View style={styles.formGroup}>
-        <Text style={[styles.label, { color: colors.text }]}>SoundCloud URL</Text>
-        <TextInput
-          style={[styles.input, { backgroundColor: colors.card, color: colors.text }]}
-          value={formData.soundcloudUrl}
-          onChangeText={(text) => setFormData({ ...formData, soundcloudUrl: text })}
-          placeholder="SoundCloud URL"
-          placeholderTextColor={colors.textSecondary}
-        />
-      </View>
+          <TextField
+            name="spotifyUrl"
+            label="Spotify URL"
+            value={formData.spotifyUrl}
+            onChange={handleInputChange}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                '& fieldset': {
+                  borderColor: 'rgba(255, 255, 255, 0.23)',
+                },
+                '&:hover fieldset': {
+                  borderColor: 'rgba(255, 255, 255, 0.5)',
+                },
+              },
+              '& .MuiInputLabel-root': {
+                color: 'rgba(255, 255, 255, 0.7)',
+              },
+              '& .MuiInputBase-input': {
+                color: '#FFFFFF',
+              },
+            }}
+          />
 
-      <TouchableOpacity
-        style={[styles.submitButton, { backgroundColor: colors.primary }]}
-        onPress={handleSubmit}
-      >
-        <Text style={styles.submitButtonText}>Add Release</Text>
-      </TouchableOpacity>
-    </ScrollView>
+          <TextField
+            name="beatportUrl"
+            label="Beatport URL"
+            value={formData.beatportUrl}
+            onChange={handleInputChange}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                '& fieldset': {
+                  borderColor: 'rgba(255, 255, 255, 0.23)',
+                },
+                '&:hover fieldset': {
+                  borderColor: 'rgba(255, 255, 255, 0.5)',
+                },
+              },
+              '& .MuiInputLabel-root': {
+                color: 'rgba(255, 255, 255, 0.7)',
+              },
+              '& .MuiInputBase-input': {
+                color: '#FFFFFF',
+              },
+            }}
+          />
+
+          <TextField
+            name="soundcloudUrl"
+            label="SoundCloud URL"
+            value={formData.soundcloudUrl}
+            onChange={handleInputChange}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                '& fieldset': {
+                  borderColor: 'rgba(255, 255, 255, 0.23)',
+                },
+                '&:hover fieldset': {
+                  borderColor: 'rgba(255, 255, 255, 0.5)',
+                },
+              },
+              '& .MuiInputLabel-root': {
+                color: 'rgba(255, 255, 255, 0.7)',
+              },
+              '& .MuiInputBase-input': {
+                color: '#FFFFFF',
+              },
+            }}
+          />
+
+          <FormControl>
+            <InputLabel id="genre-label" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+              Genre
+            </InputLabel>
+            <Select
+              labelId="genre-label"
+              name="genre"
+              label="Genre"
+              value={formData.genre}
+              onChange={handleSelectChange}
+              sx={{
+                color: '#FFFFFF',
+                '& .MuiOutlinedInput-notchedOutline': {
+                  borderColor: 'rgba(255, 255, 255, 0.23)',
+                },
+                '&:hover .MuiOutlinedInput-notchedOutline': {
+                  borderColor: 'rgba(255, 255, 255, 0.5)',
+                },
+                '& .MuiSvgIcon-root': {
+                  color: 'rgba(255, 255, 255, 0.7)',
+                },
+              }}
+            >
+              <MenuItem value="house">House</MenuItem>
+              <MenuItem value="techno">Techno</MenuItem>
+              <MenuItem value="deep-house">Deep House</MenuItem>
+              <MenuItem value="tech-house">Tech House</MenuItem>
+              <MenuItem value="minimal">Minimal</MenuItem>
+              <MenuItem value="progressive">Progressive</MenuItem>
+            </Select>
+          </FormControl>
+
+          {submitError && (
+            <Typography color="error" sx={{ mt: 2 }}>
+              {submitError}
+            </Typography>
+          )}
+
+          <Button
+            type="submit"
+            variant="contained"
+            disabled={isSubmitting}
+            sx={{
+              mt: 2,
+              backgroundColor: '#1DB954',
+              '&:hover': {
+                backgroundColor: '#1aa34a',
+              },
+            }}
+          >
+            {isSubmitting ? 'Submitting...' : 'Submit Release'}
+          </Button>
+        </Box>
+      </form>
+    </Paper>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 20,
-  },
-  formGroup: {
-    marginBottom: 15,
-  },
-  label: {
-    fontSize: 16,
-    marginBottom: 5,
-  },
-  input: {
-    height: 40,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-  },
-  submitButton: {
-    padding: 15,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  submitButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});

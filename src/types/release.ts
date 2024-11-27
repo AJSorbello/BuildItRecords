@@ -1,7 +1,10 @@
 export interface Track {
   id: string;
-  name: string;
+  title: string;
+  artist: string;
+  duration: string;
   previewUrl: string | null;
+  spotifyId?: string;
 }
 
 export interface Release {

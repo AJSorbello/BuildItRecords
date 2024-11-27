@@ -1,8 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Box, Button, Typography, Stack } from '@mui/material';
+import MusicNoteIcon from '@mui/icons-material/MusicNote';
+import CloudQueueIcon from '@mui/icons-material/CloudQueue';
+import PeopleIcon from '@mui/icons-material/People';
 import { useTheme } from '../contexts/ThemeContext';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigate } from 'react-router-dom';
+import BeatportIcon from '../assets/icons/BeatportIcon';
 
 interface LabelHeaderProps {
   label: 'records' | 'tech' | 'deep';
@@ -15,84 +18,85 @@ interface LabelHeaderProps {
 
 const LabelHeader: React.FC<LabelHeaderProps> = ({ label, platformLinks }) => {
   const { colors } = useTheme();
-  const navigation = useNavigation();
+  const navigate = useNavigate();
 
   const handlePlatformPress = (url: string) => {
-    // Open platform URL
+    window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   const handleArtistsPress = () => {
-    navigation.navigate('Artists');
+    navigate('/artists');
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.card }]}>
-      <View style={styles.platformLinks}>
-        <TouchableOpacity
-          style={[styles.platformButton, { backgroundColor: '#1DB954' }]}
-          onPress={() => handlePlatformPress(platformLinks.spotify)}
+    <Box sx={{ 
+      padding: '10px 20px',
+      borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+      backgroundColor: colors.card 
+    }}>
+      <Stack direction="row" spacing={2} sx={{ flexWrap: 'wrap', justifyContent: 'space-around' }}>
+        <Button
+          variant="contained"
+          startIcon={<MusicNoteIcon />}
+          onClick={() => handlePlatformPress(platformLinks.spotify)}
+          sx={{
+            backgroundColor: '#1DB954',
+            color: '#FFFFFF',
+            '&:hover': {
+              backgroundColor: '#1aa34a'
+            }
+          }}
         >
-          <Ionicons name="logo-spotify" size={20} color="#FFFFFF" />
-          <Text style={styles.platformText}>Spotify</Text>
-        </TouchableOpacity>
+          Spotify
+        </Button>
 
-        <TouchableOpacity
-          style={[styles.platformButton, { backgroundColor: '#FF6B00' }]}
-          onPress={() => handlePlatformPress(platformLinks.beatport)}
+        <Button
+          variant="contained"
+          startIcon={<BeatportIcon />}
+          onClick={() => handlePlatformPress(platformLinks.beatport)}
+          sx={{
+            backgroundColor: '#FF6B00',
+            color: '#FFFFFF',
+            '&:hover': {
+              backgroundColor: '#e66000'
+            }
+          }}
         >
-          <Text style={[styles.beatportIcon, styles.platformText]}>B</Text>
-          <Text style={styles.platformText}>Beatport</Text>
-        </TouchableOpacity>
+          Beatport
+        </Button>
 
-        <TouchableOpacity
-          style={[styles.platformButton, { backgroundColor: '#FF7700' }]}
-          onPress={() => handlePlatformPress(platformLinks.soundcloud)}
+        <Button
+          variant="contained"
+          startIcon={<CloudQueueIcon />}
+          onClick={() => handlePlatformPress(platformLinks.soundcloud)}
+          sx={{
+            backgroundColor: '#FF7700',
+            color: '#FFFFFF',
+            '&:hover': {
+              backgroundColor: '#e66a00'
+            }
+          }}
         >
-          <Ionicons name="logo-soundcloud" size={20} color="#FFFFFF" />
-          <Text style={styles.platformText}>SoundCloud</Text>
-        </TouchableOpacity>
+          SoundCloud
+        </Button>
 
-        <TouchableOpacity
-          style={[styles.platformButton, { backgroundColor: colors.primary }]}
-          onPress={handleArtistsPress}
+        <Button
+          variant="contained"
+          startIcon={<PeopleIcon />}
+          onClick={handleArtistsPress}
+          sx={{
+            backgroundColor: colors.primary,
+            color: '#FFFFFF',
+            '&:hover': {
+              backgroundColor: '#1aa34a'
+            }
+          }}
         >
-          <Ionicons name="people" size={20} color="#FFFFFF" />
-          <Text style={styles.platformText}>Artists</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+          Artists
+        </Button>
+      </Stack>
+    </Box>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  platformLinks: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-  },
-  platformButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    gap: 6,
-  },
-  platformText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  beatportIcon: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-});
 
 export default LabelHeader;

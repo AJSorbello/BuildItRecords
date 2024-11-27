@@ -11,6 +11,7 @@ interface SymphonicRelease {
   stores: {
     beatport?: string;
     spotify?: string;
+    soundcloud?: string;
   };
   tracks: Array<{
     id: string;
@@ -59,8 +60,8 @@ class SymphonicService {
         hasMore = data.has_more || data.next_page;
         page++;
 
-        // Optional: Add a small delay to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Add delay between requests to avoid rate limiting
+        await this.delay(1000);
       }
 
       return allReleases;
@@ -107,18 +108,18 @@ class SymphonicService {
       artist: item.artist,
       artwork: item.artwork_url,
       releaseDate: new Date(item.release_date).toISOString().split('T')[0],
-      genre: item.genre,
-      beatportLink: item.stores?.beatport,
-      spotifyLink: item.stores?.spotify,
       tracks: item.tracks.map(track => ({
         id: track.id,
         title: track.title,
         artist: track.artist,
         duration: track.duration,
-        spotifyId: track.spotify_id,
-        previewUrl: track.preview_url,
+        spotifyId: track.spotify_id || undefined,
+        previewUrl: track.preview_url || null,
       })),
       label: this.determineLabel(item.label_name),
+      spotifyUrl: item.stores?.spotify || '',
+      beatportUrl: item.stores?.beatport || '',
+      soundcloudUrl: item.stores?.soundcloud || '',
     }));
   }
 
@@ -150,6 +151,13 @@ class SymphonicService {
     if (name.includes('tech')) return 'tech';
     if (name.includes('deep')) return 'deep';
     return 'records';
+  }
+
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => {
+      const timeoutId = window.setTimeout(resolve, ms);
+      return () => window.clearTimeout(timeoutId);
+    });
   }
 }
 

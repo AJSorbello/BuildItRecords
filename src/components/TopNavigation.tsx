@@ -46,8 +46,8 @@ const StyledTab = styled(Tab)<{ tabtype: string }>(({ tabtype }) => ({
   },
   '&:hover': {
     color: tabtype === 'records' ? '#02FF95' : 
-          tabtype === 'tech' ? '#FF0000' : 
-          '#00BFFF',
+           tabtype === 'tech' ? '#FF0000' : 
+           '#00BFFF',
     opacity: 1,
   },
 }));
@@ -79,24 +79,25 @@ const TopNavigation = () => {
   const navigate = useNavigate();
 
   const handleChange = (event: React.SyntheticEvent, newValue: string) => {
-    navigate(newValue);
+    navigate(`/${newValue}`);
   };
 
-  const value = location.pathname === '/' ? '/' : location.pathname;
+  // Extract the label from the current path
+  const currentLabel = location.pathname.split('/')[1] || 'records';
 
   const tabs = [
     {
-      value: '/',
+      value: 'records',
       logo: RecordsSquareLogo,
       label: 'Records'
     },
     {
-      value: '/tech',
+      value: 'tech',
       logo: TechSquareLogo,
       label: 'Tech'
     },
     {
-      value: '/deep',
+      value: 'deep',
       logo: DeepSquareLogo,
       label: 'Deep'
     }
@@ -106,22 +107,29 @@ const TopNavigation = () => {
     <StyledAppBar>
       <Box sx={{ width: '100%' }}>
         <StyledTabs
-          value={value}
+          value={currentLabel}
           onChange={handleChange}
           aria-label="label navigation"
+          TabIndicatorProps={{
+            style: {
+              backgroundColor: 
+                currentLabel === 'records' ? '#02FF95' :
+                currentLabel === 'tech' ? '#FF0000' :
+                '#00BFFF'
+            }
+          }}
         >
           {tabs.map((tab) => (
             <StyledTab
               key={tab.value}
               value={tab.value}
-              tabtype={tab.label.toLowerCase()}
+              tabtype={tab.value}
               label={
                 <TabContent>
-                  <Logo src={tab.logo} alt={tab.label} tabtype={tab.label.toLowerCase()} />
+                  <Logo src={tab.logo} alt={tab.label} tabtype={tab.value} />
                   <span>{tab.label}</span>
                 </TabContent>
               }
-              component="div"
             />
           ))}
         </StyledTabs>

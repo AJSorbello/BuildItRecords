@@ -1,22 +1,10 @@
 import axios from 'axios';
-import { encode as base64Encode } from 'base-64';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as WebBrowser from 'expo-web-browser';
-import { makeRedirectUri, ResponseType, Prompt } from 'expo-auth-session';
-import { SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET } from '@env';
-import * as Linking from 'expo-linking';
-import { Platform } from 'react-native';
+import SpotifyWebApi from 'spotify-web-api-node';
+import { convertSpotifyToRelease } from '../utils/spotifyUtils';
 
-export interface SpotifyTrack {
-  id: string;
-  name: string;
-  artists: Array<{ name: string }>;
-  duration_ms: number;
-  preview_url: string | null;
-  external_urls: {
-    spotify: string;
-  };
-}
+const SPOTIFY_CLIENT_ID = process.env.REACT_APP_SPOTIFY_CLIENT_ID;
+const SPOTIFY_CLIENT_SECRET = process.env.REACT_APP_SPOTIFY_CLIENT_SECRET;
+const SPOTIFY_REDIRECT_URI = process.env.REACT_APP_SPOTIFY_REDIRECT_URI;
 
 export interface SpotifyRelease {
   id: string;
@@ -24,411 +12,216 @@ export interface SpotifyRelease {
   artists: Array<{ name: string }>;
   images: Array<{ url: string }>;
   release_date: string;
+  tracks: {
+    items: Array<{
+      id: string;
+      name: string;
+      artists: Array<{ name: string }>;
+      duration_ms: number;
+      preview_url: string | null;
+    }>;
+  };
   external_urls: {
     spotify: string;
-  };
-  tracks: {
-    items: SpotifyTrack[];
   };
 }
 
 class SpotifyService {
   private static instance: SpotifyService;
   private accessToken: string | null = null;
-  private tokenExpirationTime: number = 0;
-  private refreshToken: string | null = null;
+  private tokenExpirationTime = 0;
+  private spotifyApi: SpotifyWebApi;
 
   private constructor() {
-    // Initialize WebBrowser for auth
-    WebBrowser.maybeCompleteAuthSession();
+    this.accessToken = localStorage.getItem('spotify_access_token');
+    const expirationTime = localStorage.getItem('spotify_token_expiration');
+    this.tokenExpirationTime = expirationTime ? parseInt(expirationTime) : 0;
+    
+    this.spotifyApi = new SpotifyWebApi({
+      clientId: SPOTIFY_CLIENT_ID,
+      clientSecret: SPOTIFY_CLIENT_SECRET,
+    });
   }
 
-  static getInstance(): SpotifyService {
+  public static getInstance(): SpotifyService {
     if (!SpotifyService.instance) {
       SpotifyService.instance = new SpotifyService();
     }
     return SpotifyService.instance;
   }
 
-  private getRedirectUri(): string {
-    if (Platform.OS === 'web') {
-      return 'http://localhost:19000/--/spotify-auth-callback';
-    }
-    return makeRedirectUri({
-      scheme: 'builditrecords',
-      path: 'callback'
-    });
+  private saveToken(token: string, expiresIn: number) {
+    this.accessToken = token;
+    this.tokenExpirationTime = Date.now() + expiresIn * 1000;
+    localStorage.setItem('spotify_access_token', token);
+    localStorage.setItem('spotify_token_expiration', this.tokenExpirationTime.toString());
   }
 
-  async authorize(): Promise<boolean> {
+  private async ensureAccessToken() {
     try {
-      const redirectUri = this.getRedirectUri();
-      const scope = 'user-read-private user-read-email playlist-read-private playlist-read-collaborative';
-      
-      const authUrl = `https://accounts.spotify.com/authorize?${new URLSearchParams({
-        response_type: 'code',
-        client_id: SPOTIFY_CLIENT_ID,
-        scope,
-        redirect_uri: redirectUri,
-        prompt: 'login'
-      }).toString()}`;
-
-      const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
-      
-      if (result.type === 'success' && result.url) {
-        const code = new URL(result.url).searchParams.get('code');
-        if (code) {
-          await this.exchangeCodeForToken(code);
-          return true;
-        }
-      }
-      return false;
+      const data = await this.spotifyApi.clientCredentialsGrant();
+      this.spotifyApi.setAccessToken(data.body.access_token);
     } catch (error) {
-      console.error('Authorization error:', error);
-      return false;
-    }
-  }
-
-  private async exchangeCodeForToken(code: string): Promise<void> {
-    try {
-      const redirectUri = this.getRedirectUri();
-      const auth = base64Encode(`${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`);
-      
-      const response = await axios.post(
-        'https://accounts.spotify.com/api/token',
-        new URLSearchParams({
-          grant_type: 'authorization_code',
-          code,
-          redirect_uri: redirectUri
-        }).toString(),
-        {
-          headers: {
-            'Authorization': `Basic ${auth}`,
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-        }
-      );
-
-      this.accessToken = response.data.access_token;
-      this.refreshToken = response.data.refresh_token;
-      this.tokenExpirationTime = Date.now() + (response.data.expires_in * 1000);
-
-      // Store tokens
-      await AsyncStorage.setItem('spotify_access_token', this.accessToken);
-      await AsyncStorage.setItem('spotify_refresh_token', this.refreshToken);
-      await AsyncStorage.setItem('spotify_token_expiration', this.tokenExpirationTime.toString());
-    } catch (error) {
-      console.error('Error exchanging code for token:', error);
+      console.error('Error getting Spotify access token:', error);
       throw error;
     }
   }
 
-  private async refreshAccessToken(): Promise<void> {
-    if (!this.refreshToken) {
-      throw new Error('No refresh token available');
-    }
-
+  public async getTrackByISRC(isrc: string) {
+    await this.ensureAccessToken();
     try {
-      const auth = base64Encode(`${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`);
-      const response = await axios.post(
-        'https://accounts.spotify.com/api/token',
-        new URLSearchParams({
-          grant_type: 'refresh_token',
-          refresh_token: this.refreshToken
-        }).toString(),
-        {
-          headers: {
-            'Authorization': `Basic ${auth}`,
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-        }
-      );
-
-      this.accessToken = response.data.access_token;
-      this.tokenExpirationTime = Date.now() + (response.data.expires_in * 1000);
-      if (response.data.refresh_token) {
-        this.refreshToken = response.data.refresh_token;
-        await AsyncStorage.setItem('spotify_refresh_token', this.refreshToken);
+      const response = await this.spotifyApi.searchTracks(`isrc:${isrc}`);
+      if (response.body.tracks?.items.length) {
+        const track = response.body.tracks.items[0];
+        return {
+          title: track.name,
+          artist: track.artists[0].name,
+          imageUrl: track.album.images[0].url,
+          releaseDate: track.album.release_date,
+          spotifyUrl: track.external_urls.spotify,
+        };
       }
-
-      await AsyncStorage.setItem('spotify_access_token', this.accessToken);
-      await AsyncStorage.setItem('spotify_token_expiration', this.tokenExpirationTime.toString());
+      throw new Error('Track not found on Spotify');
     } catch (error) {
-      console.error('Error refreshing token:', error);
+      console.error('Error fetching track from Spotify:', error);
       throw error;
     }
   }
 
-  private async getAccessToken(): Promise<string> {
-    // Check if we have a valid token
+  public async getAccessToken(): Promise<string | null> {
     if (this.accessToken && Date.now() < this.tokenExpirationTime) {
       return this.accessToken;
     }
+    return null;
+  }
 
-    // Try to refresh token
+  public async login() {
+    const scope = 'user-read-private user-read-email playlist-read-private';
+    const state = Math.random().toString(36).substring(7);
+    
+    const params = new URLSearchParams({
+      client_id: SPOTIFY_CLIENT_ID!,
+      response_type: 'token',
+      redirect_uri: SPOTIFY_REDIRECT_URI!,
+      state,
+      scope,
+    });
+
+    window.location.href = `https://accounts.spotify.com/authorize?${params.toString()}`;
+  }
+
+  public handleRedirect(hash: string): boolean {
+    if (!hash) return false;
+    
+    const params = new URLSearchParams(hash.substring(1));
+    const accessToken = params.get('access_token');
+    const expiresIn = params.get('expires_in');
+
+    if (accessToken && expiresIn) {
+      this.saveToken(accessToken, parseInt(expiresIn));
+      return true;
+    }
+    return false;
+  }
+
+  public logout() {
+    this.accessToken = null;
+    this.tokenExpirationTime = 0;
+    localStorage.removeItem('spotify_access_token');
+    localStorage.removeItem('spotify_token_expiration');
+  }
+
+  public isAuthenticated(): boolean {
+    return !!this.accessToken && Date.now() < this.tokenExpirationTime;
+  }
+
+  public getLoginUrl(): string {
+    const scope = 'user-read-private user-read-email playlist-read-private';
+    const state = Math.random().toString(36).substring(7);
+    
+    const params = new URLSearchParams({
+      client_id: SPOTIFY_CLIENT_ID!,
+      response_type: 'token',
+      redirect_uri: SPOTIFY_REDIRECT_URI!,
+      state,
+      scope,
+    });
+
+    return `https://accounts.spotify.com/authorize?${params.toString()}`;
+  }
+
+  public async getPlaylists() {
+    if (!this.accessToken) {
+      throw new Error('Not authenticated');
+    }
+
     try {
-      await this.refreshAccessToken();
-      return this.accessToken;
+      const response = await axios.get('https://api.spotify.com/v1/me/playlists', {
+        headers: {
+          Authorization: `Bearer ${this.accessToken}`,
+        },
+      });
+      return response.data.items;
     } catch (error) {
-      // If refresh fails, try to authorize again
-      if (await this.authorize()) {
-        return this.accessToken;
-      } else {
-        throw error;
-      }
+      console.error('Error fetching playlists:', error);
+      throw error;
     }
   }
 
-  async searchByISRC(isrc: string): Promise<SpotifyTrack | null> {
-    try {
-      const token = await this.getAccessToken();
-      const response = await axios.get(
-        `https://api.spotify.com/v1/search?q=isrc:${isrc}&type=track`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+  public async getPlaylist(playlistId: string) {
+    if (!this.accessToken) {
+      throw new Error('Not authenticated');
+    }
 
-      const tracks = response.data.tracks.items;
-      return tracks.length > 0 ? tracks[0] : null;
+    try {
+      const response = await axios.get(`https://api.spotify.com/v1/playlists/${playlistId}`, {
+        headers: {
+          Authorization: `Bearer ${this.accessToken}`,
+        },
+      });
+      return response.data;
     } catch (error) {
-      console.error('Error searching Spotify by ISRC:', error);
-      return null;
+      console.error('Error fetching playlist:', error);
+      throw error;
     }
   }
 
-  async searchByUPC(upc: string): Promise<SpotifyTrack | null> {
-    try {
-      const token = await this.getAccessToken();
-      const response = await axios.get(
-        `https://api.spotify.com/v1/search?q=upc:${upc}&type=album`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+  public async getPlaylistTracks(playlistId: string) {
+    if (!this.accessToken) {
+      throw new Error('Not authenticated');
+    }
 
-      const albums = response.data.albums.items;
-      if (albums.length > 0) {
-        const albumTracks = await axios.get(
-          `https://api.spotify.com/v1/albums/${albums[0].id}/tracks`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-        return albumTracks.data.items[0] || null;
-      }
-      return null;
+    try {
+      const response = await axios.get(`https://api.spotify.com/v1/playlists/${playlistId}/tracks`, {
+        headers: {
+          Authorization: `Bearer ${this.accessToken}`,
+        },
+      });
+      return response.data.items.map((item: any) => ({
+        id: item.track.id,
+        name: item.track.name,
+        artists: item.track.artists.map((artist: any) => artist.name),
+        duration: item.track.duration_ms,
+        previewUrl: item.track.preview_url,
+        spotifyUrl: item.track.external_urls.spotify,
+        albumImage: item.track.album.images[0]?.url,
+      }));
     } catch (error) {
-      console.error('Error searching Spotify by UPC:', error);
-      return null;
+      console.error('Error fetching playlist tracks:', error);
+      throw error;
     }
   }
 
-  async getTrackPreview(trackId: string): Promise<string | null> {
+  public async getLabelReleases(labelId: string) {
+    await this.ensureAccessToken();
     try {
-      const token = await this.getAccessToken();
-      const response = await axios.get(
-        `https://api.spotify.com/v1/tracks/${trackId}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      return response.data.preview_url;
-    } catch (error) {
-      console.error('Error getting track preview:', error);
-      return null;
-    }
-  }
-
-  async getLabelReleases(labelId: string): Promise<SpotifyRelease[]> {
-    try {
-      const token = await this.getAccessToken();
-      if (!token) throw new Error('No access token available');
-
-      // Map label names to their Spotify artist IDs
-      const labelSpotifyIds = {
-        'records': 'builditrecords',  // Build It Records
-        'tech': 'buildittech',        // Build It Tech (placeholder - need actual ID)
-        'deep': 'builditdeep',        // Build It Deep (placeholder - need actual ID)
-      };
-
-      const spotifyId = labelSpotifyIds[labelId];
-      if (!spotifyId) throw new Error('Invalid label ID');
-
-      // First get the user's playlists
-      const response = await axios.get(
-        `https://api.spotify.com/v1/users/${spotifyId}/playlists`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-          params: {
-            limit: 50,
-          },
-        }
-      );
-
-      // Get full details for each playlist
-      const releases = await Promise.all(
-        response.data.items.map(async (playlist: any) => {
-          const playlistDetails = await axios.get(
-            `https://api.spotify.com/v1/playlists/${playlist.id}`,
-            {
-              headers: {
-                'Authorization': `Bearer ${token}`,
-              },
-            }
-          );
-
-          // Convert playlist to our release format
-          return {
-            id: playlist.id,
-            name: playlist.name,
-            artists: playlist.description ? [{ name: playlist.description }] : [{ name: 'Various Artists' }],
-            images: playlist.images,
-            release_date: playlist.description?.match(/\d{4}/)?.[0] || new Date().getFullYear().toString(),
-            external_urls: {
-              spotify: playlist.external_urls.spotify,
-            },
-            tracks: {
-              items: playlistDetails.data.tracks.items.map((item: any) => ({
-                id: item.track.id,
-                name: item.track.name,
-                artists: item.track.artists,
-                duration_ms: item.track.duration_ms,
-                preview_url: item.track.preview_url,
-                external_urls: item.track.external_urls,
-              })),
-            },
-          };
-        })
-      );
-
-      return releases.sort((a, b) => 
-        new Date(b.release_date).getTime() - new Date(a.release_date).getTime()
-      );
+      const response = await this.spotifyApi.getArtistAlbums(labelId, { limit: 50 });
+      return response.body.items;
     } catch (error) {
       console.error('Error fetching label releases:', error);
       throw error;
     }
   }
-
-  async getLatestRelease(labelId: string): Promise<SpotifyRelease | null> {
-    try {
-      const releases = await this.getLabelReleases(labelId);
-      return releases.length > 0 ? releases[0] : null;
-    } catch (error) {
-      console.error('Error fetching latest release:', error);
-      throw error;
-    }
-  }
-
-  async searchArtist(query: string): Promise<any[]> {
-    try {
-      const token = await this.getAccessToken();
-      if (!token) throw new Error('No access token available');
-
-      const response = await axios.get(
-        'https://api.spotify.com/v1/search',
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-          params: {
-            q: query,
-            type: 'artist',
-            limit: 10,
-          },
-        }
-      );
-
-      return response.data.artists.items;
-    } catch (error) {
-      console.error('Error searching for artist:', error);
-      throw error;
-    }
-  }
-
-  async getArtistReleases(artistId: string): Promise<SpotifyRelease[]> {
-    try {
-      const token = await this.getAccessToken();
-      if (!token) throw new Error('No access token available');
-
-      const response = await axios.get(
-        `https://api.spotify.com/v1/artists/${artistId}/albums`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-          params: {
-            include_groups: 'album,single',
-            limit: 50,
-            market: 'US',
-          },
-        }
-      );
-
-      // Get full album details for each release
-      const releases = await Promise.all(
-        response.data.items.map(async (album: any) => {
-          const albumDetails = await axios.get(
-            `https://api.spotify.com/v1/albums/${album.id}`,
-            {
-              headers: {
-                'Authorization': `Bearer ${token}`,
-              },
-            }
-          );
-
-          return albumDetails.data;
-        })
-      );
-
-      return releases.sort((a, b) => 
-        new Date(b.release_date).getTime() - new Date(a.release_date).getTime()
-      );
-    } catch (error) {
-      console.error('Error fetching artist releases:', error);
-      throw error;
-    }
-  }
-
-  async getTrackDetails(trackId: string): Promise<any> {
-    try {
-      const token = await this.getAccessToken();
-      if (!token) throw new Error('No access token available');
-
-      const response = await axios.get(
-        `https://api.spotify.com/v1/tracks/${trackId}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          }
-        }
-      );
-
-      // Get artist details
-      const artistResponses = await Promise.all(
-        response.data.artists.map((artist: any) =>
-          axios.get(`https://api.spotify.com/v1/artists/${artist.id}`, {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-            }
-          })
-        )
-      );
-
-      const artists = artistResponses.map(res => res.data);
-
-      return {
-        track: response.data,
-        artists: artists
-      };
-    } catch (error) {
-      console.error('Error getting track details:', error);
-      throw error;
-    }
-  }
 }
 
-export default SpotifyService;
+export default SpotifyService.getInstance();

@@ -1,39 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  Image,
-  TouchableOpacity,
-  Linking,
-  Dimensions,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { Audio } from 'expo-av';
+  Card,
+  CardContent,
+  CardMedia,
+  Typography,
+  Box,
+  IconButton,
+  Link,
+  Stack,
+} from '@mui/material';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import PauseIcon from '@mui/icons-material/Pause';
+import MusicNoteIcon from '@mui/icons-material/MusicNote';
+import AlbumIcon from '@mui/icons-material/Album';
+import CloudQueueIcon from '@mui/icons-material/CloudQueue';
 import { useTheme } from '../contexts/ThemeContext';
-
-interface Track {
-  id: string;
-  title: string;
-  artist: string;
-  duration: string;
-  spotifyId: string;
-  previewUrl?: string | null;
-}
-
-interface Release {
-  id: string;
-  title: string;
-  artist: string;
-  artwork: string;
-  releaseDate: string;
-  spotifyLink: string;
-  tracks: Track[];
-  label: string;
-  spotifyUrl: string;
-  beatportUrl: string;
-  soundcloudUrl: string;
-}
+import { Release, Track } from '../types/release';
 
 interface ReleaseCardProps {
   release: Release;
@@ -45,271 +27,141 @@ const ReleaseCard: React.FC<ReleaseCardProps> = ({ release, compact = false, fea
   const { colors } = useTheme();
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
-  const [sound, setSound] = useState<Audio.Sound | null>(null);
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  };
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const handlePlayPause = async (track: Track) => {
-    if (!track.previewUrl) {
-      return;
-    }
+    if (!track.previewUrl) return;
 
-    if (isPlaying && currentTrack?.id === track.id) {
-      await sound?.pauseAsync();
-      setIsPlaying(false);
+    if (currentTrack?.id === track.id) {
+      if (isPlaying) {
+        audioRef.current?.pause();
+      } else {
+        audioRef.current?.play();
+      }
+      setIsPlaying(!isPlaying);
     } else {
-      if (sound) {
-        await sound.unloadAsync();
+      if (audioRef.current) {
+        audioRef.current.pause();
       }
-
-      try {
-        const { sound: newSound } = await Audio.Sound.createAsync(
-          { uri: track.previewUrl },
-          { shouldPlay: true },
-          (status) => {
-            if (status.didJustFinish) {
-              setIsPlaying(false);
-              setCurrentTrack(null);
-            }
-          }
-        );
-        setSound(newSound);
-        setCurrentTrack(track);
-        setIsPlaying(true);
-      } catch (error) {
-        console.error('Error playing track:', error);
-      }
+      
+      const audio = new Audio(track.previewUrl);
+      audioRef.current = audio;
+      
+      audio.addEventListener('ended', () => {
+        setIsPlaying(false);
+        setCurrentTrack(null);
+      });
+      
+      audio.play();
+      setIsPlaying(true);
+      setCurrentTrack(track);
     }
   };
 
-  React.useEffect(() => {
-    return sound
-      ? () => {
-          sound.unloadAsync();
-        }
-      : undefined;
-  }, [sound]);
-
-  const cardWidth = featured
-    ? Dimensions.get('window').width - 40 // Full width minus padding
-    : (Dimensions.get('window').width - 50) / 2; // Half width minus padding and gap
-
-  if (compact) {
-    return (
-      <View style={[styles.compactContainer, { backgroundColor: colors.background }]}>
-        <Image source={{ uri: release.artwork }} style={styles.compactArtwork} />
-        <View style={styles.compactInfo}>
-          <View>
-            <Text style={[styles.compactArtist, { color: colors.text }]}>{release.artist}</Text>
-            <Text style={[styles.compactTitle, { color: colors.text }]}>{release.title}</Text>
-            <Text style={[styles.compactDate, { color: colors.textSecondary }]}>
-              {new Date(release.releaseDate).toLocaleDateString()}
-            </Text>
-          </View>
-          <View style={styles.compactButtons}>
-            <TouchableOpacity
-              style={[styles.compactButton, { backgroundColor: '#1DB954' }]}
-              onPress={() => Linking.openURL(release.spotifyUrl)}
-            >
-              <Ionicons name="logo-spotify" size={16} color="#FFFFFF" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.compactButton, { backgroundColor: '#FF6B00' }]}
-              onPress={() => Linking.openURL(release.beatportUrl)}
-            >
-              <Text style={styles.compactButtonText}>BP</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.compactButton, { backgroundColor: '#FF5500' }]}
-              onPress={() => Linking.openURL(release.soundcloudUrl)}
-            >
-              <Ionicons name="logo-soundcloud" size={16} color="#FFFFFF" />
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    );
-  }
-
   return (
-    <View style={[
-      styles.card,
-      {
-        backgroundColor: colors.cardBackground,
-        width: cardWidth
-      }
-    ]}>
-      <Image
-        source={{ uri: release.artwork }}
-        style={[
-          styles.artwork,
-          featured && styles.featuredArtwork
-        ]}
+    <Card
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        backgroundColor: colors.card,
+        borderRadius: 2,
+        overflow: 'hidden',
+      }}
+    >
+      <CardMedia
+        component="img"
+        image={release.artwork}
+        alt={`${release.title} by ${release.artist}`}
+        sx={{
+          width: '100%',
+          aspectRatio: '1',
+          objectFit: 'cover',
+        }}
       />
       
-      <View style={styles.content}>
-        <Text style={[styles.title, { color: colors.text }]}>{release.title}</Text>
-        <Text style={[styles.artist, { color: colors.textSecondary }]}>{release.artist}</Text>
-        <Text style={[styles.date, { color: colors.textTertiary }]}>{formatDate(release.releaseDate)}</Text>
-
-        <View style={styles.tracks}>
-          {release.tracks.map((track) => (
-            <View key={track.id} style={[styles.track, { borderBottomColor: colors.border }]}>
-              <TouchableOpacity
-                style={styles.playButton}
-                onPress={() => handlePlayPause(track)}
-                disabled={!track.previewUrl}
+      <CardContent sx={{ flexGrow: 1, p: 2 }}>
+        <Typography variant="h6" component="h2" sx={{ mb: 1, color: colors.text }}>
+          {release.title}
+        </Typography>
+        <Typography variant="subtitle1" color="text.secondary" sx={{ mb: 2 }}>
+          {release.artist}
+        </Typography>
+        
+        {!compact && (
+          <Box sx={{ mt: 2 }}>
+            {release.tracks.map((track) => (
+              <Box
+                key={track.id}
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  mb: 1,
+                  p: 1,
+                  borderRadius: 1,
+                  '&:hover': {
+                    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                  },
+                }}
               >
-                <Ionicons
-                  name={isPlaying && currentTrack?.id === track.id ? 'pause' : 'play'}
-                  size={20}
-                  color={track.previewUrl ? colors.primary : colors.textTertiary}
-                />
-              </TouchableOpacity>
-              <View style={styles.trackInfo}>
-                <Text style={[styles.trackTitle, { color: colors.text }]}>{track.title}</Text>
-                <Text style={[styles.trackArtist, { color: colors.textSecondary }]}>{track.artist}</Text>
-              </View>
-              <Text style={[styles.duration, { color: colors.textTertiary }]}>{track.duration}</Text>
-            </View>
-          ))}
-        </View>
-
-        <TouchableOpacity
-          style={[styles.spotifyButton, { backgroundColor: colors.primary }]}
-          onPress={() => Linking.openURL(release.spotifyLink)}
-        >
-          <Ionicons name="logo-spotify" size={20} color="#FFFFFF" />
-          <Text style={styles.spotifyButtonText}>Listen on Spotify</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+                <IconButton
+                  size="small"
+                  onClick={() => handlePlayPause(track)}
+                  disabled={!track.previewUrl}
+                  sx={{ mr: 1 }}
+                >
+                  {isPlaying && currentTrack?.id === track.id ? (
+                    <PauseIcon />
+                  ) : (
+                    <PlayArrowIcon />
+                  )}
+                </IconButton>
+                <Typography variant="body2" sx={{ color: colors.text }}>
+                  {track.title}
+                </Typography>
+              </Box>
+            ))}
+          </Box>
+        )}
+        
+        <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
+          {release.spotifyUrl && (
+            <IconButton
+              component={Link}
+              href={release.spotifyUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              sx={{ color: '#1DB954' }}
+            >
+              <MusicNoteIcon />
+            </IconButton>
+          )}
+          {release.beatportUrl && (
+            <IconButton
+              component={Link}
+              href={release.beatportUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              sx={{ color: '#FF6B00' }}
+            >
+              <AlbumIcon />
+            </IconButton>
+          )}
+          {release.soundcloudUrl && (
+            <IconButton
+              component={Link}
+              href={release.soundcloudUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              sx={{ color: '#FF7700' }}
+            >
+              <CloudQueueIcon />
+            </IconButton>
+          )}
+        </Stack>
+      </CardContent>
+    </Card>
   );
 };
-
-const styles = StyleSheet.create({
-  card: {
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-  artwork: {
-    width: '100%',
-    aspectRatio: 1,
-  },
-  featuredArtwork: {
-    height: 300,
-  },
-  content: {
-    padding: 15,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 5,
-  },
-  artist: {
-    fontSize: 16,
-    marginBottom: 5,
-  },
-  date: {
-    fontSize: 14,
-    marginBottom: 15,
-  },
-  tracks: {
-    marginBottom: 15,
-  },
-  track: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-  },
-  playButton: {
-    width: 30,
-    alignItems: 'center',
-  },
-  trackInfo: {
-    flex: 1,
-    marginLeft: 10,
-  },
-  trackTitle: {
-    fontSize: 14,
-  },
-  trackArtist: {
-    fontSize: 12,
-  },
-  duration: {
-    fontSize: 12,
-    marginLeft: 10,
-  },
-  spotifyButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 12,
-    borderRadius: 25,
-  },
-  spotifyButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: 'bold',
-    marginLeft: 8,
-  },
-  // Compact styles
-  compactContainer: {
-    flexDirection: 'row',
-    padding: 10,
-    marginVertical: 5,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  compactArtwork: {
-    width: 80,
-    height: 80,
-    borderRadius: 5,
-    marginRight: 15,
-  },
-  compactInfo: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  compactArtist: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 3,
-  },
-  compactTitle: {
-    fontSize: 14,
-    marginBottom: 3,
-  },
-  compactDate: {
-    fontSize: 12,
-  },
-  compactButtons: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  compactButton: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  compactButtonText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
-});
 
 export default ReleaseCard;

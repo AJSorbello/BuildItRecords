@@ -2,7 +2,7 @@ import React from 'react';
 import {
   Drawer,
   List,
-  ListItem,
+  ListItemButton,
   ListItemIcon,
   ListItemText,
   styled,
@@ -35,7 +35,11 @@ const StyledDrawer = styled(Drawer)(({ theme }) => ({
   },
 }));
 
-const StyledListItem = styled(ListItem)<{ active?: boolean }>(({ active }) => ({
+interface StyledListButtonProps {
+  active?: boolean;
+}
+
+const StyledListButton = styled(ListItemButton)<StyledListButtonProps>(({ active }) => ({
   marginBottom: '8px',
   borderRadius: '4px',
   backgroundColor: active ? 'rgba(2, 255, 149, 0.1)' : 'transparent',
@@ -70,15 +74,14 @@ const Sidebar: React.FC<SidebarProps> = ({ label }) => {
     <StyledDrawer variant="permanent" anchor="left">
       <List>
         {menuItems.map((item) => (
-          <StyledListItem
-            button
+          <StyledListButton
             key={item.text}
             onClick={() => navigate(item.path)}
             active={location.pathname === item.path}
           >
             <ListItemIcon>{item.icon}</ListItemIcon>
             <ListItemText primary={item.text} />
-          </StyledListItem>
+          </StyledListButton>
         ))}
       </List>
     </StyledDrawer>
