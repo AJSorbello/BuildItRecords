@@ -2,7 +2,7 @@ import axios from 'axios';
 import { encode as base64Encode } from 'base-64';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as WebBrowser from 'expo-web-browser';
-import { makeRedirectUri } from 'expo-auth-session';
+import { makeRedirectUri, ResponseType, Prompt } from 'expo-auth-session';
 import { SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET } from '@env';
 import * as Linking from 'expo-linking';
 import { Platform } from 'react-native';
@@ -36,8 +36,12 @@ class SpotifyService {
   private static instance: SpotifyService;
   private accessToken: string | null = null;
   private tokenExpirationTime: number = 0;
+  private refreshToken: string | null = null;
 
-  private constructor() {}
+  private constructor() {
+    // Initialize WebBrowser for auth
+    WebBrowser.maybeCompleteAuthSession();
+  }
 
   static getInstance(): SpotifyService {
     if (!SpotifyService.instance) {
@@ -46,18 +50,92 @@ class SpotifyService {
     return SpotifyService.instance;
   }
 
-  private async getAccessToken(): Promise<string> {
-    // Check if we have a valid token
-    if (this.accessToken && Date.now() < this.tokenExpirationTime) {
-      return this.accessToken;
+  private getRedirectUri(): string {
+    if (Platform.OS === 'web') {
+      return 'http://localhost:19000/--/spotify-auth-callback';
+    }
+    return makeRedirectUri({
+      scheme: 'builditrecords',
+      path: 'callback'
+    });
+  }
+
+  async authorize(): Promise<boolean> {
+    try {
+      const redirectUri = this.getRedirectUri();
+      const scope = 'user-read-private user-read-email playlist-read-private playlist-read-collaborative';
+      
+      const authUrl = `https://accounts.spotify.com/authorize?${new URLSearchParams({
+        response_type: 'code',
+        client_id: SPOTIFY_CLIENT_ID,
+        scope,
+        redirect_uri: redirectUri,
+        prompt: 'login'
+      }).toString()}`;
+
+      const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
+      
+      if (result.type === 'success' && result.url) {
+        const code = new URL(result.url).searchParams.get('code');
+        if (code) {
+          await this.exchangeCodeForToken(code);
+          return true;
+        }
+      }
+      return false;
+    } catch (error) {
+      console.error('Authorization error:', error);
+      return false;
+    }
+  }
+
+  private async exchangeCodeForToken(code: string): Promise<void> {
+    try {
+      const redirectUri = this.getRedirectUri();
+      const auth = base64Encode(`${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`);
+      
+      const response = await axios.post(
+        'https://accounts.spotify.com/api/token',
+        new URLSearchParams({
+          grant_type: 'authorization_code',
+          code,
+          redirect_uri: redirectUri
+        }).toString(),
+        {
+          headers: {
+            'Authorization': `Basic ${auth}`,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+        }
+      );
+
+      this.accessToken = response.data.access_token;
+      this.refreshToken = response.data.refresh_token;
+      this.tokenExpirationTime = Date.now() + (response.data.expires_in * 1000);
+
+      // Store tokens
+      await AsyncStorage.setItem('spotify_access_token', this.accessToken);
+      await AsyncStorage.setItem('spotify_refresh_token', this.refreshToken);
+      await AsyncStorage.setItem('spotify_token_expiration', this.tokenExpirationTime.toString());
+    } catch (error) {
+      console.error('Error exchanging code for token:', error);
+      throw error;
+    }
+  }
+
+  private async refreshAccessToken(): Promise<void> {
+    if (!this.refreshToken) {
+      throw new Error('No refresh token available');
     }
 
     try {
-      // Get a new token using client credentials
       const auth = base64Encode(`${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`);
       const response = await axios.post(
         'https://accounts.spotify.com/api/token',
-        'grant_type=client_credentials',
+        new URLSearchParams({
+          grant_type: 'refresh_token',
+          refresh_token: this.refreshToken
+        }).toString(),
         {
           headers: {
             'Authorization': `Basic ${auth}`,
@@ -68,10 +146,36 @@ class SpotifyService {
 
       this.accessToken = response.data.access_token;
       this.tokenExpirationTime = Date.now() + (response.data.expires_in * 1000);
+      if (response.data.refresh_token) {
+        this.refreshToken = response.data.refresh_token;
+        await AsyncStorage.setItem('spotify_refresh_token', this.refreshToken);
+      }
+
+      await AsyncStorage.setItem('spotify_access_token', this.accessToken);
+      await AsyncStorage.setItem('spotify_token_expiration', this.tokenExpirationTime.toString());
+    } catch (error) {
+      console.error('Error refreshing token:', error);
+      throw error;
+    }
+  }
+
+  private async getAccessToken(): Promise<string> {
+    // Check if we have a valid token
+    if (this.accessToken && Date.now() < this.tokenExpirationTime) {
+      return this.accessToken;
+    }
+
+    // Try to refresh token
+    try {
+      await this.refreshAccessToken();
       return this.accessToken;
     } catch (error) {
-      console.error('Error getting Spotify access token:', error);
-      throw error;
+      // If refresh fails, try to authorize again
+      if (await this.authorize()) {
+        return this.accessToken;
+      } else {
+        throw error;
+      }
     }
   }
 

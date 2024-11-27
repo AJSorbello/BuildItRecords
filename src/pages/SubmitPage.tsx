@@ -13,6 +13,7 @@ import {
   CardContent,
   IconButton,
   styled,
+  SelectChangeEvent,
 } from '@mui/material';
 import { Add as AddIcon, Remove as RemoveIcon } from '@mui/icons-material';
 import PageLayout from '../components/PageLayout';
@@ -39,6 +40,7 @@ interface Track {
 
 interface Artist {
   name: string;
+  fullName: string;
   email: string;
   country: string;
   province: string;
@@ -54,6 +56,7 @@ const SubmitPage = () => {
   const { label = 'records' } = useParams<{ label?: string }>();
   const [artists, setArtists] = useState<Artist[]>([{
     name: '',
+    fullName: '',
     email: '',
     country: '',
     province: '',
@@ -86,6 +89,7 @@ const SubmitPage = () => {
   const addArtist = () => {
     setArtists([...artists, {
       name: '',
+      fullName: '',
       email: '',
       country: '',
       province: '',
@@ -100,33 +104,47 @@ const SubmitPage = () => {
 
   const removeArtist = (index: number) => {
     if (artists.length > 1) {
-      setArtists(artists.filter((_, i) => i !== index));
+      const newArtists = [...artists];
+      newArtists.splice(index, 1);
+      setArtists(newArtists);
     }
   };
 
   const addTrack = () => {
-    setTracks([...tracks, { title: '', soundCloudLink: '', genre: '' }]);
+    setTracks([...tracks, {
+      title: '',
+      soundCloudLink: '',
+      genre: '',
+    }]);
   };
 
   const removeTrack = (index: number) => {
     if (tracks.length > 1) {
-      setTracks(tracks.filter((_, i) => i !== index));
+      const newTracks = [...tracks];
+      newTracks.splice(index, 1);
+      setTracks(newTracks);
     }
   };
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    // Handle form submission here
-    console.log({ artists, tracks, label });
+    // Handle form submission
+    console.log({ artists, tracks });
   };
-
-  const labelDisplay = label.charAt(0).toUpperCase() + label.slice(1);
 
   return (
     <PageLayout label={label as 'records' | 'tech' | 'deep'}>
-      <Box component="form" onSubmit={handleSubmit} sx={{ maxWidth: 800, mx: 'auto', mb: 4 }}>
+      <Box
+        component="form"
+        onSubmit={handleSubmit}
+        sx={{
+          maxWidth: '800px',
+          margin: '0 auto',
+          padding: '24px',
+        }}
+      >
         <Typography variant="h4" gutterBottom sx={{ color: 'text.primary', mb: 2 }}>
-          Submit Demo to Build It {labelDisplay}
+          Submit Demo to Build It {label.charAt(0).toUpperCase() + label.slice(1)}
         </Typography>
 
         <Typography variant="body1" sx={{ color: 'text.secondary', mb: 4 }}>
@@ -158,6 +176,15 @@ const SubmitPage = () => {
                     label="Artist Name"
                     value={artist.name}
                     onChange={(e) => handleArtistChange(index, 'name', e.target.value)}
+                    required
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Full Name"
+                    value={artist.fullName}
+                    onChange={(e) => handleArtistChange(index, 'fullName', e.target.value)}
                     required
                   />
                 </Grid>
@@ -285,14 +312,20 @@ const SubmitPage = () => {
                   />
                 </Grid>
                 <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    label="Genre"
-                    value={track.genre}
-                    onChange={(e) => handleTrackChange(index, 'genre', e.target.value)}
-                    required
-                    helperText="e.g., Deep House, Tech House, Progressive House"
-                  />
+                  <FormControl fullWidth required>
+                    <InputLabel id={`genre-label-${index}`}>Genre</InputLabel>
+                    <Select
+                      labelId={`genre-label-${index}`}
+                      value={track.genre}
+                      onChange={(e: SelectChangeEvent) => handleTrackChange(index, 'genre', e.target.value)}
+                      label="Genre"
+                    >
+                      <MenuItem value="house">House</MenuItem>
+                      <MenuItem value="techno">Techno</MenuItem>
+                      <MenuItem value="deep-house">Deep House</MenuItem>
+                      <MenuItem value="tech-house">Tech House</MenuItem>
+                    </Select>
+                  </FormControl>
                 </Grid>
                 <Grid item xs={12}>
                   <TextField
