@@ -9,6 +9,9 @@ import {
   Card,
   CardContent,
   Modal,
+  Checkbox,
+  FormControlLabel,
+  Link,
 } from '@mui/material';
 import RemoveIcon from '@mui/icons-material/Remove';
 import AddIcon from '@mui/icons-material/Add';
@@ -67,6 +70,7 @@ const buttonStyle = {
 const SubmitPage: React.FC<SubmitPageProps> = ({ label }) => {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [artists, setArtists] = React.useState<Artist[]>([{
     fullName: '',
     name: '',
@@ -139,6 +143,11 @@ const SubmitPage: React.FC<SubmitPageProps> = ({ label }) => {
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
 
+    if (!termsAccepted) {
+      alert('Please accept the terms and conditions to proceed.');
+      return;
+    }
+
     const artist = artists[0]; // Assuming single artist for simplicity
     const track = tracks[0]; // Assuming single track for simplicity
 
@@ -148,24 +157,21 @@ const SubmitPage: React.FC<SubmitPageProps> = ({ label }) => {
     }
 
     const templateParams = {
-      to_name: 'aj@builditrecords.com, anmol@builditrecords.com',
-      from_name: artist.fullName,
-      subject: `${artist.name} - ${track.genre} Demo`,
-      message: `Hello,
-
-You got a new demo submission from ${artist.fullName} (${artist.name}):
-
-Genre: ${track.genre}
-
-Links:
-SoundCloud: ${artist.soundcloud}
-Spotify: ${artist.spotify}
-Apple Music: ${artist.appleMusic}
-
-Thank you for your submission, we will review it for consideration.
-
-Best wishes,
-Build It Records Team`,
+      fullName: artist.fullName,
+      artistName: artist.name,
+      email: artist.email,
+      country: artist.country,
+      province: artist.province,
+      facebook: artist.facebook,
+      twitter: artist.twitter,
+      instagram: artist.instagram,
+      soundcloud: artist.soundcloud,
+      spotify: artist.spotify,
+      appleMusic: artist.appleMusic,
+      trackTitle: track.title,
+      trackGenre: track.genre,
+      soundCloudLink: track.soundCloudPrivateLink,
+      label: label
     };
 
     console.log('Sending email with params:', templateParams);
@@ -222,6 +228,8 @@ Build It Records Team`,
                   value={artist.fullName}
                   onChange={(e) => handleArtistChange(index, 'fullName', e.target.value)}
                   required
+                  id={`artist-fullname-${index}`}
+                  name={`artist-fullname-${index}`}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -231,6 +239,8 @@ Build It Records Team`,
                   value={artist.name}
                   onChange={(e) => handleArtistChange(index, 'name', e.target.value)}
                   required
+                  id={`artist-name-${index}`}
+                  name={`artist-name-${index}`}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -241,6 +251,8 @@ Build It Records Team`,
                   value={artist.email}
                   onChange={(e) => handleArtistChange(index, 'email', e.target.value)}
                   required
+                  id={`artist-email-${index}`}
+                  name={`artist-email-${index}`}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -250,6 +262,8 @@ Build It Records Team`,
                   value={artist.country}
                   onChange={(e) => handleArtistChange(index, 'country', e.target.value)}
                   required
+                  id={`artist-country-${index}`}
+                  name={`artist-country-${index}`}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -259,6 +273,8 @@ Build It Records Team`,
                   value={artist.province}
                   onChange={(e) => handleArtistChange(index, 'province', e.target.value)}
                   required
+                  id={`artist-province-${index}`}
+                  name={`artist-province-${index}`}
                 />
               </Grid>
               <Grid item xs={12}>
@@ -272,6 +288,8 @@ Build It Records Team`,
                   label="Facebook"
                   value={artist.facebook}
                   onChange={(e) => handleArtistChange(index, 'facebook', e.target.value)}
+                  id={`artist-facebook-${index}`}
+                  name={`artist-facebook-${index}`}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -280,6 +298,8 @@ Build It Records Team`,
                   label="Twitter/X"
                   value={artist.twitter}
                   onChange={(e) => handleArtistChange(index, 'twitter', e.target.value)}
+                  id={`artist-twitter-${index}`}
+                  name={`artist-twitter-${index}`}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -288,6 +308,8 @@ Build It Records Team`,
                   label="Instagram"
                   value={artist.instagram}
                   onChange={(e) => handleArtistChange(index, 'instagram', e.target.value)}
+                  id={`artist-instagram-${index}`}
+                  name={`artist-instagram-${index}`}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -296,6 +318,8 @@ Build It Records Team`,
                   label="SoundCloud"
                   value={artist.soundcloud}
                   onChange={(e) => handleArtistChange(index, 'soundcloud', e.target.value)}
+                  id={`artist-soundcloud-${index}`}
+                  name={`artist-soundcloud-${index}`}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -304,6 +328,8 @@ Build It Records Team`,
                   label="Spotify"
                   value={artist.spotify}
                   onChange={(e) => handleArtistChange(index, 'spotify', e.target.value)}
+                  id={`artist-spotify-${index}`}
+                  name={`artist-spotify-${index}`}
                 />
               </Grid>
               <Grid item xs={12}>
@@ -312,6 +338,8 @@ Build It Records Team`,
                   label="Apple Music"
                   value={artist.appleMusic}
                   onChange={(e) => handleArtistChange(index, 'appleMusic', e.target.value)}
+                  id={`artist-applemusic-${index}`}
+                  name={`artist-applemusic-${index}`}
                 />
               </Grid>
             </Grid>
@@ -355,6 +383,8 @@ Build It Records Team`,
                   value={track.title}
                   onChange={(e) => handleTrackChange(index, 'title', e.target.value)}
                   required
+                  id={`track-title-${index}`}
+                  name={`track-title-${index}`}
                 />
               </Grid>
               <Grid item xs={12}>
@@ -365,6 +395,8 @@ Build It Records Team`,
                   onChange={(e) => handleTrackChange(index, 'genre', e.target.value)}
                   required
                   helperText="e.g., Deep House, Tech House, Progressive House"
+                  id={`track-genre-${index}`}
+                  name={`track-genre-${index}`}
                 />
               </Grid>
               <Grid item xs={12}>
@@ -375,6 +407,8 @@ Build It Records Team`,
                   onChange={(e) => handleTrackChange(index, 'soundCloudPrivateLink', e.target.value)}
                   required
                   helperText="Please provide a private SoundCloud link for your track"
+                  id={`track-soundcloud-${index}`}
+                  name={`track-soundcloud-${index}`}
                 />
               </Grid>
             </Grid>
@@ -412,12 +446,51 @@ Build It Records Team`,
       </Box>
 
       <Box sx={{ mt: 4 }}>
+        <FormControlLabel
+          control={
+            <Checkbox 
+              checked={termsAccepted}
+              onChange={(e) => setTermsAccepted(e.target.checked)}
+              sx={{
+                color: '#02FF95',
+                '&.Mui-checked': {
+                  color: '#02FF95',
+                },
+              }}
+              id="terms-checkbox"
+              name="terms-checkbox"
+            />
+          }
+          label={
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+              I accept the{' '}
+              <Link 
+                href="/legal" 
+                target="_blank"
+                sx={{ 
+                  color: '#02FF95',
+                  textDecoration: 'none',
+                  '&:hover': {
+                    textDecoration: 'underline',
+                  },
+                }}
+              >
+                Terms of Service and Privacy Policy
+              </Link>
+            </Typography>
+          }
+        />
         <Button
           type="submit"
           variant="contained"
           size="large"
           fullWidth
-          sx={buttonStyle}
+          disabled={!termsAccepted}
+          sx={{
+            ...buttonStyle,
+            mt: 2,
+            opacity: termsAccepted ? 1 : 0.5,
+          }}
         >
           Submit Demo
         </Button>

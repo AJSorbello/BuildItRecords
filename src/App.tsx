@@ -17,6 +17,7 @@ import ArtistsPage from './pages/ArtistsPage';
 import PlaylistsPage from './pages/PlaylistsPage';
 import SubmitPage from './pages/SubmitPage';
 import NotFoundPage from './pages/NotFoundPage';
+import LegalPage from './pages/LegalPage';
 
 const router = createBrowserRouter(
   createRoutesFromElements(
@@ -50,6 +51,9 @@ const router = createBrowserRouter(
         <Route path="playlists" element={<PlaylistsPage label="deep" />} />
         <Route path="submit" element={<SubmitPage label="deep" />} />
       </Route>
+
+      {/* Legal Route */}
+      <Route path="/legal" element={<LegalPage />} />
 
       {/* 404 Route */}
       <Route path="*" element={<NotFoundPage />} />
