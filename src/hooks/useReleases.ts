@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import spotifyService from '../services/spotifyService';
+import spotifyService from '../services/SpotifyService';
 import { Release } from '../types/release';
 
 const SPOTIFY_IDS = {

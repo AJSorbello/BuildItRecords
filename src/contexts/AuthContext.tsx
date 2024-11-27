@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import spotifyService from '../services/spotifyService';
+import spotifyService from '../services/SpotifyService';
 
 interface AuthContextType {
   isAuthenticated: boolean;

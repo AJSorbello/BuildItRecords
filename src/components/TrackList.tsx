@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Typography, Grid, Card, CardContent, CardMedia, Link, IconButton, styled } from '@mui/material';
 import { FaSpotify, FaPlay, FaPause } from 'react-icons/fa';
-import spotifyService from '../services/spotifyService';
+import spotifyService from '../services/SpotifyService';
 
 interface Track {
   id: string;

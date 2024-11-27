@@ -1,4 +1,4 @@
-import { SpotifyRelease } from '../services/spotifyService';
+import { SpotifyRelease } from '../services/SpotifyService';
 import { Release } from '../types/release';
 
 export const convertSpotifyToRelease = (spotifyRelease: SpotifyRelease): Release => {
@@ -12,7 +12,7 @@ export const convertSpotifyToRelease = (spotifyRelease: SpotifyRelease): Release
     beatportUrl: '', // Will be populated later if available
     soundcloudUrl: '', // Will be populated later if available
     label: determineLabelFromPlaylist(spotifyRelease.external_urls.spotify),
-    tracks: spotifyRelease.tracks.items.map(track => ({
+    tracks: spotifyRelease.tracks.items.map((track: { id: string; name: string; artists: Array<{ name: string }>; duration_ms: number; preview_url: string | null; }) => ({
       id: track.id,
       title: track.name,
       artist: track.artists[0]?.name || 'Unknown Artist',
