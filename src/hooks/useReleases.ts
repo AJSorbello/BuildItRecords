@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import SpotifyService, { SpotifyRelease } from '../services/SpotifyService';
+import spotifyService from '../services/spotifyService';
 import { Release } from '../types/release';
 
 const SPOTIFY_IDS = {
@@ -27,7 +27,7 @@ export const useReleases = (labelId: LabelId) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  const convertSpotifyToRelease = (spotifyRelease: SpotifyRelease): Release => ({
+  const convertSpotifyToRelease = (spotifyRelease: any): Release => ({
     id: spotifyRelease.id,
     title: spotifyRelease.name,
     artist: spotifyRelease.artists[0]?.name || 'Unknown Artist',
@@ -37,13 +37,18 @@ export const useReleases = (labelId: LabelId) => {
     beatportUrl: BEATPORT_URLS[labelId],
     soundcloudUrl: SOUNDCLOUD_URLS[labelId],
     label: labelId,
-    tracks: spotifyRelease.tracks.items.map(track => ({
+    tracks: spotifyRelease.tracks.items.map((track: {
+      id: string;
+      name: string;
+      artists: Array<{ name: string }>;
+      duration_ms: number;
+      preview_url: string | null;
+    }) => ({
       id: track.id,
       title: track.name,
       artist: track.artists[0]?.name || 'Unknown Artist',
-      duration: Math.floor(track.duration_ms / 1000).toString(),
-      spotifyId: track.id,
-      previewUrl: track.preview_url || null,
+      duration: track.duration_ms,
+      previewUrl: track.preview_url,
     })),
   });
 
@@ -53,7 +58,6 @@ export const useReleases = (labelId: LabelId) => {
         setIsLoading(true);
         setError(null);
         
-        const spotifyService = SpotifyService.getInstance();
         const allReleases = await spotifyService.getLabelReleases(SPOTIFY_IDS[labelId]);
         const formattedReleases = allReleases.map(convertSpotifyToRelease);
         
@@ -77,7 +81,6 @@ export const useReleases = (labelId: LabelId) => {
         setIsLoading(true);
         setError(null);
         
-        const spotifyService = SpotifyService.getInstance();
         const allReleases = await spotifyService.getLabelReleases(SPOTIFY_IDS[labelId]);
         const formattedReleases = allReleases.map(convertSpotifyToRelease);
         

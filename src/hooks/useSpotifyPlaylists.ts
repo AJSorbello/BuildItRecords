@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { SpotifyService } from '../services/SpotifyService';
+import spotifyService from '../services/spotifyService';
 
 interface PlaylistTrack {
   id: string;
@@ -35,10 +35,9 @@ export const useSpotifyPlaylists = (label: 'records' | 'tech' | 'deep') => {
           deep: ['YOUR_DEEP_PLAYLIST_ID']
         };
 
-        const service = SpotifyService.getInstance();
         const playlistData = await Promise.all(
           playlistIds[label].map(async (id) => {
-            const playlist = await service.getPlaylist(id);
+            const playlist = await spotifyService.getPlaylist(id);
             return {
               id: playlist.id,
               name: playlist.name,

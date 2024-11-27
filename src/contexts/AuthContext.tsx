@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import SpotifyService from '../services/SpotifyService';
+import spotifyService from '../services/spotifyService';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -26,7 +26,7 @@ const storage = {
   }
 };
 
-const spotifyService = SpotifyService.getInstance();
+const spotifyServiceInstance = spotifyService;
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -37,7 +37,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Check for Spotify redirect callback
     const hash = window.location.hash;
     if (hash) {
-      const success = spotifyService.handleRedirect(hash);
+      const success = spotifyServiceInstance.handleRedirect(hash.substring(1));
       if (success) {
         setIsAuthenticated(true);
         // Clean up the URL
@@ -48,7 +48,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const checkAuthStatus = async () => {
     try {
-      setIsAuthenticated(spotifyService.isAuthenticated());
+      setIsAuthenticated(spotifyServiceInstance.isAuthenticated());
     } catch (error) {
       console.error('Error checking auth status:', error);
     } finally {
@@ -58,12 +58,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = () => {
     // Redirect to Spotify login
-    window.location.href = spotifyService.getLoginUrl();
+    window.location.href = spotifyServiceInstance.getLoginUrl();
   };
 
   const logout = async () => {
     try {
-      spotifyService.logout();
+      spotifyServiceInstance.logout();
       setIsAuthenticated(false);
     } catch (error) {
       console.error('Logout error:', error);

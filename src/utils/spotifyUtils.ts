@@ -1,4 +1,4 @@
-import { SpotifyRelease } from '../services/SpotifyService';
+import { SpotifyRelease } from '../services/spotifyService';
 import { Release } from '../types/release';
 
 export const convertSpotifyToRelease = (spotifyRelease: SpotifyRelease): Release => {
