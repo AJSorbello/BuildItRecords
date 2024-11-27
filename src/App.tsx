@@ -18,6 +18,17 @@ import PlaylistsPage from './pages/PlaylistsPage';
 import SubmitPage from './pages/SubmitPage';
 import NotFoundPage from './pages/NotFoundPage';
 import LegalPage from './pages/LegalPage';
+import AdminLogin from './components/AdminLogin';
+import AdminDashboard from './components/AdminDashboard';
+
+// Protected Route component
+const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const token = localStorage.getItem('adminToken');
+  if (!token) {
+    return <Navigate to="/admin/login" replace />;
+  }
+  return <>{children}</>;
+};
 
 const router = createBrowserRouter(
   createRoutesFromElements(
@@ -50,6 +61,19 @@ const router = createBrowserRouter(
         <Route path="artists" element={<ArtistsPage label="deep" />} />
         <Route path="playlists" element={<PlaylistsPage label="deep" />} />
         <Route path="submit" element={<SubmitPage label="deep" />} />
+      </Route>
+
+      {/* Admin Routes */}
+      <Route path="/admin">
+        <Route path="login" element={<AdminLogin />} />
+        <Route 
+          path="dashboard" 
+          element={
+            <ProtectedRoute>
+              <AdminDashboard />
+            </ProtectedRoute>
+          } 
+        />
       </Route>
 
       {/* Legal Route */}
