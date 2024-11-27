@@ -42,10 +42,6 @@ interface SubmitPageProps {
   label: 'records' | 'tech' | 'deep';
 }
 
-interface StyledCardProps extends React.ComponentProps<typeof Card> {
-  children: React.ReactNode;
-}
-
 const StyledCard = styled(Card)({
   backgroundColor: 'rgba(255, 255, 255, 0.05)',
   borderRadius: '8px',

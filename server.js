@@ -9,8 +9,22 @@ app.use(
   helmet.contentSecurityPolicy({
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdn.emailjs.com"],
-      connectSrc: ["'self'", "https://api.emailjs.com"],
+      scriptSrc: [
+        "'self'",
+        "'unsafe-inline'",
+        "'unsafe-eval'",
+        "https://cdn.emailjs.com",
+        "http://localhost:3000",
+        "ws://localhost:3000"
+      ],
+      connectSrc: [
+        "'self'",
+        "https://api.emailjs.com",
+        "http://localhost:3000",
+        "ws://localhost:3000",
+        "ws://localhost:*",
+        "http://localhost:*"
+      ],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https:"],

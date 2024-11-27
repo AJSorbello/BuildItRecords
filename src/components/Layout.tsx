@@ -10,8 +10,6 @@ import BuildItRecordsLogo from '../assets/png/records/BuildItRecords.png';
 import BuildItTechLogo from '../assets/png/tech/BuildIt_Tech.png';
 import BuildItDeepLogo from '../assets/png/deep/BuildIt_Deep.png';
 
-const drawerWidth = 240;
-
 const getLogo = (label: string) => {
   switch (label) {
     case 'tech':
