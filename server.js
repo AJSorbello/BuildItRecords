@@ -11,7 +11,28 @@ const trackManagementRouter = require('./server/routes/trackManagement');
 const app = express();
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if(!origin) return callback(null, true);
+    
+    const allowedOrigins = [
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'https://builditrecords.com',
+      'https://www.builditrecords.com',
+      'https://admin.builditrecords.com'
+    ];
+    
+    if(allowedOrigins.indexOf(origin) === -1){
+      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
+  credentials: true
+}));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -49,6 +70,28 @@ app.use(
     }
   })
 );
+
+// Domain-based routing
+app.use((req, res, next) => {
+  const host = req.get('host');
+  
+  // Local development
+  if (host.includes('localhost')) {
+    next();
+    return;
+  }
+  
+  // Admin subdomain
+  if (host.startsWith('admin.')) {
+    // Only allow admin routes on admin subdomain
+    if (!req.path.startsWith('/api/admin') && !req.path.startsWith('/api/track-management')) {
+      res.sendFile(path.join(__dirname, 'build', 'index.html'));
+      return;
+    }
+  }
+  
+  next();
+});
 
 // API routes
 app.use('/api/tracks', tracksRouter);

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
@@ -16,31 +16,41 @@ const AdminLogin = () => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setCredentials(prev => ({ ...prev, [name]: value }));
-  };
+  useEffect(() => {
+    // Check if we're on the admin subdomain
+    const isAdminDomain = window.location.hostname.startsWith('admin.');
+    if (!isAdminDomain) {
+      // Redirect to admin subdomain
+      window.location.href = `https://admin.${window.location.hostname.replace('www.', '')}${window.location.pathname}`;
+      return;
+    }
+
+    // Check if already authenticated
+    const token = localStorage.getItem('adminToken');
+    if (token) {
+      navigate('/dashboard');
+    }
+  }, [navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
     try {
-      console.log('Attempting login with:', credentials);
       const response = await axios.post('/api/admin/login', credentials);
-      console.log('Login response:', response.data);
-      
-      if (response.data.token) {
-        localStorage.setItem('adminToken', response.data.token);
-        localStorage.setItem('adminUsername', response.data.username);
-        navigate('/admin/dashboard');
-      } else {
-        setError('Invalid response from server');
-      }
+      localStorage.setItem('adminToken', response.data.token);
+      localStorage.setItem('adminUsername', credentials.username);
+      navigate('/dashboard');
     } catch (err) {
-      console.error('Login error:', err.response || err);
-      setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
+      setError(err.response?.data?.error || 'Login failed');
     }
+  };
+
+  const handleChange = (e) => {
+    setCredentials({
+      ...credentials,
+      [e.target.name]: e.target.value,
+    });
   };
 
   return (
@@ -53,18 +63,25 @@ const AdminLogin = () => {
           alignItems: 'center',
         }}
       >
-        <Paper elevation={3} sx={{ p: 4, width: '100%' }}>
-          <Typography component="h1" variant="h5" align="center" gutterBottom>
+        <Paper
+          elevation={3}
+          sx={{
+            padding: 4,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            width: '100%',
+          }}
+        >
+          <Typography component="h1" variant="h5">
             Admin Login
           </Typography>
-          
           {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
+            <Alert severity="error" sx={{ width: '100%', mt: 2 }}>
               {error}
             </Alert>
           )}
-
-          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
+          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1, width: '100%' }}>
             <TextField
               margin="normal"
               required

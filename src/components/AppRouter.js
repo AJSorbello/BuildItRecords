@@ -6,33 +6,65 @@ import AdminDashboard from './AdminDashboard';
 // Protected Route component
 const ProtectedRoute = ({ children }) => {
   const isAuthenticated = !!localStorage.getItem('adminToken');
-  return isAuthenticated ? children : <Navigate to="/admin/login" />;
+  
+  // Check if we're on the admin subdomain
+  const isAdminDomain = window.location.hostname.startsWith('admin.');
+  
+  if (!isAdminDomain) {
+    // Redirect to admin subdomain if trying to access admin routes from main domain
+    window.location.href = `https://admin.${window.location.hostname.replace('www.', '')}${window.location.pathname}`;
+    return null;
+  }
+  
+  return isAuthenticated ? children : <Navigate to="/login" />;
 };
 
 const AppRouter = () => {
+  // Check if we're on the admin subdomain
+  const isAdminDomain = window.location.hostname.startsWith('admin.');
+
+  if (isAdminDomain) {
+    // Admin Routes
+    return (
+      <Router>
+        <Routes>
+          <Route path="/login" element={<AdminLogin />} />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+          {/* Redirect root to dashboard if authenticated, otherwise to login */}
+          <Route
+            path="/"
+            element={
+              localStorage.getItem('adminToken') ? 
+                <Navigate to="/dashboard" /> : 
+                <Navigate to="/login" />
+            }
+          />
+          {/* Catch all route for admin subdomain */}
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
+      </Router>
+    );
+  }
+
+  // Main Application Routes
   return (
     <Router>
       <Routes>
-        {/* Admin routes */}
-        <Route path="/admin/login" element={<AdminLogin />} />
+        {/* Add your public routes here */}
         <Route
-          path="/admin/dashboard"
+          path="*"
           element={
-            <ProtectedRoute>
-              <AdminDashboard />
-            </ProtectedRoute>
-          }
-        />
-        
-        {/* Add your existing routes here */}
-        
-        {/* Redirect /admin to dashboard if authenticated, otherwise to login */}
-        <Route
-          path="/admin"
-          element={
-            localStorage.getItem('adminToken') ? 
-              <Navigate to="/admin/dashboard" /> : 
-              <Navigate to="/admin/login" />
+            <div>
+              <h1>Welcome to Build It Records</h1>
+              {/* Add your main application content here */}
+            </div>
           }
         />
       </Routes>

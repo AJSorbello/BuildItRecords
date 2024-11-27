@@ -37,10 +37,14 @@ const AdminDashboard = () => {
   const categories = ['Featured', 'New Release', 'Popular', 'Recommended'];
 
   useEffect(() => {
-    fetchTracks();
-    verifyAdmin();
-  }, []);
+    const checkAdminAndFetchTracks = async () => {
+      await verifyAdmin();
+      await fetchTracks();
+    };
+    checkAdminAndFetchTracks();
+  }, []);  // We'll disable the exhaustive-deps rule for this effect
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const verifyAdmin = async () => {
     try {
       const token = localStorage.getItem('adminToken');
