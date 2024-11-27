@@ -7,31 +7,54 @@ export interface Artist {
   genres: string[];
 }
 
-export const parseCSV = (csvText: string): Promise<Release[]> => {
+interface ParseResult {
+  data: Record<string, string>[];
+  errors: string[];
+}
+
+export const parseCSV = (file: File): Promise<ParseResult> => {
   return new Promise((resolve, reject) => {
-    Papa.parse(csvText, {
-      header: true,
-      complete: (results: Papa.ParseResult<any>) => {
-        const releases = results.data
-          .filter((row: any) => row.Artist && row.Title)
-          .map((row: any) => ({
-            id: row.ID || Math.random().toString(36).substr(2, 9),
-            title: row.Title,
-            artist: row.Artist,
-            artwork: row.Artwork || '',
-            releaseDate: row.ReleaseDate || new Date().toISOString().split('T')[0],
-            spotifyUrl: row.SpotifyURL || '',
-            beatportUrl: row.BeatportURL || '',
-            soundcloudUrl: row.SoundCloudURL || '',
-            label: row.Label || 'records', // Default to 'records' if not specified
-            tracks: [],
-          }));
-        resolve(releases);
-      },
-      error: (error: Error) => {
-        reject(error);
+    const reader = new FileReader();
+    const results: Record<string, string>[] = [];
+    const errors: string[] = [];
+
+    reader.onload = (event) => {
+      const csvData = event?.target?.result as string;
+      if (!csvData) {
+        reject(new Error('Failed to read file'));
+        return;
       }
-    });
+
+      const lines = csvData.split('\n');
+      if (lines.length === 0) {
+        reject(new Error('Empty CSV file'));
+        return;
+      }
+
+      const headers = lines[0].split(',').map(header => header.trim());
+      
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+        
+        const values = line.split(',').map(value => value.trim());
+        const row: Record<string, string> = {};
+        
+        headers.forEach((header, index) => {
+          row[header] = values[index] || '';
+        });
+        
+        results.push(row);
+      }
+
+      resolve({ data: results, errors });
+    };
+
+    reader.onerror = () => {
+      reject(new Error('Error reading file'));
+    };
+
+    reader.readAsText(file);
   });
 };
 

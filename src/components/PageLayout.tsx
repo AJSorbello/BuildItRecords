@@ -8,16 +8,14 @@ import BuildItRecordsLogo from '../assets/png/records/BuildItRecords.png';
 import BuildItTechLogo from '../assets/png/tech/BuildIt_Tech.png';
 import BuildItDeepLogo from '../assets/png/deep/BuildIt_Deep.png';
 
-const drawerWidth = 240;
-
 const Main = styled('main')({
   flexGrow: 1,
   padding: '24px',
   backgroundColor: '#121212',
   minHeight: 'calc(100vh - 180px)',
   marginTop: '180px',
-  marginLeft: drawerWidth,
-  width: `calc(100% - ${drawerWidth}px)`,
+  marginLeft: 240,
+  width: 'calc(100% - 240px)',
 });
 
 const FullLogo = styled('img')({

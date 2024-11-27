@@ -37,6 +37,10 @@ export const useFormSubmission = (): UseFormSubmissionReturn => {
 
     try {
       // TODO: Implement actual API call
+      const formData = new FormData();
+      if (data.imageUrl) {
+        formData.append('file', data.imageUrl);
+      }
       await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
       console.log('Form submitted:', data);
     } catch (error) {

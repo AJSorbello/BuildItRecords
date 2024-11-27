@@ -1,6 +1,5 @@
 import * as React from 'react';
 import { Box, Typography, Grid, Card, CardContent, CardMedia, CardActionArea } from '@mui/material';
-import { labelColors } from '../theme/theme';
 
 interface Artist {
   id: string;
