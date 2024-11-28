@@ -5,6 +5,16 @@ const SPOTIFY_CLIENT_ID = process.env.REACT_APP_SPOTIFY_CLIENT_ID!;
 const SPOTIFY_CLIENT_SECRET = process.env.REACT_APP_SPOTIFY_CLIENT_SECRET!;
 const SPOTIFY_REDIRECT_URI = process.env.REACT_APP_SPOTIFY_REDIRECT_URI!;
 
+function encodeBase64(str: string): string {
+  if (typeof window === 'undefined') {
+    // Node.js environment
+    return Buffer.from(str).toString('base64');
+  } else {
+    // Browser environment
+    return btoa(str);
+  }
+}
+
 export class SpotifyService {
   private static instance: SpotifyService;
   private spotifyApi: SpotifyWebApi;
@@ -28,10 +38,34 @@ export class SpotifyService {
 
   public async ensureAccessToken(): Promise<void> {
     if (!this.accessToken || Date.now() >= this.tokenExpirationTime) {
-      const data = await this.spotifyApi.clientCredentialsGrant();
-      this.accessToken = data.body.access_token;
-      this.spotifyApi.setAccessToken(this.accessToken);
-      this.tokenExpirationTime = Date.now() + (data.body.expires_in * 1000);
+      try {
+        const response = await fetch('https://accounts.spotify.com/api/token', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Authorization': 'Basic ' + encodeBase64(SPOTIFY_CLIENT_ID + ':' + SPOTIFY_CLIENT_SECRET)
+          },
+          body: 'grant_type=client_credentials'
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to get access token');
+        }
+
+        const data = await response.json();
+        const accessToken = data.access_token;
+        
+        if (!accessToken) {
+          throw new Error('No access token received from Spotify');
+        }
+        
+        this.accessToken = accessToken;
+        this.spotifyApi.setAccessToken(accessToken);
+        this.tokenExpirationTime = Date.now() + (data.expires_in * 1000);
+      } catch (error) {
+        console.error('Error getting Spotify access token:', error);
+        throw error;
+      }
     }
   }
 
@@ -74,38 +108,45 @@ export class SpotifyService {
         label: 'Unknown Label' // We'll update this when we fetch album details
       },
       preview_url: track.preview_url,
-      external_urls: track.external_urls
+      external_urls: track.external_urls,
+      duration_ms: track.duration_ms
     };
   }
 
-  private convertToSpotifyApiPlaylist(playlist: SpotifyApi.SinglePlaylistResponse): SpotifyPlaylist {
-    return {
-      id: playlist.id,
-      name: playlist.name,
-      description: playlist.description,
-      images: playlist.images.map(image => ({
-        url: image.url,
-        height: image.height ?? null,
-        width: image.width ?? null
-      })),
-      tracks: {
-        items: playlist.tracks.items.map(item => ({
-          track: this.convertToSpotifyApiTrack(item.track as SpotifyApi.TrackObjectFull),
-          added_at: item.added_at
-        }))
-      },
-      external_urls: playlist.external_urls
-    };
-  }
-
-  public async getTrackDetails(trackId: string): Promise<SpotifyTrack | null> {
+  public async getPlaylist(playlistId: string): Promise<SpotifyPlaylist> {
+    await this.ensureValidToken();
     try {
-      await this.ensureValidToken();
+      const response = await this.spotifyApi.getPlaylist(playlistId);
+      return this.convertToSpotifyApiPlaylist(response.body);
+    } catch (error) {
+      console.error('Error fetching playlist:', error);
+      throw error;
+    }
+  }
+
+  public async getTrackDetails(trackId: string): Promise<SpotifyTrack> {
+    await this.ensureValidToken();
+    try {
       const response = await this.spotifyApi.getTrack(trackId);
       const track = response.body;
-
       const apiTrack = this.convertToSpotifyApiTrack(track);
       return this.convertTrackToSpotifyTrack(apiTrack);
+    } catch (error) {
+      console.error('Error fetching track details:', error);
+      throw error;
+    }
+  }
+
+  public async getTrackDetailsByUrl(trackUrl: string): Promise<SpotifyTrack | null> {
+    try {
+      await this.ensureValidToken();
+      const trackId = this.extractTrackId(trackUrl);
+      
+      if (!trackId) {
+        throw new Error('Invalid Spotify track URL');
+      }
+
+      return this.getTrackDetails(trackId);
     } catch (error) {
       console.error('Error fetching track details:', error);
       return null;
@@ -136,6 +177,7 @@ export class SpotifyService {
       recordLabel: track.album.label || 'Unknown Label',
       spotifyUrl: track.external_urls.spotify,
       previewUrl: track.preview_url,
+      duration: track.duration_ms ? this.formatDuration(track.duration_ms) : undefined,
       album: {
         id: track.album.id,
         name: track.album.name,
@@ -147,28 +189,12 @@ export class SpotifyService {
     };
   }
 
-  async getTrackDetailsByUrl(trackUrl: string): Promise<SpotifyTrack | null> {
-    try {
-      await this.ensureValidToken();
-      const trackId = this.extractTrackId(trackUrl);
-      
-      if (!trackId) {
-        throw new Error('Invalid Spotify track URL');
-      }
-
-      return this.getTrackDetails(trackId);
-    } catch (error) {
-      console.error('Error fetching track details:', error);
-      return null;
-    }
-  }
-
   private extractTrackId(trackUrl: string): string | null {
     const match = trackUrl.match(/track\/([a-zA-Z0-9]+)/);
     return match ? match[1] : null;
   }
 
-  async getSimplifiedTrackDetails(trackUrl: string): Promise<SimplifiedTrackOutput> {
+  public async getSimplifiedTrackDetails(trackUrl: string): Promise<SimplifiedTrackOutput> {
     try {
       const track = await this.getTrackDetailsByUrl(trackUrl);
       if (!track) {
@@ -201,17 +227,6 @@ export class SpotifyService {
     }
   }
 
-  public async getPlaylist(playlistId: string): Promise<SpotifyPlaylist> {
-    try {
-      await this.ensureValidToken();
-      const response = await this.spotifyApi.getPlaylist(playlistId);
-      return this.convertToSpotifyApiPlaylist(response.body);
-    } catch (error) {
-      console.error('Error fetching playlist:', error);
-      throw error;
-    }
-  }
-
   public async getLabelReleases(playlistId: string): Promise<SpotifyTrack[]> {
     try {
       await this.ensureValidToken();
@@ -225,6 +240,32 @@ export class SpotifyService {
       console.error('Error fetching label releases:', error);
       throw error;
     }
+  }
+
+  private convertToSpotifyApiPlaylist(playlist: SpotifyApi.SinglePlaylistResponse): SpotifyPlaylist {
+    return {
+      id: playlist.id,
+      name: playlist.name,
+      description: playlist.description,
+      images: playlist.images.map(image => ({
+        url: image.url,
+        height: image.height ?? null,
+        width: image.width ?? null
+      })),
+      tracks: {
+        items: playlist.tracks.items.map(item => ({
+          track: this.convertToSpotifyApiTrack(item.track as SpotifyApi.TrackObjectFull),
+          added_at: item.added_at
+        }))
+      },
+      external_urls: playlist.external_urls
+    };
+  }
+
+  private formatDuration(ms: number): string {
+    const minutes = Math.floor(ms / 60000);
+    const seconds = Math.floor((ms % 60000) / 1000);
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   }
 
   public isAuthenticated(): boolean {

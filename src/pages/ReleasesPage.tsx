@@ -1,23 +1,16 @@
 import * as React from 'react';
-import { Box, Typography, Grid, Card, CardContent, CardMedia, Link, styled } from '@mui/material';
+import { Box, Typography, Grid, Card, CardContent, CardMedia, Link, styled, CircularProgress } from '@mui/material';
 import { FaSpotify, FaSoundcloud } from 'react-icons/fa';
 import { SiBeatport } from 'react-icons/si';
-
-interface Release {
-  id: string;
-  title: string;
-  artist: string;
-  artwork: string;
-  releaseDate: string;
-  label: string;
-  beatportUrl?: string;
-  spotifyUrl?: string;
-  soundcloudUrl?: string;
-  plays?: number;
-}
+import useReleases from '../hooks/useReleases';
+import { Release } from '../types/release';
 
 interface ReleasesPageProps {
   label: 'records' | 'tech' | 'deep';
+}
+
+interface StyledLinkProps {
+  hovercolor?: string;
 }
 
 const FeaturedReleaseCard = styled(Card)({
@@ -56,235 +49,54 @@ const TopListenCard = styled(Card)({
   },
 });
 
-const IconLink = styled(Link)({
+const IconLink = styled(Link)<StyledLinkProps>(({ hovercolor }) => ({
   color: '#FFFFFF',
+  display: 'inline-flex',
+  alignItems: 'center',
   marginRight: '16px',
+  textDecoration: 'none',
+  transition: 'color 0.2s',
   '&:hover': {
-    color: '#02FF95',
+    color: hovercolor || '#1DB954',
   },
-});
-
-const getReleases = (label: string): Release[] => {
-  switch (label) {
-    case 'tech':
-      return [
-        {
-          id: '1',
-          title: 'Warehouse Techno',
-          artist: 'Techno Warrior',
-          artwork: 'https://via.placeholder.com/800',
-          releaseDate: '2024-01-10',
-          label: 'Build It Tech',
-          beatportUrl: 'https://www.beatport.com',
-          spotifyUrl: 'https://open.spotify.com',
-          plays: 15000,
-        },
-        {
-          id: '2',
-          title: 'Industrial Mind',
-          artist: 'Dark Matter',
-          artwork: 'https://via.placeholder.com/300',
-          releaseDate: '2023-12-15',
-          label: 'Build It Tech',
-          plays: 12000,
-        },
-        {
-          id: '3',
-          title: 'Deep Emotions',
-          artist: 'Deep Artist',
-          artwork: 'https://via.placeholder.com/300',
-          releaseDate: '2024-02-01',
-          label: 'Build It Deep',
-          spotifyUrl: 'https://open.spotify.com',
-          soundcloudUrl: 'https://soundcloud.com',
-          plays: 10000,
-        },
-        {
-          id: '4',
-          title: 'House Vibes',
-          artist: 'House Master',
-          artwork: 'https://via.placeholder.com/300',
-          releaseDate: '2024-03-01',
-          label: 'Build It Records',
-          beatportUrl: 'https://www.beatport.com',
-          spotifyUrl: 'https://open.spotify.com',
-          soundcloudUrl: 'https://soundcloud.com',
-          plays: 8000,
-        },
-        {
-          id: '5',
-          title: 'Techno Beats',
-          artist: 'Techno Beats',
-          artwork: 'https://via.placeholder.com/300',
-          releaseDate: '2023-11-15',
-          label: 'Build It Tech',
-          beatportUrl: 'https://www.beatport.com',
-          spotifyUrl: 'https://open.spotify.com',
-          plays: 6000,
-        },
-        {
-          id: '6',
-          title: 'Deep House',
-          artist: 'Deep House',
-          artwork: 'https://via.placeholder.com/300',
-          releaseDate: '2023-10-15',
-          label: 'Build It Deep',
-          spotifyUrl: 'https://open.spotify.com',
-          soundcloudUrl: 'https://soundcloud.com',
-          plays: 4000,
-        },
-        {
-          id: '7',
-          title: 'House Music',
-          artist: 'House Music',
-          artwork: 'https://via.placeholder.com/300',
-          releaseDate: '2023-09-15',
-          label: 'Build It Records',
-          beatportUrl: 'https://www.beatport.com',
-          spotifyUrl: 'https://open.spotify.com',
-          soundcloudUrl: 'https://soundcloud.com',
-          plays: 2000,
-        },
-        {
-          id: '8',
-          title: 'Techno Tracks',
-          artist: 'Techno Tracks',
-          artwork: 'https://via.placeholder.com/300',
-          releaseDate: '2023-08-15',
-          label: 'Build It Tech',
-          beatportUrl: 'https://www.beatport.com',
-          spotifyUrl: 'https://open.spotify.com',
-          plays: 1000,
-        },
-        {
-          id: '9',
-          title: 'Deep Tracks',
-          artist: 'Deep Tracks',
-          artwork: 'https://via.placeholder.com/300',
-          releaseDate: '2023-07-15',
-          label: 'Build It Deep',
-          spotifyUrl: 'https://open.spotify.com',
-          soundcloudUrl: 'https://soundcloud.com',
-          plays: 500,
-        },
-        {
-          id: '10',
-          title: 'House Tracks',
-          artist: 'House Tracks',
-          artwork: 'https://via.placeholder.com/300',
-          releaseDate: '2023-06-15',
-          label: 'Build It Records',
-          beatportUrl: 'https://www.beatport.com',
-          spotifyUrl: 'https://open.spotify.com',
-          soundcloudUrl: 'https://soundcloud.com',
-          plays: 100,
-        },
-        {
-          id: '11',
-          title: 'Warehouse Techno',
-          artist: 'Techno Warrior',
-          artwork: 'https://via.placeholder.com/300',
-          releaseDate: '2024-01-10',
-          label: 'Build It Tech',
-          beatportUrl: 'https://www.beatport.com',
-          spotifyUrl: 'https://open.spotify.com',
-          plays: 15000,
-        },
-        {
-          id: '12',
-          title: 'Industrial Mind',
-          artist: 'Dark Matter',
-          artwork: 'https://via.placeholder.com/300',
-          releaseDate: '2023-12-15',
-          label: 'Build It Tech',
-          plays: 12000,
-        },
-      ];
-    case 'deep':
-      return [
-        {
-          id: '1',
-          title: 'Deep Emotions',
-          artist: 'Deep Artist',
-          artwork: 'https://via.placeholder.com/300',
-          releaseDate: '2024-02-01',
-          label: 'Build It Deep',
-          spotifyUrl: 'https://open.spotify.com',
-          soundcloudUrl: 'https://soundcloud.com',
-          plays: 10000,
-        },
-        {
-          id: '2',
-          title: 'Deep House',
-          artist: 'Deep House',
-          artwork: 'https://via.placeholder.com/300',
-          releaseDate: '2023-10-15',
-          label: 'Build It Deep',
-          spotifyUrl: 'https://open.spotify.com',
-          soundcloudUrl: 'https://soundcloud.com',
-          plays: 4000,
-        },
-        {
-          id: '3',
-          title: 'Deep Tracks',
-          artist: 'Deep Tracks',
-          artwork: 'https://via.placeholder.com/300',
-          releaseDate: '2023-07-15',
-          label: 'Build It Deep',
-          spotifyUrl: 'https://open.spotify.com',
-          soundcloudUrl: 'https://soundcloud.com',
-          plays: 500,
-        },
-      ];
-    default:
-      return [
-        {
-          id: '1',
-          title: 'House Vibes',
-          artist: 'House Master',
-          artwork: 'https://via.placeholder.com/300',
-          releaseDate: '2024-03-01',
-          label: 'Build It Records',
-          beatportUrl: 'https://www.beatport.com',
-          spotifyUrl: 'https://open.spotify.com',
-          soundcloudUrl: 'https://soundcloud.com',
-          plays: 8000,
-        },
-        {
-          id: '2',
-          title: 'House Music',
-          artist: 'House Music',
-          artwork: 'https://via.placeholder.com/300',
-          releaseDate: '2023-09-15',
-          label: 'Build It Records',
-          beatportUrl: 'https://www.beatport.com',
-          spotifyUrl: 'https://open.spotify.com',
-          soundcloudUrl: 'https://soundcloud.com',
-          plays: 2000,
-        },
-        {
-          id: '3',
-          title: 'House Tracks',
-          artist: 'House Tracks',
-          artwork: 'https://via.placeholder.com/300',
-          releaseDate: '2023-06-15',
-          label: 'Build It Records',
-          beatportUrl: 'https://www.beatport.com',
-          spotifyUrl: 'https://open.spotify.com',
-          soundcloudUrl: 'https://soundcloud.com',
-          plays: 100,
-        },
-      ];
-  }
-};
+}));
 
 const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
-  const releases = getReleases(label);
+  const { releases, isLoading, error } = useReleases(label);
+  
+  if (isLoading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box sx={{ textAlign: 'center', color: 'error.main', py: 4 }}>
+        <Typography variant="h6">Error loading releases: {error.message}</Typography>
+      </Box>
+    );
+  }
+
+  if (!releases.length) {
+    return (
+      <Box sx={{ textAlign: 'center', py: 4 }}>
+        <Typography variant="h6" color="text.secondary">No releases found</Typography>
+      </Box>
+    );
+  }
+
   const featuredRelease = releases[0];
   const pastReleases = releases.slice(1);
-
-  // Sort releases by plays to get top listened
-  const topListened = [...releases].sort((a, b) => (b.plays || 0) - (a.plays || 0)).slice(0, 10);
+  const topListened = [...releases]
+    .sort((a, b) => {
+      const durationA = parseInt(a.tracks[0]?.duration || '0');
+      const durationB = parseInt(b.tracks[0]?.duration || '0');
+      return durationB - durationA;
+    })
+    .slice(0, 10);
 
   return (
     <Box sx={{ maxWidth: 1400, margin: '0 auto', padding: '0 16px' }}>
@@ -326,18 +138,18 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
                     {featuredRelease.releaseDate}
                   </Typography>
                   <Box mt={2}>
-                    {featuredRelease.beatportUrl && (
-                      <IconLink href={featuredRelease.beatportUrl} target="_blank">
-                        <SiBeatport size={24} />
-                      </IconLink>
-                    )}
                     {featuredRelease.spotifyUrl && (
-                      <IconLink href={featuredRelease.spotifyUrl} target="_blank">
+                      <IconLink href={featuredRelease.spotifyUrl} target="_blank" hovercolor="#1DB954">
                         <FaSpotify size={24} />
                       </IconLink>
                     )}
+                    {featuredRelease.beatportUrl && (
+                      <IconLink href={featuredRelease.beatportUrl} target="_blank" hovercolor="#02FF95">
+                        <SiBeatport size={24} />
+                      </IconLink>
+                    )}
                     {featuredRelease.soundcloudUrl && (
-                      <IconLink href={featuredRelease.soundcloudUrl} target="_blank">
+                      <IconLink href={featuredRelease.soundcloudUrl} target="_blank" hovercolor="#FF3300">
                         <FaSoundcloud size={24} />
                       </IconLink>
                     )}
@@ -349,12 +161,12 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
 
           {/* Past Releases Grid */}
           <Box>
-            <Typography variant="h5" gutterBottom sx={{ mb: 4 }}>
+            <Typography variant="h5" gutterBottom sx={{ textAlign: 'center', mb: 3 }}>
               Past Releases
             </Typography>
             <Grid container spacing={3}>
               {pastReleases.map((release) => (
-                <Grid item xs={12} sm={6} md={4} key={release.id}>
+                <Grid item key={release.id} xs={12} sm={6} md={4}>
                   <ReleaseCard>
                     <CardMedia
                       component="img"
@@ -367,33 +179,31 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
                       alt={release.title}
                     />
                     <CardContent sx={{ flexGrow: 1 }}>
-                      <Typography variant="body1" component="div" sx={{ color: 'text.primary', fontWeight: 'bold' }}>
+                      <Typography variant="h6" component="div" sx={{ mb: 1 }}>
                         {release.title}
                       </Typography>
-                      <Typography variant="body2" color="text.secondary">
+                      <Typography color="text.secondary" sx={{ mb: 1 }}>
                         {release.artist}
                       </Typography>
-                      <Box sx={{ mt: 1 }}>
-                        <Typography variant="caption" color="text.secondary">
-                          {release.releaseDate}
-                        </Typography>
-                        <Box mt={1}>
-                          {release.beatportUrl && (
-                            <IconLink href={release.beatportUrl} target="_blank">
-                              <SiBeatport size={20} />
-                            </IconLink>
-                          )}
-                          {release.spotifyUrl && (
-                            <IconLink href={release.spotifyUrl} target="_blank">
-                              <FaSpotify size={20} />
-                            </IconLink>
-                          )}
-                          {release.soundcloudUrl && (
-                            <IconLink href={release.soundcloudUrl} target="_blank">
-                              <FaSoundcloud size={20} />
-                            </IconLink>
-                          )}
-                        </Box>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                        {release.releaseDate}
+                      </Typography>
+                      <Box>
+                        {release.spotifyUrl && (
+                          <IconLink href={release.spotifyUrl} target="_blank" hovercolor="#1DB954">
+                            <FaSpotify size={20} />
+                          </IconLink>
+                        )}
+                        {release.beatportUrl && (
+                          <IconLink href={release.beatportUrl} target="_blank" hovercolor="#02FF95">
+                            <SiBeatport size={20} />
+                          </IconLink>
+                        )}
+                        {release.soundcloudUrl && (
+                          <IconLink href={release.soundcloudUrl} target="_blank" hovercolor="#FF3300">
+                            <FaSoundcloud size={20} />
+                          </IconLink>
+                        )}
                       </Box>
                     </CardContent>
                   </ReleaseCard>
@@ -403,30 +213,40 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
           </Box>
         </Grid>
 
-        {/* Right Sidebar - Top 10 Most Listened */}
+        {/* Sidebar */}
         <Grid item xs={12} md={3}>
-          <Box sx={{ position: { md: 'sticky' }, top: { md: '24px' } }}>
-            <Typography variant="h5" gutterBottom sx={{ mb: 3 }}>
-              Top 10 Most Listened
+          <Box>
+            <Typography variant="h5" gutterBottom sx={{ textAlign: 'center', mb: 3 }}>
+              Most Popular
             </Typography>
-            {topListened.map((track, index) => (
-              <TopListenCard key={track.id}>
-                <CardContent sx={{ py: 2, '&:last-child': { pb: 2 } }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Typography variant="h6" sx={{ color: 'text.secondary', mr: 2, minWidth: '28px' }}>
-                      {index + 1}
-                    </Typography>
-                    <Box>
-                      <Typography variant="body1" sx={{ color: 'text.primary', fontWeight: 'bold' }}>
-                        {track.title}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {track.artist}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {track.plays?.toLocaleString()} plays
-                      </Typography>
-                    </Box>
+            {topListened.map((release, index) => (
+              <TopListenCard key={release.id}>
+                <CardContent>
+                  <Typography variant="h6" component="div">
+                    {index + 1}. {release.title}
+                  </Typography>
+                  <Typography color="text.secondary">
+                    {release.artist}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {release.tracks[0]?.duration || '0:00'}
+                  </Typography>
+                  <Box mt={1}>
+                    {release.spotifyUrl && (
+                      <IconLink href={release.spotifyUrl} target="_blank" hovercolor="#1DB954">
+                        <FaSpotify size={16} />
+                      </IconLink>
+                    )}
+                    {release.beatportUrl && (
+                      <IconLink href={release.beatportUrl} target="_blank" hovercolor="#02FF95">
+                        <SiBeatport size={16} />
+                      </IconLink>
+                    )}
+                    {release.soundcloudUrl && (
+                      <IconLink href={release.soundcloudUrl} target="_blank" hovercolor="#FF3300">
+                        <FaSoundcloud size={16} />
+                      </IconLink>
+                    )}
                   </Box>
                 </CardContent>
               </TopListenCard>

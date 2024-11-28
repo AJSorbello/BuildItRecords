@@ -34,6 +34,7 @@ export interface SpotifyApiTrack {
   external_urls: {
     spotify: string;
   };
+  duration_ms: number;
 }
 
 // Application Types
@@ -61,6 +62,7 @@ export interface SpotifyTrack {
   previewUrl: string | null;
   spotifyUrl: string;
   album: SpotifyAlbum;
+  duration?: string;
 }
 
 export interface SimplifiedTrackOutput {
