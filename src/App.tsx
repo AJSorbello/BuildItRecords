@@ -23,8 +23,8 @@ import AdminDashboard from './components/AdminDashboard';
 
 // Protected Route component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const token = localStorage.getItem('adminToken');
-  if (!token) {
+  const isAdmin = localStorage.getItem('isAdmin') === 'true';
+  if (!isAdmin) {
     return <Navigate to="/admin/login" replace />;
   }
   return <>{children}</>;

@@ -7,7 +7,7 @@ module.exports = function(app) {
         'Content-Security-Policy',
         "default-src 'self'; " +
         "script-src 'self' 'unsafe-inline'; " +
-        "connect-src 'self' http://localhost:3000; " +
+        "connect-src 'self' http://localhost:3000 http://localhost:3001; " +
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
         "font-src 'self' https://fonts.gstatic.com; " +
         "img-src 'self' data: https:; " +
@@ -22,8 +22,10 @@ module.exports = function(app) {
   app.use(
     '/api',
     createProxyMiddleware({
-      target: 'http://localhost:3000',
+      target: 'http://localhost:3001',
       changeOrigin: true,
+      secure: false,
+      logLevel: 'debug',
     })
   );
 };

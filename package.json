@@ -30,12 +30,14 @@
     "@types/react": "^18.2.47",
     "@types/react-dom": "^18.2.18",
     "@types/spotify-web-api-node": "^5.0.11",
-    "axios": "^1.6.5",
+    "axios": "^1.7.8",
+    "bcryptjs": "^2.4.3",
     "date-fns": "^3.0.6",
     "dotenv": "^16.3.1",
     "express": "^4.21.1",
     "framer-motion": "^10.17.9",
     "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.2",
     "nodemailer": "^6.9.16",
     "papaparse": "^5.4.1",
     "react": "^18.2.0",
@@ -66,6 +68,7 @@
       "react-app/jest"
     ]
   },
+  "proxy": "http://localhost:3001/",
   "browserslist": {
     "production": [
       ">0.2%",

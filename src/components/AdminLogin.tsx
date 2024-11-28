@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import {
   Container,
   Box,
@@ -14,6 +13,11 @@ interface LoginCredentials {
   username: string;
   password: string;
 }
+
+const ADMIN_CREDENTIALS = {
+  username: 'admin',
+  password: 'admin123' // You should change this in production
+};
 
 const AdminLogin: React.FC = () => {
   const navigate = useNavigate();
@@ -35,15 +39,18 @@ const AdminLogin: React.FC = () => {
     e.preventDefault();
     setError('');
 
-    try {
-      const response = await axios.post('/api/admin/login', credentials);
-      localStorage.setItem('adminToken', response.data.token);
+    // Simple client-side authentication
+    if (
+      credentials.username === ADMIN_CREDENTIALS.username && 
+      credentials.password === ADMIN_CREDENTIALS.password
+    ) {
+      // Store authentication state
+      localStorage.setItem('isAdmin', 'true');
       localStorage.setItem('adminUsername', credentials.username);
       
-      const isDevelopment = process.env.NODE_ENV === 'development';
-      const dashboardPath = isDevelopment ? '/admin/dashboard' : '/dashboard';
-      navigate(dashboardPath);
-    } catch (err) {
+      // Navigate to dashboard
+      navigate('/admin/dashboard');
+    } else {
       setError('Invalid credentials');
     }
   };
@@ -51,8 +58,8 @@ const AdminLogin: React.FC = () => {
   return (
     <Container maxWidth="sm">
       <Box sx={{ mt: 8 }}>
-        <Paper elevation={3} sx={{ p: 4 }}>
-          <Typography variant="h4" component="h1" gutterBottom align="center">
+        <Paper elevation={3} sx={{ p: 4, backgroundColor: '#282828' }}>
+          <Typography variant="h4" component="h1" gutterBottom align="center" sx={{ color: '#FFFFFF' }}>
             Admin Login
           </Typography>
           
@@ -71,6 +78,22 @@ const AdminLogin: React.FC = () => {
               value={credentials.username}
               onChange={handleChange}
               required
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  '& fieldset': {
+                    borderColor: '#666',
+                  },
+                  '&:hover fieldset': {
+                    borderColor: '#999',
+                  },
+                },
+                '& .MuiInputLabel-root': {
+                  color: '#999',
+                },
+                '& .MuiOutlinedInput-input': {
+                  color: '#FFF',
+                },
+              }}
             />
             <TextField
               fullWidth
@@ -81,13 +104,35 @@ const AdminLogin: React.FC = () => {
               value={credentials.password}
               onChange={handleChange}
               required
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  '& fieldset': {
+                    borderColor: '#666',
+                  },
+                  '&:hover fieldset': {
+                    borderColor: '#999',
+                  },
+                },
+                '& .MuiInputLabel-root': {
+                  color: '#999',
+                },
+                '& .MuiOutlinedInput-input': {
+                  color: '#FFF',
+                },
+              }}
             />
             <Button
               type="submit"
               fullWidth
               variant="contained"
-              color="primary"
-              sx={{ mt: 3 }}
+              sx={{ 
+                mt: 3,
+                backgroundColor: '#02FF95',
+                color: '#121212',
+                '&:hover': {
+                  backgroundColor: '#00CC76',
+                },
+              }}
             >
               Login
             </Button>

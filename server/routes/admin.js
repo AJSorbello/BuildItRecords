@@ -54,9 +54,9 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// Verify current token
+// Verify admin token
 router.get('/verify', verifyToken, (req, res) => {
-  res.json({ valid: true, user: req.user });
+  res.json({ message: 'Token is valid', user: req.user });
 });
 
-module.exports = { router, verifyToken };
+module.exports = router;
