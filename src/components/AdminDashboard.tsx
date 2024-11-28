@@ -20,25 +20,42 @@ import {
   CircularProgress,
 } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import SpotifyService from '../services/SpotifyService';
+import { extractSpotifyId } from '../utils/spotifyUtils';
+import { SpotifyTrack } from '../types/spotify';
 
 interface Track {
   id: string;
   name: string;
   artist: string;
   spotifyUrl: string;
-  albumArt?: string;
+  albumArt: string;
 }
 
 interface TrackFormData {
   name: string;
   artist: string;
   spotifyUrl: string;
+  albumArt: string;
 }
 
 const initialFormData: TrackFormData = {
   name: '',
   artist: '',
   spotifyUrl: '',
+  albumArt: ''
+};
+
+interface FetchState {
+  loading: boolean;
+  error: string | null;
+  data: SpotifyTrack | null;
+}
+
+const initialFetchState: FetchState = {
+  loading: false,
+  error: null,
+  data: null,
 };
 
 const AdminDashboard: React.FC = () => {
@@ -46,8 +63,7 @@ const AdminDashboard: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState<TrackFormData>(initialFormData);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [error, setError] = useState<string>('');
-  const [loading, setLoading] = useState(false);
+  const [fetchState, setFetchState] = useState<FetchState>(initialFetchState);
 
   useEffect(() => {
     fetchTracks();
@@ -60,52 +76,48 @@ const AdminDashboard: React.FC = () => {
         setTracks(JSON.parse(storedTracks));
       }
     } catch (err) {
-      setError('Failed to fetch tracks');
+      console.error('Error fetching tracks:', err);
     }
-  };
-
-  const extractSpotifyId = (url: string) => {
-    const match = url.match(/track\/([a-zA-Z0-9]+)/);
-    return match ? match[1] : null;
   };
 
   const fetchSpotifyTrackDetails = async (url: string) => {
-    const trackId = extractSpotifyId(url);
-    if (!trackId) {
-      setError('Invalid Spotify URL');
-      return;
-    }
-
+    setFetchState(prev => ({ ...prev, loading: true, error: null }));
+    
     try {
-      setLoading(true);
-      setError('');
-
-      console.log('Fetching track details for ID:', trackId);
-      const response = await fetch(`/api/spotify/track/${trackId}`);
-      const data = await response.json();
-
-      if (!response.ok) {
-        console.error('Error response:', data);
-        throw new Error(data.error || data.details || 'Failed to fetch track details');
+      const trackId = extractSpotifyId(url);
+      if (!trackId) {
+        throw new Error('Invalid Spotify URL format');
       }
 
-      console.log('Track details received:', data);
-      setFormData(prev => ({
-        ...prev,
-        name: data.name,
-        artist: data.artists[0].name,
-        spotifyUrl: url
-      }));
+      const spotifyService = SpotifyService.getInstance();
+      await spotifyService.ensureAccessToken();
+      const track = await spotifyService.getTrackDetails(trackId);
+
+      setFetchState({
+        loading: false,
+        error: null,
+        data: track as SpotifyTrack
+      });
+
+      setFormData({
+        name: track.name,
+        artist: track.artists[0]?.name || '',
+        spotifyUrl: track.external_urls?.spotify || url,
+        albumArt: track.album.images[0]?.url || ''
+      });
+
     } catch (err) {
       console.error('Error fetching track details:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch track details');
+      setFetchState({
+        loading: false,
+        error: err instanceof Error ? err.message : 'Failed to fetch track details',
+        data: null
+      });
+      
       setFormData(prev => ({
-        ...prev,
-        name: '',
-        artist: ''
+        ...initialFormData,
+        spotifyUrl: prev.spotifyUrl
       }));
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -121,18 +133,24 @@ const AdminDashboard: React.FC = () => {
     setOpen(true);
     setFormData(initialFormData);
     setEditingId(null);
-    setError('');
+    setFetchState(initialFetchState);
   };
 
   const handleClose = () => {
     setOpen(false);
     setFormData(initialFormData);
     setEditingId(null);
-    setError('');
+    setFetchState(initialFetchState);
   };
 
   const handleEdit = (track: Track) => {
-    setFormData(track);
+    // Convert Track to TrackFormData
+    setFormData({
+      name: track.name,
+      artist: track.artist,
+      spotifyUrl: track.spotifyUrl,
+      albumArt: track.albumArt || '' // Provide default empty string if albumArt is undefined
+    });
     setEditingId(track.id);
     setOpen(true);
   };
@@ -143,32 +161,33 @@ const AdminDashboard: React.FC = () => {
       localStorage.setItem('tracks', JSON.stringify(updatedTracks));
       setTracks(updatedTracks);
     } catch (err) {
-      setError('Failed to delete track');
+      console.error('Error deleting track:', err);
     }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.spotifyUrl || !formData.name || !formData.artist) {
-      setError('Please enter a valid Spotify URL and wait for track details to load');
+      console.error('Please enter a valid Spotify URL and wait for track details to load');
       return;
     }
 
     try {
       let updatedTracks: Track[];
-      
+      const newTrack: Track = {
+        id: editingId || crypto.randomUUID(),
+        name: formData.name,
+        artist: formData.artist,
+        spotifyUrl: formData.spotifyUrl,
+        albumArt: formData.albumArt
+      };
+
       if (editingId) {
         updatedTracks = tracks.map(track => 
-          track.id === editingId 
-            ? { ...formData, id: track.id }
-            : track
+          track.id === editingId ? newTrack : track
         );
       } else {
-        const newTrack: Track = {
-          ...formData,
-          id: Date.now().toString(),
-        };
         updatedTracks = [...tracks, newTrack];
       }
       
@@ -176,7 +195,7 @@ const AdminDashboard: React.FC = () => {
       setTracks(updatedTracks);
       handleClose();
     } catch (err) {
-      setError('Failed to save track');
+      console.error('Error saving track:', err);
     }
   };
 
@@ -209,9 +228,9 @@ const AdminDashboard: React.FC = () => {
         </Button>
       </Box>
 
-      {error && (
+      {fetchState.error && (
         <Typography color="error" sx={{ mb: 2 }}>
-          {error}
+          Error: {fetchState.error}
         </Typography>
       )}
 
@@ -273,18 +292,18 @@ const AdminDashboard: React.FC = () => {
                 '& .MuiOutlinedInput-input': { color: '#FFF' },
               }}
             />
-            {loading && (
+            {fetchState.loading && (
               <Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }}>
                 <CircularProgress sx={{ color: '#02FF95' }} />
               </Box>
             )}
-            {formData.name && (
+            {fetchState.data && (
               <Box sx={{ my: 2, p: 2, backgroundColor: '#1e1e1e', borderRadius: 1 }}>
                 <Typography variant="subtitle1" sx={{ color: '#02FF95' }}>
                   Track Details:
                 </Typography>
                 <Typography sx={{ color: '#FFF' }}>
-                  {formData.name} - {formData.artist}
+                  {fetchState.data.name} - {fetchState.data.artists[0]?.name || ''}
                 </Typography>
               </Box>
             )}
@@ -299,7 +318,7 @@ const AdminDashboard: React.FC = () => {
             <Button 
               type="submit"
               variant="contained"
-              disabled={loading || !formData.name}
+              disabled={fetchState.loading || !formData.name}
               sx={{
                 backgroundColor: '#02FF95',
                 color: '#121212',

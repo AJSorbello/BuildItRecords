@@ -58,7 +58,8 @@ export const useReleases = (labelId: LabelId) => {
         setIsLoading(true);
         setError(null);
         
-        const allReleases = await spotifyService.getLabelReleases(SPOTIFY_IDS[labelId]);
+        const spotifyServiceInstance = spotifyService.getInstance();
+        const allReleases = await spotifyServiceInstance.getLabelReleases(SPOTIFY_IDS[labelId]);
         const formattedReleases = allReleases.map(convertSpotifyToRelease);
         
         setReleases(formattedReleases);
@@ -81,7 +82,8 @@ export const useReleases = (labelId: LabelId) => {
         setIsLoading(true);
         setError(null);
         
-        const allReleases = await spotifyService.getLabelReleases(SPOTIFY_IDS[labelId]);
+        const spotifyServiceInstance = spotifyService.getInstance();
+        const allReleases = await spotifyServiceInstance.getLabelReleases(SPOTIFY_IDS[labelId]);
         const formattedReleases = allReleases.map(convertSpotifyToRelease);
         
         setReleases(formattedReleases);

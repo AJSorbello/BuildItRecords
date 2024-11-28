@@ -4,6 +4,7 @@ import { Layout } from './Layout';
 import AdminLogin from './AdminLogin';
 import AdminDashboard from './AdminDashboard';
 import Home from './Home';
+import SpotifyCallback from './SpotifyCallback';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -35,6 +36,9 @@ const AppRouter: React.FC = () => {
     return (
       <Router>
         <Routes>
+          {/* Spotify callback route */}
+          <Route path="/callback" element={<SpotifyCallback />} />
+          
           {/* Admin routes */}
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route

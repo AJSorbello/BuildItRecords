@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Typography, Grid, Card, CardContent, CardMedia, Link, IconButton, styled } from '@mui/material';
 import { FaSpotify, FaPlay, FaPause } from 'react-icons/fa';
-import spotifyService from '../services/SpotifyService';
+import SpotifyService from '../services/SpotifyService';
 
 interface Track {
   id: string;
@@ -64,6 +64,7 @@ const TrackList: React.FC = () => {
       try {
         // Replace with your playlist ID
         const playlistId = 'your_playlist_id';
+        const spotifyService = SpotifyService.getInstance();
         const response = await spotifyService.getPlaylist(playlistId);
         
         const formattedTracks = response.tracks.items.map((track: any) => ({

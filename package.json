@@ -7,10 +7,10 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
+    "server": "node server/server.js",
+    "dev": "concurrently \"npm run server\" \"npm run start\"",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
-    "type-check": "tsc",
-    "start:prod": "node server.js",
-    "start:server": "node server/server.js"
+    "type-check": "tsc"
   },
   "dependencies": {
     "@emotion/react": "^11.11.3",
@@ -32,6 +32,7 @@
     "@types/spotify-web-api-node": "^5.0.11",
     "axios": "^1.7.8",
     "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
     "date-fns": "^3.0.6",
     "dotenv": "^16.3.1",
     "express": "^4.21.1",
@@ -58,6 +59,7 @@
     "@babel/preset-typescript": "^7.23.7",
     "@typescript-eslint/eslint-plugin": "^5.62.0",
     "@typescript-eslint/parser": "^5.62.0",
+    "concurrently": "^7.6.0",
     "eslint": "^8.56.0",
     "eslint-plugin-react": "^7.33.2",
     "http-proxy-middleware": "^3.0.3"
