@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import spotifyService from '../services/SpotifyService';
+import { spotifyService } from '../services/SpotifyService';
 import { Release } from '../types/release';
 
 const SPOTIFY_IDS = {
@@ -22,7 +22,7 @@ const SOUNDCLOUD_URLS = {
 
 type LabelId = keyof typeof SPOTIFY_IDS;
 
-export const useReleases = (labelId: LabelId) => {
+const useReleases = (labelId: LabelId) => {
   const [releases, setReleases] = useState<Release[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -58,13 +58,12 @@ export const useReleases = (labelId: LabelId) => {
         setIsLoading(true);
         setError(null);
         
-        const spotifyServiceInstance = spotifyService.getInstance();
-        const allReleases = await spotifyServiceInstance.getLabelReleases(SPOTIFY_IDS[labelId]);
+        const allReleases = await spotifyService.getLabelReleases(SPOTIFY_IDS[labelId]);
         const formattedReleases = allReleases.map(convertSpotifyToRelease);
         
         setReleases(formattedReleases);
       } catch (error) {
-        setError(error instanceof Error ? error : new Error('Failed to fetch releases'));
+        setError(error as Error);
       } finally {
         setIsLoading(false);
       }
@@ -82,16 +81,17 @@ export const useReleases = (labelId: LabelId) => {
         setIsLoading(true);
         setError(null);
         
-        const spotifyServiceInstance = spotifyService.getInstance();
-        const allReleases = await spotifyServiceInstance.getLabelReleases(SPOTIFY_IDS[labelId]);
+        const allReleases = await spotifyService.getLabelReleases(SPOTIFY_IDS[labelId]);
         const formattedReleases = allReleases.map(convertSpotifyToRelease);
         
         setReleases(formattedReleases);
       } catch (error) {
-        setError(error instanceof Error ? error : new Error('Failed to fetch releases'));
+        setError(error as Error);
       } finally {
         setIsLoading(false);
       }
     },
   };
 };
+
+export default useReleases;

@@ -1,12 +1,62 @@
 import { SpotifyRelease, SpotifyTrack } from '../types/spotify';
 import { Release, Track } from '../types/release';
+import { SpotifyService } from '../services/SpotifyService';
+
+const spotifyService = SpotifyService.getInstance();
+
+export const fetchTrackDetails = async (trackUrl: string): Promise<SpotifyTrack> => {
+  try {
+    const trackDetails = await spotifyService.getTrackDetailsByUrl(trackUrl);
+    if (!trackDetails) {
+      throw new Error('Track not found');
+    }
+    
+    console.log('Track Details:', trackDetails);
+    return trackDetails;
+  } catch (error) {
+    console.error('Error fetching track details:', error);
+    throw error;
+  }
+};
+
+export const searchSpotifyTracks = async (query: string): Promise<SpotifyTrack[]> => {
+  try {
+    const tracks = await spotifyService.searchTracks(query);
+    console.log('Search Results:', tracks);
+    return tracks;
+  } catch (error) {
+    console.error('Error searching tracks:', error);
+    throw error;
+  }
+};
+
+export const getLabelReleases = async (playlistId: string): Promise<SpotifyTrack[]> => {
+  try {
+    const releases = await spotifyService.getLabelReleases(playlistId);
+    console.log('Label Releases:', releases);
+    return releases;
+  } catch (error) {
+    console.error('Error fetching label releases:', error);
+    throw error;
+  }
+};
 
 export const extractSpotifyId = (url: string): string | null => {
-  if (!url) return null;
+  const match = url.match(/track\/([a-zA-Z0-9]+)/);
+  return match ? match[1] : null;
+};
 
-  // Handle both track URLs and URIs
-  const trackIdMatch = url.match(/track[:/]([a-zA-Z0-9]+)/);
-  return trackIdMatch ? trackIdMatch[1] : null;
+// Utility to format track details for display
+export const formatTrackDetails = (track: SpotifyTrack) => {
+  return {
+    title: track.trackTitle,
+    artist: track.artist,
+    label: track.recordLabel,
+    artwork: track.albumCover,
+    albumName: track.album.name,
+    releaseDate: track.album.releaseDate,
+    spotifyUrl: track.spotifyUrl
+  };
 };
 
 export const isValidSpotifyUrl = (url: string): boolean => {
@@ -50,4 +100,15 @@ export const convertSpotifyToRelease = (spotifyRelease: SpotifyRelease): Release
       spotifyId: track.id
     }))
   };
+};
+
+export const getSimplifiedTrackDetails = async (trackUrl: string) => {
+  try {
+    const details = await spotifyService.getSimplifiedTrackDetails(trackUrl);
+    console.log('Simplified Track Details:', details);
+    return details;
+  } catch (error) {
+    console.error('Error fetching simplified track details:', error);
+    throw error;
+  }
 };
