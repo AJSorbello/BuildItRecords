@@ -1,42 +1,86 @@
+require('dotenv').config();
+
 const express = require('express');
-const nodemailer = require('nodemailer');
-const path = require('path');
-const helmet = require('helmet');
-const axios = require('axios');
 const cors = require('cors');
-require('dotenv').config({ path: path.join(__dirname, '../.env') });
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const Redis = require('ioredis');
+const { validateSpotifyUrl } = require('./utils/validation');
+const { classifyTrack } = require('./utils/trackClassifier');
 
+// Initialize Express app
 const app = express();
-const PORT = 3001; // Changed default port to 3001
+const port = process.env.PORT || 3001;
 
-// Enable CORS for development
-app.use(cors({
-  origin: 'http://localhost:3000',
-  credentials: true
-}));
+// Redis client setup
+const redis = new Redis({
+  host: process.env.REDIS_HOST || 'localhost',
+  port: process.env.REDIS_PORT || 6379,
+});
 
-// Parse JSON bodies
+// Middleware
+app.use(helmet());
+app.use(cors());
 app.use(express.json());
 
-// Configure Helmet with CSP
-app.use(
-  helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'"],
-        connectSrc: ["'self'", "https://api.spotify.com", "https://accounts.spotify.com"],
-        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-        fontSrc: ["'self'", "https://fonts.gstatic.com"],
-        imgSrc: ["'self'", "data:", "https:"],
-        frameSrc: ["'self'"],
-        formAction: ["'self'"]
-      },
-    },
-  })
-);
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100 // limit each IP to 100 requests per windowMs
+});
+app.use(limiter);
 
-// API Routes
+// Caching middleware
+const cacheMiddleware = async (req, res, next) => {
+  try {
+    const cacheKey = `spotify:${req.originalUrl}`;
+    const cachedData = await redis.get(cacheKey);
+    
+    if (cachedData) {
+      return res.json(JSON.parse(cachedData));
+    }
+    
+    res.sendResponse = res.json;
+    res.json = (body) => {
+      redis.setex(cacheKey, 3600, JSON.stringify(body)); // Cache for 1 hour
+      res.sendResponse(body);
+    };
+    
+    next();
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Import routes
+const tracksRouter = require('./routes/tracks');
+const artistsRouter = require('./routes/artists');
+const albumsRouter = require('./routes/albums');
+const processRouter = require('./routes/process');
+
+// Use routes
+app.use('/api/tracks', cacheMiddleware, tracksRouter);
+app.use('/api/artists', cacheMiddleware, artistsRouter);
+app.use('/api/albums', cacheMiddleware, albumsRouter);
+app.use('/api/process', processRouter);
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(err.status || 500).json({
+    error: {
+      message: err.message || 'Internal Server Error',
+      status: err.status || 500
+    }
+  });
+});
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ status: 'healthy' });
+});
+
+// Spotify endpoint
 app.get('/api/spotify/track/:trackId', async (req, res) => {
   console.log('Received request for track:', req.params.trackId);
   
@@ -174,6 +218,7 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+// Start server
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
 });

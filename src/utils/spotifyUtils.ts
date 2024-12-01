@@ -1,5 +1,5 @@
 import { SpotifyRelease, SpotifyTrack } from '../types/spotify';
-import { Release, Track } from '../types/release';
+import { Release } from '../types/release';
 import { SpotifyService } from '../services/SpotifyService';
 
 const spotifyService = SpotifyService.getInstance();

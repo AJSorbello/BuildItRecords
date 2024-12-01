@@ -1,9 +1,9 @@
 import SpotifyWebApi from 'spotify-web-api-node';
-import { SpotifyTrack, SpotifyImage, isSpotifyTrack, isSpotifyAlbum, SpotifyApiTrack, SpotifyApiAlbum, SpotifyPlaylist, SimplifiedTrackOutput } from '../types/spotify';
+import { SpotifyTrack, SpotifyImage, SpotifyApiTrack, SpotifyPlaylist, SimplifiedTrackOutput } from '../types/spotify';
 
-const SPOTIFY_CLIENT_ID = process.env.REACT_APP_SPOTIFY_CLIENT_ID!;
-const SPOTIFY_CLIENT_SECRET = process.env.REACT_APP_SPOTIFY_CLIENT_SECRET!;
-const SPOTIFY_REDIRECT_URI = process.env.REACT_APP_SPOTIFY_REDIRECT_URI!;
+const SPOTIFY_CLIENT_ID = process.env.REACT_APP_SPOTIFY_CLIENT_ID ?? '';
+const SPOTIFY_CLIENT_SECRET = process.env.REACT_APP_SPOTIFY_CLIENT_SECRET ?? '';
+const SPOTIFY_REDIRECT_URI = process.env.REACT_APP_SPOTIFY_REDIRECT_URI ?? '';
 
 export class SpotifyService {
   private static instance: SpotifyService;
@@ -115,7 +115,6 @@ export class SpotifyService {
   private async convertTrackToSpotifyTrack(track: SpotifyApiTrack): Promise<SpotifyTrack> {
     await this.ensureValidToken();
     
-    let albumDetails;
     try {
       const albumResponse = await this.spotifyApi.getAlbum(track.album.id);
       const album = albumResponse.body;
