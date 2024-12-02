@@ -7,4 +7,6 @@ export interface Track {
   spotifyUrl: string;
   albumCover?: string;
   recordLabel: RecordLabel;
+  beatportUrl?: string;
+  soundcloudUrl?: string;
 }

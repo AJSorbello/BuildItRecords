@@ -29,6 +29,8 @@ export class SpotifyService {
   public async ensureAccessToken(): Promise<void> {
     try {
       if (!this.accessToken || Date.now() >= this.tokenExpirationTime) {
+        console.log('Getting new Spotify access token...');
+        
         // Use btoa for base64 encoding in the browser
         const credentials = btoa(`${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`);
         
@@ -43,23 +45,30 @@ export class SpotifyService {
 
         if (!response.ok) {
           const errorData = await response.text();
+          console.error('Failed to get access token:', errorData);
           throw new Error(`Failed to get Spotify access token: ${errorData}`);
         }
 
         const data = await response.json();
+        console.log('Got access token response:', { 
+          success: !!data.access_token,
+          expiresIn: data.expires_in 
+        });
+
         if (!data.access_token) {
           throw new Error('No access token received from Spotify');
         }
 
-        const accessToken: string = data.access_token;
-        this.accessToken = accessToken;
-        this.spotifyApi.setAccessToken(accessToken);
+        this.accessToken = data.access_token;
         this.tokenExpirationTime = Date.now() + (data.expires_in * 1000);
         
-        console.log('Successfully obtained Spotify access token');
+        if (this.accessToken) {
+          this.spotifyApi.setAccessToken(this.accessToken);
+          console.log('Successfully set new access token');
+        }
       }
     } catch (error) {
-      console.error('Error getting Spotify access token:', error);
+      console.error('Error in ensureAccessToken:', error);
       throw error;
     }
   }
@@ -149,6 +158,22 @@ export class SpotifyService {
       const albumResponse = await this.spotifyApi.getAlbum(track.album.id);
       const album = albumResponse.body;
       
+      // Debug log
+      console.log('Album response:', album);
+      console.log('Album images:', track.album.images);
+      
+      // Get the highest quality image or use a placeholder
+      let albumCover = 'https://via.placeholder.com/300';
+      if (track.album.images && track.album.images.length > 0) {
+        const bestImage = track.album.images.sort((a, b) => (b.width || 0) - (a.width || 0))[0];
+        if (bestImage && bestImage.url) {
+          albumCover = bestImage.url;
+        }
+      }
+      
+      // Debug log
+      console.log('Selected album cover:', albumCover);
+      
       // Convert album
       const spotifyAlbum: SpotifyAlbum = {
         id: track.album.id,
@@ -165,16 +190,21 @@ export class SpotifyService {
       };
 
       // Convert track
-      return {
+      const spotifyTrack = {
         id: track.id,
         trackTitle: track.name,
         artist: track.artists.map(a => a.name).join(', '),
-        albumCover: track.album.images[0]?.url || '',
+        albumCover, // Will never be undefined now
         recordLabel: album.label || 'Unknown Label',
         previewUrl: track.preview_url,
         spotifyUrl: track.external_urls.spotify,
         album: spotifyAlbum
       };
+
+      // Debug log
+      console.log('Converted Spotify track:', spotifyTrack);
+
+      return spotifyTrack;
     } catch (error) {
       console.error('Error converting track:', error);
       throw error;
@@ -183,14 +213,67 @@ export class SpotifyService {
 
   async getTrackDetailsByUrl(trackUrl: string): Promise<SpotifyTrack | null> {
     try {
+      console.log('Getting track details for URL:', trackUrl);
+      
       await this.ensureValidToken();
       const trackId = this.extractTrackId(trackUrl);
       
       if (!trackId) {
+        console.error('Invalid track URL:', trackUrl);
         throw new Error('Invalid Spotify track URL');
       }
 
-      return this.getTrackDetails(trackId);
+      console.log('Extracted track ID:', trackId);
+
+      // Get track details
+      console.log('Fetching track details...');
+      const response = await this.spotifyApi.getTrack(trackId);
+      const track = response.body;
+      console.log('Got track response:', track);
+
+      // Get album details to get the label and high-quality artwork
+      console.log('Fetching album details...');
+      const albumResponse = await this.spotifyApi.getAlbum(track.album.id);
+      const album = albumResponse.body;
+      console.log('Got album response:', album);
+
+      // Get the highest quality image
+      let albumCover = 'https://via.placeholder.com/300';
+      if (album.images && album.images.length > 0) {
+        // Sort by width to get the highest quality image
+        const bestImage = album.images.sort((a, b) => (b.width || 0) - (a.width || 0))[0];
+        if (bestImage && bestImage.url) {
+          albumCover = bestImage.url;
+          console.log('Selected album cover:', albumCover);
+        }
+      }
+
+      // Convert to our format
+      const spotifyTrack: SpotifyTrack = {
+        id: track.id,
+        trackTitle: track.name,
+        artist: track.artists.map(a => a.name).join(', '),
+        albumCover,
+        recordLabel: album.label || 'Unknown Label',
+        previewUrl: track.preview_url,
+        spotifyUrl: track.external_urls.spotify,
+        album: {
+          id: album.id,
+          name: album.name,
+          images: album.images.map(img => ({
+            url: img.url,
+            height: img.height || 0,
+            width: img.width || 0
+          })),
+          artists: album.artists.map(a => a.name).join(', '),
+          releaseDate: album.release_date,
+          label: album.label || 'Unknown Label',
+          spotifyUrl: album.external_urls.spotify
+        }
+      };
+
+      console.log('Converted track with artwork:', spotifyTrack);
+      return spotifyTrack;
     } catch (error) {
       console.error('Error fetching track details:', error);
       return null;
@@ -243,8 +326,10 @@ export class SpotifyService {
   public async searchTracks(query: string): Promise<SpotifyTrack[]> {
     try {
       await this.ensureValidToken();
+      console.log('Searching tracks for query:', query);
       const response = await this.spotifyApi.searchTracks(query);
       const tracks = response.body.tracks?.items || [];
+      console.log('Got search tracks response:', tracks);
       
       const apiTracks = tracks.map(track => this.convertToSpotifyApiTrack(track));
       return Promise.all(apiTracks.map(track => this.convertTrackToSpotifyTrack(track)));
@@ -257,7 +342,9 @@ export class SpotifyService {
   public async getPlaylist(playlistId: string): Promise<SpotifyPlaylist> {
     try {
       await this.ensureValidToken();
+      console.log('Fetching playlist:', playlistId);
       const response = await this.spotifyApi.getPlaylist(playlistId);
+      console.log('Got playlist response:', response.body);
       return this.convertToSpotifyApiPlaylist(response.body);
     } catch (error) {
       console.error('Error fetching playlist:', error);
@@ -268,6 +355,7 @@ export class SpotifyService {
   public async getLabelReleases(playlistId: string): Promise<SpotifyTrack[]> {
     try {
       await this.ensureValidToken();
+      console.log('Fetching label releases for playlist:', playlistId);
       const playlist = await this.getPlaylist(playlistId);
       
       return Promise.all(

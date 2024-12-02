@@ -4,28 +4,29 @@ import {
   Typography,
   Box,
   Button,
-  TextField,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  Paper,
-  IconButton,
-  CircularProgress,
+  TextField,
   Select,
   MenuItem,
+  SelectChangeEvent,
+  CircularProgress,
+  Paper,
+  IconButton,
   FormControl,
   InputLabel,
-  SelectChangeEvent,
 } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import { RECORD_LABELS } from '../constants/labels';
+import { Track } from '../types/track';
+import { RecordLabel } from '../constants/labels';
+import AdminTrackList from './AdminTrackList';
 import { spotifyService } from '../services/SpotifyService';
+import { getData, resetData } from '../utils/dataInitializer';
 import { extractSpotifyId, isValidSpotifyUrl, normalizeSpotifyUrl } from '../utils/spotifyUtils';
 import { SpotifyTrack } from '../types/spotify';
-import AdminTrackList from './AdminTrackList';
-import { Track } from '../types/track';
-import { RECORD_LABELS, RecordLabel } from '../constants/labels';
-import { getData } from '../utils/dataInitializer';
 
 interface TrackFormData {
   id: string;
@@ -33,6 +34,7 @@ interface TrackFormData {
   artist: string;
   spotifyUrl: string;
   recordLabel: RecordLabel;
+  albumCover: string;
 }
 
 const initialFormData: TrackFormData = {
@@ -41,6 +43,7 @@ const initialFormData: TrackFormData = {
   artist: '',
   spotifyUrl: '',
   recordLabel: RECORD_LABELS.RECORDS,
+  albumCover: 'https://via.placeholder.com/300' // Default album cover
 };
 
 interface FetchState {
@@ -59,6 +62,7 @@ interface SpotifyTrackData {
   artist: string;
   recordLabel: RecordLabel;
   spotifyUrl: string;
+  albumCover: string;
 }
 
 const validateRecordLabel = (label: string): RecordLabel => {
@@ -69,29 +73,25 @@ const validateRecordLabel = (label: string): RecordLabel => {
 };
 
 const AdminDashboard: React.FC = () => {
-  const [tracks, setTracks] = useState<Track[]>([]);
   const [open, setOpen] = useState(false);
-  const [formData, setFormData] = useState<TrackFormData>(initialFormData);
+  const [tracks, setTracks] = useState<Track[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [formData, setFormData] = useState<TrackFormData>(initialFormData);
   const [fetchState, setFetchState] = useState<FetchState>(initialFetchState);
 
   useEffect(() => {
-    fetchTracks();
-  }, []);
-
-  const fetchTracks = () => {
-    try {
-      const storedTracks = localStorage.getItem('tracks');
-      if (storedTracks) {
-        setTracks(JSON.parse(storedTracks));
-      } else {
-        const { tracks } = getData();
-        setTracks(tracks);
-      }
-    } catch (err) {
-      console.error('Error fetching tracks:', err);
+    // Initialize data if needed
+    const storedTracks = localStorage.getItem('tracks');
+    if (!storedTracks) {
+      console.log('No tracks found in localStorage, initializing with mock data');
+      resetData();
     }
-  };
+    
+    // Load tracks from localStorage
+    const data = getData();
+    console.log('Loaded tracks from localStorage:', data.tracks);
+    setTracks(data.tracks);
+  }, []);
 
   const handleSpotifyFetch = async (trackId: string) => {
     setFetchState({
@@ -100,19 +100,22 @@ const AdminDashboard: React.FC = () => {
     });
 
     try {
-      await spotifyService.ensureAccessToken();
-      const track = await spotifyService.getTrackDetails(trackId);
-      
-      if (!track) {
-        throw new Error('Track not found');
+      // Get track details from Spotify
+      const trackDetails = await spotifyService.getTrackDetailsByUrl(formData.spotifyUrl);
+      if (!trackDetails) {
+        throw new Error('Failed to fetch track details from Spotify');
       }
 
+      // Debug log
+      console.log('Fetched track details:', trackDetails);
+
       setFormData({
-        id: track.id,
-        trackTitle: track.trackTitle,
-        artist: track.artist,
-        recordLabel: validateRecordLabel(track.recordLabel),
-        spotifyUrl: track.spotifyUrl
+        id: trackDetails.id,
+        trackTitle: trackDetails.trackTitle,
+        artist: trackDetails.artist,
+        recordLabel: validateRecordLabel(trackDetails.recordLabel),
+        spotifyUrl: trackDetails.spotifyUrl,
+        albumCover: trackDetails.albumCover
       });
 
       setFetchState({
@@ -120,10 +123,10 @@ const AdminDashboard: React.FC = () => {
         error: null,
       });
     } catch (error) {
-      console.error('Error fetching track:', error);
+      console.error('Error processing Spotify URL:', error);
       setFetchState({
         loading: false,
-        error: error instanceof Error ? error.message : 'Failed to fetch track details',
+        error: error instanceof Error ? error.message : 'Failed to process Spotify URL',
       });
     }
   };
@@ -132,32 +135,16 @@ const AdminDashboard: React.FC = () => {
     const { value } = e.target;
     console.log('Original URL:', value);
     
-    // Normalize the URL
-    const normalizedUrl = normalizeSpotifyUrl(value);
-    console.log('Normalized URL:', normalizedUrl);
+    // Update form with URL immediately
+    setFormData(prev => ({ ...prev, spotifyUrl: value }));
     
-    setFormData(prev => ({ ...prev, spotifyUrl: normalizedUrl }));
-    
-    if (!normalizedUrl) {
+    if (!value) {
       setFetchState(initialFetchState);
       return;
     }
 
     try {
-      // Log URL validation result
-      const isValid = isValidSpotifyUrl(normalizedUrl);
-      console.log('Is valid Spotify URL?', isValid);
-      
-      if (!isValid) {
-        setFetchState({
-          loading: false,
-          error: 'Please enter a valid Spotify track URL (e.g., https://open.spotify.com/track/...)',
-        });
-        return;
-      }
-
-      // Log track ID extraction
-      const trackId = extractSpotifyId(normalizedUrl);
+      const trackId = extractSpotifyId(value);
       console.log('Extracted track ID:', trackId);
       
       if (!trackId) {
@@ -168,7 +155,44 @@ const AdminDashboard: React.FC = () => {
         return;
       }
 
-      await handleSpotifyFetch(trackId);
+      // Get track details from Spotify
+      setFetchState({
+        loading: true,
+        error: null,
+      });
+
+      const track = await spotifyService.getTrackDetails(trackId);
+      console.log('Fetched Spotify track:', track);
+
+      if (!track || !track.albumCover) {
+        setFetchState({
+          loading: false,
+          error: 'Failed to fetch track details or album cover from Spotify',
+        });
+        return;
+      }
+
+      // Update form with track details including album cover
+      setFormData(prev => ({
+        ...prev,
+        trackTitle: track.trackTitle,
+        artist: track.artist,
+        albumCover: track.albumCover, // This is now required
+        recordLabel: validateRecordLabel(track.recordLabel)
+      }));
+
+      // Debug log
+      console.log('Updated form data with album cover:', {
+        trackTitle: track.trackTitle,
+        artist: track.artist,
+        albumCover: track.albumCover,
+        recordLabel: track.recordLabel
+      });
+
+      setFetchState({
+        loading: false,
+        error: null,
+      });
     } catch (error) {
       console.error('Error processing Spotify URL:', error);
       setFetchState({
@@ -198,7 +222,8 @@ const AdminDashboard: React.FC = () => {
       trackTitle: track.trackTitle,
       artist: track.artist,
       spotifyUrl: track.spotifyUrl,
-      recordLabel: validateRecordLabel(track.recordLabel)
+      recordLabel: validateRecordLabel(track.recordLabel),
+      albumCover: track.albumCover || ''
     });
     setEditingId(track.id);
     setOpen(true);
@@ -214,12 +239,44 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
-  const handleTextInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleTextInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
       [name]: value
     }));
+
+    // If Spotify URL changes and it's a valid URL, fetch metadata
+    if (name === 'spotifyUrl' && value) {
+      try {
+        console.log('Spotify URL changed, fetching metadata...');
+        const trackId = value.split('/').pop()?.split('?')[0];
+        if (trackId) {
+          setFetchState({ loading: true, error: null });
+          const trackDetails = await spotifyService.getTrackDetailsByUrl(value);
+          
+          if (trackDetails) {
+            console.log('Got track details:', trackDetails);
+            setFormData(prev => ({
+              ...prev,
+              trackTitle: trackDetails.trackTitle,
+              artist: trackDetails.artist,
+              albumCover: trackDetails.albumCover,
+              recordLabel: validateRecordLabel(trackDetails.recordLabel)
+            }));
+            setFetchState({ loading: false, error: null });
+          } else {
+            throw new Error('Failed to fetch track details');
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching track metadata:', error);
+        setFetchState({
+          loading: false,
+          error: error instanceof Error ? error.message : 'Failed to fetch track metadata'
+        });
+      }
+    }
   };
 
   const handleSelectChange = (e: SelectChangeEvent<RecordLabel>) => {
@@ -229,7 +286,7 @@ const AdminDashboard: React.FC = () => {
     }));
   };
 
-  const handleSubmit = (e: React.MouseEvent) => {
+  const handleSubmit = async (e: React.MouseEvent) => {
     e.preventDefault();
 
     if (!formData.spotifyUrl || !formData.trackTitle || !formData.artist || !formData.recordLabel) {
@@ -241,15 +298,36 @@ const AdminDashboard: React.FC = () => {
     }
 
     try {
-      let updatedTracks: Track[];
+      setFetchState({ loading: true, error: null });
+
+      // Ensure we have track details from Spotify
+      let trackDetails = formData;
+      if (!formData.albumCover) {
+        const spotifyDetails = await spotifyService.getTrackDetailsByUrl(formData.spotifyUrl);
+        if (spotifyDetails) {
+          trackDetails = {
+            ...formData,
+            albumCover: spotifyDetails.albumCover
+          };
+        }
+      }
+
+      // Debug log before saving
+      console.log('Track details before saving:', trackDetails);
+
       const newTrack: Track = {
         id: editingId || crypto.randomUUID(),
-        trackTitle: formData.trackTitle,
-        artist: formData.artist,
-        spotifyUrl: formData.spotifyUrl,
-        recordLabel: formData.recordLabel
+        trackTitle: trackDetails.trackTitle,
+        artist: trackDetails.artist,
+        spotifyUrl: trackDetails.spotifyUrl,
+        recordLabel: trackDetails.recordLabel,
+        albumCover: trackDetails.albumCover || 'https://via.placeholder.com/300'
       };
 
+      // Debug log
+      console.log('New track to save:', newTrack);
+
+      let updatedTracks: Track[];
       if (editingId) {
         updatedTracks = tracks.map(track => 
           track.id === editingId ? newTrack : track
@@ -258,9 +336,19 @@ const AdminDashboard: React.FC = () => {
         updatedTracks = [...tracks, newTrack];
       }
       
-      console.log('Saving track:', newTrack);
+      // Debug log before localStorage
+      console.log('Tracks to save to localStorage:', updatedTracks);
+
+      // Save to localStorage
       localStorage.setItem('tracks', JSON.stringify(updatedTracks));
+
+      // Verify saved data
+      const savedData = localStorage.getItem('tracks');
+      const parsedData = savedData ? JSON.parse(savedData) : [];
+      console.log('Verified saved data:', parsedData);
+
       setTracks(updatedTracks);
+      setFetchState({ loading: false, error: null });
       handleClose();
     } catch (err) {
       console.error('Error saving track:', err);
@@ -276,28 +364,31 @@ const AdminDashboard: React.FC = () => {
 
     setFetchState({ loading: true, error: null });
     try {
-      const trackId = formData.spotifyUrl.split('/').pop()?.split('?')[0];
-      if (!trackId) throw new Error('Invalid Spotify URL');
+      // Get track details from Spotify
+      const trackDetails = await spotifyService.getTrackDetailsByUrl(formData.spotifyUrl);
+      if (!trackDetails) {
+        throw new Error('Failed to fetch track details from Spotify');
+      }
 
-      // Here you would typically make an API call to get track metadata
-      // For now, we'll just use the URL as is
-      const track: SpotifyTrackData = {
-        id: trackId,
-        trackTitle: 'Sample Track',
-        artist: 'Sample Artist',
-        recordLabel: RECORD_LABELS.RECORDS,
-        spotifyUrl: formData.spotifyUrl
-      };
+      // Debug log
+      console.log('Fetched track details:', trackDetails);
 
       setFormData({
-        id: track.id,
-        trackTitle: track.trackTitle,
-        artist: track.artist,
-        recordLabel: validateRecordLabel(track.recordLabel),
-        spotifyUrl: track.spotifyUrl
+        id: trackDetails.id,
+        trackTitle: trackDetails.trackTitle,
+        artist: trackDetails.artist,
+        recordLabel: validateRecordLabel(trackDetails.recordLabel),
+        spotifyUrl: trackDetails.spotifyUrl,
+        albumCover: trackDetails.albumCover
       });
+
+      setFetchState({ loading: false, error: null });
     } catch (error) {
-      setFetchState({ loading: false, error: 'Failed to fetch track metadata' });
+      console.error('Error fetching track metadata:', error);
+      setFetchState({ 
+        loading: false, 
+        error: error instanceof Error ? error.message : 'Failed to fetch track metadata'
+      });
     }
   };
 
@@ -407,6 +498,15 @@ const AdminDashboard: React.FC = () => {
                 ))}
               </Select>
             </FormControl>
+            <TextField
+              fullWidth
+              name="albumCover"
+              label="Album Cover"
+              value={formData.albumCover}
+              onChange={handleTextInputChange}
+              sx={{ mb: 2, input: { color: '#FFFFFF' } }}
+              InputLabelProps={{ sx: { color: '#999' } }}
+            />
           </Box>
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>

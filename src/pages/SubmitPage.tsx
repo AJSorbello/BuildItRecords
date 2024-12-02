@@ -17,6 +17,7 @@ import {
 import RemoveIcon from '@mui/icons-material/Remove';
 import AddIcon from '@mui/icons-material/Add';
 import { useNavigate } from 'react-router-dom';
+import { LabelKey } from '../types/labels';
 
 interface Track {
   title: string;
@@ -39,7 +40,7 @@ interface Artist {
 }
 
 interface SubmitPageProps {
-  label: 'records' | 'tech' | 'deep';
+  label: LabelKey;
 }
 
 const StyledCard = styled(Card)({

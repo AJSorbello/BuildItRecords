@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { Box, Typography, Grid, Card, CardContent, CardMedia, Link, styled } from '@mui/material';
 import { FaSpotify } from 'react-icons/fa';
+import { LabelKey } from '../types/labels';
 
 interface Playlist {
   id: string;
@@ -13,7 +14,7 @@ interface Playlist {
 }
 
 interface PlaylistsPageProps {
-  label: 'records' | 'tech' | 'deep';
+  label: LabelKey;
 }
 
 const PlaylistCard = styled(Card)({
@@ -43,9 +44,9 @@ const SpotifyLink = styled(Link)({
   },
 });
 
-const getPlaylists = (label: string): Playlist[] => {
+const getPlaylists = (label: LabelKey): Playlist[] => {
   switch (label) {
-    case 'tech':
+    case 'TECH':
       return [
         {
           id: '1',
@@ -75,7 +76,7 @@ const getPlaylists = (label: string): Playlist[] => {
           tracks: 75,
         },
       ];
-    case 'deep':
+    case 'DEEP':
       return [
         {
           id: '1',
@@ -126,10 +127,10 @@ const PlaylistsPage: React.FC<PlaylistsPageProps> = ({ label }) => {
   return (
     <Box sx={{ maxWidth: 1400, margin: '0 auto', padding: '0 16px' }}>
       <Typography variant="h4" gutterBottom sx={{ color: 'text.primary', textAlign: 'center' }}>
-        {label === 'tech' ? 'Build It Tech' : label === 'deep' ? 'Build It Deep' : 'Build It Records'}
+        {label === 'TECH' ? 'Build It Tech' : label === 'DEEP' ? 'Build It Deep' : 'Build It Records'}
       </Typography>
       <Typography variant="h6" sx={{ color: 'text.secondary', mb: 6, textAlign: 'center' }}>
-        {label === 'tech' ? 'Techno & Tech House' : label === 'deep' ? 'Deep House' : 'House Music'} Playlists
+        {label === 'TECH' ? 'Techno & Tech House' : label === 'DEEP' ? 'Deep House' : 'House Music'} Playlists
       </Typography>
 
       <Grid container spacing={4}>

@@ -11,10 +11,10 @@ import BuildItTechLogo from '../assets/png/tech/BuildIt_Tech.png';
 import BuildItDeepLogo from '../assets/png/deep/BuildIt_Deep.png';
 
 const getLogo = (label: string) => {
-  switch (label) {
-    case 'tech':
+  switch (label.toUpperCase()) {
+    case 'TECH':
       return BuildItTechLogo;
-    case 'deep':
+    case 'DEEP':
       return BuildItDeepLogo;
     default:
       return BuildItRecordsLogo;
@@ -24,15 +24,15 @@ const getLogo = (label: string) => {
 export const Layout: React.FC = () => {
   const location = useLocation();
   const path = location.pathname;
-  const currentLabel = path.split('/')[1] || 'records';
+  const currentLabel = (path.split('/')[1] || 'records').toUpperCase();
 
   console.log('Layout rendered:', { path, currentLabel });
 
   const renderSidebar = () => {
     switch (currentLabel) {
-      case 'tech':
+      case 'TECH':
         return <TechSidebar />;
-      case 'deep':
+      case 'DEEP':
         return <DeepSidebar />;
       default:
         return <RecordsSidebar />;

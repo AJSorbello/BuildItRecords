@@ -50,21 +50,24 @@ export const mockTracks: Track[] = [
     id: '1',
     trackTitle: 'Deep House Vibes',
     artist: 'DJ Deep',
-    spotifyUrl: 'https://open.spotify.com/track/123456',
+    spotifyUrl: 'https://open.spotify.com/track/123',
+    albumCover: 'https://via.placeholder.com/300x300.png?text=Deep+House+Vibes',
     recordLabel: RECORD_LABELS.RECORDS
   },
   {
     id: '2',
-    trackTitle: 'Tech House Groove',
+    trackTitle: 'Tech Revolution',
     artist: 'Tech Master',
-    spotifyUrl: 'https://open.spotify.com/track/234567',
+    spotifyUrl: 'https://open.spotify.com/track/456',
+    albumCover: 'https://via.placeholder.com/300x300.png?text=Tech+Revolution',
     recordLabel: RECORD_LABELS.TECH
   },
   {
     id: '3',
-    trackTitle: 'Deep Bass Journey',
+    trackTitle: 'Bass Exploration',
     artist: 'Bass Explorer',
-    spotifyUrl: 'https://open.spotify.com/track/345678',
+    spotifyUrl: 'https://open.spotify.com/track/789',
+    albumCover: 'https://via.placeholder.com/300x300.png?text=Bass+Exploration',
     recordLabel: RECORD_LABELS.DEEP
   },
   {
@@ -72,7 +75,8 @@ export const mockTracks: Track[] = [
     trackTitle: 'House Nation',
     artist: 'DJ Deep',
     spotifyUrl: 'https://open.spotify.com/track/456789',
-    recordLabel: RECORD_LABELS.RECORDS
+    recordLabel: RECORD_LABELS.RECORDS,
+    albumCover: 'https://via.placeholder.com/300x300.png?text=House+Nation'
   }
 ];
 

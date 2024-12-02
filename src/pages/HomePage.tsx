@@ -1,14 +1,15 @@
 import * as React from 'react';
 import { Box, Typography, Grid, Card, CardContent, CardMedia } from '@mui/material';
+import { LabelKey } from '../types/labels';
 
 interface HomePageProps {
-  label: 'records' | 'tech' | 'deep';
+  label: LabelKey;
 }
 
 const HomePage: React.FC<HomePageProps> = ({ label }) => {
   const getFeaturedContent = () => {
     switch (label) {
-      case 'tech':
+      case 'TECH':
         return {
           title: 'Build It Tech',
           description: 'Pushing the boundaries of modern techno music.',
@@ -18,7 +19,7 @@ const HomePage: React.FC<HomePageProps> = ({ label }) => {
             { id: 3, title: 'Techno Release 3', artist: 'Artist C', image: '/path/to/image3.jpg' },
           ]
         };
-      case 'deep':
+      case 'DEEP':
         return {
           title: 'Build It Deep',
           description: 'Exploring the depths of deep house and melodic techno.',

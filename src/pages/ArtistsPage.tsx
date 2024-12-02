@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { Box, Typography, Grid, Card, CardContent, CardMedia, CardActionArea } from '@mui/material';
+import { LabelKey } from '../types/labels';
 
 interface Artist {
   id: string;
@@ -9,56 +10,50 @@ interface Artist {
 }
 
 interface ArtistsPageProps {
-  label: 'records' | 'tech' | 'deep';
+  label: LabelKey;
 }
 
-const getArtists = (label: string): Artist[] => {
-  switch (label) {
-    case 'tech':
-      return [
-        {
-          id: '1',
-          name: 'Techno Artist 1',
-          image: '/path/to/tech-artist1.jpg',
-          bio: 'Pioneering the techno scene with innovative sounds.',
-        },
-        {
-          id: '2',
-          name: 'Techno Artist 2',
-          image: '/path/to/tech-artist2.jpg',
-          bio: 'Pushing boundaries in industrial techno.',
+// Helper function to generate a simple ID
+const generateId = () => Math.random().toString(36).substr(2, 9);
+
+const getArtists = (label: LabelKey): Artist[] => {
+  // Get tracks from localStorage
+  const storedTracks = localStorage.getItem('tracks');
+  if (!storedTracks) return [];
+  
+  try {
+    const allTracks = JSON.parse(storedTracks);
+    
+    // Get unique artists by label
+    const artistsByLabel = allTracks
+      .filter((track: any) => {
+        switch (label) {
+          case 'RECORDS':
+            return track.recordLabel === 'BUILD IT RECORDS';
+          case 'TECH':
+            return track.recordLabel === 'BUILD IT TECH';
+          case 'DEEP':
+            return track.recordLabel === 'BUILD IT DEEP';
+          default:
+            return false;
         }
-      ];
-    case 'deep':
-      return [
-        {
-          id: '1',
-          name: 'Deep House Artist 1',
-          image: '/path/to/deep-artist1.jpg',
-          bio: 'Creating atmospheric deep house journeys.',
-        },
-        {
-          id: '2',
-          name: 'Deep House Artist 2',
-          image: '/path/to/deep-artist2.jpg',
-          bio: 'Melodic deep house productions.',
+      })
+      .reduce((artists: { [key: string]: Artist }, track: any) => {
+        if (!artists[track.artist]) {
+          artists[track.artist] = {
+            id: generateId(),
+            name: track.artist,
+            image: track.albumCover || 'https://via.placeholder.com/300',
+            bio: `Artist on ${track.recordLabel}` // TODO: Add proper artist bios
+          };
         }
-      ];
-    default:
-      return [
-        {
-          id: '1',
-          name: 'House Artist 1',
-          image: '/path/to/house-artist1.jpg',
-          bio: 'Underground house music pioneer.',
-        },
-        {
-          id: '2',
-          name: 'House Artist 2',
-          image: '/path/to/house-artist2.jpg',
-          bio: 'Soulful house music producer.',
-        }
-      ];
+        return artists;
+      }, {});
+    
+    return Object.values(artistsByLabel);
+  } catch (error) {
+    console.error('Error loading artists:', error);
+    return [];
   }
 };
 
