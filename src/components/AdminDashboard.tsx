@@ -78,6 +78,10 @@ const AdminDashboard: React.FC = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<TrackFormData>(initialFormData);
   const [fetchState, setFetchState] = useState<FetchState>(initialFetchState);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [importLabel, setImportLabel] = useState<string>('');
+  const [importing, setImporting] = useState(false);
+  const [selectedLabel, setSelectedLabel] = useState<RecordLabel | 'All'>('All');
 
   useEffect(() => {
     // Initialize data if needed
@@ -407,6 +411,54 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
+  const handleImportDialogOpen = () => {
+    setImportDialogOpen(true);
+    setImportLabel('');
+  };
+
+  const handleImportDialogClose = () => {
+    setImportDialogOpen(false);
+    setImportLabel('');
+  };
+
+  const handleImportTracks = async () => {
+    if (!importLabel) {
+      setFetchState({
+        loading: false,
+        error: 'Please enter a label name'
+      });
+      return;
+    }
+
+    setImporting(true);
+    setFetchState({ loading: true, error: null });
+
+    try {
+      await spotifyService.importLabelTracks(importLabel);
+      
+      // Refresh tracks list
+      const data = getData();
+      setTracks(data.tracks);
+      
+      handleImportDialogClose();
+      setFetchState({ loading: false, error: null });
+    } catch (error) {
+      console.error('Error importing tracks:', error);
+      setFetchState({
+        loading: false,
+        error: error instanceof Error ? error.message : 'Failed to import tracks'
+      });
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const handleLabelChange = (event: SelectChangeEvent<RecordLabel | 'All'>) => {
+    setSelectedLabel(event.target.value as RecordLabel | 'All');
+  };
+
+  const filteredTracks = selectedLabel === 'All' ? tracks : tracks.filter(track => track.recordLabel === selectedLabel);
+
   return (
     <Container sx={{ py: 4 }}>
       <Box sx={{ 
@@ -421,19 +473,28 @@ const AdminDashboard: React.FC = () => {
         <Typography variant="h4" component="h1" sx={{ color: '#FFFFFF' }}>
           Track Management
         </Typography>
-        <Button 
-          variant="contained" 
-          onClick={handleOpen}
-          sx={{
-            backgroundColor: '#02FF95',
-            color: '#121212',
-            '&:hover': {
-              backgroundColor: '#00CC76',
-            }
-          }}
-        >
-          Add New Track
-        </Button>
+        <Box>
+          <Button
+            variant="contained"
+            onClick={handleImportDialogOpen}
+            sx={{ mr: 2 }}
+          >
+            Import by Label
+          </Button>
+          <Button 
+            variant="contained" 
+            onClick={handleOpen}
+            sx={{
+              backgroundColor: '#02FF95',
+              color: '#121212',
+              '&:hover': {
+                backgroundColor: '#00CC76',
+              }
+            }}
+          >
+            Add New Track
+          </Button>
+        </Box>
       </Box>
 
       {fetchState.error && (
@@ -442,112 +503,31 @@ const AdminDashboard: React.FC = () => {
         </Typography>
       )}
 
-      <Box sx={{ mt: 4 }}>
-        <Typography variant="h5" gutterBottom sx={{ color: '#FFFFFF', mb: 3 }}>
-          Submitted Tracks
-        </Typography>
-        <AdminTrackList tracks={tracks} onEditTrack={handleEdit} onDeleteTrack={handleDelete} />
-      </Box>
+      <FormControl fullWidth margin="normal">
+        <InputLabel sx={{ color: '#FFFFFF' }}>Filter by Label</InputLabel>
+        <Select
+          value={selectedLabel}
+          onChange={handleLabelChange}
+          sx={{ color: '#FFFFFF', mb: 2 }}
+          inputProps={{ sx: { color: '#FFFFFF' } }}
+        >
+          <MenuItem value="All">All</MenuItem>
+          {Object.values(RECORD_LABELS).map((label) => (
+            <MenuItem key={label} value={label}>{label}</MenuItem>
+          ))}
+        </Select>
+      </FormControl>
 
-      <Dialog 
-        open={open} 
-        onClose={handleClose}
-        PaperProps={{
-          sx: {
-            backgroundColor: '#282828',
-            minWidth: '500px'
-          }
-        }}
-      >
-        <DialogTitle sx={{ color: '#FFFFFF' }}>
-          {editingId ? 'Edit Track' : 'Add New Track'}
-        </DialogTitle>
-        <DialogContent>
-          <Box component="form" sx={{ mt: 2 }}>
-            <TextField
-              fullWidth
-              label="Spotify URL"
-              value={formData.spotifyUrl}
-              onChange={handleSpotifyUrlChange}
-              sx={{ mb: 2, input: { color: '#FFFFFF' } }}
-              InputLabelProps={{ sx: { color: '#999' } }}
-            />
-            <Button
-              onClick={extractSpotifyMetadata}
-              disabled={fetchState.loading || !formData.spotifyUrl}
-              sx={{ mt: 1 }}
-            >
-              Extract Metadata
-            </Button>
-
-            <TextField
-              fullWidth
-              name="trackTitle"
-              label="Track Title"
-              value={formData.trackTitle}
-              onChange={handleTextInputChange}
-              sx={{ mb: 2, input: { color: '#FFFFFF' } }}
-              InputLabelProps={{ sx: { color: '#999' } }}
-            />
-            <TextField
-              fullWidth
-              name="artist"
-              label="Artist"
-              value={formData.artist}
-              onChange={handleTextInputChange}
-              sx={{ mb: 2, input: { color: '#FFFFFF' } }}
-              InputLabelProps={{ sx: { color: '#999' } }}
-            />
-            <FormControl fullWidth margin="normal">
-              <InputLabel>Record Label</InputLabel>
-              <Select<RecordLabel>
-                name="recordLabel"
-                value={formData.recordLabel}
-                onChange={handleSelectChange}
-                label="Record Label"
-              >
-                {Object.values(RECORD_LABELS).map((label) => (
-                  <MenuItem key={label} value={label}>
-                    {label}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <TextField
-              fullWidth
-              name="albumCover"
-              label="Album Cover"
-              value={formData.albumCover}
-              onChange={handleTextInputChange}
-              sx={{ mb: 2, input: { color: '#FFFFFF' } }}
-              InputLabelProps={{ sx: { color: '#999' } }}
-            />
+      <Box component="ul" sx={{ listStyle: 'none', p: 0 }}>
+        {filteredTracks.map(track => (
+          <Box component="li" key={track.id} sx={{ display: 'flex', alignItems: 'center', mb: 2, backgroundColor: '#333', p: 2, borderRadius: 1 }}>
+            <Box component="img" src={track.albumCover} alt={track.trackTitle} sx={{ width: 50, height: 50, mr: 2, borderRadius: 1 }} />
+            <Typography variant="body1" sx={{ color: '#FFFFFF', flex: 1 }}>{track.trackTitle}</Typography>
+            <Typography variant="body2" sx={{ color: '#AAAAAA', flex: 1 }}>{track.artist}</Typography>
+            <Typography variant="body2" sx={{ color: '#AAAAAA', flex: 1 }}>{track.recordLabel}</Typography>
           </Box>
-        </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button onClick={handleClose} sx={{ color: '#999' }}>
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleSubmit}
-            variant="contained"
-            disabled={!formData.trackTitle || !formData.artist || !formData.spotifyUrl || fetchState.loading}
-            sx={{
-              backgroundColor: '#02FF95',
-              color: '#121212',
-              '&:hover': {
-                backgroundColor: '#00CC76',
-              },
-              '&:disabled': {
-                backgroundColor: '#666',
-                color: '#999'
-              }
-            }}
-          >
-            {editingId ? 'Update Track' : 'Add Track'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        ))}
+      </Box>
     </Container>
   );
 };

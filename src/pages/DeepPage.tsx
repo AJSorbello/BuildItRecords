@@ -9,6 +9,7 @@ import { RECORD_LABELS } from '../constants/labels';
 import { getArtistsByLabel } from '../utils/artistUtils';
 import { Artist } from '../data/mockData';
 import TrackList from '../components/TrackList';
+import UpdateTracksHelper from '../components/UpdateTracksHelper';
 
 const IconLink = styled(Link)({
   color: '#FFFFFF',
@@ -33,6 +34,7 @@ const ArtistCard = styled(Card)({
 const DeepPage = () => {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [artists, setArtists] = useState<Artist[]>([]);
+  const [showHelper, setShowHelper] = useState(true);
 
   useEffect(() => {
     setTracks(getTracksByLabel(RECORD_LABELS.DEEP));
@@ -41,6 +43,7 @@ const DeepPage = () => {
 
   return (
     <PageLayout label="deep">
+      {showHelper && <UpdateTracksHelper />}
       <Box sx={{ maxWidth: 1200, margin: '0 auto', padding: 3 }}>
         <Typography variant="h4" component="h1" gutterBottom sx={{ color: '#FFFFFF', mb: 4 }}>
           Deep Releases

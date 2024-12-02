@@ -422,6 +422,143 @@ export class SpotifyService {
     this.tokenExpirationTime = 0;
     this.spotifyApi.setAccessToken('');
   }
+
+  public async searchTracksByLabel(labelName: string): Promise<SpotifyTrack[]> {
+    try {
+      await this.ensureValidToken();
+      
+      if (!labelName.trim()) {
+        throw new Error('Please enter a valid label name');
+      }
+
+      // Search for albums by label
+      const query = `label:${labelName.trim()}`;
+      let searchResponse;
+      try {
+        // Use the correct search parameters
+        searchResponse = await this.spotifyApi.searchAlbums(query, { limit: 50 });
+        if (!searchResponse || !searchResponse.body || !searchResponse.body.albums) {
+          throw new Error('Invalid response from Spotify');
+        }
+      } catch (error) {
+        console.error('Error searching for albums:', error);
+        if (error instanceof Error) {
+          if (error.message.includes('No search query')) {
+            throw new Error('Please enter a valid label name');
+          } else if (error.message.includes('Invalid response')) {
+            throw new Error('Unable to connect to Spotify. Please try again.');
+          }
+        }
+        throw new Error('Failed to search for albums. Please try again.');
+      }
+
+      const albums = searchResponse.body.albums.items || [];
+      console.log(`Found ${albums.length} albums for label: ${labelName}`);
+
+      if (albums.length === 0) {
+        throw new Error(`No albums found for label: "${labelName}". Please check the label name and try again.`);
+      }
+      
+      // Fetch tracks for each album (limit to first 10 albums to avoid rate limits)
+      const limitedAlbums = albums.slice(0, 10);
+      const tracksPromises = limitedAlbums.map(async (album) => {
+        try {
+          const tracksResponse = await this.spotifyApi.getAlbumTracks(album.id, { limit: 50 });
+          if (!tracksResponse || !tracksResponse.body || !tracksResponse.body.items) {
+            console.error(`Invalid response for album ${album.id}`);
+            return [];
+          }
+
+          const tracks = tracksResponse.body.items;
+          
+          // Get full track details for each track (limit to first 5 tracks per album)
+          const limitedTracks = tracks.slice(0, 5);
+          const trackDetailsPromises = limitedTracks.map(async (track) => {
+            try {
+              const trackResponse = await this.spotifyApi.getTrack(track.id);
+              if (!trackResponse || !trackResponse.body) {
+                console.error(`Invalid response for track ${track.id}`);
+                return null;
+              }
+
+              const trackData = trackResponse.body;
+              
+              return {
+                id: trackData.id,
+                trackTitle: trackData.name,
+                artist: trackData.artists.map(artist => artist.name).join(', '),
+                spotifyUrl: trackData.external_urls.spotify,
+                albumCover: trackData.album.images[0]?.url || 'https://via.placeholder.com/300',
+                releaseDate: trackData.album.release_date,
+                recordLabel: labelName
+              };
+            } catch (error) {
+              console.error(`Error fetching details for track ${track.id}:`, error);
+              return null;
+            }
+          });
+          
+          const trackDetails = await Promise.all(trackDetailsPromises);
+          return trackDetails.filter((track): track is SpotifyTrack => track !== null);
+        } catch (error) {
+          console.error(`Error fetching tracks for album ${album.id}:`, error);
+          return [];
+        }
+      });
+      
+      const allTracksArrays = await Promise.all(tracksPromises);
+      const allTracks = allTracksArrays.flat();
+
+      if (allTracks.length === 0) {
+        throw new Error(`No tracks found for label: "${labelName}". Please check the label name and try again.`);
+      }
+      
+      // Sort by release date, newest first
+      allTracks.sort((a, b) => {
+        const dateA = new Date(a.releaseDate || '');
+        const dateB = new Date(b.releaseDate || '');
+        return dateB.getTime() - dateA.getTime();
+      });
+      
+      console.log(`Found ${allTracks.length} total tracks for label: ${labelName}`);
+      return allTracks;
+      
+    } catch (error) {
+      console.error('Error searching tracks by label:', error);
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('An unexpected error occurred while searching for tracks');
+    }
+  }
+
+  public async importLabelTracks(labelName: string): Promise<void> {
+    try {
+      const tracks = await this.searchTracksByLabel(labelName);
+      
+      // Get existing tracks from localStorage
+      const existingTracks = JSON.parse(localStorage.getItem('tracks') || '[]');
+      
+      // Filter out duplicates and add new tracks
+      const existingUrls = new Set(existingTracks.map((track: any) => track.spotifyUrl));
+      const newTracks = tracks.filter(track => !existingUrls.has(track.spotifyUrl));
+
+      if (newTracks.length === 0) {
+        throw new Error('No new tracks found. All tracks from this label are already imported.');
+      }
+      
+      // Add new tracks to existing tracks
+      const updatedTracks = [...existingTracks, ...newTracks];
+      
+      // Save back to localStorage
+      localStorage.setItem('tracks', JSON.stringify(updatedTracks));
+      
+      console.log(`Imported ${newTracks.length} new tracks for label: ${labelName}`);
+    } catch (error) {
+      console.error('Error importing label tracks:', error);
+      throw error instanceof Error ? error : new Error('An unexpected error occurred while importing tracks');
+    }
+  }
 }
 
 export const spotifyService = SpotifyService.getInstance();
