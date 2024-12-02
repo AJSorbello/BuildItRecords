@@ -30,6 +30,8 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   return <>{children}</>;
 };
 
+import { initializeData } from './utils/dataInitializer';
+
 const router = createBrowserRouter(
   createRoutesFromElements(
     <>
@@ -91,6 +93,11 @@ const router = createBrowserRouter(
 );
 
 const App: React.FC = () => {
+  React.useEffect(() => {
+    // Initialize data when the app starts
+    initializeData();
+  }, []);
+
   return (
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />

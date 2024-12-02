@@ -9,56 +9,63 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   Paper,
   IconButton,
   CircularProgress,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  SelectChangeEvent,
 } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { spotifyService } from '../services/SpotifyService';
 import { extractSpotifyId } from '../utils/spotifyUtils';
 import { SpotifyTrack } from '../types/spotify';
+import TrackList from './AdminTrackList';
+import { Track } from '../types/track';
+import { RECORD_LABELS, RecordLabel } from '../constants/labels';
+import { getData } from '../utils/dataInitializer';
 
-interface Track {
+interface TrackFormData {
   id: string;
   trackTitle: string;
   artist: string;
   spotifyUrl: string;
-  albumCover: string;
-  recordLabel: string;
-}
-
-interface TrackFormData {
-  trackTitle: string;
-  artist: string;
-  spotifyUrl: string;
-  albumCover: string;
-  recordLabel: string;
+  recordLabel: RecordLabel;
 }
 
 const initialFormData: TrackFormData = {
+  id: '',
   trackTitle: '',
   artist: '',
   spotifyUrl: '',
-  albumCover: '',
-  recordLabel: ''
+  recordLabel: RECORD_LABELS.RECORDS,
 };
 
 interface FetchState {
   loading: boolean;
   error: string | null;
-  data: SpotifyTrack | null;
 }
 
 const initialFetchState: FetchState = {
   loading: false,
   error: null,
-  data: null,
+};
+
+interface SpotifyTrackData {
+  id: string;
+  trackTitle: string;
+  artist: string;
+  recordLabel: RecordLabel;
+  spotifyUrl: string;
+}
+
+const validateRecordLabel = (label: string): RecordLabel => {
+  if (Object.values(RECORD_LABELS).includes(label as RecordLabel)) {
+    return label as RecordLabel;
+  }
+  return RECORD_LABELS.RECORDS; // Default to RECORDS if invalid
 };
 
 const AdminDashboard: React.FC = () => {
@@ -77,6 +84,9 @@ const AdminDashboard: React.FC = () => {
       const storedTracks = localStorage.getItem('tracks');
       if (storedTracks) {
         setTracks(JSON.parse(storedTracks));
+      } else {
+        const { tracks } = getData();
+        setTracks(tracks);
       }
     } catch (err) {
       console.error('Error fetching tracks:', err);
@@ -87,7 +97,6 @@ const AdminDashboard: React.FC = () => {
     setFetchState({
       loading: true,
       error: null,
-      data: null
     });
 
     try {
@@ -99,25 +108,22 @@ const AdminDashboard: React.FC = () => {
       }
 
       setFormData({
-        ...formData,
+        id: track.id,
         trackTitle: track.trackTitle,
         artist: track.artist,
-        albumCover: track.albumCover,
-        recordLabel: track.recordLabel,
+        recordLabel: validateRecordLabel(track.recordLabel),
         spotifyUrl: track.spotifyUrl
       });
 
       setFetchState({
         loading: false,
         error: null,
-        data: track
       });
     } catch (error) {
       console.error('Error fetching track:', error);
       setFetchState({
         loading: false,
         error: error instanceof Error ? error.message : 'Failed to fetch track details',
-        data: null
       });
     }
   };
@@ -125,6 +131,7 @@ const AdminDashboard: React.FC = () => {
   const handleSpotifyUrlChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const { value } = e.target;
     setFormData(prev => ({ ...prev, spotifyUrl: value }));
+    console.log('Spotify URL:', value);
     if (value && value.includes('spotify.com/track/')) {
       const trackId = extractSpotifyId(formData.spotifyUrl);
       if (!trackId) {
@@ -149,13 +156,12 @@ const AdminDashboard: React.FC = () => {
   };
 
   const handleEdit = (track: Track) => {
-    // Convert Track to TrackFormData
     setFormData({
+      id: track.id,
       trackTitle: track.trackTitle,
       artist: track.artist,
       spotifyUrl: track.spotifyUrl,
-      albumCover: track.albumCover || '', 
-      recordLabel: track.recordLabel || ''
+      recordLabel: validateRecordLabel(track.recordLabel)
     });
     setEditingId(track.id);
     setOpen(true);
@@ -169,6 +175,21 @@ const AdminDashboard: React.FC = () => {
     } catch (err) {
       console.error('Error deleting track:', err);
     }
+  };
+
+  const handleTextInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSelectChange = (e: SelectChangeEvent<RecordLabel>) => {
+    setFormData(prev => ({
+      ...prev,
+      recordLabel: e.target.value as RecordLabel
+    }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -186,7 +207,6 @@ const AdminDashboard: React.FC = () => {
         trackTitle: formData.trackTitle,
         artist: formData.artist,
         spotifyUrl: formData.spotifyUrl,
-        albumCover: formData.albumCover,
         recordLabel: formData.recordLabel
       };
 
@@ -203,6 +223,36 @@ const AdminDashboard: React.FC = () => {
       handleClose();
     } catch (err) {
       console.error('Error saving track:', err);
+    }
+  };
+
+  const extractSpotifyMetadata = async () => {
+    if (!formData.spotifyUrl) return;
+
+    setFetchState({ loading: true, error: null });
+    try {
+      const trackId = formData.spotifyUrl.split('/').pop()?.split('?')[0];
+      if (!trackId) throw new Error('Invalid Spotify URL');
+
+      // Here you would typically make an API call to get track metadata
+      // For now, we'll just use the URL as is
+      const track: SpotifyTrackData = {
+        id: trackId,
+        trackTitle: 'Sample Track',
+        artist: 'Sample Artist',
+        recordLabel: RECORD_LABELS.RECORDS,
+        spotifyUrl: formData.spotifyUrl
+      };
+
+      setFormData({
+        id: track.id,
+        trackTitle: track.trackTitle,
+        artist: track.artist,
+        recordLabel: validateRecordLabel(track.recordLabel),
+        spotifyUrl: track.spotifyUrl
+      });
+    } catch (error) {
+      setFetchState({ loading: false, error: 'Failed to fetch track metadata' });
     }
   };
 
@@ -241,35 +291,12 @@ const AdminDashboard: React.FC = () => {
         </Typography>
       )}
 
-      <TableContainer component={Paper} sx={{ backgroundColor: '#282828' }}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell sx={{ color: '#999' }}>Track Title</TableCell>
-              <TableCell sx={{ color: '#999' }}>Artist</TableCell>
-              <TableCell sx={{ color: '#999' }}>Record Label</TableCell>
-              <TableCell sx={{ color: '#999' }}>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {tracks.map((track) => (
-              <TableRow key={track.id}>
-                <TableCell sx={{ color: '#FFF' }}>{track.trackTitle}</TableCell>
-                <TableCell sx={{ color: '#FFF' }}>{track.artist}</TableCell>
-                <TableCell sx={{ color: '#FFF' }}>{track.recordLabel}</TableCell>
-                <TableCell>
-                  <IconButton onClick={() => handleEdit(track)} sx={{ color: '#02FF95' }}>
-                    <EditIcon />
-                  </IconButton>
-                  <IconButton onClick={() => handleDelete(track.id)} sx={{ color: '#FF4444' }}>
-                    <DeleteIcon />
-                  </IconButton>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+      <Box sx={{ mt: 4 }}>
+        <Typography variant="h5" gutterBottom sx={{ color: '#FFFFFF', mb: 3 }}>
+          Submitted Tracks
+        </Typography>
+        <TrackList tracks={tracks} handleEdit={handleEdit} handleDelete={handleDelete} />
+      </Box>
 
       <Dialog 
         open={open} 
@@ -277,121 +304,70 @@ const AdminDashboard: React.FC = () => {
         PaperProps={{
           sx: {
             backgroundColor: '#282828',
-            color: '#FFFFFF'
+            minWidth: '500px'
           }
         }}
       >
-        <DialogTitle>{editingId ? 'Edit Track' : 'Add New Track'}</DialogTitle>
-        <form onSubmit={handleSubmit}>
-          <DialogContent>
+        <DialogTitle sx={{ color: '#FFFFFF' }}>
+          {editingId ? 'Edit Track' : 'Add New Track'}
+        </DialogTitle>
+        <DialogContent>
+          <Box component="form" sx={{ mt: 2 }}>
             <TextField
               fullWidth
-              margin="normal"
               label="Spotify URL"
-              name="spotifyUrl"
               value={formData.spotifyUrl}
               onChange={handleSpotifyUrlChange}
-              required
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  '& fieldset': { borderColor: '#666' },
-                  '&:hover fieldset': { borderColor: '#999' },
-                },
-                '& .MuiInputLabel-root': { color: '#999' },
-                '& .MuiOutlinedInput-input': { color: '#FFF' },
-              }}
+              sx={{ mb: 2, input: { color: '#FFFFFF' } }}
+              InputLabelProps={{ sx: { color: '#999' } }}
             />
-            {fetchState.loading && (
-              <Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }}>
-                <CircularProgress sx={{ color: '#02FF95' }} />
-              </Box>
-            )}
-            {fetchState.data && (
-              <Box sx={{ my: 2, p: 2, backgroundColor: '#1e1e1e', borderRadius: 1 }}>
-                <Typography variant="subtitle1" sx={{ color: '#02FF95' }}>
-                  Track Details:
-                </Typography>
-                <Typography sx={{ color: '#FFF' }}>
-                  {fetchState.data.trackTitle} - {fetchState.data.artist}
-                </Typography>
-              </Box>
-            )}
+            <Button
+              onClick={extractSpotifyMetadata}
+              disabled={fetchState.loading || !formData.spotifyUrl}
+              sx={{ mt: 1 }}
+            >
+              Extract Metadata
+            </Button>
+
             <TextField
               fullWidth
-              margin="normal"
               label="Track Title"
-              name="trackTitle"
               value={formData.trackTitle}
-              onChange={(e) => setFormData({ ...formData, trackTitle: e.target.value })}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  '& fieldset': { borderColor: '#666' },
-                  '&:hover fieldset': { borderColor: '#999' },
-                },
-                '& .MuiInputLabel-root': { color: '#999' },
-                '& .MuiOutlinedInput-input': { color: '#FFF' },
-              }}
+              onChange={handleTextInputChange}
+              sx={{ mb: 2, input: { color: '#FFFFFF' } }}
+              InputLabelProps={{ sx: { color: '#999' } }}
             />
             <TextField
               fullWidth
-              margin="normal"
               label="Artist"
-              name="artist"
               value={formData.artist}
-              onChange={(e) => setFormData({ ...formData, artist: e.target.value })}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  '& fieldset': { borderColor: '#666' },
-                  '&:hover fieldset': { borderColor: '#999' },
-                },
-                '& .MuiInputLabel-root': { color: '#999' },
-                '& .MuiOutlinedInput-input': { color: '#FFF' },
-              }}
+              onChange={handleTextInputChange}
+              sx={{ mb: 2, input: { color: '#FFFFFF' } }}
+              InputLabelProps={{ sx: { color: '#999' } }}
             />
-            <TextField
-              fullWidth
-              margin="normal"
-              label="Record Label"
-              name="recordLabel"
-              value={formData.recordLabel}
-              onChange={(e) => setFormData({ ...formData, recordLabel: e.target.value })}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  '& fieldset': { borderColor: '#666' },
-                  '&:hover fieldset': { borderColor: '#999' },
-                },
-                '& .MuiInputLabel-root': { color: '#999' },
-                '& .MuiOutlinedInput-input': { color: '#FFF' },
-              }}
-            />
-          </DialogContent>
-          <DialogActions sx={{ p: 3 }}>
-            <Button 
-              onClick={handleClose}
-              sx={{ color: '#999' }}
-            >
-              Cancel
-            </Button>
-            <Button 
-              type="submit"
-              variant="contained"
-              disabled={fetchState.loading || !formData.trackTitle}
-              sx={{
-                backgroundColor: '#02FF95',
-                color: '#121212',
-                '&:hover': {
-                  backgroundColor: '#00CC76',
-                },
-                '&.Mui-disabled': {
-                  backgroundColor: '#1a1a1a',
-                  color: '#666',
-                }
-              }}
-            >
-              {editingId ? 'Save Changes' : 'Add Track'}
-            </Button>
-          </DialogActions>
-        </form>
+            <FormControl fullWidth margin="normal">
+              <InputLabel>Record Label</InputLabel>
+              <Select<RecordLabel>
+                name="recordLabel"
+                value={formData.recordLabel}
+                onChange={handleSelectChange}
+                label="Record Label"
+              >
+                {Object.values(RECORD_LABELS).map((label) => (
+                  <MenuItem key={label} value={label}>
+                    {label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpen(false)}>Cancel</Button>
+          <Button type="submit" variant="contained">
+            {editingId ? 'Update' : 'Add'} Track
+          </Button>
+        </DialogActions>
       </Dialog>
     </Container>
   );

@@ -1,9 +1,14 @@
-import React from 'react';
-import { Grid, Card, CardContent, CardMedia, Typography, Link, Box, styled } from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import { Box, Typography, Grid, Card, CardContent, CardMedia, Link, styled } from '@mui/material';
 import { FaSpotify, FaSoundcloud } from 'react-icons/fa';
 import { SiBeatport } from 'react-icons/si';
 import PageLayout from '../components/PageLayout';
-import { getArtistsByLabel } from '../data/artists';
+import { Track } from '../types/track';
+import { getTracksByLabel } from '../utils/trackUtils';
+import { RECORD_LABELS } from '../constants/labels';
+import { getArtistsByLabel } from '../utils/artistUtils';
+import { Artist } from '../data/mockData';
+import TrackList from '../components/TrackList';
 
 const IconLink = styled(Link)({
   color: '#FFFFFF',
@@ -16,15 +21,9 @@ const IconLink = styled(Link)({
 const ArtistCard = styled(Card)({
   backgroundColor: 'rgba(255, 255, 255, 0.05)',
   transition: 'transform 0.2s',
-  '&:hover': {
-    transform: 'scale(1.02)',
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-  },
-});
-
-const PlaylistCard = styled(Card)({
-  backgroundColor: 'rgba(255, 255, 255, 0.05)',
-  transition: 'transform 0.2s',
+  height: '100%',
+  display: 'flex',
+  flexDirection: 'column',
   '&:hover': {
     transform: 'scale(1.02)',
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
@@ -32,120 +31,71 @@ const PlaylistCard = styled(Card)({
 });
 
 const DeepPage = () => {
-  const deepArtists = getArtistsByLabel('deep');
+  const [tracks, setTracks] = useState<Track[]>([]);
+  const [artists, setArtists] = useState<Artist[]>([]);
 
-  const playlists = [
-    {
-      id: '1',
-      title: 'Deep House Essentials',
-      description: 'The finest in deep house music',
-      url: 'https://open.spotify.com/playlist/37i9dQZF1DX2TRYkJECvfC',
-    },
-    {
-      id: '2',
-      title: 'Deep & Melodic',
-      description: 'Melodic deep house selections',
-      url: 'https://open.spotify.com/playlist/37i9dQZF1DX2TRYkJECvfC',
-    },
-  ];
+  useEffect(() => {
+    setTracks(getTracksByLabel(RECORD_LABELS.DEEP));
+    setArtists(getArtistsByLabel(RECORD_LABELS.DEEP));
+  }, []);
 
   return (
     <PageLayout label="deep">
-      <Box mb={4}>
-        <Typography variant="h4" gutterBottom sx={{ color: 'text.primary' }}>
-          Build It Deep
+      <Box sx={{ maxWidth: 1200, margin: '0 auto', padding: 3 }}>
+        <Typography variant="h4" component="h1" gutterBottom sx={{ color: '#FFFFFF', mb: 4 }}>
+          Deep Releases
         </Typography>
-        <Typography variant="h6" sx={{ color: 'text.secondary', mb: 4 }}>
-          Deep-House for the Underground
-        </Typography>
+        
+        <Box mb={6}>
+          <TrackList tracks={tracks} />
+        </Box>
 
-        <Typography variant="h5" gutterBottom>
-          Featured Release
-        </Typography>
-        <Card>
-          <CardMedia
-            component="img"
-            height="300"
-            image="https://via.placeholder.com/800x800.png?text=Featured+Deep+Release"
-            alt="Featured Release"
-          />
-          <CardContent>
-            <Typography variant="h6">Latest Deep House Release</Typography>
-            <Typography variant="subtitle1" color="text.secondary">
-              Featured Artist
-            </Typography>
-            <Box mt={2}>
-              <IconLink href="#" target="_blank">
-                <FaSpotify size={24} />
-              </IconLink>
-              <IconLink href="#" target="_blank">
-                <SiBeatport size={24} />
-              </IconLink>
-              <IconLink href="#" target="_blank">
-                <FaSoundcloud size={24} />
-              </IconLink>
-            </Box>
-          </CardContent>
-        </Card>
-      </Box>
-
-      <Box mb={4}>
-        <Typography variant="h5" gutterBottom>
-          Playlists
-        </Typography>
-        <Grid container spacing={3}>
-          {playlists.map((playlist) => (
-            <Grid item xs={12} sm={6} key={playlist.id}>
-              <PlaylistCard>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>
-                    {playlist.title}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" gutterBottom>
-                    {playlist.description}
-                  </Typography>
-                  <Box mt={2}>
-                    <IconLink href={playlist.url} target="_blank">
-                      <FaSpotify size={24} />
-                    </IconLink>
-                  </Box>
-                </CardContent>
-              </PlaylistCard>
-            </Grid>
-          ))}
-        </Grid>
-      </Box>
-
-      <Typography variant="h5" gutterBottom>
-        Artists
-      </Typography>
-      <Grid container spacing={3}>
-        {deepArtists.map((artist) => (
-          <Grid item xs={12} sm={6} md={4} key={artist.id}>
-            <ArtistCard>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  {artist.name}
-                </Typography>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                  {artist.genres.join(', ')}
-                </Typography>
-                <Box mt={2}>
-                  <IconLink href={artist.spotifyUrl} target="_blank">
-                    <FaSpotify size={24} />
-                  </IconLink>
-                  <IconLink href={artist.beatportUrl} target="_blank">
-                    <SiBeatport size={24} />
-                  </IconLink>
-                  <IconLink href={artist.soundcloudUrl} target="_blank">
-                    <FaSoundcloud size={24} />
-                  </IconLink>
-                </Box>
-              </CardContent>
-            </ArtistCard>
+        <Box>
+          <Typography variant="h5" gutterBottom sx={{ textAlign: 'center', mb: 4 }}>
+            Artists
+          </Typography>
+          <Grid container spacing={3} justifyContent="center">
+            {artists.map((artist) => (
+              <Grid item xs={12} sm={6} md={4} key={artist.id}>
+                <ArtistCard>
+                  <CardMedia
+                    component="img"
+                    height="200"
+                    image={artist.imageUrl || 'https://via.placeholder.com/300x300.png?text=' + encodeURIComponent(artist.name)}
+                    alt={artist.name}
+                    sx={{
+                      objectFit: 'cover',
+                      transition: 'transform 0.2s ease-in-out',
+                      '&:hover': {
+                        transform: 'scale(1.05)'
+                      }
+                    }}
+                  />
+                  <CardContent>
+                    <Typography variant="h6" gutterBottom sx={{ color: '#FFFFFF' }}>
+                      {artist.name}
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: '#AAAAAA', mb: 2 }}>
+                      {artist.bio}
+                    </Typography>
+                    <Box sx={{ display: 'flex', gap: 2 }}>
+                      <IconLink href={artist.spotifyUrl} target="_blank" rel="noopener noreferrer">
+                        <FaSpotify size={24} />
+                      </IconLink>
+                      <IconLink href={artist.beatportUrl} target="_blank" rel="noopener noreferrer">
+                        <SiBeatport size={24} />
+                      </IconLink>
+                      <IconLink href={artist.soundcloudUrl} target="_blank" rel="noopener noreferrer">
+                        <FaSoundcloud size={24} />
+                      </IconLink>
+                    </Box>
+                  </CardContent>
+                </ArtistCard>
+              </Grid>
+            ))}
           </Grid>
-        ))}
-      </Grid>
+        </Box>
+      </Box>
     </PageLayout>
   );
 };
