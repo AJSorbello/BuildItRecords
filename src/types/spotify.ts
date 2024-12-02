@@ -50,6 +50,7 @@ export interface SpotifyAlbum {
   artists: string;
   releaseDate: string;
   spotifyUrl: string;
+  label: string;
 }
 
 export interface SpotifyTrack {

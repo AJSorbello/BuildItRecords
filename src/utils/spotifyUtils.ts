@@ -42,8 +42,53 @@ export const getLabelReleases = async (playlistId: string): Promise<SpotifyTrack
 };
 
 export const extractSpotifyId = (url: string): string | null => {
-  const match = url.match(/track\/([a-zA-Z0-9]+)/);
-  return match ? match[1] : null;
+  if (!url) return null;
+  
+  try {
+    const match = url.match(/track\/([a-zA-Z0-9]+)(?:\?|$)/);
+    return match ? match[1] : null;
+  } catch (error) {
+    console.error('Error extracting Spotify ID:', error);
+    return null;
+  }
+};
+
+export const normalizeSpotifyUrl = (url: string): string => {
+  if (!url) return '';
+  
+  // Add https:// if missing
+  if (url.startsWith('ttps://')) {
+    url = 'h' + url;
+  }
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    url = 'https://' + url;
+  }
+  
+  // Remove any leading/trailing whitespace
+  url = url.trim();
+  
+  return url;
+};
+
+export const isValidSpotifyUrl = (url: string): boolean => {
+  if (!url) return false;
+  
+  try {
+    // Normalize the URL first
+    url = normalizeSpotifyUrl(url);
+    
+    // Verify it's a proper Spotify URL
+    if (!url.startsWith('https://open.spotify.com/track/')) {
+      return false;
+    }
+    
+    // Try to extract the track ID
+    const trackId = extractSpotifyId(url);
+    return trackId !== null;
+  } catch (error) {
+    console.error('Error validating Spotify URL:', error);
+    return false;
+  }
 };
 
 // Utility to format track details for display
@@ -57,13 +102,6 @@ export const formatTrackDetails = (track: SpotifyTrack) => {
     releaseDate: track.album.releaseDate,
     spotifyUrl: track.spotifyUrl
   };
-};
-
-export const isValidSpotifyUrl = (url: string): boolean => {
-  const trackUrlPattern = /^https:\/\/open\.spotify\.com\/track\/[a-zA-Z0-9]+/;
-  const trackUriPattern = /^spotify:track:[a-zA-Z0-9]+$/;
-  
-  return trackUrlPattern.test(url) || trackUriPattern.test(url);
 };
 
 export const formatDuration = (ms: number): string => {

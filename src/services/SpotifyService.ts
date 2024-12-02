@@ -1,5 +1,5 @@
 import SpotifyWebApi from 'spotify-web-api-node';
-import { SpotifyTrack, SpotifyImage, SpotifyApiTrack, SpotifyPlaylist, SimplifiedTrackOutput } from '../types/spotify';
+import { SpotifyTrack, SpotifyImage, SpotifyApiTrack, SpotifyPlaylist, SimplifiedTrackOutput, SpotifyAlbum } from '../types/spotify';
 
 const SPOTIFY_CLIENT_ID = process.env.REACT_APP_SPOTIFY_CLIENT_ID ?? '';
 const SPOTIFY_CLIENT_SECRET = process.env.REACT_APP_SPOTIFY_CLIENT_SECRET ?? '';
@@ -27,11 +27,40 @@ export class SpotifyService {
   }
 
   public async ensureAccessToken(): Promise<void> {
-    if (!this.accessToken || Date.now() >= this.tokenExpirationTime) {
-      const data = await this.spotifyApi.clientCredentialsGrant();
-      this.accessToken = data.body.access_token;
-      this.spotifyApi.setAccessToken(this.accessToken);
-      this.tokenExpirationTime = Date.now() + (data.body.expires_in * 1000);
+    try {
+      if (!this.accessToken || Date.now() >= this.tokenExpirationTime) {
+        // Use btoa for base64 encoding in the browser
+        const credentials = btoa(`${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`);
+        
+        const response = await fetch('https://accounts.spotify.com/api/token', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Basic ${credentials}`,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: 'grant_type=client_credentials'
+        });
+
+        if (!response.ok) {
+          const errorData = await response.text();
+          throw new Error(`Failed to get Spotify access token: ${errorData}`);
+        }
+
+        const data = await response.json();
+        if (!data.access_token) {
+          throw new Error('No access token received from Spotify');
+        }
+
+        const accessToken: string = data.access_token;
+        this.accessToken = accessToken;
+        this.spotifyApi.setAccessToken(accessToken);
+        this.tokenExpirationTime = Date.now() + (data.expires_in * 1000);
+        
+        console.log('Successfully obtained Spotify access token');
+      }
+    } catch (error) {
+      console.error('Error getting Spotify access token:', error);
+      throw error;
     }
   }
 
@@ -116,34 +145,40 @@ export class SpotifyService {
     await this.ensureValidToken();
     
     try {
+      // Get album details to get the label
       const albumResponse = await this.spotifyApi.getAlbum(track.album.id);
       const album = albumResponse.body;
-      if (album) {
-        track.album.label = album.label || 'Unknown Label';
-      }
-    } catch (error) {
-      console.error('Error fetching album details:', error);
-    }
-    
-    const artistNames = track.artists.map(artist => artist.name).join(', ');
-    
-    return {
-      id: track.id,
-      trackTitle: track.name,
-      artist: artistNames,
-      albumCover: track.album.images[0]?.url || '',
-      recordLabel: track.album.label || 'Unknown Label',
-      spotifyUrl: track.external_urls.spotify,
-      previewUrl: track.preview_url,
-      album: {
+      
+      // Convert album
+      const spotifyAlbum: SpotifyAlbum = {
         id: track.album.id,
         name: track.album.name,
-        images: this.convertImages(track.album.images),
-        artists: track.album.artists.map(artist => artist.name).join(', '),
+        images: track.album.images.map(img => ({
+          url: img.url,
+          height: img.height || 0,
+          width: img.width || 0
+        })),
+        artists: track.album.artists.map(a => a.name).join(', '),
         releaseDate: track.album.release_date,
+        label: album.label || 'Unknown Label',
         spotifyUrl: track.album.external_urls.spotify
-      }
-    };
+      };
+
+      // Convert track
+      return {
+        id: track.id,
+        trackTitle: track.name,
+        artist: track.artists.map(a => a.name).join(', '),
+        albumCover: track.album.images[0]?.url || '',
+        recordLabel: album.label || 'Unknown Label',
+        previewUrl: track.preview_url,
+        spotifyUrl: track.external_urls.spotify,
+        album: spotifyAlbum
+      };
+    } catch (error) {
+      console.error('Error converting track:', error);
+      throw error;
+    }
   }
 
   async getTrackDetailsByUrl(trackUrl: string): Promise<SpotifyTrack | null> {
@@ -163,8 +198,27 @@ export class SpotifyService {
   }
 
   private extractTrackId(trackUrl: string): string | null {
-    const match = trackUrl.match(/track\/([a-zA-Z0-9]+)/);
-    return match ? match[1] : null;
+    if (!trackUrl) return null;
+    
+    try {
+      // Extract the ID between track/ and ? or end of string
+      const match = trackUrl.match(/track\/([a-zA-Z0-9]+)(?:\?|$)/);
+      if (match) return match[1];
+      
+      // Handle Spotify URIs
+      const uriMatch = trackUrl.match(/^spotify:track:([a-zA-Z0-9]+)$/);
+      if (uriMatch) return uriMatch[1];
+      
+      // Handle direct IDs (22 characters)
+      if (/^[a-zA-Z0-9]{22}$/.test(trackUrl)) {
+        return trackUrl;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error extracting track ID:', error);
+      return null;
+    }
   }
 
   async getSimplifiedTrackDetails(trackUrl: string): Promise<SimplifiedTrackOutput> {

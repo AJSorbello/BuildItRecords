@@ -92,7 +92,7 @@ const router = createBrowserRouter(
   }
 );
 
-const App: React.FC = () => {
+function App() {
   React.useEffect(() => {
     // Initialize data when the app starts
     initializeData();
@@ -104,6 +104,6 @@ const App: React.FC = () => {
       <RouterProvider router={router} />
     </ThemeProvider>
   );
-};
+}
 
 export default App;

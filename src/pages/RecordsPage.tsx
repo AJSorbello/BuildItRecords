@@ -33,32 +33,16 @@ const ArtistCard = styled(Card)({
 const RecordsPage = () => {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [artists, setArtists] = useState<Artist[]>([]);
-  const [pastReleases, setPastReleases] = useState<any[]>([]);
-  const [playlists, setPlaylists] = useState<any[]>([]);
 
   useEffect(() => {
-    setTracks(getTracksByLabel(RECORD_LABELS.RECORDS));
-    setArtists(getArtistsByLabel(RECORD_LABELS.RECORDS));
-    setPastReleases([
-      {
-        id: '1',
-        title: 'Release 1',
-        artist: 'Artist 1',
-        catalogNumber: 'BIR001',
-        genre: 'House',
-        style: 'Deep House'
-      },
-      // Add more mock releases as needed
-    ]);
-    setPlaylists([
-      {
-        id: '1',
-        title: 'Playlist 1',
-        description: 'Our latest tracks',
-        url: 'https://spotify.com/playlist1'
-      },
-      // Add more mock playlists as needed
-    ]);
+    const recordsTracks = getTracksByLabel(RECORD_LABELS.RECORDS);
+    const recordsArtists = getArtistsByLabel(RECORD_LABELS.RECORDS);
+    
+    console.log('Tracks:', recordsTracks); // Debug log
+    console.log('Artists:', recordsArtists); // Debug log
+    
+    setTracks(recordsTracks);
+    setArtists(recordsArtists);
   }, []);
 
   return (
@@ -69,68 +53,14 @@ const RecordsPage = () => {
         </Typography>
         
         <Box mb={6}>
+          <Typography variant="h5" gutterBottom sx={{ color: '#FFFFFF', mb: 3 }}>
+            Latest Releases
+          </Typography>
           <TrackList tracks={tracks} />
         </Box>
 
-        <Box mb={6}>
-          <Typography variant="h5" gutterBottom sx={{ textAlign: 'center', mb: 4 }}>
-            Past Releases
-          </Typography>
-          <Grid container spacing={3} justifyContent="center">
-            {pastReleases.map((release) => (
-              <Grid item xs={12} sm={6} md={3} key={release.id}>
-                <Card sx={{ backgroundColor: 'rgba(255, 255, 255, 0.05)', transition: 'transform 0.2s', height: '100%', display: 'flex', flexDirection: 'column', '&:hover': { transform: 'scale(1.02)', backgroundColor: 'rgba(255, 255, 255, 0.08)' } }}>
-                  <CardContent sx={{ flexGrow: 1 }}>
-                    <Typography variant="body1" component="div" sx={{ color: 'text.primary', fontWeight: 'bold' }}>
-                      {release.title}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {release.artist}
-                    </Typography>
-                    <Box mt={1}>
-                      <Typography variant="caption" color="text.secondary">
-                        {release.catalogNumber}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary" display="block">
-                        {release.genre} {release.style ? `- ${release.style}` : ''}
-                      </Typography>
-                    </Box>
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
-        </Box>
-
-        <Box mb={6}>
-          <Typography variant="h5" gutterBottom sx={{ textAlign: 'center', mb: 4 }}>
-            Playlists
-          </Typography>
-          <Grid container spacing={3} justifyContent="center">
-            {playlists.map((playlist) => (
-              <Grid item xs={12} sm={6} key={playlist.id}>
-                <Card sx={{ backgroundColor: 'rgba(255, 255, 255, 0.05)', transition: 'transform 0.2s', height: '100%', display: 'flex', flexDirection: 'column', '&:hover': { transform: 'scale(1.02)', backgroundColor: 'rgba(255, 255, 255, 0.08)' } }}>
-                  <CardContent sx={{ flexGrow: 1 }}>
-                    <Typography variant="h6" gutterBottom>
-                      {playlist.title}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {playlist.description}
-                    </Typography>
-                    <Box mt={2}>
-                      <IconLink href={playlist.url} target="_blank" rel="noopener noreferrer">
-                        <FaSpotify size={24} />
-                      </IconLink>
-                    </Box>
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
-        </Box>
-
         <Box>
-          <Typography variant="h5" gutterBottom sx={{ textAlign: 'center', mb: 4 }}>
+          <Typography variant="h5" gutterBottom sx={{ color: '#FFFFFF', mb: 4 }}>
             Artists
           </Typography>
           <Grid container spacing={3} justifyContent="center">

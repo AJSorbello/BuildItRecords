@@ -20,9 +20,9 @@ import {
 } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { spotifyService } from '../services/SpotifyService';
-import { extractSpotifyId } from '../utils/spotifyUtils';
+import { extractSpotifyId, isValidSpotifyUrl, normalizeSpotifyUrl } from '../utils/spotifyUtils';
 import { SpotifyTrack } from '../types/spotify';
-import TrackList from './AdminTrackList';
+import AdminTrackList from './AdminTrackList';
 import { Track } from '../types/track';
 import { RECORD_LABELS, RecordLabel } from '../constants/labels';
 import { getData } from '../utils/dataInitializer';
@@ -130,14 +130,51 @@ const AdminDashboard: React.FC = () => {
 
   const handleSpotifyUrlChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const { value } = e.target;
-    setFormData(prev => ({ ...prev, spotifyUrl: value }));
-    console.log('Spotify URL:', value);
-    if (value && value.includes('spotify.com/track/')) {
-      const trackId = extractSpotifyId(formData.spotifyUrl);
-      if (!trackId) {
-        throw new Error('Invalid Spotify URL format');
+    console.log('Original URL:', value);
+    
+    // Normalize the URL
+    const normalizedUrl = normalizeSpotifyUrl(value);
+    console.log('Normalized URL:', normalizedUrl);
+    
+    setFormData(prev => ({ ...prev, spotifyUrl: normalizedUrl }));
+    
+    if (!normalizedUrl) {
+      setFetchState(initialFetchState);
+      return;
+    }
+
+    try {
+      // Log URL validation result
+      const isValid = isValidSpotifyUrl(normalizedUrl);
+      console.log('Is valid Spotify URL?', isValid);
+      
+      if (!isValid) {
+        setFetchState({
+          loading: false,
+          error: 'Please enter a valid Spotify track URL (e.g., https://open.spotify.com/track/...)',
+        });
+        return;
       }
+
+      // Log track ID extraction
+      const trackId = extractSpotifyId(normalizedUrl);
+      console.log('Extracted track ID:', trackId);
+      
+      if (!trackId) {
+        setFetchState({
+          loading: false,
+          error: 'Could not extract track ID from URL',
+        });
+        return;
+      }
+
       await handleSpotifyFetch(trackId);
+    } catch (error) {
+      console.error('Error processing Spotify URL:', error);
+      setFetchState({
+        loading: false,
+        error: error instanceof Error ? error.message : 'Failed to process Spotify URL',
+      });
     }
   };
 
@@ -192,11 +229,14 @@ const AdminDashboard: React.FC = () => {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.MouseEvent) => {
     e.preventDefault();
 
-    if (!formData.spotifyUrl || !formData.trackTitle || !formData.artist) {
-      console.error('Please enter a valid Spotify URL and wait for track details to load');
+    if (!formData.spotifyUrl || !formData.trackTitle || !formData.artist || !formData.recordLabel) {
+      setFetchState({
+        loading: false,
+        error: 'Please fill in all required fields'
+      });
       return;
     }
 
@@ -218,11 +258,16 @@ const AdminDashboard: React.FC = () => {
         updatedTracks = [...tracks, newTrack];
       }
       
+      console.log('Saving track:', newTrack);
       localStorage.setItem('tracks', JSON.stringify(updatedTracks));
       setTracks(updatedTracks);
       handleClose();
     } catch (err) {
       console.error('Error saving track:', err);
+      setFetchState({
+        loading: false,
+        error: 'Failed to save track'
+      });
     }
   };
 
@@ -295,7 +340,7 @@ const AdminDashboard: React.FC = () => {
         <Typography variant="h5" gutterBottom sx={{ color: '#FFFFFF', mb: 3 }}>
           Submitted Tracks
         </Typography>
-        <TrackList tracks={tracks} handleEdit={handleEdit} handleDelete={handleDelete} />
+        <AdminTrackList tracks={tracks} onEditTrack={handleEdit} onDeleteTrack={handleDelete} />
       </Box>
 
       <Dialog 
@@ -331,6 +376,7 @@ const AdminDashboard: React.FC = () => {
 
             <TextField
               fullWidth
+              name="trackTitle"
               label="Track Title"
               value={formData.trackTitle}
               onChange={handleTextInputChange}
@@ -339,6 +385,7 @@ const AdminDashboard: React.FC = () => {
             />
             <TextField
               fullWidth
+              name="artist"
               label="Artist"
               value={formData.artist}
               onChange={handleTextInputChange}
@@ -362,10 +409,27 @@ const AdminDashboard: React.FC = () => {
             </FormControl>
           </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpen(false)}>Cancel</Button>
-          <Button type="submit" variant="contained">
-            {editingId ? 'Update' : 'Add'} Track
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={handleClose} sx={{ color: '#999' }}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleSubmit}
+            variant="contained"
+            disabled={!formData.trackTitle || !formData.artist || !formData.spotifyUrl || fetchState.loading}
+            sx={{
+              backgroundColor: '#02FF95',
+              color: '#121212',
+              '&:hover': {
+                backgroundColor: '#00CC76',
+              },
+              '&:disabled': {
+                backgroundColor: '#666',
+                color: '#999'
+              }
+            }}
+          >
+            {editingId ? 'Update Track' : 'Add Track'}
           </Button>
         </DialogActions>
       </Dialog>
