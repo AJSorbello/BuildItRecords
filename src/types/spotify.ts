@@ -62,6 +62,7 @@ export interface SpotifyTrack {
   previewUrl: string | null;
   spotifyUrl: string;
   album: SpotifyAlbum;
+  releaseDate: string;
 }
 
 export interface SimplifiedTrackOutput {

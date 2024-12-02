@@ -1,20 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Typography, Grid, Card, CardContent, CardMedia, Link, styled } from '@mui/material';
+import { Box, Typography, Grid, Card, CardContent, CardMedia, IconButton, Button, Link } from '@mui/material';
+import { styled } from '@mui/material/styles';
+import { PlayArrow } from '@mui/icons-material';
 import { FaSpotify, FaSoundcloud } from 'react-icons/fa';
 import { SiBeatport } from 'react-icons/si';
 import { Track } from '../types/track';
-import { RECORD_LABELS } from '../constants/labels';
+import { Release } from '../types/release';
+import { RECORD_LABELS, RecordLabel } from '../constants/labels';
 import { resetData, getData } from '../utils/dataInitializer';
 import { LabelKey } from '../types/labels';
-import { SpotifyService } from '../services/SpotifyService'; // Fix import path with correct case
+import { spotifyService } from '../services/SpotifyService';
+import { extractSpotifyId } from '../utils/spotifyUtils';
 
-interface Release {
+interface ReleaseItem {
   id: string;
   title: string;
   artist: string;
   artwork: string;
   releaseDate: string;
-  label: string;
+  label: RecordLabel;
   beatportUrl?: string;
   spotifyUrl?: string;
   soundcloudUrl?: string;
@@ -34,22 +38,19 @@ const FeaturedReleaseCard = styled(Card)({
   backgroundColor: 'rgba(255, 255, 255, 0.05)',
   transition: 'transform 0.2s',
   height: '100%',
-  display: 'flex',
-  flexDirection: 'column',
-  maxWidth: 800,
-  margin: '0 auto',
   '&:hover': {
     transform: 'scale(1.02)',
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
   },
+  display: 'flex',
+  flexDirection: 'column',
+  position: 'relative',
 });
 
 const ReleaseCard = styled(Card)({
   backgroundColor: 'rgba(255, 255, 255, 0.05)',
   transition: 'transform 0.2s',
   height: '100%',
-  display: 'flex',
-  flexDirection: 'column',
   '&:hover': {
     transform: 'scale(1.02)',
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
@@ -70,8 +71,9 @@ const IconLink = styled(Link)({
   color: '#FFFFFF',
   marginRight: '16px',
   '&:hover': {
-    color: '#02FF95',
+    color: '#1DB954', // Spotify green color for hover effect
   },
+  textDecoration: 'none',
 });
 
 const mockData = [
@@ -107,7 +109,7 @@ const mockData = [
   },
 ];
 
-const getReleases = (label: LabelKey): Release[] => {
+const getReleases = (label: LabelKey): ReleaseItem[] => {
   const storedTracks = getData().tracks;
   if (!storedTracks) return [];
 
@@ -126,7 +128,7 @@ const getReleases = (label: LabelKey): Release[] => {
         });
         return matches;
       })
-      .map((track): Release | null => {
+      .map((track): ReleaseItem | null => {
         if (!track.id || !track.trackTitle || !track.artist || !track.recordLabel) {
           console.error('Missing required fields for track:', track);
           return null;
@@ -146,7 +148,7 @@ const getReleases = (label: LabelKey): Release[] => {
           title: track.trackTitle,
           artist: track.artist,
           artwork,
-          releaseDate: new Date().toISOString().split('T')[0], 
+          releaseDate: formatReleaseDate(track.releaseDate),
           label: track.recordLabel,
           beatportUrl: track.beatportUrl,
           spotifyUrl: track.spotifyUrl,
@@ -158,15 +160,100 @@ const getReleases = (label: LabelKey): Release[] => {
 
         return release;
       })
-      .filter((track): track is Release => track !== null);
+      .filter((track): track is ReleaseItem => track !== null);
   } catch (error) {
     console.error('Error loading releases:', error);
     return [];
   }
 };
 
+const formatReleaseDate = (date: string | undefined): string => {
+  console.log('Formatting date:', date);
+  
+  if (!date) {
+    const now = new Date();
+    console.log('No date provided, using current date:', now);
+    return formatDate(now);
+  }
+
+  const d = new Date(date);
+  if (isNaN(d.getTime())) {
+    console.error('Invalid date:', date);
+    const now = new Date();
+    console.log('Using current date instead:', now);
+    return formatDate(now);
+  }
+
+  return formatDate(d);
+};
+
+const formatDate = (d: Date): string => {
+  const month = d.toLocaleString('default', { month: 'short' });
+  const day = d.getDate();
+  const year = d.getFullYear();
+  
+  // Add ordinal suffix to day (1st, 2nd, 3rd, etc.)
+  const ordinal = (n: number) => {
+    if (n > 3 && n < 21) return `${n}th`; // handle 4th through 20th
+    switch (n % 10) {
+      case 1: return `${n}st`;
+      case 2: return `${n}nd`;
+      case 3: return `${n}rd`;
+      default: return `${n}th`;
+    }
+  };
+  
+  const formattedDate = `${month} ${ordinal(day)}, ${year}`;
+  console.log('Formatted date:', formattedDate);
+  return formattedDate;
+};
+
+const getDefaultLabel = (spotifyLabel: string): RecordLabel => {
+  // Convert spotify label to our internal label format
+  const label = spotifyLabel.toLowerCase();
+  if (label.includes('tech')) return RECORD_LABELS.TECH;
+  if (label.includes('deep')) return RECORD_LABELS.DEEP;
+  return RECORD_LABELS.RECORDS; // default label
+};
+
+const getTrackFromSpotify = async (spotifyUrl: string): Promise<Track | null> => {
+  try {
+    const trackId = extractSpotifyId(spotifyUrl);
+    if (!trackId) {
+      console.error('Could not extract Spotify track ID from URL:', spotifyUrl);
+      return null;
+    }
+
+    const spotifyTrack = await spotifyService.getTrackDetails(trackId);
+    if (!spotifyTrack) {
+      console.error('Could not fetch track details from Spotify');
+      return null;
+    }
+
+    console.log('Spotify track details:', spotifyTrack);
+
+    const track: Track = {
+      id: spotifyTrack.id,
+      trackTitle: spotifyTrack.trackTitle,
+      artist: spotifyTrack.artist,
+      albumCover: spotifyTrack.albumCover,
+      releaseDate: spotifyTrack.releaseDate,
+      recordLabel: getDefaultLabel(spotifyTrack.recordLabel),
+      beatportUrl: '',
+      spotifyUrl: spotifyTrack.spotifyUrl,
+      soundcloudUrl: '',
+    };
+
+    return track;
+  } catch (error) {
+    console.error('Error fetching track from Spotify:', error);
+    return null;
+  }
+};
+
 const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
-  const [releases, setReleases] = useState<Release[]>([]);
+  const [releases, setReleases] = useState<ReleaseItem[]>([]);
+  const [topListens, setTopListens] = useState<ReleaseItem[]>([]);
 
   useEffect(() => {
     const allTracks = getData().tracks;
@@ -185,7 +272,7 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
 
     // Then, convert tracks to releases, fetching artwork if needed
     const convertTracksToReleases = async () => {
-      const releases = await Promise.all(filteredTracks.map(async (track: Track): Promise<Release | null> => {
+      const releases = await Promise.all(filteredTracks.map(async (track: Track): Promise<ReleaseItem | null> => {
         if (!track.id || !track.trackTitle || !track.artist || !track.recordLabel) {
           console.error('Missing required fields for track:', track);
           return null;
@@ -198,7 +285,6 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
         if ((!artwork || artwork === 'https://via.placeholder.com/300') && track.spotifyUrl) {
           try {
             console.log('Fetching artwork from Spotify...');
-            const spotifyService = SpotifyService.getInstance();
             const trackDetails = await spotifyService.getTrackDetailsByUrl(track.spotifyUrl);
             if (trackDetails?.albumCover) {
               artwork = trackDetails.albumCover;
@@ -222,16 +308,16 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
 
         console.log('Using artwork:', artwork);
 
-        const release: Release = {
+        const release: ReleaseItem = {
           id: track.id,
           title: track.trackTitle,
           artist: track.artist,
-          artwork,
-          releaseDate: new Date().toISOString().split('T')[0],
+          artwork: track.albumCover || '',
+          releaseDate: track.releaseDate ? formatReleaseDate(track.releaseDate) : formatReleaseDate(new Date().toISOString()),
           label: track.recordLabel,
-          beatportUrl: track.beatportUrl,
+          beatportUrl: track.beatportUrl || '',
           spotifyUrl: track.spotifyUrl,
-          soundcloudUrl: track.soundcloudUrl,
+          soundcloudUrl: track.soundcloudUrl || '',
           plays: 0
         };
 
@@ -239,14 +325,14 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
         return release;
       }));
 
-      return releases.filter((release): release is Release => release !== null);
+      return releases.filter((release): release is ReleaseItem => release !== null);
     };
 
     // Execute the conversion and update state
     convertTracksToReleases().then(setReleases);
   }, [label]);
 
-  const featuredRelease = releases[0];
+  const featuredRelease = releases[0] || null;
   const pastReleases = releases.slice(1);
 
   const topListened = releases.length > 0 
@@ -297,7 +383,7 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
                     </Typography>
                     <Box sx={{ mt: 2 }}>
                       <Typography variant="h6" color="text.secondary">
-                        {featuredRelease.releaseDate}
+                        {formatReleaseDate(featuredRelease.releaseDate)}
                       </Typography>
                       <Box mt={2}>
                         {featuredRelease.beatportUrl && (
@@ -362,7 +448,7 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
                           </Typography>
                           <Box sx={{ mt: 1 }}>
                             <Typography variant="caption" color="text.secondary">
-                              {release.releaseDate}
+                              {formatReleaseDate(release.releaseDate)}
                             </Typography>
                             <Box mt={1}>
                               {release.beatportUrl && (

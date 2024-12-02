@@ -198,7 +198,8 @@ export class SpotifyService {
         recordLabel: album.label || 'Unknown Label',
         previewUrl: track.preview_url,
         spotifyUrl: track.external_urls.spotify,
-        album: spotifyAlbum
+        album: spotifyAlbum,
+        releaseDate: track.album.release_date
       };
 
       // Debug log
@@ -269,7 +270,8 @@ export class SpotifyService {
           releaseDate: album.release_date,
           label: album.label || 'Unknown Label',
           spotifyUrl: album.external_urls.spotify
-        }
+        },
+        releaseDate: album.release_date
       };
 
       console.log('Converted track with artwork:', spotifyTrack);
@@ -365,6 +367,32 @@ export class SpotifyService {
     } catch (error) {
       console.error('Error fetching label releases:', error);
       throw error;
+    }
+  }
+
+  public async getArtistDetails(artistName: string): Promise<{ id: string; name: string; images: SpotifyImage[] } | null> {
+    try {
+      await this.ensureValidToken();
+      
+      // Search for the artist
+      const searchResponse = await this.spotifyApi.searchArtists(artistName, { limit: 1 });
+      const artist = searchResponse.body.artists?.items[0];
+      
+      if (!artist) {
+        console.log('No artist found for:', artistName);
+        return null;
+      }
+
+      console.log('Found artist:', artist.name, 'with', artist.images.length, 'images');
+      
+      return {
+        id: artist.id,
+        name: artist.name,
+        images: this.convertImages(artist.images)
+      };
+    } catch (error) {
+      console.error('Error fetching artist details:', error);
+      return null;
     }
   }
 
