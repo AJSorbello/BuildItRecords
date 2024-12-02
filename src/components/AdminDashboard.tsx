@@ -300,6 +300,21 @@ const AdminDashboard: React.FC = () => {
     try {
       setFetchState({ loading: true, error: null });
 
+      // Check for duplicates
+      const normalizedUrl = normalizeSpotifyUrl(formData.spotifyUrl);
+      const isDuplicate = tracks.some(track => 
+        track.id !== editingId && // Ignore current track when editing
+        normalizeSpotifyUrl(track.spotifyUrl) === normalizedUrl
+      );
+
+      if (isDuplicate) {
+        setFetchState({
+          loading: false,
+          error: 'This track already exists in the database'
+        });
+        return;
+      }
+
       // Ensure we have track details from Spotify
       let trackDetails = formData;
       if (!formData.albumCover) {
