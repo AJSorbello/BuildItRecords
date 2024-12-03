@@ -171,17 +171,15 @@ const formatReleaseDate = (date: string | undefined): string => {
   console.log('Formatting date:', date);
   
   if (!date) {
-    const now = new Date();
-    console.log('No date provided, using current date:', now);
-    return formatDate(now);
+    console.log('No date provided, returning Unknown');
+    return 'Unknown';
   }
 
   const d = new Date(date);
   if (isNaN(d.getTime())) {
     console.error('Invalid date:', date);
-    const now = new Date();
-    console.log('Using current date instead:', now);
-    return formatDate(now);
+    console.log('Returning Unknown');
+    return 'Unknown';
   }
 
   return formatDate(d);
@@ -308,17 +306,28 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
 
         console.log('Using artwork:', artwork);
 
+        const releaseDate = track.releaseDate ? new Date(track.releaseDate) : null;
+        if (releaseDate && isNaN(releaseDate.getTime())) {
+          console.warn('Invalid release date for track:', track);
+        }
+
         const release: ReleaseItem = {
           id: track.id,
           title: track.trackTitle,
           artist: track.artist,
-          artwork: track.albumCover || '',
-          releaseDate: track.releaseDate ? formatReleaseDate(track.releaseDate) : formatReleaseDate(new Date().toISOString()),
+          artwork,
+          releaseDate: releaseDate && !isNaN(releaseDate.getTime())
+            ? releaseDate.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+              })
+            : 'Unknown',
           label: track.recordLabel,
-          beatportUrl: track.beatportUrl || '',
+          beatportUrl: track.beatportUrl,
           spotifyUrl: track.spotifyUrl,
-          soundcloudUrl: track.soundcloudUrl || '',
-          plays: 0
+          soundcloudUrl: track.soundcloudUrl,
+          plays: 0 
         };
 
         console.log('Created release:', release);
@@ -383,7 +392,7 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
                     </Typography>
                     <Box sx={{ mt: 2 }}>
                       <Typography variant="h6" color="text.secondary">
-                        {formatReleaseDate(featuredRelease.releaseDate)}
+                        {featuredRelease.releaseDate}
                       </Typography>
                       <Box mt={2}>
                         {featuredRelease.beatportUrl && (
@@ -448,7 +457,7 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
                           </Typography>
                           <Box sx={{ mt: 1 }}>
                             <Typography variant="caption" color="text.secondary">
-                              {formatReleaseDate(release.releaseDate)}
+                              {release.releaseDate}
                             </Typography>
                             <Box mt={1}>
                               {release.beatportUrl && (

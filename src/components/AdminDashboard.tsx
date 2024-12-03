@@ -74,6 +74,7 @@ const validateRecordLabel = (label: string): RecordLabel => {
 
 const AdminDashboard: React.FC = () => {
   const [open, setOpen] = useState(false);
+  console.log('Dialog open state:', open);
   const [tracks, setTracks] = useState<Track[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<TrackFormData>(initialFormData);
@@ -207,10 +208,12 @@ const AdminDashboard: React.FC = () => {
   };
 
   const handleOpen = () => {
+    console.log('Add New Track button clicked');
     setOpen(true);
     setFormData(initialFormData);
     setEditingId(null);
     setFetchState(initialFetchState);
+    console.log('Dialog state set to open');
   };
 
   const handleClose = () => {
@@ -528,6 +531,99 @@ const AdminDashboard: React.FC = () => {
           </Box>
         ))}
       </Box>
+
+      <Dialog open={open} onClose={handleClose}>
+        <DialogTitle>Add New Track</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Track Title"
+            fullWidth
+            variant="outlined"
+            value={formData.trackTitle}
+            onChange={handleTextInputChange}
+            name="trackTitle"
+          />
+          <TextField
+            margin="dense"
+            label="Artist"
+            fullWidth
+            variant="outlined"
+            value={formData.artist}
+            onChange={handleTextInputChange}
+            name="artist"
+          />
+          <TextField
+            margin="dense"
+            label="Spotify URL"
+            fullWidth
+            variant="outlined"
+            value={formData.spotifyUrl}
+            onChange={handleTextInputChange}
+            name="spotifyUrl"
+          />
+          <FormControl fullWidth margin="normal">
+            <InputLabel>Record Label</InputLabel>
+            <Select
+              value={formData.recordLabel}
+              onChange={handleSelectChange}
+              name="recordLabel"
+            >
+              {Object.values(RECORD_LABELS).map((label) => (
+                <MenuItem key={label} value={label}>{label}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClose}>Cancel</Button>
+          <Button onClick={handleSubmit} variant="contained" color="primary">
+            Save
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={importDialogOpen} onClose={handleImportDialogClose}>
+        <DialogTitle>Import Tracks by Label</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Label Name"
+            fullWidth
+            variant="outlined"
+            value={importLabel}
+            onChange={(e) => setImportLabel(e.target.value)}
+            disabled={importing}
+            helperText="Enter the exact label name as it appears on Spotify"
+          />
+          {fetchState.error && (
+            <Typography color="error" sx={{ mt: 2 }}>
+              {fetchState.error}
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleImportDialogClose} disabled={importing}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleImportTracks} 
+            variant="contained" 
+            disabled={importing || !importLabel}
+          >
+            {importing ? (
+              <>
+                <CircularProgress size={20} sx={{ mr: 1 }} />
+                Importing...
+              </>
+            ) : (
+              'Import'
+            )}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };
