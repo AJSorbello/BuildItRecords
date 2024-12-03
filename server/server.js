@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config({ path: './.env' });
 
 const express = require('express');
 const cors = require('cors');
@@ -10,6 +10,7 @@ const { classifyTrack } = require('./utils/trackClassifier');
 
 // Initialize Express app
 const app = express();
+app.set('trust proxy', 1); // Trust first proxy
 const port = process.env.PORT || 3001;
 
 // Redis client setup
