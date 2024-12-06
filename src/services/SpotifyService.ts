@@ -215,70 +215,31 @@ export class SpotifyService {
 
   async getTrackDetailsByUrl(trackUrl: string): Promise<SpotifyTrack | null> {
     try {
-      console.log('Getting track details for URL:', trackUrl);
-      
-      await this.ensureValidToken();
       const trackId = this.extractTrackId(trackUrl);
-      
       if (!trackId) {
-        console.error('Invalid track URL:', trackUrl);
-        throw new Error('Invalid Spotify track URL');
+        throw new Error('Invalid Spotify URL');
       }
 
-      console.log('Extracted track ID:', trackId);
-
-      // Get track details
-      console.log('Fetching track details...');
-      const response = await this.spotifyApi.getTrack(trackId);
-      const track = response.body;
-      console.log('Got track response:', track);
-
-      // Get album details to get the label and high-quality artwork
-      console.log('Fetching album details...');
-      const albumResponse = await this.spotifyApi.getAlbum(track.album.id);
-      const album = albumResponse.body;
-      console.log('Got album response:', album);
-
-      // Get the highest quality image
-      let albumCover = 'https://via.placeholder.com/300';
-      if (album.images && album.images.length > 0) {
-        // Sort by width to get the highest quality image
-        const bestImage = album.images.sort((a, b) => (b.width || 0) - (a.width || 0))[0];
-        if (bestImage && bestImage.url) {
-          albumCover = bestImage.url;
-          console.log('Selected album cover:', albumCover);
-        }
+      const track = await this.spotifyApi.getTrack(trackId);
+      if (!track) {
+        throw new Error('Track not found');
       }
 
-      // Convert to our format
-      const spotifyTrack: SpotifyTrack = {
+      // Get album details to get the release date
+      const albumId = track.album.id;
+      const album = await this.spotifyApi.getAlbum(albumId);
+      
+      return {
         id: track.id,
         trackTitle: track.name,
-        artist: track.artists.map(a => a.name).join(', '),
-        albumCover,
-        recordLabel: album.label || 'Unknown Label',
-        previewUrl: track.preview_url,
+        artist: track.artists.map(artist => artist.name).join(', '),
         spotifyUrl: track.external_urls.spotify,
-        album: {
-          id: album.id,
-          name: album.name,
-          images: album.images.map(img => ({
-            url: img.url,
-            height: img.height || 0,
-            width: img.width || 0
-          })),
-          artists: album.artists.map(a => a.name).join(', '),
-          releaseDate: album.release_date,
-          label: album.label || 'Unknown Label',
-          spotifyUrl: album.external_urls.spotify
-        },
-        releaseDate: album.release_date
+        albumCover: track.album.images[0]?.url || 'https://via.placeholder.com/300',
+        recordLabel: album.label || 'Unknown Label',
+        releaseDate: album.release_date || new Date().toISOString().split('T')[0] // Use current date as fallback
       };
-
-      console.log('Converted track with artwork:', spotifyTrack);
-      return spotifyTrack;
     } catch (error) {
-      console.error('Error fetching track details:', error);
+      console.error('Error getting track details:', error);
       return null;
     }
   }
@@ -562,6 +523,13 @@ export class SpotifyService {
         throw new Error('No new tracks found. All tracks from this label are already imported.');
       }
 
+      // Sort tracks by release date (newest first)
+      newTracks.sort((a, b) => {
+        const dateA = new Date(a.releaseDate || '');
+        const dateB = new Date(b.releaseDate || '');
+        return dateB.getTime() - dateA.getTime();
+      });
+
       // Process tracks in batches
       const totalBatches = Math.ceil(newTracks.length / batchSize);
       let importedCount = 0;
@@ -574,8 +542,13 @@ export class SpotifyService {
         // Get current tracks from localStorage
         const currentTracks = JSON.parse(localStorage.getItem('tracks') || '[]');
         
-        // Add batch to existing tracks
-        const updatedTracks = [...currentTracks, ...batch];
+        // Sort all tracks by release date (newest first)
+        const updatedTracks = [...currentTracks, ...batch].sort((a, b) => {
+          const dateA = new Date(a.releaseDate || '');
+          const dateB = new Date(b.releaseDate || '');
+          return dateB.getTime() - dateA.getTime();
+        });
+
         localStorage.setItem('tracks', JSON.stringify(updatedTracks));
         
         importedCount += batch.length;

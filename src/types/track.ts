@@ -9,5 +9,5 @@ export interface Track {
   recordLabel: RecordLabel;
   beatportUrl?: string;
   soundcloudUrl?: string;
-  releaseDate?: string;
+  releaseDate: string;
 }

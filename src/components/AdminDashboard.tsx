@@ -35,6 +35,7 @@ interface TrackFormData {
   spotifyUrl: string;
   recordLabel: RecordLabel;
   albumCover: string;
+  releaseDate: string;
 }
 
 const initialFormData: TrackFormData = {
@@ -43,7 +44,8 @@ const initialFormData: TrackFormData = {
   artist: '',
   spotifyUrl: '',
   recordLabel: RECORD_LABELS.RECORDS,
-  albumCover: 'https://via.placeholder.com/300' // Default album cover
+  albumCover: 'https://via.placeholder.com/300', // Default album cover
+  releaseDate: ''
 };
 
 interface FetchState {
@@ -63,6 +65,7 @@ interface SpotifyTrackData {
   recordLabel: RecordLabel;
   spotifyUrl: string;
   albumCover: string;
+  releaseDate: string;
 }
 
 const validateRecordLabel = (label: string): RecordLabel => {
@@ -98,10 +101,15 @@ const AdminDashboard: React.FC = () => {
       resetData();
     }
     
-    // Load tracks from localStorage
+    // Load and sort tracks from localStorage
     const data = getData();
-    console.log('Loaded tracks from localStorage:', data.tracks);
-    setTracks(data.tracks);
+    const sortedTracks = data.tracks.sort((a, b) => {
+      const dateA = new Date(a.releaseDate || '');
+      const dateB = new Date(b.releaseDate || '');
+      return dateB.getTime() - dateA.getTime();
+    });
+    console.log('Loaded tracks from localStorage:', sortedTracks);
+    setTracks(sortedTracks);
   }, []);
 
   const handleSpotifyFetch = async (trackId: string) => {
@@ -126,7 +134,8 @@ const AdminDashboard: React.FC = () => {
         artist: trackDetails.artist,
         recordLabel: validateRecordLabel(trackDetails.recordLabel),
         spotifyUrl: trackDetails.spotifyUrl,
-        albumCover: trackDetails.albumCover
+        albumCover: trackDetails.albumCover,
+        releaseDate: trackDetails.releaseDate
       });
 
       setFetchState({
@@ -189,7 +198,8 @@ const AdminDashboard: React.FC = () => {
         trackTitle: track.trackTitle,
         artist: track.artist,
         albumCover: track.albumCover, // This is now required
-        recordLabel: validateRecordLabel(track.recordLabel)
+        recordLabel: validateRecordLabel(track.recordLabel),
+        releaseDate: track.releaseDate
       }));
 
       // Debug log
@@ -197,7 +207,8 @@ const AdminDashboard: React.FC = () => {
         trackTitle: track.trackTitle,
         artist: track.artist,
         albumCover: track.albumCover,
-        recordLabel: track.recordLabel
+        recordLabel: track.recordLabel,
+        releaseDate: track.releaseDate
       });
 
       setFetchState({
@@ -236,7 +247,8 @@ const AdminDashboard: React.FC = () => {
       artist: track.artist,
       spotifyUrl: track.spotifyUrl,
       recordLabel: validateRecordLabel(track.recordLabel),
-      albumCover: track.albumCover || ''
+      albumCover: track.albumCover || '',
+      releaseDate: track.releaseDate || '' // Provide empty string as fallback
     });
     setEditingId(track.id);
     setOpen(true);
@@ -275,7 +287,8 @@ const AdminDashboard: React.FC = () => {
               trackTitle: trackDetails.trackTitle,
               artist: trackDetails.artist,
               albumCover: trackDetails.albumCover,
-              recordLabel: validateRecordLabel(trackDetails.recordLabel)
+              recordLabel: validateRecordLabel(trackDetails.recordLabel),
+              releaseDate: trackDetails.releaseDate
             }));
             setFetchState({ loading: false, error: null });
           } else {
@@ -335,7 +348,8 @@ const AdminDashboard: React.FC = () => {
         if (spotifyDetails) {
           trackDetails = {
             ...formData,
-            albumCover: spotifyDetails.albumCover
+            albumCover: spotifyDetails.albumCover,
+            releaseDate: spotifyDetails.releaseDate
           };
         }
       }
@@ -349,7 +363,8 @@ const AdminDashboard: React.FC = () => {
         artist: trackDetails.artist,
         spotifyUrl: trackDetails.spotifyUrl,
         recordLabel: trackDetails.recordLabel,
-        albumCover: trackDetails.albumCover || 'https://via.placeholder.com/300'
+        albumCover: trackDetails.albumCover || 'https://via.placeholder.com/300',
+        releaseDate: trackDetails.releaseDate
       };
 
       // Debug log
@@ -407,7 +422,8 @@ const AdminDashboard: React.FC = () => {
         artist: trackDetails.artist,
         recordLabel: validateRecordLabel(trackDetails.recordLabel),
         spotifyUrl: trackDetails.spotifyUrl,
-        albumCover: trackDetails.albumCover
+        albumCover: trackDetails.albumCover,
+        releaseDate: trackDetails.releaseDate
       });
 
       setFetchState({ loading: false, error: null });
@@ -562,6 +578,7 @@ const AdminDashboard: React.FC = () => {
             <Typography variant="body1" sx={{ color: '#FFFFFF', flex: 1 }}>{track.trackTitle}</Typography>
             <Typography variant="body2" sx={{ color: '#AAAAAA', flex: 1 }}>{track.artist}</Typography>
             <Typography variant="body2" sx={{ color: '#AAAAAA', flex: 1 }}>{track.recordLabel}</Typography>
+            <Typography variant="body2" sx={{ color: '#AAAAAA', flex: 1 }}>{track.releaseDate ? new Date(track.releaseDate).toLocaleDateString() : 'Unknown'}</Typography>
           </Box>
         ))}
       </Box>
@@ -640,6 +657,15 @@ const AdminDashboard: React.FC = () => {
             value={formData.spotifyUrl}
             onChange={handleTextInputChange}
             name="spotifyUrl"
+          />
+          <TextField
+            margin="dense"
+            label="Release Date"
+            fullWidth
+            variant="outlined"
+            value={formData.releaseDate}
+            onChange={handleTextInputChange}
+            name="releaseDate"
           />
           <FormControl fullWidth margin="normal">
             <InputLabel>Record Label</InputLabel>
