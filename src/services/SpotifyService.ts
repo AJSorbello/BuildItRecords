@@ -5,7 +5,9 @@ const SPOTIFY_CLIENT_ID = process.env.REACT_APP_SPOTIFY_CLIENT_ID ?? '';
 const SPOTIFY_CLIENT_SECRET = process.env.REACT_APP_SPOTIFY_CLIENT_SECRET ?? '';
 const SPOTIFY_REDIRECT_URI = process.env.REACT_APP_SPOTIFY_REDIRECT_URI ?? '';
 
-
+/**
+ * Spotify API service class.
+ */
 export class SpotifyService {
   private static instance: SpotifyService;
   private spotifyApi: SpotifyWebApi;
@@ -220,15 +222,20 @@ export class SpotifyService {
         throw new Error('Invalid Spotify URL');
       }
 
-      const track = await this.spotifyApi.getTrack(trackId);
-      if (!track) {
+      const trackResponse = await this.spotifyApi.getTrack(trackId);
+      if (!trackResponse || !trackResponse.body) {
         throw new Error('Track not found');
       }
 
+      const track = trackResponse.body;
+
       // Get album details to get the release date
-      const albumId = track.album.id;
-      const album = await this.spotifyApi.getAlbum(albumId);
-      
+      const albumResponse = await this.spotifyApi.getAlbum(track.album.id);
+      if (!albumResponse || !albumResponse.body) {
+        throw new Error('Album not found');
+      }
+      const album = albumResponse.body;
+
       return {
         id: track.id,
         trackTitle: track.name,
@@ -236,7 +243,21 @@ export class SpotifyService {
         spotifyUrl: track.external_urls.spotify,
         albumCover: track.album.images[0]?.url || 'https://via.placeholder.com/300',
         recordLabel: album.label || 'Unknown Label',
-        releaseDate: album.release_date || new Date().toISOString().split('T')[0] // Use current date as fallback
+        releaseDate: album.release_date || new Date().toISOString().split('T')[0],
+        previewUrl: track.preview_url,
+        album: {
+          id: album.id,
+          name: album.name,
+          images: album.images.map(img => ({
+            url: img.url,
+            height: img.height || 0,
+            width: img.width || 0
+          })),
+          artists: album.artists.map(artist => artist.name).join(', '),
+          releaseDate: album.release_date,
+          label: album.label || 'Unknown Label',
+          spotifyUrl: album.external_urls.spotify
+        }
       };
     } catch (error) {
       console.error('Error getting track details:', error);
