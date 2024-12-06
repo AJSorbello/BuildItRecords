@@ -72,6 +72,11 @@ const validateRecordLabel = (label: string): RecordLabel => {
   return RECORD_LABELS.RECORDS; // Default to RECORDS if invalid
 };
 
+interface ImportProgress {
+  imported: number;
+  total: number;
+}
+
 const AdminDashboard: React.FC = () => {
   const [open, setOpen] = useState(false);
   console.log('Dialog open state:', open);
@@ -83,6 +88,7 @@ const AdminDashboard: React.FC = () => {
   const [importLabel, setImportLabel] = useState<string>('');
   const [importing, setImporting] = useState(false);
   const [selectedLabel, setSelectedLabel] = useState<RecordLabel | 'All'>('All');
+  const [importProgress, setImportProgress] = useState<ImportProgress | null>(null);
 
   useEffect(() => {
     // Initialize data if needed
@@ -433,23 +439,51 @@ const AdminDashboard: React.FC = () => {
       return;
     }
 
+    // Validate label name format
+    const validLabels = ['build it deep', 'build it records', 'build it tech'];
+    if (!validLabels.includes(importLabel.toLowerCase())) {
+      setFetchState({
+        loading: false,
+        error: 'Please enter a valid label name: "Build It Deep", "Build It Records", or "Build It Tech"'
+      });
+      return;
+    }
+
     setImporting(true);
+    setImportProgress(null);
     setFetchState({ loading: true, error: null });
 
     try {
-      await spotifyService.importLabelTracks(importLabel);
+      const initialTrackCount = tracks.length;
       
-      // Refresh tracks list
+      await spotifyService.importLabelTracks(
+        importLabel,
+        50, // batch size
+        (imported, total) => {
+          setImportProgress({ imported, total });
+        }
+      );
+
+      // Reload tracks after import
       const data = getData();
       setTracks(data.tracks);
       
-      handleImportDialogClose();
+      // Calculate new tracks added
+      const newTracksCount = data.tracks.length - initialTrackCount;
+      
+      // Show success message with count
+      alert(`Successfully imported ${newTracksCount} new tracks from ${importLabel}`);
+      
+      // Reset state
+      setImportDialogOpen(false);
+      setImportLabel('');
+      setImportProgress(null);
       setFetchState({ loading: false, error: null });
     } catch (error) {
       console.error('Error importing tracks:', error);
       setFetchState({
         loading: false,
-        error: error instanceof Error ? error.message : 'Failed to import tracks'
+        error: error instanceof Error ? error.message : 'An error occurred while importing tracks'
       });
     } finally {
       setImporting(false);
@@ -532,6 +566,50 @@ const AdminDashboard: React.FC = () => {
         ))}
       </Box>
 
+      <Dialog open={importDialogOpen} onClose={() => !importing && setImportDialogOpen(false)}>
+        <DialogTitle>Import Tracks by Label</DialogTitle>
+        <DialogContent>
+          <Box sx={{ width: '100%', mt: 2 }}>
+            <TextField
+              fullWidth
+              label="Label Name"
+              value={importLabel}
+              onChange={(e) => setImportLabel(e.target.value)}
+              disabled={importing}
+              helperText="Enter exact label name: 'Build It Deep', 'Build It Records', or 'Build It Tech'"
+              error={Boolean(fetchState.error)}
+            />
+            {fetchState.error && (
+              <Typography color="error" sx={{ mt: 1 }}>
+                {fetchState.error}
+              </Typography>
+            )}
+            {importing && importProgress && (
+              <Box sx={{ mt: 2, textAlign: 'center' }}>
+                <CircularProgress size={24} sx={{ mb: 1 }} />
+                <Typography variant="body2">
+                  Importing tracks: {importProgress.imported} of {importProgress.total}
+                  {importProgress.imported < importProgress.total && '... (waiting 3s between batches)'}
+                </Typography>
+              </Box>
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setImportDialogOpen(false)} disabled={importing}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleImportTracks}
+            variant="contained"
+            color="primary"
+            disabled={importing || !importLabel}
+          >
+            {importing ? 'Importing...' : 'Import'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <Dialog open={open} onClose={handleClose}>
         <DialogTitle>Add New Track</DialogTitle>
         <DialogContent>
@@ -580,47 +658,6 @@ const AdminDashboard: React.FC = () => {
           <Button onClick={handleClose}>Cancel</Button>
           <Button onClick={handleSubmit} variant="contained" color="primary">
             Save
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      <Dialog open={importDialogOpen} onClose={handleImportDialogClose}>
-        <DialogTitle>Import Tracks by Label</DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Label Name"
-            fullWidth
-            variant="outlined"
-            value={importLabel}
-            onChange={(e) => setImportLabel(e.target.value)}
-            disabled={importing}
-            helperText="Enter the exact label name as it appears on Spotify"
-          />
-          {fetchState.error && (
-            <Typography color="error" sx={{ mt: 2 }}>
-              {fetchState.error}
-            </Typography>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleImportDialogClose} disabled={importing}>
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleImportTracks} 
-            variant="contained" 
-            disabled={importing || !importLabel}
-          >
-            {importing ? (
-              <>
-                <CircularProgress size={20} sx={{ mr: 1 }} />
-                Importing...
-              </>
-            ) : (
-              'Import'
-            )}
           </Button>
         </DialogActions>
       </Dialog>
