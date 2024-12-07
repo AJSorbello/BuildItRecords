@@ -7,6 +7,7 @@ interface Track {
   id: string;
   name: string;
   artist: string;
+  album: string;
   albumCover: string;
   previewUrl: string | null;
   spotifyUrl: string;
@@ -62,6 +63,7 @@ const PlaylistTrackList: React.FC<PlaylistTrackListProps> = ({ playlistId }) => 
   const [tracks, setTracks] = useState<Track[]>([]);
   const [playingTrackId, setPlayingTrackId] = useState<string | null>(null);
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchTracks = async () => {
@@ -69,18 +71,23 @@ const PlaylistTrackList: React.FC<PlaylistTrackListProps> = ({ playlistId }) => 
 
       try {
         const response = await spotifyService.getPlaylist(playlistId);
+        if (!response) {
+          throw new Error('Failed to fetch playlist');
+        }
         
         const formattedTracks = response.tracks.items.map((item: any) => ({
           id: item.track.id,
           name: item.track.name,
           artist: item.track.artists.map((artist: any) => artist.name).join(', '),
-          albumCover: item.track.album?.images[0]?.url || '',
+          album: item.track.album.name,
+          albumCover: item.track.album.images[0]?.url || '',
           previewUrl: item.track.preview_url,
           spotifyUrl: item.track.external_urls.spotify,
           duration: formatDuration(item.track.duration_ms),
         }));
 
         setTracks(formattedTracks);
+        setLoading(false);
       } catch (error) {
         console.error('Error fetching tracks:', error);
       }

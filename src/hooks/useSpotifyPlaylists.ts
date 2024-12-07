@@ -5,7 +5,9 @@ interface PlaylistTrack {
   id: string;
   name: string;
   artists: string[];
-  albumCover: string;
+  albumName: string;
+  albumImage: string;
+  duration: number;
   previewUrl: string | null;
 }
 
@@ -36,23 +38,30 @@ export const useSpotifyPlaylists = (label: keyof typeof playlistIds) => {
 
         const playlistPromises = playlistIds[label].map(async (id) => {
           const playlist = await spotifyService.getPlaylist(id);
+          if (!playlist) {
+            console.warn(`Playlist ${id} not found`);
+            return null;
+          }
+          
           return {
             id: playlist.id,
             name: playlist.name,
             description: playlist.description || '',
-            imageUrl: playlist.images[0]?.url || '',
+            imageUrl: playlist.images?.[0]?.url || '',
             tracks: playlist.tracks.items.map(item => ({
               id: item.track.id,
               name: item.track.name,
               artists: item.track.artists.map(artist => artist.name),
-              albumCover: item.track.album.images[0]?.url || '',
+              albumName: item.track.album.name,
+              albumImage: item.track.album.images?.[0]?.url || '',
+              duration: item.track.duration_ms,
               previewUrl: item.track.preview_url
             }))
           };
         });
 
         const fetchedPlaylists = await Promise.all(playlistPromises);
-        setPlaylists(fetchedPlaylists);
+        setPlaylists(fetchedPlaylists.filter((playlist): playlist is Playlist => playlist !== null));
       } catch (error) {
         setError(error as Error);
       } finally {

@@ -1,11 +1,7 @@
-export interface Track {
-  id: string;
-  title: string;
-  artist: string;
-  duration: string;
-  previewUrl: string | null;
-  spotifyId?: string;
-}
+import { Track } from './track';
+import { RecordLabel as LabelType } from '../constants/labels';
+
+export type RecordLabel = LabelType;
 
 export interface Release {
   id: string;
@@ -14,7 +10,7 @@ export interface Release {
   artwork: string;
   releaseDate: string;
   tracks: Track[];
-  label: string;
+  label: RecordLabel;
   spotifyUrl: string;
   beatportUrl: string;
   soundcloudUrl: string;

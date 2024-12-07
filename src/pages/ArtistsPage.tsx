@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Grid, Card, CardMedia, CardContent, Typography, TextField, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { RECORD_LABELS } from '../constants/labels';
 import { generateId } from '../utils/idGenerator';
 import { spotifyService } from '../services/SpotifyService';
 import { Track } from '../types/track';
+import type { SpotifyApi } from '@spotify/web-api-ts-sdk';
 
 interface Artist {
   id: string;
@@ -13,13 +14,20 @@ interface Artist {
   image: string;
   imageUrl: string;
   recordLabel: string;
-  spotifyUrl?: string;
+  spotifyId?: string | null;
+  spotifyUrl?: string | null;
   beatportUrl?: string;
   soundcloudUrl?: string;
   bandcampUrl?: string;
 }
 
 type LabelType = 'RECORDS' | 'TECH' | 'DEEP';
+
+interface SpotifyImage {
+  url: string;
+  width: number | null;
+  height: number | null;
+}
 
 const getArtists = async (label: LabelType): Promise<Artist[]> => {
   console.log('Getting artists for label:', label);
@@ -50,18 +58,19 @@ const getArtists = async (label: LabelType): Promise<Artist[]> => {
     // Get stored artist images from localStorage
     const storedArtistImages = localStorage.getItem('artistImages') || '{}';
     const artistImages = JSON.parse(storedArtistImages) as Record<string, string>;
-    
+
     const artistsByLabel = filteredTracks.reduce<{ [key: string]: { artist: Artist; latestArtwork: string } }>((artists, track) => {
-      if (!artists[track.artist]) {
+      const artistName = track.artist;
+      if (!artists[artistName]) {
         const defaultImage = 'https://via.placeholder.com/300';
         // Use stored image if available, otherwise use album cover
-        const storedImage = artistImages[track.artist];
+        const storedImage = artistImages[artistName];
         const imageToUse = storedImage || track.albumCover || defaultImage;
         
-        artists[track.artist] = {
+        artists[artistName] = {
           artist: {
             id: generateId(),
-            name: track.artist,
+            name: artistName,
             image: imageToUse,
             imageUrl: imageToUse,
             bio: `Artist on ${labelValue}`,
@@ -78,14 +87,14 @@ const getArtists = async (label: LabelType): Promise<Artist[]> => {
     }, {});
 
     console.log('Artists by label:', artistsByLabel);
-    
+
     // Convert to array
     const artistsArray = Object.values(artistsByLabel);
-    
+
     // Only fetch Spotify images for artists that don't have a stored image
     const artistsToUpdate = artistsArray.filter(({ artist }) => !artistImages[artist.name]);
     console.log('Artists needing Spotify images:', artistsToUpdate.length);
-    
+
     if (artistsToUpdate.length > 0) {
       // Add delay between Spotify API calls to prevent rate limiting
       const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -98,20 +107,24 @@ const getArtists = async (label: LabelType): Promise<Artist[]> => {
         await Promise.all(
           batch.map(async ({ artist }) => {
             try {
-              const spotifyArtist = await spotifyService.getArtistDetails(artist.name);
-              
-              if (spotifyArtist && Array.isArray(spotifyArtist.images) && spotifyArtist.images.length > 0) {
-                const images = [...spotifyArtist.images];
-                const bestImage = images
-                  .filter(img => img && typeof img.width === 'number')
-                  .sort((a, b) => (b.width || 0) - (a.width || 0))[0];
-                
-                if (bestImage?.url) {
-                  artistImages[artist.name] = bestImage.url;
-                  localStorage.setItem('artistImages', JSON.stringify(artistImages));
-                  
+              // Try to find a track by this artist
+              const artistTracks = filteredTracks.filter(track => track.artist === artist.name);
+              const firstTrack = artistTracks[0];
+
+              console.log(`Fetching Spotify details for artist: ${artist.name}`);
+              const spotifyArtist = await spotifyService.getArtistDetailsByName(artist.name, firstTrack?.trackTitle);
+              if (spotifyArtist) {
+                console.log(`Found Spotify images for ${artist.name}:`, spotifyArtist.images);
+
+                // Get the highest quality image
+                const bestImage = spotifyArtist.images
+                  .filter((img: SpotifyImage) => img && img.width !== null)
+                  .sort((a: SpotifyImage, b: SpotifyImage) => ((b.width || 0) - (a.width || 0)))[0];
+
+                if (bestImage) {
                   artist.image = bestImage.url;
-                  artist.imageUrl = bestImage.url;
+                  artist.spotifyId = spotifyArtist.id;
+                  artist.spotifyUrl = spotifyArtist.external_urls.spotify;
                 }
               }
             } catch (error) {
@@ -136,6 +149,7 @@ const getArtists = async (label: LabelType): Promise<Artist[]> => {
 
 const ArtistsPage: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [artists, setArtists] = useState<Artist[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
@@ -185,6 +199,11 @@ const ArtistsPage: React.FC = () => {
       });
   }, [artists, searchTerm, sortOrder]);
 
+  const handleArtistClick = (artist: Artist) => {
+    const label = location.pathname.split('/')[1]; // Get current label (records/tech/deep)
+    navigate(`/${label}/artists/${encodeURIComponent(artist.name)}`);
+  };
+
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ mb: 3, display: 'flex', gap: 2, alignItems: 'center' }}>
@@ -218,7 +237,19 @@ const ArtistsPage: React.FC = () => {
         ) : (
           filteredAndSortedArtists.map((artist) => (
             <Grid item xs={12} sm={6} md={4} lg={3} key={artist.id}>
-              <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+              <Card 
+                sx={{ 
+                  height: '100%', 
+                  display: 'flex', 
+                  flexDirection: 'column',
+                  cursor: 'pointer',
+                  '&:hover': {
+                    transform: 'scale(1.02)',
+                    transition: 'transform 0.2s ease-in-out'
+                  }
+                }}
+                onClick={() => handleArtistClick(artist)}
+              >
                 <CardMedia
                   component="img"
                   height="200"

@@ -1,3 +1,5 @@
+import { RecordLabel } from '../constants/labels';
+
 // Spotify API Types
 export interface SpotifyApiImage {
   url: string;
@@ -29,28 +31,38 @@ export interface SpotifyApiTrack {
   id: string;
   name: string;
   artists: SpotifyApiArtist[];
-  album: SpotifyApiAlbum;
+  album: {
+    name: string;
+    release_date: string;
+    images: SpotifyApiImage[];
+    label?: string;
+  };
   preview_url: string | null;
   external_urls: {
     spotify: string;
   };
+  duration_ms: number;
 }
 
 // Application Types
 export interface SpotifyImage {
   url: string;
-  height: number;
-  width: number;
+  height: number | null;
+  width: number | null;
 }
 
 export interface SpotifyAlbum {
+  name: string;
+  release_date: string;
+  images: SpotifyImage[];
+}
+
+export interface SpotifyArtist {
   id: string;
   name: string;
-  images: SpotifyImage[];
-  artists: string;
-  releaseDate: string;
-  spotifyUrl: string;
-  label: string;
+  external_urls: {
+    spotify: string;
+  };
 }
 
 export interface SpotifyTrack {
@@ -58,17 +70,21 @@ export interface SpotifyTrack {
   trackTitle: string;
   artist: string;
   albumCover: string;
-  recordLabel: string;
+  album: {
+    name: string;
+    releaseDate: string;
+    images: SpotifyImage[];
+  };
+  recordLabel: RecordLabel;
   previewUrl: string | null;
   spotifyUrl: string;
-  album: SpotifyAlbum;
   releaseDate: string;
 }
 
 export interface SimplifiedTrackOutput {
   trackTitle: string;
   artistName: string;
-  recordLabel: string;
+  recordLabel: RecordLabel;
   artwork: string;
 }
 
@@ -76,7 +92,7 @@ export interface SpotifyPlaylist {
   id: string;
   name: string;
   description: string | null;
-  images: SpotifyApiImage[];
+  images: SpotifyImage[];
   tracks: {
     items: {
       track: SpotifyApiTrack;
@@ -114,7 +130,7 @@ export interface SpotifyAuthResponse {
   expires_in: number;
 }
 
-export interface SpotifyApiError extends Error {
+export interface SpotifyApiError {
   statusCode?: number;
   body?: {
     error?: {
@@ -126,18 +142,23 @@ export interface SpotifyApiError extends Error {
 
 // Type Guards
 export function isSpotifyTrack(track: any): track is SpotifyApiTrack {
-  return track &&
+  return (
+    track &&
     typeof track.id === 'string' &&
     typeof track.name === 'string' &&
     Array.isArray(track.artists) &&
     track.album &&
-    typeof track.album.id === 'string';
+    typeof track.external_urls?.spotify === 'string'
+  );
 }
 
 export function isSpotifyAlbum(album: any): album is SpotifyApiAlbum {
-  return album &&
+  return (
+    album &&
     typeof album.id === 'string' &&
     typeof album.name === 'string' &&
     Array.isArray(album.images) &&
-    Array.isArray(album.artists);
+    Array.isArray(album.artists) &&
+    typeof album.release_date === 'string'
+  );
 }

@@ -25,7 +25,7 @@ interface ReleaseItem {
   plays: number;
 }
 
-interface StoredTrack extends Track {
+interface StoredTrack extends Omit<Track, 'beatportUrl' | 'soundcloudUrl'> {
   beatportUrl?: string;
   soundcloudUrl?: string;
 }
@@ -235,11 +235,21 @@ const getTrackFromSpotify = async (spotifyUrl: string): Promise<Track | null> =>
       trackTitle: spotifyTrack.trackTitle,
       artist: spotifyTrack.artist,
       albumCover: spotifyTrack.albumCover,
-      releaseDate: spotifyTrack.releaseDate,
+      album: {
+        name: spotifyTrack.trackTitle,
+        releaseDate: spotifyTrack.releaseDate,
+        images: [{
+          url: spotifyTrack.albumCover,
+          height: 640,
+          width: 640
+        }]
+      },
       recordLabel: getDefaultLabel(spotifyTrack.recordLabel),
-      beatportUrl: '',
+      previewUrl: null,
       spotifyUrl: spotifyTrack.spotifyUrl,
-      soundcloudUrl: '',
+      releaseDate: spotifyTrack.releaseDate,
+      beatportUrl: spotifyTrack.beatportUrl,
+      soundcloudUrl: spotifyTrack.soundcloudUrl
     };
 
     return track;

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { spotifyService } from '../services/SpotifyService';
 import { Release } from '../types/release';
+import { RecordLabel, RECORD_LABELS } from '../constants/labels';
 
 const SPOTIFY_IDS = {
   records: 'builditrecords',
@@ -22,6 +23,17 @@ const SOUNDCLOUD_URLS = {
 
 type LabelId = keyof typeof SPOTIFY_IDS;
 
+const labelIdToRecordLabel = (labelId: LabelId): RecordLabel => {
+  switch (labelId) {
+    case 'records':
+      return RECORD_LABELS.RECORDS;
+    case 'tech':
+      return RECORD_LABELS.TECH;
+    case 'deep':
+      return RECORD_LABELS.DEEP;
+  }
+};
+
 const useReleases = (labelId: LabelId) => {
   const [releases, setReleases] = useState<Release[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -36,7 +48,7 @@ const useReleases = (labelId: LabelId) => {
     spotifyUrl: spotifyRelease.external_urls.spotify,
     beatportUrl: BEATPORT_URLS[labelId],
     soundcloudUrl: SOUNDCLOUD_URLS[labelId],
-    label: labelId,
+    label: labelIdToRecordLabel(labelId),
     tracks: spotifyRelease.tracks.items.map((track: {
       id: string;
       name: string;

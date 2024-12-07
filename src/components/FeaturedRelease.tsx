@@ -21,83 +21,39 @@ interface FeaturedReleaseProps {
 export default function FeaturedRelease({ release }: FeaturedReleaseProps) {
   const { colors } = useTheme();
 
-  const openLink = (url: string) => {
-    window.open(url, '_blank', 'noopener,noreferrer');
+  const openLink = (url: string | undefined) => {
+    if (url) {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
   };
 
   return (
     <Card sx={{ 
-      bgcolor: colors.background,
-      p: 3,
-      my: 3,
+      backgroundColor: colors.card,
       borderRadius: 2,
+      overflow: 'hidden',
+      position: 'relative'
     }}>
-      <Typography
-        variant="overline"
+      <CardMedia
+        component="img"
+        image={release.artwork}
+        alt={`${release.title} by ${release.artist}`}
         sx={{
-          color: colors.textSecondary,
-          display: 'block',
-          mb: 2,
+          height: 400,
+          objectFit: 'cover'
         }}
-      >
-        Latest Release
-      </Typography>
+      />
       
-      <Box sx={{ 
-        display: 'flex',
-        flexDirection: { xs: 'column', md: 'row' },
-        gap: 3,
-      }}>
-        <CardMedia
-          component="img"
-          image={release.artwork}
-          alt={`${release.title} by ${release.artist}`}
-          sx={{
-            width: { xs: '100%', md: '300px' },
-            height: { xs: '300px', md: '300px' },
-            objectFit: 'cover',
-            borderRadius: 1,
-          }}
-        />
+      <CardContent sx={{ position: 'relative', zIndex: 1 }}>
+        <Typography variant="h4" component="h1" sx={{ mb: 2, color: colors.text }}>
+          {release.title}
+        </Typography>
+        <Typography variant="h5" sx={{ mb: 3, color: colors.textSecondary }}>
+          {release.artist}
+        </Typography>
         
-        <CardContent sx={{ 
-          flex: 1,
-          p: 0,
-          '&:last-child': { pb: 0 },
-        }}>
-          <Typography
-            variant="h4"
-            component="h2"
-            sx={{
-              color: colors.text,
-              mb: 1,
-              fontWeight: 'bold',
-            }}
-          >
-            {release.artist}
-          </Typography>
-          
-          <Typography
-            variant="h5"
-            sx={{
-              color: colors.text,
-              mb: 2,
-            }}
-          >
-            {release.title}
-          </Typography>
-          
-          <Typography
-            variant="body1"
-            sx={{
-              color: colors.textSecondary,
-              mb: 3,
-            }}
-          >
-            {new Date(release.releaseDate).toLocaleDateString()}
-          </Typography>
-          
-          <Stack direction="row" spacing={2} sx={{ flexWrap: 'wrap', gap: 2 }}>
+        <Stack direction="row" spacing={2}>
+          {release.spotifyUrl && (
             <Button
               variant="contained"
               startIcon={<MusicNoteIcon />}
@@ -105,13 +61,15 @@ export default function FeaturedRelease({ release }: FeaturedReleaseProps) {
               sx={{
                 bgcolor: '#1DB954',
                 '&:hover': {
-                  bgcolor: '#1aa34a',
-                },
+                  bgcolor: '#1ed760'
+                }
               }}
             >
               Spotify
             </Button>
-            
+          )}
+          
+          {release.beatportUrl && (
             <Button
               variant="contained"
               startIcon={<AlbumIcon />}
@@ -119,13 +77,15 @@ export default function FeaturedRelease({ release }: FeaturedReleaseProps) {
               sx={{
                 bgcolor: '#FF6B00',
                 '&:hover': {
-                  bgcolor: '#e66000',
-                },
+                  bgcolor: '#ff7b1c'
+                }
               }}
             >
               Beatport
             </Button>
-            
+          )}
+          
+          {release.soundcloudUrl && (
             <Button
               variant="contained"
               startIcon={<CloudQueueIcon />}
@@ -133,15 +93,15 @@ export default function FeaturedRelease({ release }: FeaturedReleaseProps) {
               sx={{
                 bgcolor: '#FF5500',
                 '&:hover': {
-                  bgcolor: '#e64d00',
-                },
+                  bgcolor: '#ff6a1f'
+                }
               }}
             >
-              SoundCloud
+              Soundcloud
             </Button>
-          </Stack>
-        </CardContent>
-      </Box>
+          )}
+        </Stack>
+      </CardContent>
     </Card>
   );
 }

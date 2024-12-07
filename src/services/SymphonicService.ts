@@ -1,4 +1,5 @@
 import { Release } from '../types/release';
+import { RecordLabel, RECORD_LABELS } from '../constants/labels';
 
 interface SymphonicRelease {
   id: string;
@@ -110,16 +111,29 @@ class SymphonicService {
       releaseDate: new Date(item.release_date).toISOString().split('T')[0],
       tracks: item.tracks.map(track => ({
         id: track.id,
-        title: track.title,
+        trackTitle: track.title,
         artist: track.artist,
-        duration: track.duration,
-        spotifyId: track.spotify_id || undefined,
+        albumCover: item.artwork_url,
+        album: {
+          name: item.title,
+          releaseDate: new Date(item.release_date).toISOString().split('T')[0],
+          images: [{
+            url: item.artwork_url,
+            height: 640,
+            width: 640
+          }]
+        },
+        recordLabel: this.determineLabel(item.label_name),
         previewUrl: track.preview_url || null,
+        spotifyUrl: track.spotify_id ? `https://open.spotify.com/track/${track.spotify_id}` : '',
+        releaseDate: new Date(item.release_date).toISOString().split('T')[0],
+        beatportUrl: '',
+        soundcloudUrl: ''
       })),
       label: this.determineLabel(item.label_name),
       spotifyUrl: item.stores?.spotify || '',
       beatportUrl: item.stores?.beatport || '',
-      soundcloudUrl: item.stores?.soundcloud || '',
+      soundcloudUrl: item.stores?.soundcloud || ''
     }));
   }
 
@@ -146,11 +160,14 @@ class SymphonicService {
     }
   }
 
-  private determineLabel(labelName: string): 'records' | 'tech' | 'deep' {
-    const name = labelName.toLowerCase();
-    if (name.includes('tech')) return 'tech';
-    if (name.includes('deep')) return 'deep';
-    return 'records';
+  private determineLabel(labelName: string): RecordLabel {
+    const normalizedName = labelName.toLowerCase();
+    if (normalizedName.includes('tech')) {
+      return RECORD_LABELS.TECH;
+    } else if (normalizedName.includes('deep')) {
+      return RECORD_LABELS.DEEP;
+    }
+    return RECORD_LABELS.RECORDS;
   }
 
   private delay(ms: number): Promise<void> {

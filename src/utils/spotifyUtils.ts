@@ -1,17 +1,14 @@
-import { SpotifyRelease, SpotifyTrack } from '../types/spotify';
+import { spotifyService } from '../services/SpotifyService';
+import { Track, SpotifyPlaylist, SpotifyApiTrack } from '../types/track';
+import { RecordLabel, RECORD_LABELS } from '../constants/labels';
 import { Release } from '../types/release';
-import { SpotifyService } from '../services/SpotifyService';
 
-const spotifyService = SpotifyService.getInstance();
-
-export const fetchTrackDetails = async (trackUrl: string): Promise<SpotifyTrack> => {
+export const fetchTrackDetails = async (trackUrl: string): Promise<Track> => {
   try {
     const trackDetails = await spotifyService.getTrackDetailsByUrl(trackUrl);
     if (!trackDetails) {
       throw new Error('Track not found');
     }
-    
-    console.log('Track Details:', trackDetails);
     return trackDetails;
   } catch (error) {
     console.error('Error fetching track details:', error);
@@ -19,7 +16,7 @@ export const fetchTrackDetails = async (trackUrl: string): Promise<SpotifyTrack>
   }
 };
 
-export const searchSpotifyTracks = async (query: string): Promise<SpotifyTrack[]> => {
+export const searchTracks = async (query: string): Promise<Track[]> => {
   try {
     const tracks = await spotifyService.searchTracks(query);
     console.log('Search Results:', tracks);
@@ -30,7 +27,7 @@ export const searchSpotifyTracks = async (query: string): Promise<SpotifyTrack[]
   }
 };
 
-export const getLabelReleases = async (playlistId: string): Promise<SpotifyTrack[]> => {
+export const getLabelReleases = async (playlistId: string): Promise<Track[]> => {
   try {
     const releases = await spotifyService.getLabelReleases(playlistId);
     console.log('Label Releases:', releases);
@@ -91,15 +88,22 @@ export const isValidSpotifyUrl = (url: string): boolean => {
   }
 };
 
-// Utility to format track details for display
-export const formatTrackDetails = (track: SpotifyTrack) => {
+export const determineLabelFromUrl = (spotifyUrl: string): RecordLabel => {
+  if (spotifyUrl.includes('records')) return RECORD_LABELS.RECORDS;
+  if (spotifyUrl.includes('tech')) return RECORD_LABELS.TECH;
+  if (spotifyUrl.includes('deep')) return RECORD_LABELS.DEEP;
+  return RECORD_LABELS.RECORDS;
+};
+
+export const convertToDisplayTrack = (track: Track) => {
   return {
+    id: track.id,
     title: track.trackTitle,
     artist: track.artist,
     label: track.recordLabel,
-    artwork: track.albumCover,
-    albumName: track.album.name,
-    releaseDate: track.album.releaseDate,
+    artwork: track.albumCover || '',
+    albumName: track.album?.name || '',
+    releaseDate: track.album?.releaseDate || track.releaseDate,
     spotifyUrl: track.spotifyUrl
   };
 };
@@ -110,33 +114,36 @@ export const formatDuration = (ms: number): string => {
   return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 };
 
-export const determineLabelFromPlaylist = (spotifyUrl: string): string => {
-  // Add your label determination logic here
-  if (spotifyUrl.includes('records')) return 'records';
-  if (spotifyUrl.includes('tech')) return 'tech';
-  if (spotifyUrl.includes('deep')) return 'deep';
-  return 'unknown';
-};
+export const convertSpotifyReleaseToRelease = (spotifyRelease: SpotifyPlaylist): Release => {
+  const label = determineLabelFromUrl(spotifyRelease.external_urls.spotify);
 
-export const convertSpotifyToRelease = (spotifyRelease: SpotifyRelease): Release => {
   return {
     id: spotifyRelease.id,
     title: spotifyRelease.name,
-    artist: spotifyRelease.artists[0]?.name || 'Unknown Artist',
-    releaseDate: spotifyRelease.release_date,
+    artist: spotifyRelease.owner.display_name || 'Various Artists',
     artwork: spotifyRelease.images[0]?.url || '',
+    releaseDate: new Date().toISOString(),
+    tracks: spotifyRelease.tracks.items.map((item) => ({
+      id: item.track.id,
+      trackTitle: item.track.name,
+      artist: item.track.artists[0]?.name || 'Unknown Artist',
+      recordLabel: label,
+      previewUrl: item.track.preview_url || null,
+      spotifyUrl: item.track.external_urls.spotify,
+      releaseDate: item.track.album?.release_date || new Date().toISOString(),
+      albumCover: item.track.album.images[0]?.url || '',
+      album: {
+        name: item.track.album.name,
+        releaseDate: item.track.album.release_date,
+        images: item.track.album.images
+      },
+      beatportUrl: '',
+      soundcloudUrl: ''
+    })),
+    label: label as RecordLabel,
     spotifyUrl: spotifyRelease.external_urls.spotify,
-    beatportUrl: '', // Required by Release interface
-    soundcloudUrl: '', // Will be populated later if available
-    label: determineLabelFromPlaylist(spotifyRelease.external_urls.spotify),
-    tracks: spotifyRelease.tracks.items.map((track) => ({
-      id: track.id,
-      title: track.name,
-      artist: track.artists[0]?.name || 'Unknown Artist',
-      duration: formatDuration(track.duration_ms),
-      previewUrl: track.preview_url,
-      spotifyId: track.id
-    }))
+    beatportUrl: '',
+    soundcloudUrl: ''
   };
 };
 

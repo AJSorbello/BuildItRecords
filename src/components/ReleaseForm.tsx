@@ -64,10 +64,10 @@ export const ReleaseForm: React.FC<ReleaseFormProps> = ({ label }) => {
           ...prev,
           title: trackDetails.trackTitle,
           artist: trackDetails.artist,
-          imageUrl: trackDetails.album?.images[0]?.url || '',
-          releaseDate: trackDetails.album?.releaseDate || new Date().toISOString(),
+          imageUrl: trackDetails.albumCover || '',
+          releaseDate: trackDetails.releaseDate,
         }));
-        setReleaseDate(trackDetails.album?.releaseDate ? new Date(trackDetails.album.releaseDate) : null);
+        setReleaseDate(trackDetails.releaseDate ? new Date(trackDetails.releaseDate) : null);
       } catch (err) {
         console.error('Error fetching track details:', err);
         setError('Failed to fetch track details from Spotify. Please check the URL and try again.');

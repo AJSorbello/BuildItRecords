@@ -20,13 +20,12 @@ import {
 } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { RECORD_LABELS } from '../constants/labels';
-import { Track } from '../types/track';
+import { Track, SpotifyApiTrack } from '../types/track';
 import { RecordLabel } from '../constants/labels';
 import AdminTrackList from './AdminTrackList';
 import { spotifyService } from '../services/SpotifyService';
 import { getData, resetData } from '../utils/dataInitializer';
 import { extractSpotifyId, isValidSpotifyUrl, normalizeSpotifyUrl } from '../utils/spotifyUtils';
-import { SpotifyTrack } from '../types/spotify';
 
 interface TrackFormData {
   id: string;
@@ -35,7 +34,19 @@ interface TrackFormData {
   spotifyUrl: string;
   recordLabel: RecordLabel;
   albumCover: string;
+  album: {
+    name: string;
+    releaseDate: string;
+    images: {
+      url: string;
+      height: number;
+      width: number;
+    }[];
+  };
   releaseDate: string;
+  previewUrl: string | null;
+  beatportUrl: string;
+  soundcloudUrl: string;
 }
 
 const initialFormData: TrackFormData = {
@@ -44,8 +55,16 @@ const initialFormData: TrackFormData = {
   artist: '',
   spotifyUrl: '',
   recordLabel: RECORD_LABELS.RECORDS,
-  albumCover: 'https://via.placeholder.com/300', // Default album cover
-  releaseDate: ''
+  albumCover: '',
+  album: {
+    name: '',
+    releaseDate: new Date().toISOString().split('T')[0],
+    images: []
+  },
+  releaseDate: new Date().toISOString().split('T')[0],
+  previewUrl: null,
+  beatportUrl: '',
+  soundcloudUrl: ''
 };
 
 interface FetchState {
@@ -65,7 +84,17 @@ interface SpotifyTrackData {
   recordLabel: RecordLabel;
   spotifyUrl: string;
   albumCover: string;
+  album: {
+    name: string;
+    releaseDate: string;
+    images: {
+      url: string;
+      height: number;
+      width: number;
+    }[];
+  };
   releaseDate: string;
+  previewUrl: string | null;
 }
 
 const validateRecordLabel = (label: string): RecordLabel => {
@@ -134,8 +163,12 @@ const AdminDashboard: React.FC = () => {
         artist: trackDetails.artist,
         recordLabel: validateRecordLabel(trackDetails.recordLabel),
         spotifyUrl: trackDetails.spotifyUrl,
-        albumCover: trackDetails.albumCover,
-        releaseDate: trackDetails.releaseDate
+        albumCover: trackDetails.albumCover || '',
+        album: trackDetails.album,
+        releaseDate: trackDetails.releaseDate,
+        previewUrl: trackDetails.previewUrl || null,
+        beatportUrl: trackDetails.beatportUrl || '',
+        soundcloudUrl: trackDetails.soundcloudUrl || ''
       });
 
       setFetchState({
@@ -193,22 +226,31 @@ const AdminDashboard: React.FC = () => {
       }
 
       // Update form with track details including album cover
-      setFormData(prev => ({
-        ...prev,
+      setFormData({
+        id: track.id,
         trackTitle: track.trackTitle,
         artist: track.artist,
-        albumCover: track.albumCover, // This is now required
         recordLabel: validateRecordLabel(track.recordLabel),
-        releaseDate: track.releaseDate
-      }));
+        spotifyUrl: track.spotifyUrl,
+        albumCover: track.albumCover || '',
+        album: track.album,
+        releaseDate: track.releaseDate,
+        previewUrl: track.previewUrl || null,
+        beatportUrl: track.beatportUrl || '',
+        soundcloudUrl: track.soundcloudUrl || ''
+      });
 
       // Debug log
       console.log('Updated form data with album cover:', {
         trackTitle: track.trackTitle,
         artist: track.artist,
         albumCover: track.albumCover,
+        album: track.album,
         recordLabel: track.recordLabel,
-        releaseDate: track.releaseDate
+        releaseDate: track.releaseDate,
+        previewUrl: track.previewUrl || null,
+        beatportUrl: track.beatportUrl || '',
+        soundcloudUrl: track.soundcloudUrl || ''
       });
 
       setFetchState({
@@ -245,10 +287,14 @@ const AdminDashboard: React.FC = () => {
       id: track.id,
       trackTitle: track.trackTitle,
       artist: track.artist,
-      spotifyUrl: track.spotifyUrl,
       recordLabel: validateRecordLabel(track.recordLabel),
+      spotifyUrl: track.spotifyUrl,
       albumCover: track.albumCover || '',
-      releaseDate: track.releaseDate || '' // Provide empty string as fallback
+      album: track.album,
+      releaseDate: track.releaseDate,
+      previewUrl: track.previewUrl || null,
+      beatportUrl: track.beatportUrl || '',
+      soundcloudUrl: track.soundcloudUrl || ''
     });
     setEditingId(track.id);
     setOpen(true);
@@ -282,14 +328,19 @@ const AdminDashboard: React.FC = () => {
           
           if (trackDetails) {
             console.log('Got track details:', trackDetails);
-            setFormData(prev => ({
-              ...prev,
+            setFormData({
+              id: trackDetails.id,
               trackTitle: trackDetails.trackTitle,
               artist: trackDetails.artist,
-              albumCover: trackDetails.albumCover,
               recordLabel: validateRecordLabel(trackDetails.recordLabel),
-              releaseDate: trackDetails.releaseDate
-            }));
+              spotifyUrl: trackDetails.spotifyUrl,
+              albumCover: trackDetails.albumCover || '',
+              album: trackDetails.album,
+              releaseDate: trackDetails.releaseDate,
+              previewUrl: trackDetails.previewUrl || null,
+              beatportUrl: trackDetails.beatportUrl || '',
+              soundcloudUrl: trackDetails.soundcloudUrl || ''
+            });
             setFetchState({ loading: false, error: null });
           } else {
             throw new Error('Failed to fetch track details');
@@ -347,9 +398,17 @@ const AdminDashboard: React.FC = () => {
         const spotifyDetails = await spotifyService.getTrackDetailsByUrl(formData.spotifyUrl);
         if (spotifyDetails) {
           trackDetails = {
-            ...formData,
-            albumCover: spotifyDetails.albumCover,
-            releaseDate: spotifyDetails.releaseDate
+            id: spotifyDetails.id,
+            trackTitle: spotifyDetails.trackTitle,
+            artist: spotifyDetails.artist,
+            recordLabel: validateRecordLabel(spotifyDetails.recordLabel),
+            spotifyUrl: spotifyDetails.spotifyUrl,
+            albumCover: spotifyDetails.albumCover || '',
+            album: spotifyDetails.album,
+            releaseDate: spotifyDetails.releaseDate,
+            previewUrl: spotifyDetails.previewUrl || null,
+            beatportUrl: spotifyDetails.beatportUrl || '',
+            soundcloudUrl: spotifyDetails.soundcloudUrl || ''
           };
         }
       }
@@ -363,8 +422,12 @@ const AdminDashboard: React.FC = () => {
         artist: trackDetails.artist,
         spotifyUrl: trackDetails.spotifyUrl,
         recordLabel: trackDetails.recordLabel,
-        albumCover: trackDetails.albumCover || 'https://via.placeholder.com/300',
-        releaseDate: trackDetails.releaseDate
+        albumCover: trackDetails.albumCover,
+        album: trackDetails.album,
+        releaseDate: trackDetails.releaseDate,
+        previewUrl: trackDetails.previewUrl || null,
+        beatportUrl: trackDetails.beatportUrl,
+        soundcloudUrl: trackDetails.soundcloudUrl
       };
 
       // Debug log
@@ -422,8 +485,12 @@ const AdminDashboard: React.FC = () => {
         artist: trackDetails.artist,
         recordLabel: validateRecordLabel(trackDetails.recordLabel),
         spotifyUrl: trackDetails.spotifyUrl,
-        albumCover: trackDetails.albumCover,
-        releaseDate: trackDetails.releaseDate
+        albumCover: trackDetails.albumCover || '',
+        album: trackDetails.album,
+        releaseDate: trackDetails.releaseDate,
+        previewUrl: trackDetails.previewUrl || null,
+        beatportUrl: trackDetails.beatportUrl || '',
+        soundcloudUrl: trackDetails.soundcloudUrl || ''
       });
 
       setFetchState({ loading: false, error: null });
@@ -473,9 +540,9 @@ const AdminDashboard: React.FC = () => {
       const initialTrackCount = tracks.length;
       
       await spotifyService.importLabelTracks(
-        importLabel,
+        importLabel as RecordLabel, // Type assertion for importLabel
         50, // batch size
-        (imported, total) => {
+        (imported: number, total: number) => {
           setImportProgress({ imported, total });
         }
       );
@@ -511,6 +578,85 @@ const AdminDashboard: React.FC = () => {
   };
 
   const filteredTracks = selectedLabel === 'All' ? tracks : tracks.filter(track => track.recordLabel === selectedLabel);
+
+  const handleTrackSubmit = async (formData: TrackFormData) => {
+    try {
+      setFetchState({ loading: true, error: null });
+
+      // Convert form data to Track object
+      const newTrack: Track = {
+        id: editingId || crypto.randomUUID(),
+        trackTitle: formData.trackTitle,
+        artist: formData.artist,
+        albumCover: formData.albumCover || '',
+        album: formData.album,
+        recordLabel: formData.recordLabel,
+        spotifyUrl: formData.spotifyUrl || '',
+        releaseDate: formData.releaseDate || new Date().toISOString(),
+        previewUrl: formData.previewUrl || null,
+        beatportUrl: formData.beatportUrl,
+        soundcloudUrl: formData.soundcloudUrl
+      };
+
+      // Save to local storage
+      const existingTracks = JSON.parse(localStorage.getItem('tracks') || '[]') as Track[];
+      const updatedTracks = editingId 
+        ? existingTracks.map(track => track.id === editingId ? newTrack : track) 
+        : [...existingTracks, newTrack];
+      localStorage.setItem('tracks', JSON.stringify(updatedTracks));
+
+      // Clear form and show success message
+      setFormData(initialFormData);
+      setFetchState({ loading: false, error: null });
+      handleClose();
+    } catch (err) {
+      console.error('Error submitting track:', err);
+      setFetchState({
+        loading: false,
+        error: err instanceof Error ? err.message : 'Failed to add track'
+      });
+    }
+  };
+
+  const handleSpotifyImport = async () => {
+    try {
+      setFetchState({ loading: true, error: null });
+
+      if (!formData.spotifyUrl) {
+        throw new Error('Please enter a Spotify URL');
+      }
+
+      // Get track details from Spotify
+      const spotifyTrack = await spotifyService.getTrackDetailsByUrl(formData.spotifyUrl);
+      
+      if (!spotifyTrack) {
+        throw new Error('Could not find track on Spotify');
+      }
+
+      // Update form with Spotify data
+      setFormData({
+        id: spotifyTrack.id,
+        trackTitle: spotifyTrack.trackTitle,
+        artist: spotifyTrack.artist,
+        recordLabel: validateRecordLabel(spotifyTrack.recordLabel),
+        spotifyUrl: spotifyTrack.spotifyUrl,
+        albumCover: spotifyTrack.albumCover || '',
+        album: spotifyTrack.album,
+        releaseDate: spotifyTrack.releaseDate || '',
+        previewUrl: spotifyTrack.previewUrl || null,
+        beatportUrl: spotifyTrack.beatportUrl || '',
+        soundcloudUrl: spotifyTrack.soundcloudUrl || ''
+      });
+
+      setFetchState({ loading: false, error: null });
+    } catch (error) {
+      console.error('Error importing from Spotify:', error);
+      setFetchState({
+        loading: false,
+        error: error instanceof Error ? error.message : 'Failed to import from Spotify'
+      });
+    }
+  };
 
   return (
     <Container sx={{ py: 4 }}>
@@ -667,6 +813,24 @@ const AdminDashboard: React.FC = () => {
             onChange={handleTextInputChange}
             name="releaseDate"
           />
+          <TextField
+            margin="dense"
+            label="Beatport URL"
+            fullWidth
+            variant="outlined"
+            value={formData.beatportUrl}
+            onChange={handleTextInputChange}
+            name="beatportUrl"
+          />
+          <TextField
+            margin="dense"
+            label="Soundcloud URL"
+            fullWidth
+            variant="outlined"
+            value={formData.soundcloudUrl}
+            onChange={handleTextInputChange}
+            name="soundcloudUrl"
+          />
           <FormControl fullWidth margin="normal">
             <InputLabel>Record Label</InputLabel>
             <Select
@@ -682,8 +846,11 @@ const AdminDashboard: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleClose}>Cancel</Button>
-          <Button onClick={handleSubmit} variant="contained" color="primary">
+          <Button onClick={() => handleTrackSubmit(formData)} variant="contained" color="primary">
             Save
+          </Button>
+          <Button onClick={handleSpotifyImport} variant="contained" color="primary">
+            Import from Spotify
           </Button>
         </DialogActions>
       </Dialog>

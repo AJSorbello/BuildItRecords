@@ -20,6 +20,7 @@ import NotFoundPage from './pages/NotFoundPage';
 import LegalPage from './pages/LegalPage';
 import AdminLogin from './components/AdminLogin';
 import AdminDashboard from './components/AdminDashboard';
+import ArtistDetailPage from './pages/ArtistDetailPage';
 
 // Protected Route component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -43,6 +44,7 @@ const router = createBrowserRouter(
         <Route index element={<HomePage label="RECORDS" />} />
         <Route path="releases" element={<ReleasesPage label="RECORDS" />} />
         <Route path="artists" element={<ArtistsPage />} />
+        <Route path="artists/:artistName" element={<ArtistDetailPage />} />
         <Route path="playlists" element={<PlaylistsPage label="RECORDS" />} />
         <Route path="submit" element={<SubmitPage label="RECORDS" />} />
       </Route>
@@ -52,6 +54,7 @@ const router = createBrowserRouter(
         <Route index element={<HomePage label="TECH" />} />
         <Route path="releases" element={<ReleasesPage label="TECH" />} />
         <Route path="artists" element={<ArtistsPage />} />
+        <Route path="artists/:artistName" element={<ArtistDetailPage />} />
         <Route path="playlists" element={<PlaylistsPage label="TECH" />} />
         <Route path="submit" element={<SubmitPage label="TECH" />} />
       </Route>
@@ -61,6 +64,7 @@ const router = createBrowserRouter(
         <Route index element={<HomePage label="DEEP" />} />
         <Route path="releases" element={<ReleasesPage label="DEEP" />} />
         <Route path="artists" element={<ArtistsPage />} />
+        <Route path="artists/:artistName" element={<ArtistDetailPage />} />
         <Route path="playlists" element={<PlaylistsPage label="DEEP" />} />
         <Route path="submit" element={<SubmitPage label="DEEP" />} />
       </Route>
