@@ -111,21 +111,52 @@ const getArtists = async (label: LabelType): Promise<Artist[]> => {
               const artistTracks = filteredTracks.filter(track => track.artist === artist.name);
               const firstTrack = artistTracks[0];
 
-              console.log(`Fetching Spotify details for artist: ${artist.name}`);
-              const spotifyArtist = await spotifyService.getArtistDetailsByName(artist.name, firstTrack?.trackTitle);
-              if (spotifyArtist) {
-                console.log(`Found Spotify images for ${artist.name}:`, spotifyArtist.images);
+              if (firstTrack) {
+                console.log('Using track for artist search:', {
+                  artist: artist.name,
+                  track: {
+                    title: firstTrack.trackTitle,
+                    label: firstTrack.recordLabel
+                  }
+                });
 
-                // Get the highest quality image
-                const bestImage = spotifyArtist.images
-                  .filter((img: SpotifyImage) => img && img.width !== null)
-                  .sort((a: SpotifyImage, b: SpotifyImage) => ((b.width || 0) - (a.width || 0)))[0];
+                // Remove any "Original Mix" or "Remix" suffixes for better search
+                const cleanTrackTitle = firstTrack.trackTitle.replace(/[\s-]+(Original Mix|Remix)$/i, '');
+                const spotifyArtist = await spotifyService.getArtistDetailsByName(artist.name, cleanTrackTitle);
 
-                if (bestImage) {
-                  artist.image = bestImage.url;
-                  artist.spotifyId = spotifyArtist.id;
-                  artist.spotifyUrl = spotifyArtist.external_urls.spotify;
+                if (spotifyArtist) {
+                  console.log('Found Spotify artist from track:', {
+                    name: spotifyArtist.name,
+                    id: spotifyArtist.id,
+                    url: spotifyArtist.external_urls?.spotify
+                  });
+
+                  if (spotifyArtist.images && spotifyArtist.images.length > 0) {
+                    // Use the first image as it's already sorted by size in the Spotify API
+                    const bestImage = spotifyArtist.images[0];
+                    console.log('Using artist image:', {
+                      url: bestImage.url,
+                      width: bestImage.width,
+                      height: bestImage.height
+                    });
+
+                    // Update artist data
+                    artist.image = bestImage.url;
+                    artist.imageUrl = bestImage.url;
+                    artist.spotifyId = spotifyArtist.id;
+                    artist.spotifyUrl = spotifyArtist.external_urls?.spotify || null;
+
+                    // Store the image URL for future use
+                    artistImages[artist.name] = bestImage.url;
+                    localStorage.setItem('artistImages', JSON.stringify(artistImages));
+                  } else {
+                    console.log('No profile images found for artist:', artist.name);
+                  }
+                } else {
+                  console.log('No Spotify artist found using track:', firstTrack.trackTitle);
                 }
+              } else {
+                console.log('No tracks found for artist:', artist.name);
               }
             } catch (error) {
               console.error(`Error fetching Spotify image for ${artist.name}:`, error);

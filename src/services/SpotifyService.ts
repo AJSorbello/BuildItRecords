@@ -232,6 +232,73 @@ export class SpotifyService {
     }
   }
 
+  async getArtistDetailsByName(artistName: string, trackTitle?: string): Promise<SpotifyArtist | null> {
+    try {
+      await this.ensureValidToken();
+      
+      // First try to find the specific track
+      if (trackTitle) {
+        console.log('Searching for specific track:', trackTitle, 'by', artistName);
+        const trackResults = await this.spotifyApi.search(`track:${trackTitle} artist:${artistName}`, ['track']);
+        
+        if (trackResults.tracks.items.length > 0) {
+          // Find the track that matches both title and artist
+          const matchingTrack = trackResults.tracks.items.find(track => 
+            track.artists.some(artist => 
+              artist.name.toLowerCase() === artistName.toLowerCase()
+            )
+          );
+
+          if (matchingTrack) {
+            console.log('Found matching track:', {
+              title: matchingTrack.name,
+              artists: matchingTrack.artists.map(a => a.name)
+            });
+
+            // Get the matching artist from the track
+            const matchingArtist = matchingTrack.artists.find(
+              artist => artist.name.toLowerCase() === artistName.toLowerCase()
+            );
+
+            if (matchingArtist) {
+              console.log('Found exact artist match from track:', matchingArtist.name);
+              return await this.getArtistDetails(matchingArtist.id);
+            }
+          }
+        }
+      }
+
+      // Fallback to previous search strategies if track search fails
+      const searchStrategies = [
+        `artist:${artistName} genre:electronic`,
+        `${artistName} genre:electronic genre:techno`,
+        artistName
+      ];
+
+      for (const searchQuery of searchStrategies) {
+        console.log(`Trying fallback search query: ${searchQuery}`);
+        const results = await this.spotifyApi.search(searchQuery, ['artist']);
+        
+        if (results.artists.items.length > 0) {
+          const exactMatch = results.artists.items.find(
+            a => a.name.toLowerCase() === artistName.toLowerCase()
+          );
+
+          if (exactMatch) {
+            console.log('Found exact artist match from search:', exactMatch.name);
+            return await this.getArtistDetails(exactMatch.id);
+          }
+        }
+      }
+
+      console.log(`No artist found for: ${artistName}`);
+      return null;
+    } catch (error) {
+      console.error('Error getting artist details by name:', error);
+      return null;
+    }
+  }
+
   async getArtistDetails(artistId: string): Promise<SpotifyArtist | null> {
     try {
       if (!artistId || artistId.length < 10) {
@@ -239,33 +306,44 @@ export class SpotifyService {
       }
       
       await this.ensureValidToken();
-      return await this.spotifyApi.artists.get(artistId);
+      const artist = await this.spotifyApi.artists.get(artistId);
+      
+      // Log the raw artist data for debugging
+      console.log('Raw artist data:', {
+        name: artist.name,
+        id: artist.id,
+        genres: artist.genres,
+        images: artist.images?.map(img => ({
+          url: img.url,
+          width: img.width,
+          height: img.height
+        }))
+      });
+
+      // Filter and sort images
+      if (artist.images && artist.images.length > 0) {
+        // Prefer square images for artist profiles
+        const profileImages = artist.images
+          .filter(img => {
+            // Filter out known album art patterns
+            if (img.url.includes('ab67616d')) return false;
+            // Prefer square-ish images (likely profile photos)
+            const ratio = img.width && img.height ? img.width / img.height : 1;
+            return ratio > 0.9 && ratio < 1.1;
+          })
+          .sort((a, b) => (b.width || 0) - (a.width || 0));
+
+        if (profileImages.length > 0) {
+          artist.images = profileImages;
+          console.log('Found suitable profile images:', profileImages);
+        } else {
+          console.log('No suitable profile images found, using original images');
+        }
+      }
+      
+      return artist;
     } catch (error) {
       console.error('Error getting artist details:', error);
-      return null;
-    }
-  }
-
-  async getArtistDetailsByName(artistName: string, trackTitle?: string): Promise<SpotifyArtist | null> {
-    try {
-      await this.ensureValidToken();
-      
-      const searchQuery = trackTitle 
-        ? `artist:${artistName} track:${trackTitle}`
-        : artistName;
-
-      const results = await this.spotifyApi.search(searchQuery, ['artist']);
-      if (!results.artists.items.length) {
-        console.log(`No artist found for query: ${searchQuery}`);
-        return null;
-      }
-
-      const artist = results.artists.items[0];
-      console.log(`Found artist: ${artist.name} (${artist.id})`);
-      
-      return await this.getArtistDetails(artist.id);
-    } catch (error) {
-      console.error('Error getting artist details by name:', error);
       return null;
     }
   }

@@ -8,6 +8,7 @@ interface Artist {
   name: string;
   bio: string;
   image: string;
+  images?: SpotifyImage[];
   spotifyId?: string;
   spotifyUrl?: string;
   tracks: Track[];
@@ -44,29 +45,53 @@ const ArtistDetailPage: React.FC = () => {
           tracks: artistTracks
         };
 
-        // Try to get Spotify artist details
+        // Try to get Spotify artist details using the first track
         const firstTrack = artistTracks[0];
-        const spotifyArtist = await spotifyService.getArtistDetailsByName(artistName, firstTrack?.trackTitle);
-        
-        if (spotifyArtist) {
-          console.log('Found Spotify artist:', spotifyArtist.name);
-          
-          if (spotifyArtist.images && spotifyArtist.images.length > 0) {
-            const bestImage = spotifyArtist.images
-              .sort((a: SpotifyImage, b: SpotifyImage) => (b.width || 0) - (a.width || 0))[0];
-            
-            if (bestImage?.url) {
-              console.log('Using image URL:', bestImage.url);
-              artistData.image = bestImage.url;
-            }
-          }
+        if (firstTrack) {
+          console.log('Using track for artist search:', {
+            title: firstTrack.trackTitle,
+            artist: firstTrack.artist,
+            label: firstTrack.recordLabel
+          });
 
-          artistData.spotifyId = spotifyArtist.id;
-          if (spotifyArtist.external_urls?.spotify) {
-            artistData.spotifyUrl = spotifyArtist.external_urls.spotify;
+          // Remove any "Original Mix" or "Remix" suffixes from track title for better search
+          const cleanTrackTitle = firstTrack.trackTitle.replace(/[\s-]+(Original Mix|Remix)$/i, '');
+          const spotifyArtist = await spotifyService.getArtistDetailsByName(artistName, cleanTrackTitle);
+
+          if (spotifyArtist) {
+            console.log('Found Spotify artist from track:', {
+              name: spotifyArtist.name,
+              id: spotifyArtist.id,
+              url: spotifyArtist.external_urls?.spotify
+            });
+
+            if (spotifyArtist.images && spotifyArtist.images.length > 0) {
+              artistData.images = spotifyArtist.images;
+              const bestImage = spotifyArtist.images[0]; // Spotify returns images sorted by size
+              
+              console.log('Using artist image:', {
+                url: bestImage.url,
+                width: bestImage.width,
+                height: bestImage.height
+              });
+              
+              artistData.image = bestImage.url;
+            } else {
+              console.log('No profile images found for artist');
+              artistData.image = 'https://via.placeholder.com/300?text=No+Profile+Image';
+            }
+
+            artistData.spotifyId = spotifyArtist.id;
+            if (spotifyArtist.external_urls?.spotify) {
+              artistData.spotifyUrl = spotifyArtist.external_urls.spotify;
+            }
+          } else {
+            console.log('No Spotify artist found using track:', firstTrack.trackTitle);
+            artistData.image = 'https://via.placeholder.com/300?text=Artist+Not+Found';
           }
         } else {
-          console.log('No Spotify artist found for:', artistName);
+          console.log('No tracks found for artist:', artistName);
+          artistData.image = 'https://via.placeholder.com/300?text=No+Tracks+Found';
         }
 
         setArtist(artistData);
