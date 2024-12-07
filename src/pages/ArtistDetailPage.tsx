@@ -142,15 +142,37 @@ const ArtistDetailPage: React.FC = () => {
             <Grid container spacing={2}>
               {artist.tracks.map((track, index) => (
                 <Grid item xs={12} key={index}>
-                  <Card>
-                    <CardContent>
-                      <Typography variant="subtitle1">
-                        {track.trackTitle}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Label: {track.recordLabel}
-                      </Typography>
-                    </CardContent>
+                  <Card sx={{ display: 'flex', backgroundColor: '#333', color: '#FFFFFF' }}>
+                    <CardMedia
+                      component="img"
+                      sx={{ width: 100, height: 100 }}
+                      image={track.albumCover || 'https://via.placeholder.com/100'}
+                      alt={track.trackTitle}
+                    />
+                    <Box sx={{ display: 'flex', flexGrow: 1, alignItems: 'center', p: 2 }}>
+                      <Grid container spacing={2} alignItems="center">
+                        <Grid item xs={12} sm={3}>
+                          <Typography variant="subtitle1" sx={{ color: '#FFFFFF' }}>
+                            {track.trackTitle}
+                          </Typography>
+                        </Grid>
+                        <Grid item xs={12} sm={3}>
+                          <Typography variant="body2" sx={{ color: '#AAAAAA' }}>
+                            {track.artist}
+                          </Typography>
+                        </Grid>
+                        <Grid item xs={12} sm={3}>
+                          <Typography variant="body2" sx={{ color: '#AAAAAA' }}>
+                            {track.recordLabel}
+                          </Typography>
+                        </Grid>
+                        <Grid item xs={12} sm={3}>
+                          <Typography variant="body2" sx={{ color: '#AAAAAA' }}>
+                            {track.releaseDate ? new Date(track.releaseDate).toLocaleDateString() : 'Unknown'}
+                          </Typography>
+                        </Grid>
+                      </Grid>
+                    </Box>
                   </Card>
                 </Grid>
               ))}
