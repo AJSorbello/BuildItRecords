@@ -1,177 +1,245 @@
-import * as React from 'react';
-import { Box, Typography, Grid, Card, CardContent, CardMedia, CardActionArea } from '@mui/material';
-import { LabelKey } from '../types/labels';
+import React, { useEffect, useState } from 'react';
+import { Box, Grid, Card, CardMedia, CardContent, Typography, TextField, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
+import { useLocation } from 'react-router-dom';
 import { RECORD_LABELS } from '../constants/labels';
-import { Track } from '../types/track';
+import { generateId } from '../utils/idGenerator';
 import { spotifyService } from '../services/SpotifyService';
+import { Track } from '../types/track';
 
 interface Artist {
   id: string;
   name: string;
+  bio: string;
   image: string;
   imageUrl: string;
-  bio: string;
   recordLabel: string;
-  spotifyUrl: string;
-  beatportUrl: string;
-  soundcloudUrl: string;
-  bandcampUrl: string;
+  spotifyUrl?: string;
+  beatportUrl?: string;
+  soundcloudUrl?: string;
+  bandcampUrl?: string;
 }
 
-interface ArtistsPageProps {
-  label: LabelKey;
-}
+type LabelType = 'RECORDS' | 'TECH' | 'DEEP';
 
-// Helper function to generate a simple ID
-const generateId = () => Math.random().toString(36).substr(2, 9);
-
-const getArtists = async (label: LabelKey): Promise<Artist[]> => {
+const getArtists = async (label: LabelType): Promise<Artist[]> => {
+  console.log('Getting artists for label:', label);
+  
   // Get tracks from localStorage
   const storedTracks = localStorage.getItem('tracks');
-  if (!storedTracks) return [];
+  console.log('Stored tracks:', storedTracks);
+  
+  if (!storedTracks) {
+    console.log('No tracks found in localStorage');
+    return [];
+  }
   
   try {
     const allTracks = JSON.parse(storedTracks) as Track[];
-    console.log('All tracks:', allTracks);
+    console.log('Parsed tracks:', allTracks);
     
     // Get unique artists by label
-    const artistsByLabel = allTracks
-      .filter((track: Track) => track.recordLabel === RECORD_LABELS[label])
-      .reduce<{ [key: string]: { artist: Artist; latestArtwork: string } }>((artists, track) => {
-        // Update or create artist entry
-        if (!artists[track.artist]) {
-          const defaultImage = 'https://via.placeholder.com/300';
-          artists[track.artist] = {
-            artist: {
-              id: generateId(),
-              name: track.artist,
-              image: track.albumCover || defaultImage,
-              imageUrl: track.albumCover || defaultImage,
-              bio: `Artist on ${RECORD_LABELS[label]}`,
-              recordLabel: RECORD_LABELS[label],
-              spotifyUrl: track.spotifyUrl || '',
-              beatportUrl: '',
-              soundcloudUrl: '',
-              bandcampUrl: ''
-            },
-            latestArtwork: track.albumCover || defaultImage
-          };
-        }
-        return artists;
-      }, {});
-
-    // Convert to array and add Spotify images where available
-    const artistsArray = Object.values(artistsByLabel);
-    const artistsWithImages = await Promise.all(
-      artistsArray.map(async ({ artist, latestArtwork }) => {
-        try {
-          // Try to get Spotify image
-          const spotifyArtist = await spotifyService.getArtistDetails(artist.name);
-          // Check if we have valid images array and it's not empty
-          if (spotifyArtist && spotifyArtist.images && Array.isArray(spotifyArtist.images) && spotifyArtist.images.length > 0) {
-            // Use the highest quality image
-            const images = [...spotifyArtist.images]; // Create a copy to avoid mutating original
-            const bestImage = images.sort((a, b) => (b.width || 0) - (a.width || 0))[0];
-            if (bestImage && bestImage.url) {
-              return {
-                ...artist,
-                image: bestImage.url,
-                imageUrl: bestImage.url
-              };
-            }
-          }
-        } catch (error) {
-          console.error(`Error fetching Spotify image for ${artist.name}:`, error);
-        }
+    const labelValue = RECORD_LABELS[label];
+    console.log('Looking for artists with label:', labelValue);
+    
+    const filteredTracks = allTracks.filter((track: Track) => {
+      return track.recordLabel === labelValue;
+    });
+    
+    console.log('Filtered tracks:', filteredTracks);
+    
+    // Get stored artist images from localStorage
+    const storedArtistImages = localStorage.getItem('artistImages') || '{}';
+    const artistImages = JSON.parse(storedArtistImages) as Record<string, string>;
+    
+    const artistsByLabel = filteredTracks.reduce<{ [key: string]: { artist: Artist; latestArtwork: string } }>((artists, track) => {
+      if (!artists[track.artist]) {
+        const defaultImage = 'https://via.placeholder.com/300';
+        // Use stored image if available, otherwise use album cover
+        const storedImage = artistImages[track.artist];
+        const imageToUse = storedImage || track.albumCover || defaultImage;
         
-        // Fall back to album artwork if Spotify image not available
-        return {
-          ...artist,
-          image: latestArtwork,
-          imageUrl: latestArtwork
+        artists[track.artist] = {
+          artist: {
+            id: generateId(),
+            name: track.artist,
+            image: imageToUse,
+            imageUrl: imageToUse,
+            bio: `Artist on ${labelValue}`,
+            recordLabel: labelValue,
+            spotifyUrl: track.spotifyUrl || '',
+            beatportUrl: '',
+            soundcloudUrl: '',
+            bandcampUrl: ''
+          },
+          latestArtwork: track.albumCover || defaultImage
         };
-      })
-    );
+      }
+      return artists;
+    }, {});
 
-    return artistsWithImages;
+    console.log('Artists by label:', artistsByLabel);
+    
+    // Convert to array
+    const artistsArray = Object.values(artistsByLabel);
+    
+    // Only fetch Spotify images for artists that don't have a stored image
+    const artistsToUpdate = artistsArray.filter(({ artist }) => !artistImages[artist.name]);
+    console.log('Artists needing Spotify images:', artistsToUpdate.length);
+    
+    if (artistsToUpdate.length > 0) {
+      // Add delay between Spotify API calls to prevent rate limiting
+      const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+      
+      // Process artists in smaller batches
+      const batchSize = 5;
+      for (let i = 0; i < artistsToUpdate.length; i += batchSize) {
+        const batch = artistsToUpdate.slice(i, i + batchSize);
+        
+        await Promise.all(
+          batch.map(async ({ artist }) => {
+            try {
+              const spotifyArtist = await spotifyService.getArtistDetails(artist.name);
+              
+              if (spotifyArtist && Array.isArray(spotifyArtist.images) && spotifyArtist.images.length > 0) {
+                const images = [...spotifyArtist.images];
+                const bestImage = images
+                  .filter(img => img && typeof img.width === 'number')
+                  .sort((a, b) => (b.width || 0) - (a.width || 0))[0];
+                
+                if (bestImage?.url) {
+                  artistImages[artist.name] = bestImage.url;
+                  localStorage.setItem('artistImages', JSON.stringify(artistImages));
+                  
+                  artist.image = bestImage.url;
+                  artist.imageUrl = bestImage.url;
+                }
+              }
+            } catch (error) {
+              console.error(`Error fetching Spotify image for ${artist.name}:`, error);
+            }
+          })
+        );
+        
+        // Add delay between batches
+        if (i + batchSize < artistsToUpdate.length) {
+          await delay(1000); // 1 second delay between batches
+        }
+      }
+    }
+    
+    return artistsArray.map(({ artist }) => artist);
   } catch (error) {
     console.error('Error loading artists:', error);
     return [];
   }
 };
 
-const ArtistsPage: React.FC<ArtistsPageProps> = ({ label }) => {
-  const [artists, setArtists] = React.useState<Artist[]>([]);
-  const [loading, setLoading] = React.useState(true);
+const ArtistsPage: React.FC = () => {
+  const location = useLocation();
+  const [artists, setArtists] = useState<Artist[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  React.useEffect(() => {
-    const loadArtists = async () => {
+  useEffect(() => {
+    const loadData = async () => {
+      const pathParts = location.pathname.split('/');
+      const labelFromPath = pathParts[1]?.toUpperCase() as LabelType;
+      
+      if (!labelFromPath || !['RECORDS', 'TECH', 'DEEP'].includes(labelFromPath)) {
+        console.error('Invalid label from path:', labelFromPath);
+        setError('Invalid label');
+        setLoading(false);
+        return;
+      }
+
+      console.log('Loading artists for label:', labelFromPath);
       setLoading(true);
+      setError(null);
+      
       try {
-        const loadedArtists = await getArtists(label);
-        setArtists(loadedArtists);
-      } catch (error) {
-        console.error('Error loading artists:', error);
+        const fetchedArtists = await getArtists(labelFromPath);
+        console.log('Fetched artists:', fetchedArtists);
+        setArtists(fetchedArtists);
+      } catch (err) {
+        console.error('Error in loadData:', err);
+        setError(err instanceof Error ? err.message : 'An error occurred loading artists');
       } finally {
         setLoading(false);
       }
     };
 
-    loadArtists();
-  }, [label]);
+    loadData();
+  }, [location.pathname]);
 
-  if (loading) {
-    return (
-      <Box sx={{ maxWidth: 1200, mx: 'auto', p: 3 }}>
-        <Typography variant="h6" sx={{ color: 'text.secondary' }}>
-          Loading artists...
-        </Typography>
-      </Box>
-    );
-  }
+  const filteredAndSortedArtists = React.useMemo(() => {
+    return artists
+      .filter(artist => 
+        artist.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        artist.bio.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+      .sort((a, b) => {
+        const comparison = a.name.localeCompare(b.name);
+        return sortOrder === 'asc' ? comparison : -comparison;
+      });
+  }, [artists, searchTerm, sortOrder]);
 
   return (
-    <Box sx={{ maxWidth: 1200, mx: 'auto', p: 3 }}>
-      <Typography variant="h3" component="h1" gutterBottom sx={{ color: 'text.primary', mb: 4 }}>
-        Artists
-      </Typography>
+    <Box sx={{ p: 3 }}>
+      <Box sx={{ mb: 3, display: 'flex', gap: 2, alignItems: 'center' }}>
+        <TextField
+          label="Search Artists"
+          variant="outlined"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          sx={{ minWidth: 200 }}
+        />
+        <FormControl sx={{ minWidth: 120 }}>
+          <InputLabel>Sort Order</InputLabel>
+          <Select
+            value={sortOrder}
+            label="Sort Order"
+            onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
+          >
+            <MenuItem value="asc">A to Z</MenuItem>
+            <MenuItem value="desc">Z to A</MenuItem>
+          </Select>
+        </FormControl>
+      </Box>
 
-      <Grid container spacing={4}>
-        {artists.map((artist) => (
-          <Grid item xs={12} sm={6} md={4} key={artist.id}>
-            <Card sx={{ 
-              height: '100%',
-              display: 'flex',
-              flexDirection: 'column',
-              backgroundColor: 'rgba(255, 255, 255, 0.05)',
-              '&:hover': {
-                transform: 'scale(1.02)',
-                transition: 'transform 0.2s ease-in-out',
-              },
-            }}>
-              <CardActionArea>
+      <Grid container spacing={3}>
+        {loading ? (
+          <Box sx={{ p: 3 }}>Loading artists...</Box>
+        ) : error ? (
+          <Box sx={{ p: 3, color: 'error.main' }}>{error}</Box>
+        ) : filteredAndSortedArtists.length === 0 ? (
+          <Box sx={{ p: 3 }}>No artists found</Box>
+        ) : (
+          filteredAndSortedArtists.map((artist) => (
+            <Grid item xs={12} sm={6} md={4} lg={3} key={artist.id}>
+              <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                 <CardMedia
                   component="img"
-                  height="300"
-                  image={artist.image}
+                  height="200"
+                  image={artist.imageUrl || 'https://via.placeholder.com/300x300.png?text=' + encodeURIComponent(artist.name)}
                   alt={artist.name}
-                  sx={{ 
+                  sx={{
                     objectFit: 'cover',
-                    filter: 'brightness(0.9)',
                   }}
                 />
-                <CardContent>
-                  <Typography variant="h6" component="h2" sx={{ color: 'text.primary' }}>
+                <CardContent sx={{ flexGrow: 1 }}>
+                  <Typography gutterBottom variant="h5" component="h2">
                     {artist.name}
                   </Typography>
-                  <Typography variant="body2" sx={{ color: 'text.secondary', mt: 1 }}>
+                  <Typography>
                     {artist.bio}
                   </Typography>
                 </CardContent>
-              </CardActionArea>
-            </Card>
-          </Grid>
-        ))}
+              </Card>
+            </Grid>
+          ))
+        )}
       </Grid>
     </Box>
   );
