@@ -1,6 +1,6 @@
 import { SpotifyApi, Track as SpotifyTrackSDK, Artist as SpotifyArtist, SearchResults } from '@spotify/web-api-ts-sdk';
 import { Track, SpotifyImage, SpotifyApiTrack, SpotifyPlaylist, Album } from '../types/track';
-import { RecordLabel, RECORD_LABELS } from '../constants/labels';
+import { RecordLabel, RECORD_LABELS, LABEL_URLS } from '../constants/labels';
 
 /**
  * Service for interacting with the Spotify Web API
@@ -62,15 +62,35 @@ export class SpotifyService {
     return match ? match[1] : null;
   }
 
+  private extractPlaylistId(playlistUrl: string): string | null {
+    const match = playlistUrl.match(/playlist\/([a-zA-Z0-9]+)/);
+    return match ? match[1] : null;
+  }
+
   async getTrackDetailsByUrl(trackUrl: string): Promise<Track | null> {
     try {
+      console.log('Processing track URL:', trackUrl);
       const trackId = this.extractTrackId(trackUrl);
       if (!trackId) {
+        console.error('Failed to extract track ID from URL:', trackUrl);
         throw new Error('Invalid Spotify URL');
       }
-      return await this.getTrackDetails(trackId);
+      console.log('Extracted track ID:', trackId);
+
+      await this.ensureValidToken();
+      console.log('Token validated, fetching track details...');
+      const track = await this.spotifyApi.tracks.get(trackId);
+      console.log('Track details fetched:', track.name);
+      
+      const label = await this.determineLabelFromUrl(trackUrl);
+      console.log('Determined label:', label);
+      
+      return this.convertSpotifyTrackToTrack(track, label);
     } catch (error) {
       console.error('Error getting track details by URL:', error);
+      if (error instanceof Error) {
+        console.error('Error details:', error.message);
+      }
       return null;
     }
   }
@@ -79,9 +99,13 @@ export class SpotifyService {
     try {
       await this.ensureValidToken();
       const results = await this.spotifyApi.search(query, ['track']);
-      return results.tracks.items.map((track: SpotifyTrackSDK) => 
-        this.convertSpotifyTrackToTrack(track, RECORD_LABELS.RECORDS)
+      const tracks = await Promise.all(
+        results.tracks.items.map(async (track: SpotifyTrackSDK) => {
+          const label = await this.determineLabelFromUrl(track.external_urls.spotify);
+          return this.convertSpotifyTrackToTrack(track, label);
+        })
       );
+      return tracks;
     } catch (error) {
       console.error('Error searching tracks:', error);
       return [];
@@ -92,10 +116,13 @@ export class SpotifyService {
     try {
       await this.ensureValidToken();
       const searchResults = await this.spotifyApi.search(`label:${labelName}`, ['track']);
-      return searchResults.tracks.items.map((track: SpotifyTrackSDK) => {
-        const label = this.determineLabelFromUrl(track.external_urls.spotify);
-        return this.convertSpotifyTrackToTrack(track, label);
-      });
+      const tracks = await Promise.all(
+        searchResults.tracks.items.map(async (track: SpotifyTrackSDK) => {
+          const label = await this.determineLabelFromUrl(track.external_urls.spotify);
+          return this.convertSpotifyTrackToTrack(track, label);
+        })
+      );
+      return tracks;
     } catch (error) {
       console.error('Error searching tracks by label:', error);
       return [];
@@ -161,10 +188,50 @@ export class SpotifyService {
     }
   }
 
-  private determineLabelFromUrl(spotifyUrl: string): RecordLabel {
-    if (spotifyUrl.includes('records')) return RECORD_LABELS.RECORDS;
-    if (spotifyUrl.includes('tech')) return RECORD_LABELS.TECH;
-    if (spotifyUrl.includes('deep')) return RECORD_LABELS.DEEP;
+  private async determineLabelFromUrl(spotifyUrl: string): Promise<RecordLabel> {
+    console.log('Determining label for URL:', spotifyUrl);
+    const trackId = this.extractTrackId(spotifyUrl);
+    if (!trackId) {
+      console.log('No track ID found, defaulting to Build It Records');
+      return RECORD_LABELS.RECORDS;
+    }
+
+    try {
+      // For now, let's default to Build It Records since we need to set up proper playlists
+      console.log('Defaulting to Build It Records until playlists are properly configured');
+      return RECORD_LABELS.RECORDS;
+
+      // Commented out playlist checking until proper playlists are configured
+      /*
+      for (const [label, playlistUrl] of Object.entries(LABEL_URLS)) {
+        console.log('Checking playlist for label:', label);
+        const playlistId = this.extractPlaylistId(playlistUrl);
+        if (!playlistId) {
+          console.log('No playlist ID found for label:', label);
+          continue;
+        }
+
+        const playlist = await this.getPlaylist(playlistId);
+        if (!playlist) {
+          console.log('Could not fetch playlist for label:', label);
+          continue;
+        }
+
+        const trackInPlaylist = playlist.tracks.items.some(item => item.track.id === trackId);
+        if (trackInPlaylist) {
+          console.log('Track found in playlist for label:', label);
+          return label as RecordLabel;
+        }
+      }
+      */
+    } catch (error) {
+      console.error('Error in determineLabelFromUrl:', error);
+      if (error instanceof Error) {
+        console.error('Error details:', error.message);
+      }
+    }
+
+    console.log('No matching label found, defaulting to Build It Records');
     return RECORD_LABELS.RECORDS;
   }
 
@@ -190,6 +257,47 @@ export class SpotifyService {
       console.error('Error getting simplified track details:', error);
       return null;
     }
+  }
+
+  async getLabelReleases(labelName: string): Promise<Track[]> {
+    try {
+      await this.ensureValidToken();
+      const searchResults = await this.spotifyApi.search(`label:${labelName}`, ['track']);
+      const tracks = await Promise.all(
+        searchResults.tracks.items.map(async (track: SpotifyTrackSDK) => {
+          const label = await this.determineLabelFromUrl(track.external_urls.spotify);
+          return this.convertSpotifyTrackToTrack(track, label);
+        })
+      );
+      return tracks;
+    } catch (error) {
+      console.error('Error getting label releases:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get an artist's releases from Spotify
+   * @param artistId The Spotify artist ID
+   * @returns Array of releases (albums, singles, etc.)
+   */
+  public async getArtistReleases(artistId: string) {
+    await this.ensureValidToken();
+    const response = await this.spotifyApi.artists.albums(
+      artistId,
+      'album,single,compilation'
+    );
+    return (response.items || []).map(album => ({
+      id: album.id,
+      name: album.name,
+      type: album.album_type,
+      release_date: album.release_date,
+      images: album.images,
+      artists: album.artists.map(artist => ({
+        id: artist.id,
+        name: artist.name
+      }))
+    }));
   }
 
   isAuthenticated(): boolean {
@@ -345,21 +453,6 @@ export class SpotifyService {
     } catch (error) {
       console.error('Error getting artist details:', error);
       return null;
-    }
-  }
-
-  async getLabelReleases(labelName: string): Promise<Track[]> {
-    try {
-      await this.ensureValidToken();
-      const searchResults = await this.spotifyApi.search(`label:${labelName}`, ['track']);
-      
-      return searchResults.tracks.items.map((track: SpotifyTrackSDK) => {
-        const label = this.determineLabelFromUrl(track.external_urls.spotify);
-        return this.convertSpotifyTrackToTrack(track, label);
-      });
-    } catch (error) {
-      console.error('Error getting label releases:', error);
-      return [];
     }
   }
 }

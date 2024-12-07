@@ -31,15 +31,29 @@ router.post('/url', [
             return response.data.audio_features;
         }
 
-        // Function to get artist genres
-        async function getArtistGenres(artistId) {
+        // Function to get artist details and create profile
+        async function getArtistDetails(artistId) {
             const response = await axios.get(
                 `https://api.spotify.com/v1/artists/${artistId}`,
                 {
                     headers: { 'Authorization': `Bearer ${accessToken}` }
                 }
             );
-            return response.data.genres;
+            return {
+                id: response.data.id,
+                name: response.data.name,
+                genres: response.data.genres,
+                popularity: response.data.popularity,
+                followers: response.data.followers.total,
+                images: response.data.images,
+                external_urls: response.data.external_urls
+            };
+        }
+
+        // Function to get artist genres
+        async function getArtistGenres(artistId) {
+            const artistDetails = await getArtistDetails(artistId);
+            return artistDetails.genres;
         }
 
         switch (spotifyItem.type) {
@@ -90,6 +104,19 @@ router.post('/url', [
                     album: albumDetails.data
                 }));
                 
+                // Get all artists' details for tracks with multiple artists
+                const artistProfiles = await Promise.all(
+                    tracks[0].artists.map(artist => getArtistDetails(artist.id))
+                );
+                
+                // If there are multiple artists, include their full profiles in the response
+                if (artistProfiles.length > 1) {
+                    tracks = tracks.map(track => ({
+                        ...track,
+                        artistProfiles
+                    }));
+                }
+                
                 // Get primary artist's genres
                 artistGenres = await getArtistGenres(tracks[0].artists[0].id);
                 break;
@@ -110,6 +137,19 @@ router.post('/url', [
                 // Get audio features for all tracks
                 const trackIds = tracks.map(track => track.id);
                 const audioFeatures = await getAudioFeatures(trackIds);
+                
+                // Get all artists' details for tracks with multiple artists
+                const artistProfiles = await Promise.all(
+                    tracks[0].artists.map(artist => getArtistDetails(artist.id))
+                );
+                
+                // If there are multiple artists, include their full profiles in the response
+                if (artistProfiles.length > 1) {
+                    tracks = tracks.map(track => ({
+                        ...track,
+                        artistProfiles
+                    }));
+                }
                 
                 // Get genres for the first track's artist
                 artistGenres = await getArtistGenres(tracks[0].artists[0].id);

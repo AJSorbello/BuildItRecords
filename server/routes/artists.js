@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const axios = require('axios');
-const { query, param } = require('express-validator');
+const { query, param, body } = require('express-validator');
 const { validateRequest, isValidSpotifyId } = require('../utils/validation');
 const { cacheMiddleware } = require('../utils/cache');
 const { getSpotifyToken } = require('../utils/spotify');
@@ -195,6 +195,103 @@ router.get('/:artistId/related', [
         res.status(error.response?.status || 500).json({
             error: 'Failed to fetch related artists',
             message: error.response?.data?.error?.message || error.message
+        });
+    }
+});
+
+// Get artist's releases (including collaborations)
+router.get('/:artistId/releases', [
+    param('artistId').custom(isValidSpotifyId).withMessage('Invalid Spotify artist ID'),
+    validateRequest,
+    cacheMiddleware
+], async (req, res) => {
+    try {
+        const { artistId } = req.params;
+        const accessToken = await getSpotifyToken();
+
+        // Get artist's tracks and singles
+        const tracksResponse = await axios.get(
+            `https://api.spotify.com/v1/artists/${artistId}/albums`,
+            {
+                params: {
+                    include_groups: 'single,album',
+                    limit: 50,
+                    market: 'US'
+                },
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`
+                }
+            }
+        );
+
+        // Format the releases
+        const releases = tracksResponse.data.items.map(item => ({
+            id: item.id,
+            name: item.name,
+            type: item.type,
+            release_date: item.release_date,
+            images: item.images,
+            artists: item.artists.map(artist => ({
+                id: artist.id,
+                name: artist.name
+            }))
+        }));
+
+        res.json(releases);
+
+    } catch (error) {
+        console.error('Error fetching releases:', error);
+        res.status(error.response?.status || 500).json({
+            error: 'Failed to fetch releases',
+            message: error.response?.data?.error?.message || error.message
+        });
+    }
+});
+
+// Create or update multiple artist profiles
+router.post('/batch', [
+    body('artists').isArray().withMessage('Artists array is required'),
+    validateRequest
+], async (req, res) => {
+    try {
+        const { artists } = req.body;
+        
+        // Process each artist in parallel
+        const processedArtists = await Promise.all(
+            artists.map(async (artist) => {
+                try {
+                    const accessToken = await getSpotifyToken();
+                    const artistResponse = await axios.get(
+                        `https://api.spotify.com/v1/artists/${artist.id}`,
+                        {
+                            headers: {
+                                'Authorization': `Bearer ${accessToken}`
+                            }
+                        }
+                    );
+                    
+                    return formatArtistData(artistResponse.data);
+                } catch (error) {
+                    console.error(`Error processing artist ${artist.id}:`, error);
+                    return {
+                        id: artist.id,
+                        error: error.message,
+                        status: 'failed'
+                    };
+                }
+            })
+        );
+        
+        res.json({
+            message: 'Artist profiles processed',
+            artists: processedArtists
+        });
+        
+    } catch (error) {
+        console.error('Error processing artists:', error);
+        res.status(500).json({
+            error: 'Failed to process artist profiles',
+            message: error.message
         });
     }
 });

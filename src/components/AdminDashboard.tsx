@@ -111,7 +111,6 @@ interface ImportProgress {
 
 const AdminDashboard: React.FC = () => {
   const [open, setOpen] = useState(false);
-  console.log('Dialog open state:', open);
   const [tracks, setTracks] = useState<Track[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<TrackFormData>(initialFormData);
@@ -121,25 +120,76 @@ const AdminDashboard: React.FC = () => {
   const [importing, setImporting] = useState(false);
   const [selectedLabel, setSelectedLabel] = useState<RecordLabel | 'All'>('All');
   const [importProgress, setImportProgress] = useState<ImportProgress | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Function to remove duplicates
+  const removeDuplicates = (tracksArray: Track[]): Track[] => {
+    const seen = new Map<string, Track>();
+    const duplicates: Track[] = [];
+    
+    // Keep only the latest version of each track (based on Spotify URL)
+    tracksArray.forEach(track => {
+      const normalizedUrl = normalizeSpotifyUrl(track.spotifyUrl);
+      if (seen.has(normalizedUrl)) {
+        duplicates.push(track);
+      } else {
+        seen.set(normalizedUrl, track);
+      }
+    });
+
+    // If duplicates were found, log them
+    if (duplicates.length > 0) {
+      console.log(`Found ${duplicates.length} duplicate tracks:`, duplicates);
+    }
+
+    return Array.from(seen.values());
+  };
 
   useEffect(() => {
-    // Initialize data if needed
-    const storedTracks = localStorage.getItem('tracks');
-    if (!storedTracks) {
-      console.log('No tracks found in localStorage, initializing with mock data');
-      resetData();
-    }
-    
-    // Load and sort tracks from localStorage
-    const data = getData();
-    const sortedTracks = data.tracks.sort((a, b) => {
-      const dateA = new Date(a.releaseDate || '');
-      const dateB = new Date(b.releaseDate || '');
-      return dateB.getTime() - dateA.getTime();
-    });
-    console.log('Loaded tracks from localStorage:', sortedTracks);
-    setTracks(sortedTracks);
+    // Load tracks from localStorage and clean duplicates
+    const loadTracks = () => {
+      try {
+        const storedTracks = localStorage.getItem('tracks');
+        if (!storedTracks) {
+          console.log('No tracks found in localStorage, initializing empty array');
+          localStorage.setItem('tracks', JSON.stringify([]));
+          setTracks([]);
+        } else {
+          const parsedTracks = JSON.parse(storedTracks) as Track[];
+          console.log('Loaded tracks from localStorage:', parsedTracks);
+          
+          // Remove duplicates
+          const uniqueTracks = removeDuplicates(parsedTracks);
+          
+          // If we found and removed duplicates, update localStorage
+          if (uniqueTracks.length !== parsedTracks.length) {
+            console.log(`Removed ${parsedTracks.length - uniqueTracks.length} duplicate tracks`);
+            localStorage.setItem('tracks', JSON.stringify(uniqueTracks));
+          }
+          
+          setTracks(uniqueTracks);
+        }
+      } catch (error) {
+        console.error('Error loading tracks:', error);
+        setTracks([]);
+      }
+    };
+
+    loadTracks();
   }, []);
+
+  // Function to clean duplicates manually
+  const cleanDuplicates = () => {
+    const uniqueTracks = removeDuplicates(tracks);
+    if (uniqueTracks.length !== tracks.length) {
+      const removedCount = tracks.length - uniqueTracks.length;
+      setTracks(uniqueTracks);
+      localStorage.setItem('tracks', JSON.stringify(uniqueTracks));
+      alert(`Removed ${removedCount} duplicate tracks`);
+    } else {
+      alert('No duplicate tracks found');
+    }
+  };
 
   const handleSpotifyFetch = async (trackId: string) => {
     setFetchState({
@@ -196,86 +246,63 @@ const AdminDashboard: React.FC = () => {
       return;
     }
 
-    try {
-      const trackId = extractSpotifyId(value);
-      console.log('Extracted track ID:', trackId);
-      
-      if (!trackId) {
-        setFetchState({
-          loading: false,
-          error: 'Could not extract track ID from URL',
-        });
-        return;
-      }
+    if (!isValidSpotifyUrl(value)) {
+      setFetchState({
+        loading: false,
+        error: 'Please enter a valid Spotify URL'
+      });
+      return;
+    }
 
-      // Get track details from Spotify
+    try {
       setFetchState({
         loading: true,
         error: null,
       });
 
-      const track = await spotifyService.getTrackDetails(trackId);
-      console.log('Fetched Spotify track:', track);
+      const trackDetails = await spotifyService.getTrackDetailsByUrl(value);
+      console.log('Fetched track details:', trackDetails);
 
-      if (!track || !track.albumCover) {
-        setFetchState({
-          loading: false,
-          error: 'Failed to fetch track details or album cover from Spotify',
-        });
-        return;
+      if (!trackDetails) {
+        throw new Error('Failed to fetch track details');
       }
 
-      // Update form with track details including album cover
-      setFormData({
-        id: track.id,
-        trackTitle: track.trackTitle,
-        artist: track.artist,
-        recordLabel: validateRecordLabel(track.recordLabel),
-        spotifyUrl: track.spotifyUrl,
-        albumCover: track.albumCover || '',
-        album: track.album,
-        releaseDate: track.releaseDate,
-        previewUrl: track.previewUrl || null,
-        beatportUrl: track.beatportUrl || '',
-        soundcloudUrl: track.soundcloudUrl || ''
-      });
-
-      // Debug log
-      console.log('Updated form data with album cover:', {
-        trackTitle: track.trackTitle,
-        artist: track.artist,
-        albumCover: track.albumCover,
-        album: track.album,
-        recordLabel: track.recordLabel,
-        releaseDate: track.releaseDate,
-        previewUrl: track.previewUrl || null,
-        beatportUrl: track.beatportUrl || '',
-        soundcloudUrl: track.soundcloudUrl || ''
-      });
+      setFormData(prev => ({
+        ...prev,
+        id: trackDetails.id,
+        trackTitle: trackDetails.trackTitle,
+        artist: trackDetails.artist,
+        recordLabel: validateRecordLabel(trackDetails.recordLabel),
+        albumCover: trackDetails.albumCover || '',
+        album: trackDetails.album,
+        releaseDate: trackDetails.releaseDate,
+        previewUrl: trackDetails.previewUrl || null,
+        beatportUrl: trackDetails.beatportUrl || '',
+        soundcloudUrl: trackDetails.soundcloudUrl || ''
+      }));
 
       setFetchState({
         loading: false,
         error: null,
       });
     } catch (error) {
-      console.error('Error processing Spotify URL:', error);
+      console.error('Error fetching track details:', error);
       setFetchState({
         loading: false,
-        error: error instanceof Error ? error.message : 'Failed to process Spotify URL',
+        error: error instanceof Error ? error.message : 'Failed to fetch track details'
       });
     }
   };
 
   const handleOpen = () => {
-    console.log('Add New Track button clicked');
-    setOpen(true);
     setFormData(initialFormData);
     setEditingId(null);
     setFetchState(initialFetchState);
-    console.log('Dialog state set to open');
+    setOpen(true);
   };
 
   const handleClose = () => {
+    console.log('Closing dialog...');
     setOpen(false);
     setFormData(initialFormData);
     setEditingId(null);
@@ -365,6 +392,7 @@ const AdminDashboard: React.FC = () => {
 
   const handleSubmit = async (e: React.MouseEvent) => {
     e.preventDefault();
+    console.log('Submitting form with data:', formData);
 
     if (!formData.spotifyUrl || !formData.trackTitle || !formData.artist || !formData.recordLabel) {
       setFetchState({
@@ -392,113 +420,45 @@ const AdminDashboard: React.FC = () => {
         return;
       }
 
-      // Ensure we have track details from Spotify
-      let trackDetails = formData;
-      if (!formData.albumCover) {
-        const spotifyDetails = await spotifyService.getTrackDetailsByUrl(formData.spotifyUrl);
-        if (spotifyDetails) {
-          trackDetails = {
-            id: spotifyDetails.id,
-            trackTitle: spotifyDetails.trackTitle,
-            artist: spotifyDetails.artist,
-            recordLabel: validateRecordLabel(spotifyDetails.recordLabel),
-            spotifyUrl: spotifyDetails.spotifyUrl,
-            albumCover: spotifyDetails.albumCover || '',
-            album: spotifyDetails.album,
-            releaseDate: spotifyDetails.releaseDate,
-            previewUrl: spotifyDetails.previewUrl || null,
-            beatportUrl: spotifyDetails.beatportUrl || '',
-            soundcloudUrl: spotifyDetails.soundcloudUrl || ''
-          };
-        }
-      }
-
-      // Debug log before saving
-      console.log('Track details before saving:', trackDetails);
-
       const newTrack: Track = {
-        id: editingId || crypto.randomUUID(),
-        trackTitle: trackDetails.trackTitle,
-        artist: trackDetails.artist,
-        spotifyUrl: trackDetails.spotifyUrl,
-        recordLabel: trackDetails.recordLabel,
-        albumCover: trackDetails.albumCover,
-        album: trackDetails.album,
-        releaseDate: trackDetails.releaseDate,
-        previewUrl: trackDetails.previewUrl || null,
-        beatportUrl: trackDetails.beatportUrl,
-        soundcloudUrl: trackDetails.soundcloudUrl
+        id: editingId || formData.id || crypto.randomUUID(),
+        trackTitle: formData.trackTitle,
+        artist: formData.artist,
+        spotifyUrl: formData.spotifyUrl,
+        recordLabel: formData.recordLabel,
+        albumCover: formData.albumCover,
+        album: formData.album,
+        releaseDate: formData.releaseDate,
+        previewUrl: formData.previewUrl || null,
+        beatportUrl: formData.beatportUrl,
+        soundcloudUrl: formData.soundcloudUrl
       };
 
-      // Debug log
-      console.log('New track to save:', newTrack);
+      console.log('Saving track:', newTrack);
 
-      let updatedTracks: Track[];
-      if (editingId) {
-        updatedTracks = tracks.map(track => 
-          track.id === editingId ? newTrack : track
-        );
-      } else {
-        updatedTracks = [...tracks, newTrack];
-      }
-      
-      // Debug log before localStorage
-      console.log('Tracks to save to localStorage:', updatedTracks);
+      // Update tracks array
+      const updatedTracks = editingId
+        ? tracks.map(track => track.id === editingId ? newTrack : track)
+        : [...tracks, newTrack];
 
       // Save to localStorage
       localStorage.setItem('tracks', JSON.stringify(updatedTracks));
+      console.log('Saved to localStorage');
 
-      // Verify saved data
-      const savedData = localStorage.getItem('tracks');
-      const parsedData = savedData ? JSON.parse(savedData) : [];
-      console.log('Verified saved data:', parsedData);
-
+      // Update state and close dialog
       setTracks(updatedTracks);
       setFetchState({ loading: false, error: null });
-      handleClose();
+      
+      // Close dialog
+      console.log('Closing dialog after save...');
+      setOpen(false);
+      setFormData(initialFormData);
+      setEditingId(null);
     } catch (err) {
       console.error('Error saving track:', err);
       setFetchState({
         loading: false,
-        error: 'Failed to save track'
-      });
-    }
-  };
-
-  const extractSpotifyMetadata = async () => {
-    if (!formData.spotifyUrl) return;
-
-    setFetchState({ loading: true, error: null });
-    try {
-      // Get track details from Spotify
-      const trackDetails = await spotifyService.getTrackDetailsByUrl(formData.spotifyUrl);
-      if (!trackDetails) {
-        throw new Error('Failed to fetch track details from Spotify');
-      }
-
-      // Debug log
-      console.log('Fetched track details:', trackDetails);
-
-      setFormData({
-        id: trackDetails.id,
-        trackTitle: trackDetails.trackTitle,
-        artist: trackDetails.artist,
-        recordLabel: validateRecordLabel(trackDetails.recordLabel),
-        spotifyUrl: trackDetails.spotifyUrl,
-        albumCover: trackDetails.albumCover || '',
-        album: trackDetails.album,
-        releaseDate: trackDetails.releaseDate,
-        previewUrl: trackDetails.previewUrl || null,
-        beatportUrl: trackDetails.beatportUrl || '',
-        soundcloudUrl: trackDetails.soundcloudUrl || ''
-      });
-
-      setFetchState({ loading: false, error: null });
-    } catch (error) {
-      console.error('Error fetching track metadata:', error);
-      setFetchState({ 
-        loading: false, 
-        error: error instanceof Error ? error.message : 'Failed to fetch track metadata'
+        error: err instanceof Error ? err.message : 'Failed to save track'
       });
     }
   };
@@ -577,7 +537,17 @@ const AdminDashboard: React.FC = () => {
     setSelectedLabel(event.target.value as RecordLabel | 'All');
   };
 
-  const filteredTracks = selectedLabel === 'All' ? tracks : tracks.filter(track => track.recordLabel === selectedLabel);
+  // Filter tracks based on search query and selected label
+  const filteredTracks = tracks.filter(track => {
+    const matchesSearch = searchQuery.toLowerCase() === '' || 
+      track.trackTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      track.artist.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      track.spotifyUrl.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesLabel = selectedLabel === 'All' || track.recordLabel === selectedLabel;
+    
+    return matchesSearch && matchesLabel;
+  });
 
   const handleTrackSubmit = async (formData: TrackFormData) => {
     try {
@@ -619,36 +589,64 @@ const AdminDashboard: React.FC = () => {
   };
 
   const handleSpotifyImport = async () => {
+    if (!formData.spotifyUrl) {
+      setFetchState({
+        loading: false,
+        error: 'Please enter a Spotify URL'
+      });
+      return;
+    }
+
     try {
       setFetchState({ loading: true, error: null });
 
-      if (!formData.spotifyUrl) {
-        throw new Error('Please enter a Spotify URL');
+      const trackDetails = await spotifyService.getTrackDetailsByUrl(formData.spotifyUrl);
+      if (!trackDetails) {
+        throw new Error('Failed to fetch track details');
       }
 
-      // Get track details from Spotify
-      const spotifyTrack = await spotifyService.getTrackDetailsByUrl(formData.spotifyUrl);
+      // Check for duplicates
+      const normalizedUrl = normalizeSpotifyUrl(formData.spotifyUrl);
+      const isDuplicate = tracks.some(track => 
+        track.id !== editingId && 
+        normalizeSpotifyUrl(track.spotifyUrl) === normalizedUrl
+      );
+
+      if (isDuplicate) {
+        setFetchState({
+          loading: false,
+          error: 'This track already exists in the database'
+        });
+        return;
+      }
+
+      const newTrack: Track = {
+        id: trackDetails.id,
+        trackTitle: trackDetails.trackTitle,
+        artist: trackDetails.artist,
+        spotifyUrl: trackDetails.spotifyUrl,
+        recordLabel: trackDetails.recordLabel,
+        albumCover: trackDetails.albumCover,
+        album: trackDetails.album,
+        releaseDate: trackDetails.releaseDate,
+        previewUrl: trackDetails.previewUrl,
+        beatportUrl: '',
+        soundcloudUrl: ''
+      };
+
+      // Update tracks array and save to localStorage
+      const updatedTracks = [...tracks, newTrack];
+      localStorage.setItem('tracks', JSON.stringify(updatedTracks));
       
-      if (!spotifyTrack) {
-        throw new Error('Could not find track on Spotify');
-      }
-
-      // Update form with Spotify data
-      setFormData({
-        id: spotifyTrack.id,
-        trackTitle: spotifyTrack.trackTitle,
-        artist: spotifyTrack.artist,
-        recordLabel: validateRecordLabel(spotifyTrack.recordLabel),
-        spotifyUrl: spotifyTrack.spotifyUrl,
-        albumCover: spotifyTrack.albumCover || '',
-        album: spotifyTrack.album,
-        releaseDate: spotifyTrack.releaseDate || '',
-        previewUrl: spotifyTrack.previewUrl || null,
-        beatportUrl: spotifyTrack.beatportUrl || '',
-        soundcloudUrl: spotifyTrack.soundcloudUrl || ''
-      });
-
+      // Update state
+      setTracks(updatedTracks);
       setFetchState({ loading: false, error: null });
+      
+      // Close dialog
+      console.log('Closing dialog after import...');
+      setOpen(false);
+      setFormData(initialFormData);
+      setEditingId(null);
     } catch (error) {
       console.error('Error importing from Spotify:', error);
       setFetchState({
@@ -702,79 +700,88 @@ const AdminDashboard: React.FC = () => {
         </Typography>
       )}
 
-      <FormControl fullWidth margin="normal">
-        <InputLabel sx={{ color: '#FFFFFF' }}>Filter by Label</InputLabel>
-        <Select
-          value={selectedLabel}
-          onChange={handleLabelChange}
-          sx={{ color: '#FFFFFF', mb: 2 }}
-          inputProps={{ sx: { color: '#FFFFFF' } }}
+      <Box sx={{ mb: 4, display: 'flex', gap: 2, alignItems: 'center' }}>
+        <TextField
+          fullWidth
+          label="Search tracks"
+          variant="outlined"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search by title, artist, or Spotify URL"
+          sx={{ flex: 1 }}
+        />
+        <FormControl sx={{ minWidth: 200 }}>
+          <InputLabel>Filter by Label</InputLabel>
+          <Select
+            value={selectedLabel}
+            onChange={(e) => setSelectedLabel(e.target.value as RecordLabel | 'All')}
+            label="Filter by Label"
+          >
+            <MenuItem value="All">All Labels</MenuItem>
+            {Object.values(RECORD_LABELS).map((label) => (
+              <MenuItem key={label} value={label}>{label}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={() => {
+            setFormData(initialFormData);
+            setOpen(true);
+          }}
         >
-          <MenuItem value="All">All</MenuItem>
-          {Object.values(RECORD_LABELS).map((label) => (
-            <MenuItem key={label} value={label}>{label}</MenuItem>
-          ))}
-        </Select>
-      </FormControl>
-
-      <Box component="ul" sx={{ listStyle: 'none', p: 0 }}>
-        {filteredTracks.map(track => (
-          <Box component="li" key={track.id} sx={{ display: 'flex', alignItems: 'center', mb: 2, backgroundColor: '#333', p: 2, borderRadius: 1 }}>
-            <Box component="img" src={track.albumCover} alt={track.trackTitle} sx={{ width: 50, height: 50, mr: 2, borderRadius: 1 }} />
-            <Typography variant="body1" sx={{ color: '#FFFFFF', flex: 1 }}>{track.trackTitle}</Typography>
-            <Typography variant="body2" sx={{ color: '#AAAAAA', flex: 1 }}>{track.artist}</Typography>
-            <Typography variant="body2" sx={{ color: '#AAAAAA', flex: 1 }}>{track.recordLabel}</Typography>
-            <Typography variant="body2" sx={{ color: '#AAAAAA', flex: 1 }}>{track.releaseDate ? new Date(track.releaseDate).toLocaleDateString() : 'Unknown'}</Typography>
-          </Box>
-        ))}
+          Add Track
+        </Button>
+        <Button
+          variant="outlined"
+          color="secondary"
+          onClick={cleanDuplicates}
+          title="Remove duplicate tracks based on Spotify URL"
+        >
+          Clean Duplicates
+        </Button>
       </Box>
 
-      <Dialog open={importDialogOpen} onClose={() => !importing && setImportDialogOpen(false)}>
-        <DialogTitle>Import Tracks by Label</DialogTitle>
-        <DialogContent>
-          <Box sx={{ width: '100%', mt: 2 }}>
-            <TextField
-              fullWidth
-              label="Label Name"
-              value={importLabel}
-              onChange={(e) => setImportLabel(e.target.value)}
-              disabled={importing}
-              helperText="Enter exact label name: 'Build It Deep', 'Build It Records', or 'Build It Tech'"
-              error={Boolean(fetchState.error)}
-            />
-            {fetchState.error && (
-              <Typography color="error" sx={{ mt: 1 }}>
-                {fetchState.error}
-              </Typography>
-            )}
-            {importing && importProgress && (
-              <Box sx={{ mt: 2, textAlign: 'center' }}>
-                <CircularProgress size={24} sx={{ mb: 1 }} />
-                <Typography variant="body2">
-                  Importing tracks: {importProgress.imported} of {importProgress.total}
-                  {importProgress.imported < importProgress.total && '... (waiting 3s between batches)'}
-                </Typography>
-              </Box>
-            )}
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setImportDialogOpen(false)} disabled={importing}>
-            Cancel
-          </Button>
-          <Button
-            onClick={handleImportTracks}
-            variant="contained"
-            color="primary"
-            disabled={importing || !importLabel}
-          >
-            {importing ? 'Importing...' : 'Import'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <Box sx={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        gap: 2,
+        maxHeight: '600px',
+        overflowY: 'auto',
+        p: 2,
+        border: '1px solid #e0e0e0',
+        borderRadius: 1,
+        bgcolor: '#f5f5f5'
+      }}>
+        {filteredTracks.length === 0 ? (
+          <Typography variant="body1" sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>
+            {searchQuery || selectedLabel !== 'All' 
+              ? 'No tracks found matching your search criteria'
+              : 'No tracks added yet'}
+          </Typography>
+        ) : (
+          filteredTracks.map((track) => (
+            <Box component="li" key={track.id} sx={{ display: 'flex', alignItems: 'center', mb: 2, backgroundColor: '#333', p: 2, borderRadius: 1 }}>
+              <Box component="img" src={track.albumCover} alt={track.trackTitle} sx={{ width: 50, height: 50, mr: 2, borderRadius: 1 }} />
+              <Typography variant="body1" sx={{ color: '#FFFFFF', flex: 1 }}>{track.trackTitle}</Typography>
+              <Typography variant="body2" sx={{ color: '#AAAAAA', flex: 1 }}>{track.artist}</Typography>
+              <Typography variant="body2" sx={{ color: '#AAAAAA', flex: 1 }}>{track.recordLabel}</Typography>
+              <Typography variant="body2" sx={{ color: '#AAAAAA', flex: 1 }}>{track.releaseDate ? new Date(track.releaseDate).toLocaleDateString() : 'Unknown'}</Typography>
+            </Box>
+          ))
+        )}
+      </Box>
 
-      <Dialog open={open} onClose={handleClose}>
-        <DialogTitle>Add New Track</DialogTitle>
+      <Dialog 
+        open={open} 
+        onClose={handleClose}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          {editingId ? 'Edit Track' : 'Add New Track'}
+        </DialogTitle>
         <DialogContent>
           <TextField
             autoFocus
@@ -801,7 +808,7 @@ const AdminDashboard: React.FC = () => {
             fullWidth
             variant="outlined"
             value={formData.spotifyUrl}
-            onChange={handleTextInputChange}
+            onChange={handleSpotifyUrlChange}
             name="spotifyUrl"
           />
           <TextField
@@ -846,11 +853,55 @@ const AdminDashboard: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleClose}>Cancel</Button>
-          <Button onClick={() => handleTrackSubmit(formData)} variant="contained" color="primary">
+          <Button onClick={handleSubmit} variant="contained" color="primary">
             Save
           </Button>
           <Button onClick={handleSpotifyImport} variant="contained" color="primary">
             Import from Spotify
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={importDialogOpen} onClose={() => !importing && setImportDialogOpen(false)}>
+        <DialogTitle>Import Tracks by Label</DialogTitle>
+        <DialogContent>
+          <Box sx={{ width: '100%', mt: 2 }}>
+            <TextField
+              fullWidth
+              label="Label Name"
+              value={importLabel}
+              onChange={(e) => setImportLabel(e.target.value)}
+              disabled={importing}
+              helperText="Enter exact label name: 'Build It Deep', 'Build It Records', or 'Build It Tech'"
+              error={Boolean(fetchState.error)}
+            />
+            {fetchState.error && (
+              <Typography color="error" sx={{ mt: 1 }}>
+                {fetchState.error}
+              </Typography>
+            )}
+            {importing && importProgress && (
+              <Box sx={{ mt: 2, textAlign: 'center' }}>
+                <CircularProgress size={24} sx={{ mb: 1 }} />
+                <Typography variant="body2">
+                  Importing tracks: {importProgress.imported} of {importProgress.total}
+                  {importProgress.imported < importProgress.total && '... (waiting 3s between batches)'}
+                </Typography>
+              </Box>
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setImportDialogOpen(false)} disabled={importing}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleImportTracks}
+            variant="contained"
+            color="primary"
+            disabled={importing || !importLabel}
+          >
+            {importing ? 'Importing...' : 'Import'}
           </Button>
         </DialogActions>
       </Dialog>
