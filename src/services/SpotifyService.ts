@@ -357,6 +357,9 @@ export class SpotifyService {
     try {
       await this.ensureValidToken();
       
+      // Add delay to prevent rate limiting
+      await this.delay(1000);
+      
       // Search for the artist
       const searchResponse = await this.spotifyApi.searchArtists(artistName, { limit: 1 });
       
@@ -369,11 +372,16 @@ export class SpotifyService {
       return {
         id: artist.id,
         name: artist.name,
-        images: this.convertImages(artist.images)
+        images: this.convertImages(artist.images || [])
       };
-    } catch (error) {
-      console.error('Error fetching artist details:', error);
-      // Don't throw error, just return null to prevent infinite loop
+    } catch (error: any) {
+      if (error?.response?.statusCode === 429) {
+        console.log('Rate limit hit, waiting before retry...');
+        await this.delay(2000);
+        return this.getArtistDetails(artistName);
+      }
+      
+      console.error('Error fetching artist details:', error?.message || 'Unknown error');
       return null;
     }
   }

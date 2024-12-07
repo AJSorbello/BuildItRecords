@@ -9,7 +9,13 @@ interface Artist {
   id: string;
   name: string;
   image: string;
+  imageUrl: string;
   bio: string;
+  recordLabel: string;
+  spotifyUrl: string;
+  beatportUrl: string;
+  soundcloudUrl: string;
+  bandcampUrl: string;
 }
 
 interface ArtistsPageProps {
@@ -34,14 +40,21 @@ const getArtists = async (label: LabelKey): Promise<Artist[]> => {
       .reduce<{ [key: string]: { artist: Artist; latestArtwork: string } }>((artists, track) => {
         // Update or create artist entry
         if (!artists[track.artist]) {
+          const defaultImage = 'https://via.placeholder.com/300';
           artists[track.artist] = {
             artist: {
               id: generateId(),
               name: track.artist,
-              image: track.albumCover || 'https://via.placeholder.com/300',
-              bio: `Artist on ${RECORD_LABELS[label]}`
+              image: track.albumCover || defaultImage,
+              imageUrl: track.albumCover || defaultImage,
+              bio: `Artist on ${RECORD_LABELS[label]}`,
+              recordLabel: RECORD_LABELS[label],
+              spotifyUrl: track.spotifyUrl || '',
+              beatportUrl: '',
+              soundcloudUrl: '',
+              bandcampUrl: ''
             },
-            latestArtwork: track.albumCover || 'https://via.placeholder.com/300'
+            latestArtwork: track.albumCover || defaultImage
           };
         }
         return artists;
@@ -62,7 +75,8 @@ const getArtists = async (label: LabelKey): Promise<Artist[]> => {
             if (bestImage && bestImage.url) {
               return {
                 ...artist,
-                image: bestImage.url
+                image: bestImage.url,
+                imageUrl: bestImage.url
               };
             }
           }
@@ -73,7 +87,8 @@ const getArtists = async (label: LabelKey): Promise<Artist[]> => {
         // Fall back to album artwork if Spotify image not available
         return {
           ...artist,
-          image: latestArtwork
+          image: latestArtwork,
+          imageUrl: latestArtwork
         };
       })
     );
