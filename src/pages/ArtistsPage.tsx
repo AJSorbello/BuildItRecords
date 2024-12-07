@@ -30,15 +30,7 @@ const getArtists = async (label: LabelKey): Promise<Artist[]> => {
     
     // Get unique artists by label
     const artistsByLabel = allTracks
-      .filter((track: Track) => {
-        const matches = track.recordLabel === RECORD_LABELS[label];
-        console.log('Track label match?', {
-          trackLabel: track.recordLabel,
-          requiredLabel: RECORD_LABELS[label],
-          matches
-        });
-        return matches;
-      })
+      .filter((track: Track) => track.recordLabel === RECORD_LABELS[label])
       .reduce<{ [key: string]: { artist: Artist; latestArtwork: string } }>((artists, track) => {
         // Update or create artist entry
         if (!artists[track.artist]) {
@@ -46,47 +38,46 @@ const getArtists = async (label: LabelKey): Promise<Artist[]> => {
             artist: {
               id: generateId(),
               name: track.artist,
-              image: 'https://via.placeholder.com/300', // Will be updated with Spotify image
+              image: track.albumCover || 'https://via.placeholder.com/300',
               bio: `Artist on ${RECORD_LABELS[label]}`
             },
             latestArtwork: track.albumCover || 'https://via.placeholder.com/300'
           };
-        } else if (track.albumCover) {
-          // Update latest artwork if available
-          artists[track.artist].latestArtwork = track.albumCover;
         }
         return artists;
       }, {});
 
-    // Fetch Spotify artist images
+    // Convert to array and add Spotify images where available
+    const artistsArray = Object.values(artistsByLabel);
     const artistsWithImages = await Promise.all(
-      Object.values(artistsByLabel).map(async ({ artist, latestArtwork }) => {
+      artistsArray.map(async ({ artist, latestArtwork }) => {
         try {
+          // Try to get Spotify image
           const spotifyArtist = await spotifyService.getArtistDetails(artist.name);
-          if (spotifyArtist && spotifyArtist.images.length > 0) {
+          // Check if we have valid images array and it's not empty
+          if (spotifyArtist && spotifyArtist.images && Array.isArray(spotifyArtist.images) && spotifyArtist.images.length > 0) {
             // Use the highest quality image
-            const bestImage = spotifyArtist.images.sort((a, b) => (b.width || 0) - (a.width || 0))[0];
-            return {
-              ...artist,
-              image: bestImage.url
-            };
+            const images = [...spotifyArtist.images]; // Create a copy to avoid mutating original
+            const bestImage = images.sort((a, b) => (b.width || 0) - (a.width || 0))[0];
+            if (bestImage && bestImage.url) {
+              return {
+                ...artist,
+                image: bestImage.url
+              };
+            }
           }
-          // If no Spotify image, use the latest release artwork
-          return {
-            ...artist,
-            image: latestArtwork
-          };
         } catch (error) {
-          console.error('Error fetching Spotify artist image:', error);
-          return {
-            ...artist,
-            image: latestArtwork
-          };
+          console.error(`Error fetching Spotify image for ${artist.name}:`, error);
         }
+        
+        // Fall back to album artwork if Spotify image not available
+        return {
+          ...artist,
+          image: latestArtwork
+        };
       })
     );
 
-    console.log('Artists with images:', artistsWithImages);
     return artistsWithImages;
   } catch (error) {
     console.error('Error loading artists:', error);

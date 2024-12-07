@@ -359,15 +359,13 @@ export class SpotifyService {
       
       // Search for the artist
       const searchResponse = await this.spotifyApi.searchArtists(artistName, { limit: 1 });
-      const artist = searchResponse.body.artists?.items[0];
       
-      if (!artist) {
-        console.log('No artist found for:', artistName);
+      if (!searchResponse?.body?.artists?.items?.length) {
+        console.log(`No artist found for name: ${artistName}`);
         return null;
       }
 
-      console.log('Found artist:', artist.name, 'with', artist.images.length, 'images');
-      
+      const artist = searchResponse.body.artists.items[0];
       return {
         id: artist.id,
         name: artist.name,
@@ -375,6 +373,7 @@ export class SpotifyService {
       };
     } catch (error) {
       console.error('Error fetching artist details:', error);
+      // Don't throw error, just return null to prevent infinite loop
       return null;
     }
   }
