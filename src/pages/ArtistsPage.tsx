@@ -59,20 +59,16 @@ const getArtists = async (label: LabelType): Promise<Artist[]> => {
     const storedArtistImages = localStorage.getItem('artistImages') || '{}';
     const artistImages = JSON.parse(storedArtistImages) as Record<string, string>;
 
-    const artistsByLabel = filteredTracks.reduce<{ [key: string]: { artist: Artist; latestArtwork: string } }>((artists, track) => {
+    const artistsByLabel = filteredTracks.reduce<{ [key: string]: { artist: Artist; tracks: Track[] } }>((artists, track) => {
       const artistName = track.artist;
       if (!artists[artistName]) {
-        const defaultImage = 'https://via.placeholder.com/300';
-        // Use stored image if available, otherwise use album cover
-        const storedImage = artistImages[artistName];
-        const imageToUse = storedImage || track.albumCover || defaultImage;
-        
+        const defaultImage = 'https://via.placeholder.com/300?text=Loading...';
         artists[artistName] = {
           artist: {
             id: generateId(),
             name: artistName,
-            image: imageToUse,
-            imageUrl: imageToUse,
+            image: defaultImage,
+            imageUrl: defaultImage,
             bio: `Artist on ${labelValue}`,
             recordLabel: labelValue,
             spotifyUrl: track.spotifyUrl || '',
@@ -80,94 +76,92 @@ const getArtists = async (label: LabelType): Promise<Artist[]> => {
             soundcloudUrl: '',
             bandcampUrl: ''
           },
-          latestArtwork: track.albumCover || defaultImage
+          tracks: []
         };
       }
+      artists[artistName].tracks.push(track);
       return artists;
     }, {});
 
     console.log('Artists by label:', artistsByLabel);
 
-    // Convert to array
+    // Convert to array and process Spotify details
     const artistsArray = Object.values(artistsByLabel);
-
-    // Only fetch Spotify images for artists that don't have a stored image
-    const artistsToUpdate = artistsArray.filter(({ artist }) => !artistImages[artist.name]);
-    console.log('Artists needing Spotify images:', artistsToUpdate.length);
-
-    if (artistsToUpdate.length > 0) {
-      // Add delay between Spotify API calls to prevent rate limiting
-      const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+    
+    // Process artists in smaller batches
+    const batchSize = 5;
+    for (let i = 0; i < artistsArray.length; i += batchSize) {
+      const batch = artistsArray.slice(i, i + batchSize);
       
-      // Process artists in smaller batches
-      const batchSize = 5;
-      for (let i = 0; i < artistsToUpdate.length; i += batchSize) {
-        const batch = artistsToUpdate.slice(i, i + batchSize);
-        
-        await Promise.all(
-          batch.map(async ({ artist }) => {
-            try {
-              // Try to find a track by this artist
-              const artistTracks = filteredTracks.filter(track => track.artist === artist.name);
-              const firstTrack = artistTracks[0];
+      await Promise.all(
+        batch.map(async ({ artist, tracks }) => {
+          try {
+            // Sort tracks by release date to use the most recent one
+            const sortedTracks = [...tracks].sort((a, b) => {
+              return new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime();
+            });
 
-              if (firstTrack) {
-                console.log('Using track for artist search:', {
-                  artist: artist.name,
-                  track: {
-                    title: firstTrack.trackTitle,
-                    label: firstTrack.recordLabel
-                  }
+            const latestTrack = sortedTracks[0];
+            if (latestTrack) {
+              console.log('Using latest track for artist search:', {
+                artist: artist.name,
+                track: {
+                  title: latestTrack.trackTitle,
+                  releaseDate: latestTrack.releaseDate,
+                  label: latestTrack.recordLabel
+                }
+              });
+
+              // Remove any "Original Mix" or "Remix" suffixes for better search
+              const cleanTrackTitle = latestTrack.trackTitle.replace(/[\s-]+(Original Mix|Remix)$/i, '');
+              const spotifyArtist = await spotifyService.getArtistDetailsByName(artist.name, cleanTrackTitle);
+
+              if (spotifyArtist) {
+                console.log('Found Spotify artist from track:', {
+                  name: spotifyArtist.name,
+                  id: spotifyArtist.id,
+                  url: spotifyArtist.external_urls?.spotify
                 });
 
-                // Remove any "Original Mix" or "Remix" suffixes for better search
-                const cleanTrackTitle = firstTrack.trackTitle.replace(/[\s-]+(Original Mix|Remix)$/i, '');
-                const spotifyArtist = await spotifyService.getArtistDetailsByName(artist.name, cleanTrackTitle);
-
-                if (spotifyArtist) {
-                  console.log('Found Spotify artist from track:', {
-                    name: spotifyArtist.name,
-                    id: spotifyArtist.id,
-                    url: spotifyArtist.external_urls?.spotify
+                if (spotifyArtist.images && spotifyArtist.images.length > 0) {
+                  const bestImage = spotifyArtist.images[0]; // Spotify returns images sorted by size
+                  console.log('Using artist image:', {
+                    url: bestImage.url,
+                    width: bestImage.width,
+                    height: bestImage.height
                   });
 
-                  if (spotifyArtist.images && spotifyArtist.images.length > 0) {
-                    // Use the first image as it's already sorted by size in the Spotify API
-                    const bestImage = spotifyArtist.images[0];
-                    console.log('Using artist image:', {
-                      url: bestImage.url,
-                      width: bestImage.width,
-                      height: bestImage.height
-                    });
+                  // Update artist data
+                  artist.image = bestImage.url;
+                  artist.imageUrl = bestImage.url;
+                  artist.spotifyId = spotifyArtist.id;
+                  artist.spotifyUrl = spotifyArtist.external_urls?.spotify || null;
 
-                    // Update artist data
-                    artist.image = bestImage.url;
-                    artist.imageUrl = bestImage.url;
-                    artist.spotifyId = spotifyArtist.id;
-                    artist.spotifyUrl = spotifyArtist.external_urls?.spotify || null;
-
-                    // Store the image URL for future use
-                    artistImages[artist.name] = bestImage.url;
-                    localStorage.setItem('artistImages', JSON.stringify(artistImages));
-                  } else {
-                    console.log('No profile images found for artist:', artist.name);
-                  }
+                  // Store the image URL for future use
+                  artistImages[artist.name] = bestImage.url;
+                  localStorage.setItem('artistImages', JSON.stringify(artistImages));
                 } else {
-                  console.log('No Spotify artist found using track:', firstTrack.trackTitle);
+                  console.log('No profile images found for artist:', artist.name);
+                  artist.image = 'https://via.placeholder.com/300?text=No+Profile+Image';
                 }
               } else {
-                console.log('No tracks found for artist:', artist.name);
+                console.log('No Spotify artist found using track:', latestTrack.trackTitle);
+                artist.image = 'https://via.placeholder.com/300?text=Artist+Not+Found';
               }
-            } catch (error) {
-              console.error(`Error fetching Spotify image for ${artist.name}:`, error);
+            } else {
+              console.log('No tracks found for artist:', artist.name);
+              artist.image = 'https://via.placeholder.com/300?text=No+Tracks+Found';
             }
-          })
-        );
-        
-        // Add delay between batches
-        if (i + batchSize < artistsToUpdate.length) {
-          await delay(1000); // 1 second delay between batches
-        }
+          } catch (error) {
+            console.error(`Error fetching Spotify image for ${artist.name}:`, error);
+            artist.image = 'https://via.placeholder.com/300?text=Error+Loading+Image';
+          }
+        })
+      );
+      
+      // Add delay between batches
+      if (i + batchSize < artistsArray.length) {
+        await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay between batches
       }
     }
     
