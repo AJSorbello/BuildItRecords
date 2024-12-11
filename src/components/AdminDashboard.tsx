@@ -17,8 +17,13 @@ import {
   IconButton,
   FormControl,
   InputLabel,
+  Pagination,
+  Stack
 } from '@mui/material';
-import { Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import {
+  Edit as EditIcon,
+  Delete as DeleteIcon
+} from '@mui/icons-material';
 import { RECORD_LABELS } from '../constants/labels';
 import { Track, SpotifyApiTrack } from '../types/track';
 import { RecordLabel } from '../constants/labels';
@@ -121,6 +126,8 @@ const AdminDashboard: React.FC = () => {
   const [selectedLabel, setSelectedLabel] = useState<RecordLabel | 'All'>('All');
   const [importProgress, setImportProgress] = useState<ImportProgress | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [tracksPerPage] = useState(10);
 
   // Function to remove duplicates
   const removeDuplicates = (tracksArray: Track[]): Track[] => {
@@ -161,13 +168,20 @@ const AdminDashboard: React.FC = () => {
           // Remove duplicates
           const uniqueTracks = removeDuplicates(parsedTracks);
           
+          // Sort tracks by release date (newest first)
+          const sortedTracks = uniqueTracks.sort((a, b) => {
+            const dateA = new Date(a.releaseDate);
+            const dateB = new Date(b.releaseDate);
+            return dateB.getTime() - dateA.getTime();
+          });
+          
           // If we found and removed duplicates, update localStorage
           if (uniqueTracks.length !== parsedTracks.length) {
             console.log(`Removed ${parsedTracks.length - uniqueTracks.length} duplicate tracks`);
-            localStorage.setItem('tracks', JSON.stringify(uniqueTracks));
+            localStorage.setItem('tracks', JSON.stringify(sortedTracks));
           }
           
-          setTracks(uniqueTracks);
+          setTracks(sortedTracks);
         }
       } catch (error) {
         console.error('Error loading tracks:', error);
@@ -183,8 +197,16 @@ const AdminDashboard: React.FC = () => {
     const uniqueTracks = removeDuplicates(tracks);
     if (uniqueTracks.length !== tracks.length) {
       const removedCount = tracks.length - uniqueTracks.length;
-      setTracks(uniqueTracks);
-      localStorage.setItem('tracks', JSON.stringify(uniqueTracks));
+      
+      // Sort tracks by release date (newest first)
+      const sortedTracks = uniqueTracks.sort((a, b) => {
+        const dateA = new Date(a.releaseDate);
+        const dateB = new Date(b.releaseDate);
+        return dateB.getTime() - dateA.getTime();
+      });
+      
+      setTracks(sortedTracks);
+      localStorage.setItem('tracks', JSON.stringify(sortedTracks));
       alert(`Removed ${removedCount} duplicate tracks`);
     } else {
       alert('No duplicate tracks found');
@@ -390,202 +412,9 @@ const AdminDashboard: React.FC = () => {
     }));
   };
 
-  const handleSubmit = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    console.log('Submitting form with data:', formData);
-
-    if (!formData.spotifyUrl || !formData.trackTitle || !formData.artist || !formData.recordLabel) {
-      setFetchState({
-        loading: false,
-        error: 'Please fill in all required fields'
-      });
-      return;
-    }
-
-    try {
-      setFetchState({ loading: true, error: null });
-
-      // Check for duplicates
-      const normalizedUrl = normalizeSpotifyUrl(formData.spotifyUrl);
-      const isDuplicate = tracks.some(track => 
-        track.id !== editingId && // Ignore current track when editing
-        normalizeSpotifyUrl(track.spotifyUrl) === normalizedUrl
-      );
-
-      if (isDuplicate) {
-        setFetchState({
-          loading: false,
-          error: 'This track already exists in the database'
-        });
-        return;
-      }
-
-      const newTrack: Track = {
-        id: editingId || formData.id || crypto.randomUUID(),
-        trackTitle: formData.trackTitle,
-        artist: formData.artist,
-        spotifyUrl: formData.spotifyUrl,
-        recordLabel: formData.recordLabel,
-        albumCover: formData.albumCover,
-        album: formData.album,
-        releaseDate: formData.releaseDate,
-        previewUrl: formData.previewUrl || null,
-        beatportUrl: formData.beatportUrl,
-        soundcloudUrl: formData.soundcloudUrl
-      };
-
-      console.log('Saving track:', newTrack);
-
-      // Update tracks array
-      const updatedTracks = editingId
-        ? tracks.map(track => track.id === editingId ? newTrack : track)
-        : [...tracks, newTrack];
-
-      // Save to localStorage
-      localStorage.setItem('tracks', JSON.stringify(updatedTracks));
-      console.log('Saved to localStorage');
-
-      // Update state and close dialog
-      setTracks(updatedTracks);
-      setFetchState({ loading: false, error: null });
-      
-      // Close dialog
-      console.log('Closing dialog after save...');
-      setOpen(false);
-      setFormData(initialFormData);
-      setEditingId(null);
-    } catch (err) {
-      console.error('Error saving track:', err);
-      setFetchState({
-        loading: false,
-        error: err instanceof Error ? err.message : 'Failed to save track'
-      });
-    }
-  };
-
-  const handleImportDialogOpen = () => {
-    setImportDialogOpen(true);
-    setImportLabel('');
-  };
-
-  const handleImportDialogClose = () => {
-    setImportDialogOpen(false);
-    setImportLabel('');
-  };
-
-  const handleImportTracks = async () => {
-    if (!importLabel) {
-      setFetchState({
-        loading: false,
-        error: 'Please enter a label name'
-      });
-      return;
-    }
-
-    // Validate label name format
-    const validLabels = ['build it deep', 'build it records', 'build it tech'];
-    if (!validLabels.includes(importLabel.toLowerCase())) {
-      setFetchState({
-        loading: false,
-        error: 'Please enter a valid label name: "Build It Deep", "Build It Records", or "Build It Tech"'
-      });
-      return;
-    }
-
-    setImporting(true);
-    setImportProgress(null);
-    setFetchState({ loading: true, error: null });
-
-    try {
-      const initialTrackCount = tracks.length;
-      
-      await spotifyService.importLabelTracks(
-        importLabel as RecordLabel, // Type assertion for importLabel
-        50, // batch size
-        (imported: number, total: number) => {
-          setImportProgress({ imported, total });
-        }
-      );
-
-      // Reload tracks after import
-      const data = getData();
-      setTracks(data.tracks);
-      
-      // Calculate new tracks added
-      const newTracksCount = data.tracks.length - initialTrackCount;
-      
-      // Show success message with count
-      alert(`Successfully imported ${newTracksCount} new tracks from ${importLabel}`);
-      
-      // Reset state
-      setImportDialogOpen(false);
-      setImportLabel('');
-      setImportProgress(null);
-      setFetchState({ loading: false, error: null });
-    } catch (error) {
-      console.error('Error importing tracks:', error);
-      setFetchState({
-        loading: false,
-        error: error instanceof Error ? error.message : 'An error occurred while importing tracks'
-      });
-    } finally {
-      setImporting(false);
-    }
-  };
-
-  const handleLabelChange = (event: SelectChangeEvent<RecordLabel | 'All'>) => {
-    setSelectedLabel(event.target.value as RecordLabel | 'All');
-  };
-
-  // Filter tracks based on search query and selected label
-  const filteredTracks = tracks.filter(track => {
-    const matchesSearch = searchQuery.toLowerCase() === '' || 
-      track.trackTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      track.artist.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      track.spotifyUrl.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesLabel = selectedLabel === 'All' || track.recordLabel === selectedLabel;
-    
-    return matchesSearch && matchesLabel;
-  });
-
-  const handleTrackSubmit = async (formData: TrackFormData) => {
-    try {
-      setFetchState({ loading: true, error: null });
-
-      // Convert form data to Track object
-      const newTrack: Track = {
-        id: editingId || crypto.randomUUID(),
-        trackTitle: formData.trackTitle,
-        artist: formData.artist,
-        albumCover: formData.albumCover || '',
-        album: formData.album,
-        recordLabel: formData.recordLabel,
-        spotifyUrl: formData.spotifyUrl || '',
-        releaseDate: formData.releaseDate || new Date().toISOString(),
-        previewUrl: formData.previewUrl || null,
-        beatportUrl: formData.beatportUrl,
-        soundcloudUrl: formData.soundcloudUrl
-      };
-
-      // Save to local storage
-      const existingTracks = JSON.parse(localStorage.getItem('tracks') || '[]') as Track[];
-      const updatedTracks = editingId 
-        ? existingTracks.map(track => track.id === editingId ? newTrack : track) 
-        : [...existingTracks, newTrack];
-      localStorage.setItem('tracks', JSON.stringify(updatedTracks));
-
-      // Clear form and show success message
-      setFormData(initialFormData);
-      setFetchState({ loading: false, error: null });
-      handleClose();
-    } catch (err) {
-      console.error('Error submitting track:', err);
-      setFetchState({
-        loading: false,
-        error: err instanceof Error ? err.message : 'Failed to add track'
-      });
-    }
+  const handleSubmit = async (event: React.MouseEvent) => {
+    event.preventDefault();
+    await handleTrackSubmit(formData);
   };
 
   const handleSpotifyImport = async () => {
@@ -635,7 +464,9 @@ const AdminDashboard: React.FC = () => {
       };
 
       // Update tracks array and save to localStorage
-      const updatedTracks = [...tracks, newTrack];
+      const updatedTracks = editingId
+        ? tracks.map(track => track.id === editingId ? newTrack : track)
+        : [...tracks, newTrack];
       localStorage.setItem('tracks', JSON.stringify(updatedTracks));
       
       // Update state
@@ -655,6 +486,161 @@ const AdminDashboard: React.FC = () => {
       });
     }
   };
+
+  const handleTrackSubmit = async (formData: TrackFormData) => {
+    try {
+      setFetchState({ loading: true, error: null });
+
+      // Convert form data to Track object
+      const newTrack: Track = {
+        id: editingId || crypto.randomUUID(),
+        trackTitle: formData.trackTitle,
+        artist: formData.artist,
+        albumCover: formData.albumCover || '',
+        album: formData.album,
+        recordLabel: formData.recordLabel,
+        spotifyUrl: formData.spotifyUrl || '',
+        releaseDate: formData.releaseDate || new Date().toISOString(),
+        previewUrl: formData.previewUrl || null,
+        beatportUrl: formData.beatportUrl,
+        soundcloudUrl: formData.soundcloudUrl
+      };
+
+      // Save to local storage
+      const existingTracks = JSON.parse(localStorage.getItem('tracks') || '[]') as Track[];
+      const updatedTracks = editingId 
+        ? existingTracks.map(track => track.id === editingId ? newTrack : track) 
+        : [...existingTracks, newTrack];
+      localStorage.setItem('tracks', JSON.stringify(updatedTracks));
+
+      // Update state
+      setTracks(updatedTracks);
+
+      // Clear form and show success message
+      setFormData(initialFormData);
+      setFetchState({ loading: false, error: null });
+      handleClose();
+    } catch (err) {
+      console.error('Error submitting track:', err);
+      setFetchState({
+        loading: false,
+        error: err instanceof Error ? err.message : 'Failed to add track'
+      });
+    }
+  };
+
+  const handleImportDialogOpen = () => {
+    setImportDialogOpen(true);
+    setImportLabel('');
+  };
+
+  const handleImportDialogClose = () => {
+    setImportDialogOpen(false);
+    setImportLabel('');
+  };
+
+  const handleImportTracks = async () => {
+    if (!importLabel) {
+      setFetchState({
+        loading: false,
+        error: 'Please enter a label name'
+      });
+      return;
+    }
+
+    // Validate label name format
+    const validLabels = ['build it deep', 'build it records', 'build it tech'];
+    if (!validLabels.includes(importLabel.toLowerCase())) {
+      setFetchState({
+        loading: false,
+        error: 'Please enter a valid label name: "Build It Deep", "Build It Records", or "Build It Tech"'
+      });
+      return;
+    }
+
+    setImporting(true);
+    setImportProgress(null);
+    setFetchState({ loading: true, error: null });
+
+    try {
+      const initialTrackCount = tracks.length;
+      
+      // Get the imported tracks directly
+      const importedTracks = await spotifyService.importLabelTracks(
+        importLabel as RecordLabel,
+        50,
+        (imported: number, total: number) => {
+          setImportProgress({ imported, total });
+        }
+      );
+
+      // Update tracks with new ones and sort
+      const updatedTracks = [...tracks];
+      for (const track of importedTracks) {
+        if (!updatedTracks.some(t => t.id === track.id)) {
+          updatedTracks.push(track);
+        }
+      }
+      
+      // Sort by release date (newest first)
+      const sortedTracks = updatedTracks.sort((a, b) => {
+        const dateA = new Date(a.releaseDate);
+        const dateB = new Date(b.releaseDate);
+        return dateB.getTime() - dateA.getTime();
+      });
+      
+      // Update state with sorted tracks
+      setTracks(sortedTracks);
+      localStorage.setItem('tracks', JSON.stringify(sortedTracks));
+      
+      // Calculate new tracks added
+      const newTracksCount = importedTracks.length;
+      
+      // Show success message with count
+      alert(`Successfully imported ${newTracksCount} new tracks from ${importLabel}`);
+      
+      // Reset state
+      setImportDialogOpen(false);
+      setImportLabel('');
+      setImportProgress(null);
+      setFetchState({ loading: false, error: null });
+      setImporting(false);
+    } catch (error) {
+      console.error('Error importing tracks:', error);
+      setFetchState({
+        loading: false,
+        error: error instanceof Error ? error.message : 'An error occurred while importing tracks'
+      });
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const handleLabelChange = (event: SelectChangeEvent<RecordLabel | 'All'>) => {
+    setSelectedLabel(event.target.value as RecordLabel | 'All');
+  };
+
+  const handlePageChange = (event: React.ChangeEvent<unknown>, value: number) => {
+    setCurrentPage(value);
+  };
+
+  // Filter tracks based on search query and selected label
+  const filteredTracks = tracks.filter(track => {
+    const matchesSearch = searchQuery.toLowerCase() === '' || 
+      track.trackTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      track.artist.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      track.spotifyUrl.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesLabel = selectedLabel === 'All' || track.recordLabel === selectedLabel;
+    
+    return matchesSearch && matchesLabel;
+  });
+
+  // Calculate pagination values
+  const indexOfLastTrack = currentPage * tracksPerPage;
+  const indexOfFirstTrack = indexOfLastTrack - tracksPerPage;
+  const currentTracks = filteredTracks.slice(indexOfFirstTrack, indexOfLastTrack);
+  const totalPages = Math.ceil(filteredTracks.length / tracksPerPage);
 
   return (
     <Container sx={{ py: 4 }}>
@@ -745,6 +731,27 @@ const AdminDashboard: React.FC = () => {
 
       <Box sx={{ 
         display: 'flex', 
+        justifyContent: 'center', 
+        mb: 2
+      }}>
+        <Stack spacing={2} direction="row" alignItems="center">
+          <Typography variant="body2" color="text.secondary">
+            Page {currentPage} of {totalPages}
+          </Typography>
+          <Pagination 
+            count={totalPages} 
+            page={currentPage} 
+            onChange={handlePageChange}
+            color="primary"
+            size="large"
+            showFirstButton
+            showLastButton
+          />
+        </Stack>
+      </Box>
+
+      <Box sx={{ 
+        display: 'flex', 
         flexDirection: 'column', 
         gap: 2,
         maxHeight: '600px',
@@ -754,14 +761,14 @@ const AdminDashboard: React.FC = () => {
         borderRadius: 1,
         bgcolor: '#f5f5f5'
       }}>
-        {filteredTracks.length === 0 ? (
+        {currentTracks.length === 0 ? (
           <Typography variant="body1" sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>
             {searchQuery || selectedLabel !== 'All' 
               ? 'No tracks found matching your search criteria'
               : 'No tracks added yet'}
           </Typography>
         ) : (
-          filteredTracks.map((track) => (
+          currentTracks.map((track) => (
             <Box component="li" key={track.id} sx={{ display: 'flex', alignItems: 'center', mb: 2, backgroundColor: '#333', p: 2, borderRadius: 1 }}>
               <Box component="img" src={track.albumCover} alt={track.trackTitle} sx={{ width: 50, height: 50, mr: 2, borderRadius: 1 }} />
               <Typography variant="body1" sx={{ color: '#FFFFFF', flex: 1 }}>{track.trackTitle}</Typography>
@@ -773,13 +780,40 @@ const AdminDashboard: React.FC = () => {
         )}
       </Box>
 
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        mt: 2
+      }}>
+        <Stack spacing={2} direction="row" alignItems="center">
+          <Typography variant="body2" color="text.secondary">
+            Page {currentPage} of {totalPages}
+          </Typography>
+          <Pagination 
+            count={totalPages} 
+            page={currentPage} 
+            onChange={handlePageChange}
+            color="primary"
+            size="large"
+            showFirstButton
+            showLastButton
+          />
+        </Stack>
+      </Box>
+
       <Dialog 
         open={open} 
         onClose={handleClose}
-        maxWidth="sm"
-        fullWidth
+        keepMounted={false}
+        disablePortal={false}
+        aria-labelledby="track-dialog-title"
+        sx={{
+          '& .MuiDialog-root': {
+            zIndex: 1300
+          }
+        }}
       >
-        <DialogTitle>
+        <DialogTitle id="track-dialog-title">
           {editingId ? 'Edit Track' : 'Add New Track'}
         </DialogTitle>
         <DialogContent>

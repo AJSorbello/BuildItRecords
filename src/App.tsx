@@ -6,7 +6,7 @@ import {
   createBrowserRouter,
   RouterProvider 
 } from 'react-router-dom';
-import { ThemeProvider, CssBaseline } from '@mui/material';
+import { ThemeProvider, CssBaseline, Box } from '@mui/material';
 import { Layout } from './components/Layout';
 import { darkTheme } from './theme/theme';
 
@@ -96,18 +96,29 @@ const router = createBrowserRouter(
   }
 );
 
-function App() {
+const App: React.FC = () => {
   React.useEffect(() => {
-    // Initialize data when the app starts
     initializeData();
   }, []);
 
   return (
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
-      <RouterProvider router={router} />
+      <Box sx={{ 
+        minHeight: '100vh',
+        backgroundColor: '#121212',
+        '& #root': {
+          // Remove aria-hidden from root when using dialogs
+          '&[aria-hidden="true"]': {
+            '& button': { display: 'none' },
+            '& [tabindex]': { display: 'none' }
+          }
+        }
+      }}>
+        <RouterProvider router={router} />
+      </Box>
     </ThemeProvider>
   );
-}
+};
 
 export default App;

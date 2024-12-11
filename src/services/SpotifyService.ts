@@ -166,22 +166,93 @@ export class SpotifyService {
   ): Promise<Track[]> {
     try {
       await this.ensureValidToken();
-      const tracks: Track[] = [];
+      const allTracks: Track[] = [];
       let offset = 0;
-      let total = batchSize;
+      let hasMore = true;
+      const limit = 50;
 
-      while (offset < total) {
-        const results = await this.searchTracks(`label:"${label}"`);
-        total = results.length;
-        tracks.push(...results);
-        offset += batchSize;
-        
-        if (onProgress) {
-          onProgress(Math.min(offset, total), total);
+      // Only use exact label search
+      const query = `label:"${label}"`;
+      console.log('Using search query:', query);
+
+      // First search to get total count
+      const initialSearch = await this.spotifyApi.search(
+        query,
+        ['track'],
+        undefined,
+        1,
+        0
+      );
+
+      const totalTracks = initialSearch.tracks.total;
+      console.log(`Found ${totalTracks} total tracks for label "${label}"`);
+
+      while (hasMore) {
+        try {
+          console.log(`Searching with offset: ${offset}`);
+          const results = await this.spotifyApi.search(
+            query,
+            ['track'],
+            undefined,
+            limit,
+            offset
+          );
+
+          console.log(`Found ${results.tracks.items.length} tracks`);
+
+          if (results.tracks.items.length > 0) {
+            const tracks = await Promise.all(
+              results.tracks.items.map(async (track: SpotifyTrackSDK) => {
+                try {
+                  // Check if track already exists in allTracks
+                  const exists = allTracks.some(t => t.id === track.id);
+                  if (!exists) {
+                    return this.convertSpotifyTrackToTrack(track, label);
+                  }
+                  return null;
+                } catch (error) {
+                  console.error('Error converting track:', error);
+                  return null;
+                }
+              })
+            );
+
+            const validTracks = tracks.filter((track): track is Track => 
+              track !== null && 
+              !allTracks.some(t => t.id === track.id)
+            );
+            
+            if (validTracks.length > 0) {
+              allTracks.push(...validTracks);
+              console.log(`Added ${validTracks.length} new tracks. Total: ${allTracks.length}`);
+              
+              if (onProgress) {
+                onProgress(allTracks.length, totalTracks);
+              }
+            }
+          }
+
+          // Stop if we've reached the total or no more tracks
+          hasMore = results.tracks.items.length > 0 && offset < totalTracks;
+          offset += limit;
+
+          console.log(`Progress: ${allTracks.length}/${totalTracks} tracks imported`);
+
+          // Add a small delay between requests to avoid rate limiting
+          await new Promise(resolve => setTimeout(resolve, 100));
+        } catch (error) {
+          console.error('Error during search:', error);
+          hasMore = false;
         }
       }
 
-      return tracks;
+      // Remove duplicates before returning
+      const uniqueTracks = Array.from(
+        new Map(allTracks.map(track => [track.id, track])).values()
+      );
+
+      console.log(`Found ${uniqueTracks.length} unique tracks for label ${label}`);
+      return uniqueTracks;
     } catch (error) {
       console.error('Error importing label tracks:', error);
       return [];
