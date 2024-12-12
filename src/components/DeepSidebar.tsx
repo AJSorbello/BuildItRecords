@@ -25,6 +25,11 @@ const DeepSidebar: React.FC = () => {
   return (
     <Drawer
       variant="permanent"
+      PaperProps={{
+        sx: {
+          border: 'none'
+        }
+      }}
       sx={{
         width: drawerWidth,
         flexShrink: 0,
@@ -33,7 +38,8 @@ const DeepSidebar: React.FC = () => {
           boxSizing: 'border-box',
           backgroundColor: '#000000',
           marginTop: '180px',
-        },
+          border: 'none'
+        }
       }}
     >
       <List>
