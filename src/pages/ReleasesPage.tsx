@@ -550,11 +550,6 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
                     <Typography variant="subtitle1" sx={{ color: '#B0B0B0', mb: 1 }}>
                       {track.artist}
                     </Typography>
-                    {track.popularity !== undefined && (
-                      <Typography variant="body2" sx={{ color: '#1DB954', mb: 2 }}>
-                        {formatPopularity(track.popularity)}
-                      </Typography>
-                    )}
                     <Box sx={{ mt: 2 }}>
                       {track.spotifyUrl && (
                         <IconLink href={track.spotifyUrl} target="_blank" rel="noopener noreferrer">
