@@ -23,10 +23,11 @@ interface ReleaseCardProps {
   track?: Track;
   compact?: boolean;
   featured?: boolean;
+  ranking?: number;
   onPlay?: (track: Track) => void;
 }
 
-const ReleaseCard: React.FC<ReleaseCardProps> = ({ release, track, compact = false, featured = false, onPlay }) => {
+const ReleaseCard: React.FC<ReleaseCardProps> = ({ release, track, compact = false, featured = false, ranking, onPlay }) => {
   const { colors } = useTheme();
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
@@ -103,6 +104,7 @@ const ReleaseCard: React.FC<ReleaseCardProps> = ({ release, track, compact = fal
         backgroundColor: colors.card,
         borderRadius: 2,
         overflow: 'hidden',
+        position: 'relative',
         ...(featured && {
           '& .MuiCardMedia-root': {
             height: '400px',
@@ -110,6 +112,27 @@ const ReleaseCard: React.FC<ReleaseCardProps> = ({ release, track, compact = fal
         }),
       }}
     >
+      {ranking && (
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 12,
+            left: 12,
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            color: '#fff',
+            borderRadius: '50%',
+            width: 32,
+            height: 32,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1,
+            fontWeight: 'bold',
+          }}
+        >
+          #{ranking}
+        </Box>
+      )}
       <CardMedia
         component="img"
         image={getArtwork() || `https://via.placeholder.com/300x300.png?text=${encodeURIComponent(getTitle())}`}

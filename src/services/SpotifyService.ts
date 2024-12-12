@@ -431,21 +431,32 @@ export class SpotifyService {
   async getTrackPopularity(trackId: string): Promise<number> {
     try {
       await this.ensureValidToken();
-      const response = await fetch(`https://api.spotify.com/v1/tracks/${trackId}`, {
-        headers: {
-          'Authorization': `Bearer ${this.accessToken}`
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch track popularity');
-      }
-      
-      const track = await response.json();
-      return track.popularity || 0;
+      const track = await this.spotifyApi.tracks.get(trackId);
+      return track.popularity;
     } catch (error) {
       console.error('Error getting track popularity:', error);
       return 0;
+    }
+  }
+
+  async getTracksByLabel(label: RecordLabel): Promise<Track[]> {
+    try {
+      await this.ensureValidToken();
+      const searchResults = await this.spotifyApi.search(`label:${label}`, ['track']);
+      const tracks = await Promise.all(
+        searchResults.tracks.items.map(async (track: SpotifyTrackSDK) => {
+          const label = await this.determineLabelFromUrl(track.external_urls.spotify);
+          const popularity = await this.getTrackPopularity(track.id);
+          return {
+            ...(await this.convertSpotifyTrackToTrack(track, label)),
+            popularity
+          };
+        })
+      );
+      return tracks;
+    } catch (error) {
+      console.error('Error getting tracks by label:', error);
+      return [];
     }
   }
 
