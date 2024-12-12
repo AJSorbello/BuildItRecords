@@ -5,10 +5,10 @@ import RecordsSquareLogo from '../assets/png/records/BuildIt_Records_Square.png'
 import TechSquareLogo from '../assets/png/tech/BuildIt_Tech_Square.png';
 import DeepSquareLogo from '../assets/png/deep/BuildIt_Deep_Square.png';
 
-const StyledAppBar = styled(AppBar)({
-  backgroundColor: '#121212',
+const StyledAppBar = styled(AppBar)(({ theme }) => ({
+  backgroundColor: '#000000 !important',
   boxShadow: 'none',
-  borderBottom: '1px solid rgba(255, 255, 255, 0.12)',
+  borderBottom: 'none',
   height: '64px',
   position: 'fixed',
   top: 0,
@@ -17,11 +17,15 @@ const StyledAppBar = styled(AppBar)({
   zIndex: 1300,
   display: 'flex',
   alignItems: 'center',
-});
+  '& .MuiToolbar-root': {
+    backgroundColor: '#000000'
+  }
+}));
 
 const StyledTabs = styled(Tabs)({
   width: '100%',
   height: '64px',
+  backgroundColor: '#000000',
   '& .MuiTabs-indicator': {
     backgroundColor: '#02FF95',
   },
@@ -29,6 +33,7 @@ const StyledTabs = styled(Tabs)({
     justifyContent: 'space-between',
     height: '100%',
     alignItems: 'center',
+    backgroundColor: '#000000',
   },
 });
 
@@ -105,8 +110,9 @@ const TopNavigation = () => {
 
   return (
     <StyledAppBar>
-      <Box sx={{ width: '100%' }}>
+      <Box sx={{ width: '100%', bgcolor: '#000000' }}>
         <StyledTabs
+          sx={{ bgcolor: '#000000' }}
           value={currentLabel}
           onChange={handleChange}
           aria-label="label navigation"
