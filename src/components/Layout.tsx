@@ -40,14 +40,47 @@ export const Layout: React.FC = () => {
   };
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#121212', flexDirection: 'column' }}>
+    <Box sx={{ 
+      display: 'flex', 
+      minHeight: '100vh', 
+      bgcolor: '#121212', 
+      flexDirection: 'column',
+      border: 'none'
+    }}>
       <CssBaseline />
       <TopNavigation />
-      <Box sx={{ display: 'flex', flex: 1, marginTop: '64px' }}>
+      <Box sx={{ 
+        display: 'flex', 
+        flex: 1, 
+        marginTop: '64px',
+        '& .MuiDrawer-paper': {
+          border: 'none'
+        }
+      }}>
         {renderSidebar()}
-        <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', height: '116px', borderBottom: '1px solid rgba(255, 255, 255, 0.12)', position: 'fixed', top: '64px', left: 0, right: 0, zIndex: 1200 }}>
-            <img src={getLogo(currentLabel)} alt={`${currentLabel} logo`} style={{ height: '100%', width: 'auto', objectFit: 'contain', filter: 'brightness(0) invert(1)', marginLeft: '24px' }} />
+        <Box component="main" sx={{ 
+          flexGrow: 1, 
+          p: 3,
+          borderLeft: 'none'
+        }}>
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            height: '116px', 
+            position: 'fixed', 
+            top: '64px', 
+            left: 0,
+            width: '240px',
+            zIndex: 1200,
+            bgcolor: '#000000'
+          }}>
+            <img src={getLogo(currentLabel)} alt={`${currentLabel} logo`} style={{ 
+              height: '100%', 
+              width: 'auto', 
+              objectFit: 'contain', 
+              filter: 'brightness(0) invert(1)'
+            }} />
           </Box>
           <Box sx={{ marginTop: '116px' }}>
             <Outlet />

@@ -25,6 +25,11 @@ const RecordsSidebar: React.FC = () => {
   return (
     <Drawer
       variant="permanent"
+      PaperProps={{
+        sx: {
+          border: 'none'
+        }
+      }}
       sx={{
         width: drawerWidth,
         flexShrink: 0,
@@ -32,9 +37,9 @@ const RecordsSidebar: React.FC = () => {
           width: drawerWidth,
           boxSizing: 'border-box',
           backgroundColor: '#000000',
-          borderRight: '1px solid rgba(255, 255, 255, 0.12)',
           marginTop: '180px',
-        },
+          border: 'none'
+        }
       }}
     >
       <List>
