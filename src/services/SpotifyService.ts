@@ -31,7 +31,7 @@ export class SpotifyService {
     }
   }
 
-  async getTrackMetrics(trackId: string): Promise<{ popularity: number; streams: number }> {
+  async getTrackMetrics(trackId: string): Promise<{ popularity: number }> {
     try {
       await this.ensureValidToken();
       const response = await fetch(`https://api.spotify.com/v1/tracks/${trackId}`, {
@@ -47,12 +47,11 @@ export class SpotifyService {
       const track = await response.json();
       
       return {
-        popularity: track.popularity || 0,
-        streams: Math.floor(Math.random() * 1000000) // Simulated stream count since Spotify API doesn't provide it
+        popularity: track.popularity || 0
       };
     } catch (error) {
       console.error('Error getting track metrics:', error);
-      return { popularity: 0, streams: 0 };
+      return { popularity: 0 };
     }
   }
 
@@ -60,9 +59,6 @@ export class SpotifyService {
     try {
       // Get track metrics
       const metrics = await this.getTrackMetrics(track.id);
-
-      // Get track popularity
-      const popularity = await this.getTrackPopularity(track.id);
 
       // Create album object
       const album: Album = {
@@ -87,8 +83,7 @@ export class SpotifyService {
         previewUrl: track.preview_url,
         beatportUrl: '',
         soundcloudUrl: '',
-        popularity: metrics.popularity,
-        streams: metrics.streams,
+        popularity: metrics.popularity
       };
     } catch (error) {
       console.error('Error converting track:', error);
@@ -114,7 +109,7 @@ export class SpotifyService {
         releaseDate: track.album.release_date,
         previewUrl: track.preview_url,
         beatportUrl: '',
-        soundcloudUrl: '',
+        soundcloudUrl: ''
       };
     }
   }

@@ -256,63 +256,39 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
-  const handleSpotifyUrlChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { value } = e.target;
-    console.log('Original URL:', value);
-    
-    // Update form with URL immediately
-    setFormData(prev => ({ ...prev, spotifyUrl: value }));
-    
-    if (!value) {
-      setFetchState(initialFetchState);
-      return;
-    }
+  const handleSpotifyUrlChange = async (value: string) => {
+    handleInputChange('spotifyUrl', value);
 
-    if (!isValidSpotifyUrl(value)) {
-      setFetchState({
-        loading: false,
-        error: 'Please enter a valid Spotify URL'
-      });
-      return;
-    }
-
-    try {
-      setFetchState({
-        loading: true,
-        error: null,
-      });
-
-      const trackDetails = await spotifyService.getTrackDetailsByUrl(value);
-      console.log('Fetched track details:', trackDetails);
-
-      if (!trackDetails) {
-        throw new Error('Failed to fetch track details');
+    // If it's a valid URL, fetch metadata
+    if (value && isValidSpotifyUrl(value)) {
+      try {
+        setFetchState({ loading: true, error: null });
+        const trackDetails = await spotifyService.getTrackDetailsByUrl(value);
+        
+        if (trackDetails) {
+          setFormData({
+            id: trackDetails.id,
+            trackTitle: trackDetails.trackTitle,
+            artist: trackDetails.artist,
+            recordLabel: validateRecordLabel(trackDetails.recordLabel),
+            spotifyUrl: trackDetails.spotifyUrl,
+            albumCover: trackDetails.albumCover || '',
+            album: trackDetails.album,
+            releaseDate: trackDetails.releaseDate,
+            previewUrl: trackDetails.previewUrl || null,
+            beatportUrl: trackDetails.beatportUrl || '',
+            soundcloudUrl: trackDetails.soundcloudUrl || ''
+          });
+          setFetchState({ loading: false, error: null });
+        } else {
+          throw new Error('Failed to fetch track details');
+        }
+      } catch (error) {
+        setFetchState({
+          loading: false,
+          error: error instanceof Error ? error.message : 'Failed to fetch track metadata'
+        });
       }
-
-      setFormData(prev => ({
-        ...prev,
-        id: trackDetails.id,
-        trackTitle: trackDetails.trackTitle,
-        artist: trackDetails.artist,
-        recordLabel: validateRecordLabel(trackDetails.recordLabel),
-        albumCover: trackDetails.albumCover || '',
-        album: trackDetails.album,
-        releaseDate: trackDetails.releaseDate,
-        previewUrl: trackDetails.previewUrl || null,
-        beatportUrl: trackDetails.beatportUrl || '',
-        soundcloudUrl: trackDetails.soundcloudUrl || ''
-      }));
-
-      setFetchState({
-        loading: false,
-        error: null,
-      });
-    } catch (error) {
-      console.error('Error fetching track details:', error);
-      setFetchState({
-        loading: false,
-        error: error instanceof Error ? error.message : 'Failed to fetch track details'
-      });
     }
   };
 
@@ -359,56 +335,23 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
-  const handleTextInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
+  const handleInputChange = (field: keyof TrackFormData, value: string) => {
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [field]: value
     }));
 
-    // If Spotify URL changes and it's a valid URL, fetch metadata
-    if (name === 'spotifyUrl' && value) {
-      try {
-        console.log('Spotify URL changed, fetching metadata...');
-        const trackId = value.split('/').pop()?.split('?')[0];
-        if (trackId) {
-          setFetchState({ loading: true, error: null });
-          const trackDetails = await spotifyService.getTrackDetailsByUrl(value);
-          
-          if (trackDetails) {
-            console.log('Got track details:', trackDetails);
-            setFormData({
-              id: trackDetails.id,
-              trackTitle: trackDetails.trackTitle,
-              artist: trackDetails.artist,
-              recordLabel: validateRecordLabel(trackDetails.recordLabel),
-              spotifyUrl: trackDetails.spotifyUrl,
-              albumCover: trackDetails.albumCover || '',
-              album: trackDetails.album,
-              releaseDate: trackDetails.releaseDate,
-              previewUrl: trackDetails.previewUrl || null,
-              beatportUrl: trackDetails.beatportUrl || '',
-              soundcloudUrl: trackDetails.soundcloudUrl || ''
-            });
-            setFetchState({ loading: false, error: null });
-          } else {
-            throw new Error('Failed to fetch track details');
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching track metadata:', error);
-        setFetchState({
-          loading: false,
-          error: error instanceof Error ? error.message : 'Failed to fetch track metadata'
-        });
-      }
+    // Clear any previous errors
+    if (fetchState.error) {
+      setFetchState({ loading: false, error: null });
     }
   };
 
-  const handleSelectChange = (e: SelectChangeEvent<RecordLabel>) => {
+  const handleSelectChange = (event: SelectChangeEvent<string>) => {
+    const value = event.target.value as RecordLabel;
     setFormData(prev => ({
       ...prev,
-      recordLabel: e.target.value as RecordLabel
+      recordLabel: value
     }));
   };
 
@@ -804,94 +747,211 @@ const AdminDashboard: React.FC = () => {
       <Dialog 
         open={open} 
         onClose={handleClose}
-        keepMounted={false}
-        disablePortal={false}
-        aria-labelledby="track-dialog-title"
-        sx={{
-          '& .MuiDialog-root': {
-            zIndex: 1300
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: {
+            bgcolor: 'rgba(18, 18, 18, 0.95)',
+            color: '#fff',
+            backdropFilter: 'blur(10px)',
+            borderRadius: 2
           }
         }}
       >
-        <DialogTitle id="track-dialog-title">
+        <DialogTitle sx={{ color: '#fff' }}>
           {editingId ? 'Edit Track' : 'Add New Track'}
         </DialogTitle>
         <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Track Title"
-            fullWidth
-            variant="outlined"
-            value={formData.trackTitle}
-            onChange={handleTextInputChange}
-            name="trackTitle"
-          />
-          <TextField
-            margin="dense"
-            label="Artist"
-            fullWidth
-            variant="outlined"
-            value={formData.artist}
-            onChange={handleTextInputChange}
-            name="artist"
-          />
-          <TextField
-            margin="dense"
-            label="Spotify URL"
-            fullWidth
-            variant="outlined"
-            value={formData.spotifyUrl}
-            onChange={handleSpotifyUrlChange}
-            name="spotifyUrl"
-          />
-          <TextField
-            margin="dense"
-            label="Release Date"
-            fullWidth
-            variant="outlined"
-            value={formData.releaseDate}
-            onChange={handleTextInputChange}
-            name="releaseDate"
-          />
-          <TextField
-            margin="dense"
-            label="Beatport URL"
-            fullWidth
-            variant="outlined"
-            value={formData.beatportUrl}
-            onChange={handleTextInputChange}
-            name="beatportUrl"
-          />
-          <TextField
-            margin="dense"
-            label="Soundcloud URL"
-            fullWidth
-            variant="outlined"
-            value={formData.soundcloudUrl}
-            onChange={handleTextInputChange}
-            name="soundcloudUrl"
-          />
-          <FormControl fullWidth margin="normal">
-            <InputLabel>Record Label</InputLabel>
-            <Select
-              value={formData.recordLabel}
-              onChange={handleSelectChange}
-              name="recordLabel"
-            >
-              {Object.values(RECORD_LABELS).map((label) => (
-                <MenuItem key={label} value={label}>{label}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          <Box sx={{ mt: 2 }}>
+            <TextField
+              fullWidth
+              label="Spotify URL"
+              value={formData.spotifyUrl}
+              onChange={(e) => handleSpotifyUrlChange(e.target.value)}
+              error={!!fetchState.error}
+              helperText={fetchState.error}
+              sx={{
+                mb: 2,
+                '& .MuiOutlinedInput-root': {
+                  color: '#fff',
+                  '& fieldset': {
+                    borderColor: 'rgba(255, 255, 255, 0.23)',
+                  },
+                  '&:hover fieldset': {
+                    borderColor: 'rgba(255, 255, 255, 0.5)',
+                  },
+                },
+                '& .MuiInputLabel-root': {
+                  color: 'rgba(255, 255, 255, 0.7)',
+                },
+              }}
+            />
+            <FormControl fullWidth sx={{ mb: 2 }}>
+              <InputLabel id="record-label-select-label" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+                Record Label
+              </InputLabel>
+              <Select
+                labelId="record-label-select-label"
+                value={formData.recordLabel}
+                onChange={handleSelectChange}
+                label="Record Label"
+                sx={{
+                  color: '#fff',
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: 'rgba(255, 255, 255, 0.23)',
+                  },
+                  '&:hover .MuiOutlinedInput-notchedOutline': {
+                    borderColor: 'rgba(255, 255, 255, 0.5)',
+                  },
+                }}
+              >
+                {Object.values(RECORD_LABELS).map((label) => (
+                  <MenuItem key={label} value={label}>
+                    {label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            {formData.albumCover && (
+              <Box 
+                sx={{ 
+                  width: '100%',
+                  position: 'relative',
+                  paddingTop: '100%',
+                  mb: 2,
+                  borderRadius: 2,
+                  overflow: 'hidden'
+                }}
+              >
+                <Box
+                  component="img"
+                  src={formData.albumCover}
+                  alt={formData.trackTitle}
+                  sx={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover'
+                  }}
+                />
+              </Box>
+            )}
+            <TextField
+              fullWidth
+              label="Track Title"
+              value={formData.trackTitle}
+              onChange={(e) => handleInputChange('trackTitle', e.target.value)}
+              sx={{
+                mb: 2,
+                '& .MuiOutlinedInput-root': {
+                  color: '#fff',
+                  '& fieldset': {
+                    borderColor: 'rgba(255, 255, 255, 0.23)',
+                  },
+                  '&:hover fieldset': {
+                    borderColor: 'rgba(255, 255, 255, 0.5)',
+                  },
+                },
+                '& .MuiInputLabel-root': {
+                  color: 'rgba(255, 255, 255, 0.7)',
+                },
+              }}
+            />
+            <TextField
+              fullWidth
+              label="Artist"
+              value={formData.artist}
+              onChange={(e) => handleInputChange('artist', e.target.value)}
+              sx={{
+                mb: 2,
+                '& .MuiOutlinedInput-root': {
+                  color: '#fff',
+                  '& fieldset': {
+                    borderColor: 'rgba(255, 255, 255, 0.23)',
+                  },
+                  '&:hover fieldset': {
+                    borderColor: 'rgba(255, 255, 255, 0.5)',
+                  },
+                },
+                '& .MuiInputLabel-root': {
+                  color: 'rgba(255, 255, 255, 0.7)',
+                },
+              }}
+            />
+            <TextField
+              fullWidth
+              label="Beatport URL (Optional)"
+              value={formData.beatportUrl}
+              onChange={(e) => handleInputChange('beatportUrl', e.target.value)}
+              sx={{
+                mb: 2,
+                '& .MuiOutlinedInput-root': {
+                  color: '#fff',
+                  '& fieldset': {
+                    borderColor: 'rgba(255, 255, 255, 0.23)',
+                  },
+                  '&:hover fieldset': {
+                    borderColor: 'rgba(255, 255, 255, 0.5)',
+                  },
+                },
+                '& .MuiInputLabel-root': {
+                  color: 'rgba(255, 255, 255, 0.7)',
+                },
+              }}
+            />
+            <TextField
+              fullWidth
+              label="SoundCloud URL (Optional)"
+              value={formData.soundcloudUrl}
+              onChange={(e) => handleInputChange('soundcloudUrl', e.target.value)}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  color: '#fff',
+                  '& fieldset': {
+                    borderColor: 'rgba(255, 255, 255, 0.23)',
+                  },
+                  '&:hover fieldset': {
+                    borderColor: 'rgba(255, 255, 255, 0.5)',
+                  },
+                },
+                '& .MuiInputLabel-root': {
+                  color: 'rgba(255, 255, 255, 0.7)',
+                },
+              }}
+            />
+          </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose}>Cancel</Button>
-          <Button onClick={handleSubmit} variant="contained" color="primary">
-            Save
+        <DialogActions sx={{ p: 3 }}>
+          <Button 
+            onClick={handleClose}
+            sx={{ 
+              color: '#fff',
+              '&:hover': {
+                bgcolor: 'rgba(255, 255, 255, 0.1)'
+              }
+            }}
+          >
+            Cancel
           </Button>
-          <Button onClick={handleSpotifyImport} variant="contained" color="primary">
-            Import from Spotify
+          <Button 
+            onClick={handleSubmit}
+            variant="contained"
+            disabled={fetchState.loading}
+            sx={{
+              bgcolor: '#1DB954',
+              color: '#fff',
+              '&:hover': {
+                bgcolor: '#1ed760'
+              }
+            }}
+          >
+            {fetchState.loading ? (
+              <CircularProgress size={24} sx={{ color: '#fff' }} />
+            ) : (
+              editingId ? 'Save Changes' : 'Add Track'
+            )}
           </Button>
         </DialogActions>
       </Dialog>

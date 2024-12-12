@@ -9,7 +9,11 @@ export interface SpotifyImage {
 export interface Album {
   name: string;
   releaseDate: string;
-  images: SpotifyImage[];
+  images: {
+    url: string;
+    height: number;
+    width: number;
+  }[];
 }
 
 export interface Track {
@@ -25,7 +29,6 @@ export interface Track {
   beatportUrl: string;
   soundcloudUrl: string;
   popularity?: number;
-  streams?: number;
 }
 
 export interface SpotifyApiTrack {

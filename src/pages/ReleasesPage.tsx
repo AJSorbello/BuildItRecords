@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Box, Typography, Grid, Card, CardContent, CardMedia, IconButton, CircularProgress } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { FaSpotify, FaSoundcloud } from 'react-icons/fa';
@@ -17,32 +17,33 @@ interface ReleaseGroupProps {
   versions: Track[];
 }
 
-const ReleaseCard = styled(Card)({
-  backgroundColor: 'rgba(255, 255, 255, 0.05)',
-  transition: 'transform 0.2s',
-  height: '100%',
+const ReleaseCard = styled(Card)(({ theme }) => ({
+  backgroundColor: 'rgba(0, 0, 0, 0.2)',
+  backdropFilter: 'blur(10px)',
+  borderRadius: theme.spacing(1),
+  transition: 'transform 0.2s ease-in-out',
   '&:hover': {
-    transform: 'scale(1.02)',
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    transform: 'translateY(-4px)',
   },
-});
+  position: 'relative',
+  zIndex: 1
+}));
 
 const IconLink = styled('a')({
-  color: '#FFFFFF',
-  marginRight: '16px',
-  cursor: 'pointer',
+  color: '#fff',
+  marginRight: '12px',
+  textDecoration: 'none',
+  transition: 'color 0.2s ease-in-out',
   '&:hover': {
     color: '#1DB954',
   },
-  textDecoration: 'none',
 });
 
 const LoadingContainer = styled(Box)({
   display: 'flex',
   justifyContent: 'center',
   alignItems: 'center',
-  padding: '2rem',
-  width: '100%',
+  height: '100vh',
 });
 
 const ReleaseGroup: React.FC<ReleaseGroupProps> = ({ mainTrack, versions }) => {
@@ -147,7 +148,6 @@ interface ReleasesPageProps {
 const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [loading, setLoading] = useState(true);
-  const [topTracks, setTopTracks] = useState<Track[]>([]);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const observer = useRef<IntersectionObserver | null>(null);
@@ -176,13 +176,7 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
         return dateB.getTime() - dateA.getTime();
       });
 
-      // Get top 10 tracks by popularity
-      const topPopularTracks = [...labelTracks]
-        .sort((a, b) => ((b.popularity || 0) - (a.popularity || 0)))
-        .slice(0, 10);
-
       setTracks(sortedTracks);
-      setTopTracks(topPopularTracks);
       setLoading(false);
     };
 
@@ -192,16 +186,17 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
   const currentTracks = tracks.slice(0, page * ITEMS_PER_PAGE);
   const hasMoreTracks = currentTracks.length < tracks.length;
 
-  // Helper function to format stream count
-  const formatStreams = (streams?: number) => {
-    const count = streams ?? 0;
-    if (count >= 1000000) {
-      return `${(count / 1000000).toFixed(1)}M`;
-    } else if (count >= 1000) {
-      return `${(count / 1000).toFixed(1)}K`;
-    }
-    return count.toString();
+  // Helper function to format popularity score
+  const formatPopularity = (popularity?: number) => {
+    if (popularity === undefined) return '';
+    return `${popularity}% Popular`;
   };
+
+  const topTracks = useMemo(() => {
+    return [...tracks]
+      .sort((a, b) => ((b.popularity || 0) - (a.popularity || 0)))
+      .slice(0, 10);
+  }, [tracks]);
 
   if (loading) {
     return (
@@ -212,9 +207,9 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
   }
 
   return (
-    <Box sx={{ p: 4 }}>
+    <Box sx={{ p: 4, position: 'relative' }}>
       {/* Top Section - Latest Release and Top 10 */}
-      <Grid container spacing={4} sx={{ mb: 6 }}>
+      <Grid container spacing={4} sx={{ mb: 8, position: 'relative', zIndex: 1 }}>
         {/* Latest Release */}
         <Grid item xs={12} md={8}>
           <Typography variant="h4" sx={{ mb: 3, color: '#fff' }}>
@@ -227,6 +222,8 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
               height: '100%',
               minHeight: { md: '600px' },
               bgcolor: 'rgba(0, 0, 0, 0.3)',
+              position: 'relative',
+              zIndex: 1
             }}>
               <Box sx={{ 
                 width: '100%',
@@ -272,13 +269,13 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
                         {new Date(currentTracks[0].releaseDate).toLocaleDateString()}
                       </Typography>
                     </Box>
-                    {currentTracks[0].streams !== undefined && (
+                    {currentTracks[0].popularity !== undefined && (
                       <Box>
                         <Typography variant="body2" sx={{ color: '#B0B0B0', mb: 1 }}>
-                          TOTAL STREAMS
+                          POPULARITY
                         </Typography>
                         <Typography variant="body1" sx={{ color: '#1DB954' }}>
-                          {formatStreams(currentTracks[0].streams)}
+                          {formatPopularity(currentTracks[0].popularity)}
                         </Typography>
                       </Box>
                     )}
@@ -356,10 +353,11 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
             height: '100%',
             minHeight: { md: '600px' },
             position: { md: 'sticky' },
-            top: { md: 24 }
+            top: { md: 24 },
+            zIndex: 1
           }}>
             <Typography variant="h4" sx={{ mb: 3, color: '#fff' }}>
-              Top 10 Most Streamed
+              Top 10 Most Popular
             </Typography>
             <Box sx={{ 
               display: 'flex', 
@@ -444,7 +442,7 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
                       >
                         {track.artist}
                       </Typography>
-                      {track.streams !== undefined && (
+                      {track.popularity !== undefined && (
                         <Typography 
                           variant="body2" 
                           sx={{ 
@@ -452,7 +450,7 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
                             ml: 1
                           }}
                         >
-                          {formatStreams(track.streams)}
+                          {track.popularity}%
                         </Typography>
                       )}
                     </Box>
@@ -477,7 +475,12 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
       </Grid>
 
       {/* Catalog Section */}
-      <Box sx={{ mt: 6 }}>
+      <Box sx={{ 
+        mt: 8, 
+        pt: 4,
+        position: 'relative',
+        zIndex: 0
+      }}>
         <Typography variant="h4" sx={{ mb: 3, color: '#fff' }}>
           Catalog
         </Typography>
@@ -519,9 +522,9 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
                   <Typography variant="subtitle1" sx={{ color: '#B0B0B0', mb: 1 }}>
                     {track.artist}
                   </Typography>
-                  {track.streams !== undefined && (
+                  {track.popularity !== undefined && (
                     <Typography variant="body2" sx={{ color: '#1DB954', mb: 2 }}>
-                      {formatStreams(track.streams)} streams
+                      {formatPopularity(track.popularity)}
                     </Typography>
                   )}
                   <Box sx={{ mt: 2 }}>
