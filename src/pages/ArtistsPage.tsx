@@ -62,7 +62,7 @@ const getArtists = async (label: LabelType): Promise<Artist[]> => {
     const artistsByLabel = filteredTracks.reduce<{ [key: string]: { artist: Artist; tracks: Track[] } }>((artists, track) => {
       const artistName = track.artist;
       if (!artists[artistName]) {
-        const defaultImage = 'https://via.placeholder.com/300?text=Loading...';
+        const defaultImage = 'https://via.placeholder.com/300?text=Searching+for+Artist...';
         artists[artistName] = {
           artist: {
             id: generateId(),
@@ -151,15 +151,15 @@ const getArtists = async (label: LabelType): Promise<Artist[]> => {
                 }
               } else {
                 console.log('No Spotify artist found using track:', latestTrack.trackTitle);
-                artist.image = 'https://via.placeholder.com/300?text=Artist+Not+Found';
+                artist.image = 'https://via.placeholder.com/300?text=Artist+Image+Not+Found';
               }
             } else {
               console.log('No tracks found for artist:', artist.name);
-              artist.image = 'https://via.placeholder.com/300?text=No+Tracks+Found';
+              artist.image = 'https://via.placeholder.com/300?text=No+Track+Information';
             }
           } catch (error) {
             console.error(`Error fetching Spotify image for ${artist.name}:`, error);
-            artist.image = 'https://via.placeholder.com/300?text=Error+Loading+Image';
+            artist.image = 'https://via.placeholder.com/300?text=Failed+to+Load+Image';
           }
         })
       );
