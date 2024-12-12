@@ -52,7 +52,7 @@ export const Layout: React.FC = () => {
       <Box sx={{ 
         display: 'flex', 
         flex: 1, 
-        marginTop: '64px',
+        marginTop: '0px',
         '& .MuiDrawer-paper': {
           border: 'none'
         }

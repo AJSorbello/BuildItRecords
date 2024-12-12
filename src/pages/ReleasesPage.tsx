@@ -211,7 +211,7 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
       display: 'flex',
       flexDirection: 'column',
       minHeight: '100vh',
-      pt: { xs: 8, sm: 9 } // Account for top navigation only
+      mt: 0
     }}>
       {/* Main Content */}
       <Box sx={{ 
