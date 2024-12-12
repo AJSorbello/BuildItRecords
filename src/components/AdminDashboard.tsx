@@ -679,7 +679,7 @@ const AdminDashboard: React.FC = () => {
       }}>
         <Stack spacing={2} direction="row" alignItems="center">
           <Typography variant="body2" color="text.secondary">
-            Page {currentPage} of {totalPages}
+            Page {currentPage} of {totalPages} • {filteredTracks.length} Releases
           </Typography>
           <Pagination 
             count={totalPages} 
@@ -730,7 +730,7 @@ const AdminDashboard: React.FC = () => {
       }}>
         <Stack spacing={2} direction="row" alignItems="center">
           <Typography variant="body2" color="text.secondary">
-            Page {currentPage} of {totalPages}
+            Page {currentPage} of {totalPages} • {filteredTracks.length} Releases
           </Typography>
           <Pagination 
             count={totalPages} 

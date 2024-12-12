@@ -269,16 +269,6 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
                         {new Date(currentTracks[0].releaseDate).toLocaleDateString()}
                       </Typography>
                     </Box>
-                    {currentTracks[0].popularity !== undefined && (
-                      <Box>
-                        <Typography variant="body2" sx={{ color: '#B0B0B0', mb: 1 }}>
-                          POPULARITY
-                        </Typography>
-                        <Typography variant="body1" sx={{ color: '#1DB954' }}>
-                          {formatPopularity(currentTracks[0].popularity)}
-                        </Typography>
-                      </Box>
-                    )}
                   </Box>
                 </Box>
                 <Box sx={{ 
@@ -357,7 +347,7 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
             zIndex: 1
           }}>
             <Typography variant="h4" sx={{ mb: 3, color: '#fff' }}>
-              Top 10 Most Popular
+              Top Releases
             </Typography>
             <Box sx={{ 
               display: 'flex', 
@@ -430,30 +420,17 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
                     >
                       {track.trackTitle}
                     </Typography>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Typography 
-                        variant="body2" 
-                        sx={{ 
-                          color: '#B0B0B0',
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis'
-                        }}
-                      >
-                        {track.artist}
-                      </Typography>
-                      {track.popularity !== undefined && (
-                        <Typography 
-                          variant="body2" 
-                          sx={{ 
-                            color: '#1DB954',
-                            ml: 1
-                          }}
-                        >
-                          {track.popularity}%
-                        </Typography>
-                      )}
-                    </Box>
+                    <Typography 
+                      variant="body2" 
+                      sx={{ 
+                        color: '#B0B0B0',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
+                      }}
+                    >
+                      {track.artist}
+                    </Typography>
                   </Box>
                   <Box sx={{ display: 'flex', gap: 1 }}>
                     {track.spotifyUrl && (

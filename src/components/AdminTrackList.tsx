@@ -115,9 +115,6 @@ const AdminTrackList: React.FC<AdminTrackListProps> = ({ tracks, onDeleteTrack, 
               <Typography variant="body2" color="text.secondary">
                 {track.artist}
               </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {track.recordLabel}
-              </Typography>
             </Box>
             <Box>
               {onEditTrack && (

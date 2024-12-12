@@ -97,6 +97,9 @@ const ReleaseCard: React.FC<ReleaseCardProps> = ({ release, track, compact = fal
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
+        minHeight: '400px',
+        maxHeight: '400px',
+        width: '100%',
         backgroundColor: colors.card,
         borderRadius: 2,
         overflow: 'hidden',
@@ -113,22 +116,59 @@ const ReleaseCard: React.FC<ReleaseCardProps> = ({ release, track, compact = fal
         alt={getTitle()}
         sx={{
           width: '100%',
-          aspectRatio: '1',
+          height: '200px',
           objectFit: 'cover',
         }}
       />
       
-      <CardContent sx={{ flexGrow: 1, p: 2 }}>
-        <Typography 
-          variant={featured ? 'h5' : 'h6'} 
-          component="h2" 
-          sx={{ mb: 1, color: colors.text }}
-        >
-          {getTitle()}
-        </Typography>
-        <Typography variant="subtitle1" color="text.secondary" sx={{ mb: 2 }}>
-          {getArtist()}
-        </Typography>
+      <CardContent 
+        sx={{ 
+          flexGrow: 1, 
+          p: 2,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between'
+        }}
+      >
+        <Box>
+          <Typography 
+            variant={featured ? 'h5' : 'h6'} 
+            component="h2" 
+            sx={{ 
+              mb: 1, 
+              color: colors.text,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              lineHeight: 1.2
+            }}
+          >
+            {getTitle()}
+          </Typography>
+          <Typography 
+            variant="subtitle1" 
+            color="text.secondary" 
+            sx={{ 
+              mb: 1,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            {getArtist()}
+          </Typography>
+          <Typography 
+            variant="body2" 
+            color="text.secondary" 
+            sx={{ mb: 2 }}
+          >
+            {new Date(track?.releaseDate || release?.releaseDate || '').toLocaleDateString(undefined, {
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric'
+            })}
+          </Typography>
+        </Box>
         
         {!compact && (
           <Box sx={{ mt: 2 }}>
