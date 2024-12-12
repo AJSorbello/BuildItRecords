@@ -19,11 +19,13 @@ export interface Track {
   albumCover: string;
   album: Album;
   recordLabel: RecordLabel;
-  previewUrl: string | null;
   spotifyUrl: string;
   releaseDate: string;
+  previewUrl: string | null;
   beatportUrl: string;
   soundcloudUrl: string;
+  popularity?: number;
+  streams?: number;
 }
 
 export interface SpotifyApiTrack {

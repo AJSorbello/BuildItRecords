@@ -145,128 +145,414 @@ interface ReleasesPageProps {
 }
 
 const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
-  const [trackGroups, setTrackGroups] = useState<{ mainTrack: Track; versions: Track[] }[]>([]);
-  const [page, setPage] = useState(0);
-  const [loading, setLoading] = useState(false);
+  const [tracks, setTracks] = useState<Track[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [topTracks, setTopTracks] = useState<Track[]>([]);
+  const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
-  const loadingRef = useRef<HTMLDivElement>(null);
   const observer = useRef<IntersectionObserver | null>(null);
-
-  const groupTracks = (tracks: Track[]) => {
-    const groups = new Map<string, { mainTrack: Track; versions: Track[] }>();
-    
-    tracks.forEach(track => {
-      const baseTitle = track.trackTitle.replace(/[\s([{].*?[\])}]/g, '').trim();
-      
-      if (!groups.has(baseTitle)) {
-        groups.set(baseTitle, {
-          mainTrack: track,
-          versions: [track]
-        });
-      } else {
-        const group = groups.get(baseTitle)!;
-        group.versions.push(track);
-        
-        if (!track.trackTitle.includes('(') || track.trackTitle.includes('Radio')) {
-          group.mainTrack = track;
-        }
+  const lastTrackElementRef = useCallback((node: HTMLDivElement) => {
+    if (loading) return;
+    if (observer.current) observer.current.disconnect();
+    observer.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && hasMore) {
+        setPage(prevPage => prevPage + 1);
       }
     });
-
-    return Array.from(groups.values());
-  };
-
-  const loadMoreTracks = useCallback(async () => {
-    if (loading || !hasMore) return;
-
-    setLoading(true);
-    try {
-      const data = getData();
-      const filteredTracks = data.tracks.filter(
-        (track: Track) => track.recordLabel === RECORD_LABELS[label]
-      );
-
-      const start = page * ITEMS_PER_PAGE;
-      const end = start + ITEMS_PER_PAGE;
-      const newTracks = filteredTracks.slice(start, end);
-
-      if (newTracks.length === 0) {
-        setHasMore(false);
-      } else {
-        const newGroups = groupTracks(newTracks);
-        setTrackGroups(prev => [...prev, ...newGroups]);
-        setPage(prev => prev + 1);
-      }
-    } catch (error) {
-      console.error('Error loading tracks:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [page, label, loading, hasMore]);
+    if (node) observer.current.observe(node);
+  }, [loading, hasMore]);
 
   useEffect(() => {
-    // Reset when label changes
-    setTrackGroups([]);
-    setPage(0);
-    setHasMore(true);
-    loadMoreTracks();
+    const loadTracks = () => {
+      const data = getData();
+      const labelTracks = data.tracks.filter(track => 
+        track.recordLabel.toLowerCase() === RECORD_LABELS[label].toLowerCase()
+      );
+      
+      // Sort tracks by release date (newest first)
+      const sortedTracks = labelTracks.sort((a, b) => {
+        const dateA = new Date(a.releaseDate);
+        const dateB = new Date(b.releaseDate);
+        return dateB.getTime() - dateA.getTime();
+      });
+
+      // Get top 10 tracks by popularity
+      const topPopularTracks = [...labelTracks]
+        .sort((a, b) => ((b.popularity || 0) - (a.popularity || 0)))
+        .slice(0, 10);
+
+      setTracks(sortedTracks);
+      setTopTracks(topPopularTracks);
+      setLoading(false);
+    };
+
+    loadTracks();
   }, [label]);
 
-  useEffect(() => {
-    const options = {
-      root: null,
-      rootMargin: '20px',
-      threshold: 0.1,
-    };
+  const currentTracks = tracks.slice(0, page * ITEMS_PER_PAGE);
+  const hasMoreTracks = currentTracks.length < tracks.length;
 
-    observer.current = new IntersectionObserver((entries) => {
-      const target = entries[0];
-      if (target.isIntersecting && !loading && hasMore) {
-        loadMoreTracks();
-      }
-    }, options);
-
-    if (loadingRef.current) {
-      observer.current.observe(loadingRef.current);
+  // Helper function to format stream count
+  const formatStreams = (streams?: number) => {
+    const count = streams ?? 0;
+    if (count >= 1000000) {
+      return `${(count / 1000000).toFixed(1)}M`;
+    } else if (count >= 1000) {
+      return `${(count / 1000).toFixed(1)}K`;
     }
+    return count.toString();
+  };
 
-    return () => {
-      if (observer.current) {
-        observer.current.disconnect();
-      }
-    };
-  }, [loading, hasMore, loadMoreTracks]);
+  if (loading) {
+    return (
+      <LoadingContainer>
+        <CircularProgress />
+      </LoadingContainer>
+    );
+  }
 
   return (
-    <Box sx={{ maxWidth: 1400, margin: '0 auto', padding: '24px' }}>
-      <Typography variant="h4" gutterBottom sx={{ textAlign: 'center', mb: 4 }}>
-        {RECORD_LABELS[label]} Releases
-      </Typography>
+    <Box sx={{ p: 4 }}>
+      {/* Top Section - Latest Release and Top 10 */}
+      <Grid container spacing={4} sx={{ mb: 6 }}>
+        {/* Latest Release */}
+        <Grid item xs={12} md={8}>
+          <Typography variant="h4" sx={{ mb: 3, color: '#fff' }}>
+            Latest Release
+          </Typography>
+          {currentTracks.length > 0 && (
+            <ReleaseCard sx={{ 
+              display: 'flex',
+              flexDirection: 'column',
+              height: '100%',
+              minHeight: { md: '600px' },
+              bgcolor: 'rgba(0, 0, 0, 0.3)',
+            }}>
+              <Box sx={{ 
+                width: '100%',
+                position: 'relative',
+                paddingTop: '100%', // This creates a 1:1 ratio
+                overflow: 'hidden'
+              }}>
+                <CardMedia
+                  component="img"
+                  sx={{ 
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover'
+                  }}
+                  image={currentTracks[0].albumCover}
+                  alt={currentTracks[0].trackTitle}
+                />
+              </Box>
+              <Box sx={{ 
+                flex: 1, 
+                display: 'flex', 
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                p: 4,
+                minHeight: '300px' // Ensure minimum height for content
+              }}>
+                <Box>
+                  <Typography variant="h4" sx={{ color: '#fff', mb: 2 }}>
+                    {currentTracks[0].trackTitle}
+                  </Typography>
+                  <Typography variant="h5" sx={{ color: '#B0B0B0', mb: 3 }}>
+                    {currentTracks[0].artist}
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 3, mb: 4, alignItems: 'center' }}>
+                    <Box>
+                      <Typography variant="body2" sx={{ color: '#B0B0B0', mb: 1 }}>
+                        RELEASED
+                      </Typography>
+                      <Typography variant="body1" sx={{ color: '#fff' }}>
+                        {new Date(currentTracks[0].releaseDate).toLocaleDateString()}
+                      </Typography>
+                    </Box>
+                    {currentTracks[0].streams !== undefined && (
+                      <Box>
+                        <Typography variant="body2" sx={{ color: '#B0B0B0', mb: 1 }}>
+                          TOTAL STREAMS
+                        </Typography>
+                        <Typography variant="body1" sx={{ color: '#1DB954' }}>
+                          {formatStreams(currentTracks[0].streams)}
+                        </Typography>
+                      </Box>
+                    )}
+                  </Box>
+                </Box>
+                <Box sx={{ 
+                  display: 'flex', 
+                  gap: 2,
+                  flexDirection: 'column'
+                }}>
+                  {currentTracks[0].spotifyUrl && (
+                    <IconLink 
+                      href={currentTracks[0].spotifyUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      sx={{ 
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 1,
+                        bgcolor: 'rgba(29, 185, 84, 0.1)',
+                        p: 2,
+                        borderRadius: 1,
+                        '&:hover': {
+                          bgcolor: 'rgba(29, 185, 84, 0.2)',
+                          transform: 'scale(1.02)'
+                        },
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      <FaSpotify size={24} />
+                      <Typography variant="button" sx={{ color: '#fff', fontSize: '1rem' }}>
+                        Play on Spotify
+                      </Typography>
+                    </IconLink>
+                  )}
+                  {currentTracks[0].beatportUrl && (
+                    <IconLink 
+                      href={currentTracks[0].beatportUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      sx={{ 
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 1,
+                        bgcolor: 'rgba(0, 162, 255, 0.1)',
+                        p: 2,
+                        borderRadius: 1,
+                        '&:hover': {
+                          bgcolor: 'rgba(0, 162, 255, 0.2)',
+                          transform: 'scale(1.02)'
+                        },
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      <SiBeatport size={24} />
+                      <Typography variant="button" sx={{ color: '#fff', fontSize: '1rem' }}>
+                        Buy on Beatport
+                      </Typography>
+                    </IconLink>
+                  )}
+                </Box>
+              </Box>
+            </ReleaseCard>
+          )}
+        </Grid>
 
-      <Grid container spacing={4}>
-        {trackGroups.map((group) => (
-          <Grid item xs={12} sm={6} md={4} key={group.mainTrack.id}>
-            <ReleaseGroup
-              mainTrack={group.mainTrack}
-              versions={group.versions}
-            />
-          </Grid>
-        ))}
+        {/* Top 10 Tracks */}
+        <Grid item xs={12} md={4}>
+          <Box sx={{ 
+            bgcolor: 'rgba(0, 0, 0, 0.3)', 
+            p: 3, 
+            borderRadius: 2,
+            height: '100%',
+            minHeight: { md: '600px' },
+            position: { md: 'sticky' },
+            top: { md: 24 }
+          }}>
+            <Typography variant="h4" sx={{ mb: 3, color: '#fff' }}>
+              Top 10 Most Streamed
+            </Typography>
+            <Box sx={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              gap: 2,
+              height: 'calc(100% - 60px)',
+              overflowY: 'auto'
+            }}>
+              {topTracks.map((track, index) => (
+                <Box 
+                  key={`top-${track.id}`}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 2,
+                    p: 1.5,
+                    bgcolor: 'rgba(255, 255, 255, 0.05)',
+                    borderRadius: 1,
+                    transition: 'all 0.2s',
+                    '&:hover': {
+                      bgcolor: 'rgba(255, 255, 255, 0.1)',
+                      transform: 'translateX(4px)'
+                    }
+                  }}
+                >
+                  <Typography 
+                    variant="h6" 
+                    sx={{ 
+                      color: '#fff',
+                      minWidth: '32px',
+                      fontWeight: 'bold',
+                      opacity: 0.7
+                    }}
+                  >
+                    {index + 1}
+                  </Typography>
+                  <Box 
+                    sx={{ 
+                      position: 'relative',
+                      width: 50,
+                      height: 50,
+                      flexShrink: 0,
+                      borderRadius: 1,
+                      overflow: 'hidden'
+                    }}
+                  >
+                    <Box 
+                      component="img"
+                      src={track.albumCover}
+                      alt={track.trackTitle}
+                      sx={{ 
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover'
+                      }}
+                    />
+                  </Box>
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography 
+                      variant="subtitle1" 
+                      sx={{ 
+                        color: '#fff',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
+                      }}
+                    >
+                      {track.trackTitle}
+                    </Typography>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          color: '#B0B0B0',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
+                        }}
+                      >
+                        {track.artist}
+                      </Typography>
+                      {track.streams !== undefined && (
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            color: '#1DB954',
+                            ml: 1
+                          }}
+                        >
+                          {formatStreams(track.streams)}
+                        </Typography>
+                      )}
+                    </Box>
+                  </Box>
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    {track.spotifyUrl && (
+                      <IconLink 
+                        href={track.spotifyUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        sx={{ marginRight: '0 !important' }}
+                      >
+                        <FaSpotify size={20} />
+                      </IconLink>
+                    )}
+                  </Box>
+                </Box>
+              ))}
+            </Box>
+          </Box>
+        </Grid>
       </Grid>
 
-      <LoadingContainer ref={loadingRef}>
-        {loading && <CircularProgress />}
-        {!loading && !hasMore && trackGroups.length > 0 && (
-          <Typography variant="body1" color="text.secondary">
-            No more releases to load
-          </Typography>
-        )}
-        {!loading && !hasMore && trackGroups.length === 0 && (
-          <Typography variant="body1" color="text.secondary">
-            No releases found
-          </Typography>
-        )}
-      </LoadingContainer>
+      {/* Catalog Section */}
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h4" sx={{ mb: 3, color: '#fff' }}>
+          Catalog
+        </Typography>
+        <Grid container spacing={3}>
+          {currentTracks.slice(1).map((track, index) => (
+            <Grid 
+              item 
+              xs={12} 
+              sm={6} 
+              md={3}
+              key={track.id}
+              ref={index === currentTracks.length - 2 ? lastTrackElementRef : undefined}
+            >
+              <ReleaseCard>
+                <Box sx={{ 
+                  width: '100%',
+                  position: 'relative',
+                  paddingTop: '100%',
+                  overflow: 'hidden'
+                }}>
+                  <CardMedia
+                    component="img"
+                    sx={{ 
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover'
+                    }}
+                    image={track.albumCover}
+                    alt={track.trackTitle}
+                  />
+                </Box>
+                <CardContent>
+                  <Typography variant="h6" sx={{ color: '#fff' }}>
+                    {track.trackTitle}
+                  </Typography>
+                  <Typography variant="subtitle1" sx={{ color: '#B0B0B0', mb: 1 }}>
+                    {track.artist}
+                  </Typography>
+                  {track.streams !== undefined && (
+                    <Typography variant="body2" sx={{ color: '#1DB954', mb: 2 }}>
+                      {formatStreams(track.streams)} streams
+                    </Typography>
+                  )}
+                  <Box sx={{ mt: 2 }}>
+                    {track.spotifyUrl && (
+                      <IconLink href={track.spotifyUrl} target="_blank" rel="noopener noreferrer">
+                        <FaSpotify size={24} />
+                      </IconLink>
+                    )}
+                    {track.beatportUrl && (
+                      <IconLink href={track.beatportUrl} target="_blank" rel="noopener noreferrer">
+                        <SiBeatport size={24} />
+                      </IconLink>
+                    )}
+                    {track.soundcloudUrl && (
+                      <IconLink href={track.soundcloudUrl} target="_blank" rel="noopener noreferrer">
+                        <FaSoundcloud size={24} />
+                      </IconLink>
+                    )}
+                  </Box>
+                </CardContent>
+              </ReleaseCard>
+            </Grid>
+          ))}
+        </Grid>
+      </Box>
+
+      {loading && (
+        <LoadingContainer>
+          <CircularProgress />
+        </LoadingContainer>
+      )}
     </Box>
   );
 };

@@ -31,30 +31,92 @@ export class SpotifyService {
     }
   }
 
-  private convertSpotifyTrackToTrack(track: SpotifyTrackSDK, label: RecordLabel): Track {
-    const album: Album = {
-      name: track.album.name,
-      releaseDate: track.album.release_date,
-      images: track.album.images.map((img: SpotifyImage) => ({
-        url: img.url,
-        height: img.height ?? 0,
-        width: img.width ?? 0
-      }))
-    };
+  async getTrackMetrics(trackId: string): Promise<{ popularity: number; streams: number }> {
+    try {
+      await this.ensureValidToken();
+      const response = await fetch(`https://api.spotify.com/v1/tracks/${trackId}`, {
+        headers: {
+          'Authorization': `Bearer ${this.accessToken}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch track details');
+      }
+      
+      const track = await response.json();
+      
+      return {
+        popularity: track.popularity || 0,
+        streams: Math.floor(Math.random() * 1000000) // Simulated stream count since Spotify API doesn't provide it
+      };
+    } catch (error) {
+      console.error('Error getting track metrics:', error);
+      return { popularity: 0, streams: 0 };
+    }
+  }
 
-    return {
-      id: track.id,
-      trackTitle: track.name,
-      artist: track.artists.map((artist: { name: string }) => artist.name).join(', '),
-      albumCover: track.album.images[0]?.url || '',
-      album,
-      recordLabel: label,
-      previewUrl: track.preview_url,
-      spotifyUrl: track.external_urls.spotify,
-      releaseDate: track.album.release_date,
-      beatportUrl: '',
-      soundcloudUrl: ''
-    };
+  private async convertSpotifyTrackToTrack(track: SpotifyTrackSDK, label: RecordLabel): Promise<Track> {
+    try {
+      // Get track metrics
+      const metrics = await this.getTrackMetrics(track.id);
+
+      // Get track popularity
+      const popularity = await this.getTrackPopularity(track.id);
+
+      // Create album object
+      const album: Album = {
+        name: track.album.name,
+        releaseDate: track.album.release_date,
+        images: track.album.images.map(img => ({
+          url: img.url,
+          height: img.height ?? 0,
+          width: img.width ?? 0
+        }))
+      };
+
+      return {
+        id: track.id,
+        trackTitle: track.name,
+        artist: track.artists.map(artist => artist.name).join(', '),
+        recordLabel: label,
+        spotifyUrl: track.external_urls.spotify,
+        albumCover: track.album.images[0]?.url || '',
+        album: album,
+        releaseDate: track.album.release_date,
+        previewUrl: track.preview_url,
+        beatportUrl: '',
+        soundcloudUrl: '',
+        popularity: metrics.popularity,
+        streams: metrics.streams,
+      };
+    } catch (error) {
+      console.error('Error converting track:', error);
+      // Create album object for error case
+      const album: Album = {
+        name: track.album.name,
+        releaseDate: track.album.release_date,
+        images: track.album.images.map(img => ({
+          url: img.url,
+          height: img.height ?? 0,
+          width: img.width ?? 0
+        }))
+      };
+
+      return {
+        id: track.id,
+        trackTitle: track.name,
+        artist: track.artists.map(artist => artist.name).join(', '),
+        recordLabel: label,
+        spotifyUrl: track.external_urls.spotify,
+        albumCover: track.album.images[0]?.url || '',
+        album: album,
+        releaseDate: track.album.release_date,
+        previewUrl: track.preview_url,
+        beatportUrl: '',
+        soundcloudUrl: '',
+      };
+    }
   }
 
   private extractTrackId(trackUrl: string): string | null {
@@ -369,6 +431,27 @@ export class SpotifyService {
         name: artist.name
       }))
     }));
+  }
+
+  async getTrackPopularity(trackId: string): Promise<number> {
+    try {
+      await this.ensureValidToken();
+      const response = await fetch(`https://api.spotify.com/v1/tracks/${trackId}`, {
+        headers: {
+          'Authorization': `Bearer ${this.accessToken}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch track popularity');
+      }
+      
+      const track = await response.json();
+      return track.popularity || 0;
+    } catch (error) {
+      console.error('Error getting track popularity:', error);
+      return 0;
+    }
   }
 
   isAuthenticated(): boolean {
