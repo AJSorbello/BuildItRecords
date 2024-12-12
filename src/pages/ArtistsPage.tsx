@@ -114,7 +114,12 @@ const getArtists = async (label: LabelType): Promise<Artist[]> => {
 
               // Remove any "Original Mix" or "Remix" suffixes for better search
               const cleanTrackTitle = latestTrack.trackTitle.replace(/[\s-]+(Original Mix|Remix)$/i, '');
-              const spotifyArtist = await spotifyService.getArtistDetailsByName(artist.name, cleanTrackTitle);
+              
+              // Extract only the first artist name for the search
+              const primaryArtist = artist.name.split(/,|&/)[0].trim();
+              console.log('Searching for primary artist:', primaryArtist);
+              
+              const spotifyArtist = await spotifyService.getArtistDetailsByName(primaryArtist, cleanTrackTitle);
 
               if (spotifyArtist) {
                 console.log('Found Spotify artist from track:', {

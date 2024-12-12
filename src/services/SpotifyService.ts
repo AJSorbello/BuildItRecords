@@ -74,7 +74,7 @@ export class SpotifyService {
       return {
         id: track.id,
         trackTitle: track.name,
-        artist: track.artists.map(artist => artist.name).join(', '),
+        artist: track.artists[0]?.name || 'Unknown Artist',
         recordLabel: label,
         spotifyUrl: track.external_urls.spotify,
         albumCover: track.album.images[0]?.url || '',
@@ -101,7 +101,7 @@ export class SpotifyService {
       return {
         id: track.id,
         trackTitle: track.name,
-        artist: track.artists.map(artist => artist.name).join(', '),
+        artist: track.artists[0]?.name || 'Unknown Artist',
         recordLabel: label,
         spotifyUrl: track.external_urls.spotify,
         albumCover: track.album.images[0]?.url || '',
@@ -376,7 +376,7 @@ export class SpotifyService {
       return {
         id: track.id,
         trackTitle: track.name,
-        artist: track.artists.map((artist: { name: string }) => artist.name).join(', '),
+        artist: track.artists[0]?.name || 'Unknown Artist',
         albumCover: track.album.images[0]?.url || '',
         previewUrl: track.preview_url,
         spotifyUrl: track.external_urls.spotify
