@@ -31,7 +31,7 @@ const DeepSidebar: React.FC = () => {
         '& .MuiDrawer-paper': {
           width: drawerWidth,
           boxSizing: 'border-box',
-          backgroundColor: '#121212',
+          backgroundColor: '#000000',
           borderRight: '1px solid rgba(255, 255, 255, 0.12)',
           marginTop: '180px',
         },
