@@ -33,6 +33,18 @@ npm start
 - Press `i` to open in iOS simulator
 - Press `a` to open in Android emulator
 
+## Server
+
+1. Install server dependencies:
+```bash
+brew install redis
+```
+
+2. Start Redis & server:
+```bash
+brew services start redis 
+npm run server
+```
 ## Development
 
 This project uses:
