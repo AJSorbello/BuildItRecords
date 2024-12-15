@@ -168,135 +168,128 @@ const getArtists = async (label: LabelType): Promise<Artist[]> => {
 };
 
 const ArtistsPage: React.FC = () => {
+  const [artists, setArtists] = useState<Artist[]>([]);
+  const [displayedArtists, setDisplayedArtists] = useState<Artist[]>([]);
+  const [visibleCount, setVisibleCount] = useState(10);
+  const [loading, setLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const location = useLocation();
   const navigate = useNavigate();
-  const [artists, setArtists] = useState<Artist[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const label = location.pathname.split('/')[1]?.toUpperCase() as LabelType || 'RECORDS';
 
   useEffect(() => {
-    const loadData = async () => {
-      const pathParts = location.pathname.split('/');
-      const labelFromPath = pathParts[1]?.toUpperCase() as LabelType;
-      
-      if (!labelFromPath || !['RECORDS', 'TECH', 'DEEP'].includes(labelFromPath)) {
-        console.error('Invalid label from path:', labelFromPath);
-        setError('Invalid label');
-        setLoading(false);
-        return;
-      }
-
-      console.log('Loading artists for label:', labelFromPath);
-      
-      // Clear cached artists for testing
-      localStorage.removeItem('cachedArtists');
-      spotifyService.clearCache();
-      
+    const loadArtists = async () => {
       setLoading(true);
-      setError(null);
-      
-      try {
-        const loadedArtists = await getArtists(labelFromPath);
-        console.log('Fetched artists:', loadedArtists);
-        setArtists(loadedArtists);
-      } catch (error) {
-        console.error('Error loading artists:', error);
-        setError('Failed to load artists');
-      } finally {
-        setLoading(false);
-      }
+      const fetchedArtists = await getArtists(label);
+      // Sort artists alphabetically by name
+      const sortedArtists = fetchedArtists.sort((a, b) => a.name.localeCompare(b.name));
+      setArtists(sortedArtists);
+      setDisplayedArtists(sortedArtists.slice(0, visibleCount));
+      setLoading(false);
     };
+    loadArtists();
+  }, [label]);
 
-    loadData();
-  }, [location.pathname]);
+  useEffect(() => {
+    const filtered = artists
+      .filter(artist => artist.name.toLowerCase().includes(searchTerm.toLowerCase()))
+      .sort((a, b) => a.name.localeCompare(b.name)); // Keep sort order when filtering
+    setDisplayedArtists(filtered.slice(0, visibleCount));
+  }, [searchTerm, artists, visibleCount]);
 
-  const filteredAndSortedArtists = React.useMemo(() => {
-    return artists
-      .filter(artist => 
-        artist.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        artist.bio.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-      .sort((a, b) => {
-        const comparison = a.name.localeCompare(b.name);
-        return sortOrder === 'asc' ? comparison : -comparison;
-      });
-  }, [artists, searchTerm, sortOrder]);
+  const loadMore = () => {
+    setVisibleCount(prev => prev + 10);
+  };
 
-  const handleArtistClick = (artist: Artist) => {
-    const label = location.pathname.split('/')[1]; // Get current label (records/tech/deep)
-    navigate(`/${label}/artists/${encodeURIComponent(artist.name)}`);
+  // Intersection Observer setup
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && displayedArtists.length < artists.length) {
+          loadMore();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    const sentinel = document.getElementById('sentinel');
+    if (sentinel) {
+      observer.observe(sentinel);
+    }
+
+    return () => observer.disconnect();
+  }, [displayedArtists.length, artists.length]);
+
+  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(event.target.value);
+    setVisibleCount(10); // Reset visible count when searching
+  };
+
+  const handleLabelChange = (event: any) => {
+    const newLabel = event.target.value as LabelType;
+    navigate(`/${newLabel.toLowerCase()}`);
   };
 
   return (
     <Box sx={{ p: 3 }}>
-      <Box sx={{ mb: 3, display: 'flex', gap: 2, alignItems: 'center' }}>
+      <Box sx={{ mb: 3, display: 'flex', gap: 2 }}>
         <TextField
           label="Search Artists"
           variant="outlined"
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          sx={{ minWidth: 200 }}
+          onChange={handleSearchChange}
+          sx={{ width: 300 }}
         />
-        <FormControl sx={{ minWidth: 120 }}>
-          <InputLabel>Sort Order</InputLabel>
-          <Select
-            value={sortOrder}
-            label="Sort Order"
-            onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
-          >
-            <MenuItem value="asc">A to Z</MenuItem>
-            <MenuItem value="desc">Z to A</MenuItem>
+        <FormControl sx={{ minWidth: 200 }}>
+          <InputLabel>Label</InputLabel>
+          <Select value={label} onChange={handleLabelChange} label="Label">
+            <MenuItem value="RECORDS">Build It Records</MenuItem>
+            <MenuItem value="TECH">Build It Tech</MenuItem>
+            <MenuItem value="DEEP">Build It Deep</MenuItem>
           </Select>
         </FormControl>
       </Box>
 
       <Grid container spacing={3}>
-        {loading ? (
-          <Box sx={{ p: 3 }}>Loading artists...</Box>
-        ) : error ? (
-          <Box sx={{ p: 3, color: 'error.main' }}>{error}</Box>
-        ) : filteredAndSortedArtists.length === 0 ? (
-          <Box sx={{ p: 3 }}>No artists found</Box>
-        ) : (
-          filteredAndSortedArtists.map((artist) => (
-            <Grid item xs={12} sm={6} md={4} lg={3} key={artist.id}>
-              <Card 
-                sx={{ 
-                  height: '100%', 
-                  display: 'flex', 
-                  flexDirection: 'column',
-                  cursor: 'pointer',
-                  '&:hover': {
-                    transform: 'scale(1.02)',
-                    transition: 'transform 0.2s ease-in-out'
-                  }
-                }}
-                onClick={() => handleArtistClick(artist)}
-              >
-                <CardMedia
-                  component="img"
-                  height="200"
-                  image={artist.imageUrl || 'https://via.placeholder.com/300x300.png?text=' + encodeURIComponent(artist.name)}
-                  alt={artist.name}
-                  sx={{
-                    objectFit: 'cover',
-                  }}
-                />
-                <CardContent sx={{ flexGrow: 1 }}>
-                  <Typography gutterBottom variant="h5" component="h2">
-                    {artist.name}
-                  </Typography>
-                  <Typography>
-                    {artist.bio}
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-          ))
-        )}
+        {displayedArtists.map((artist) => (
+          <Grid item xs={12} sm={6} md={4} lg={3} key={artist.id}>
+            <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+              <CardMedia
+                component="img"
+                height="300"
+                image={artist.imageUrl || artist.image}
+                alt={artist.name}
+                sx={{ objectFit: 'cover' }}
+              />
+              <CardContent sx={{ flexGrow: 1 }}>
+                <Typography gutterBottom variant="h5" component="h2">
+                  {artist.name}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {artist.bio}
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        ))}
       </Grid>
+
+      {loading && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+          <Typography>Loading artists...</Typography>
+        </Box>
+      )}
+
+      {/* Sentinel element for infinite scroll */}
+      {!loading && displayedArtists.length < artists.length && (
+        <Box id="sentinel" sx={{ height: '20px', my: 4 }} />
+      )}
+
+      {!loading && displayedArtists.length === 0 && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+          <Typography>No artists found</Typography>
+        </Box>
+      )}
     </Box>
   );
 };
