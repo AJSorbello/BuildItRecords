@@ -73,24 +73,45 @@ const TrackList: React.FC<TrackListProps> = ({ tracks, onPlayTrack }) => {
           >
             {/* Album Cover */}
             {isLoading ? (
-              <Skeleton 
-                variant="rectangular" 
-                width="100%" 
-                height={400} 
-                animation="wave"
-                sx={{ bgcolor: 'rgba(255, 255, 255, 0.1)' }}
-              />
+              <Box sx={{ 
+                width: '100%', 
+                position: 'relative',
+                paddingTop: '100%' // This creates a 1:1 ratio
+              }}>
+                <Skeleton 
+                  variant="rectangular" 
+                  animation="wave"
+                  sx={{ 
+                    bgcolor: 'rgba(255, 255, 255, 0.1)',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%'
+                  }}
+                />
+              </Box>
             ) : (
-              <CardMedia
-                component="img"
-                height={400}
-                image={displayTrack.albumCover || 'https://via.placeholder.com/400?text=No+Image'}
-                alt={displayTrack.trackTitle}
-                sx={{
-                  objectFit: 'cover',
-                  objectPosition: 'center'
-                }}
-              />
+              <Box sx={{ 
+                width: '100%', 
+                position: 'relative',
+                paddingTop: '100%' // This creates a 1:1 ratio
+              }}>
+                <CardMedia
+                  component="img"
+                  image={displayTrack.albumCover || 'https://via.placeholder.com/400?text=No+Image'}
+                  alt={displayTrack.trackTitle}
+                  sx={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    objectPosition: 'center'
+                  }}
+                />
+              </Box>
             )}
             
             {/* Track Info */}

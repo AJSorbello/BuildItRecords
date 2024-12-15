@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Typography, Container } from '@mui/material';
+import { Box, Typography, Grid } from '@mui/material';
 import { RECORD_LABELS } from '../../constants/labels';
 import { Track } from '../../types/track';
 import TrackList from '../../components/TrackList';
@@ -8,7 +8,8 @@ import { spotifyService } from '../../services/SpotifyService';
 import { getData } from '../../utils/dataInitializer';
 
 const RecordsHome = () => {
-  const [featuredTracks, setFeaturedTracks] = useState<Track[]>([]);
+  const [mainTrack, setMainTrack] = useState<Track | null>(null);
+  const [otherVersions, setOtherVersions] = useState<Track[]>([]);
 
   useEffect(() => {
     const fetchFeaturedTracks = async () => {
@@ -68,10 +69,21 @@ const RecordsHome = () => {
             })
           );
           console.log('Final tracks with details:', tracksWithDetails.map(t => t.trackTitle));
-          setFeaturedTracks(tracksWithDetails);
+          
+          // Find the radio version or use the first track
+          const radioVersion = tracksWithDetails.find(t => 
+            t.trackTitle.toLowerCase().includes('radio')
+          ) || tracksWithDetails[0];
+          
+          // Filter out the radio version from other versions
+          const otherTracks = tracksWithDetails.filter(t => t !== radioVersion);
+          
+          setMainTrack(radioVersion);
+          setOtherVersions(otherTracks);
         } catch (error) {
           console.error('Error fetching Spotify details:', error);
-          setFeaturedTracks(releaseTracks);
+          setMainTrack(releaseTracks[0]);
+          setOtherVersions(releaseTracks.slice(1));
         }
       }
     };
@@ -81,63 +93,52 @@ const RecordsHome = () => {
 
   return (
     <PageLayout label="records">
-      <Container 
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          maxWidth: '1000px !important',
-          pl: '0 !important',
-          pr: '24px !important'
-        }}
-      >
-        <Box
-          sx={{
-            width: '100%',
-            maxWidth: '900px',
-            mt: 1
+      <Box sx={{ maxWidth: 1200, margin: '0 auto', padding: 3 }}>
+        <Typography 
+          variant="h4" 
+          component="h1" 
+          gutterBottom 
+          sx={{ 
+            color: '#FFFFFF', 
+            mb: 4,
+            textAlign: 'left'
           }}
         >
-          <Typography 
-            variant="h3" 
-            component="h1" 
-            gutterBottom 
-            sx={{ 
-              color: '#FFFFFF',
-              mb: 4,
-              fontWeight: 'bold',
-              textAlign: 'center'
-            }}
-          >
-            Build It Records
-          </Typography>
-          
+          Build It Records
+        </Typography>
+
+        <Box mb={6}>
           <Typography 
             variant="h5" 
-            sx={{ 
-              color: '#AAAAAA',
-              mb: 6,
-              textAlign: 'center'
-            }}
-          >
-            Underground electronic music for the discerning listener.
-          </Typography>
-
-          <Typography 
-            variant="h4" 
             gutterBottom 
             sx={{ 
-              color: '#FFFFFF',
-              mb: 4,
-              fontWeight: 'bold'
+              color: '#FFFFFF', 
+              mb: 3,
+              textAlign: 'left'
             }}
           >
-            {featuredTracks.length > 1 ? 'Featured EP' : 'Featured Release'}
+            {otherVersions.length > 0 ? 'Featured EP' : 'Featured Release'}
           </Typography>
 
-          <TrackList tracks={featuredTracks} />
+          {/* Main Track */}
+          {mainTrack && (
+            <Box mb={4}>
+              <TrackList tracks={[mainTrack]} />
+            </Box>
+          )}
+
+          {/* Other Versions */}
+          {otherVersions.length > 0 && (
+            <Grid container spacing={3}>
+              {otherVersions.map((track) => (
+                <Grid item xs={12} sm={6} md={4} key={track.id}>
+                  <TrackList tracks={[track]} />
+                </Grid>
+              ))}
+            </Grid>
+          )}
         </Box>
-      </Container>
+      </Box>
     </PageLayout>
   );
 };
