@@ -129,31 +129,45 @@ const AdminDashboard: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [tracksPerPage] = useState(10);
 
-  // Function to remove duplicates
-  const removeDuplicates = (tracksArray: Track[]): Track[] => {
-    const seen = new Map<string, Track>();
+  // Function to remove duplicates and sort tracks in a single pass
+  const processTracksEfficiently = (tracksArray: Track[]): Track[] => {
+    const trackMap = new Map<string, Track>();
     const duplicates: Track[] = [];
     
-    // Keep only the latest version of each track (based on Spotify URL)
+    // Single pass to handle duplicates and track the latest version
     tracksArray.forEach(track => {
       const normalizedUrl = normalizeSpotifyUrl(track.spotifyUrl);
-      if (seen.has(normalizedUrl)) {
-        duplicates.push(track);
+      const existingTrack = trackMap.get(normalizedUrl);
+      
+      if (existingTrack) {
+        // Keep the newer track based on releaseDate
+        const existingDate = new Date(existingTrack.releaseDate).getTime();
+        const newDate = new Date(track.releaseDate).getTime();
+        
+        if (newDate > existingDate) {
+          duplicates.push(existingTrack);
+          trackMap.set(normalizedUrl, track);
+        } else {
+          duplicates.push(track);
+        }
       } else {
-        seen.set(normalizedUrl, track);
+        trackMap.set(normalizedUrl, track);
       }
     });
 
-    // If duplicates were found, log them
+    // Convert to array and sort in the same pass
+    const result = Array.from(trackMap.values());
+    result.sort((a, b) => new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime());
+
     if (duplicates.length > 0) {
-      console.log(`Found ${duplicates.length} duplicate tracks:`, duplicates);
+      console.log(`Found and processed ${duplicates.length} duplicate tracks:`, duplicates);
     }
 
-    return Array.from(seen.values());
+    return result;
   };
 
   useEffect(() => {
-    // Load tracks from localStorage and clean duplicates
+    // Load tracks from localStorage with optimized processing
     const loadTracks = () => {
       try {
         const storedTracks = localStorage.getItem('tracks');
@@ -161,28 +175,22 @@ const AdminDashboard: React.FC = () => {
           console.log('No tracks found in localStorage, initializing empty array');
           localStorage.setItem('tracks', JSON.stringify([]));
           setTracks([]);
-        } else {
-          const parsedTracks = JSON.parse(storedTracks) as Track[];
-          console.log('Loaded tracks from localStorage:', parsedTracks);
-          
-          // Remove duplicates
-          const uniqueTracks = removeDuplicates(parsedTracks);
-          
-          // Sort tracks by release date (newest first)
-          const sortedTracks = uniqueTracks.sort((a, b) => {
-            const dateA = new Date(a.releaseDate);
-            const dateB = new Date(b.releaseDate);
-            return dateB.getTime() - dateA.getTime();
-          });
-          
-          // If we found and removed duplicates, update localStorage
-          if (uniqueTracks.length !== parsedTracks.length) {
-            console.log(`Removed ${parsedTracks.length - uniqueTracks.length} duplicate tracks`);
-            localStorage.setItem('tracks', JSON.stringify(sortedTracks));
-          }
-          
-          setTracks(sortedTracks);
+          return;
         }
+
+        const parsedTracks = JSON.parse(storedTracks) as Track[];
+        console.log('Loaded tracks from localStorage:', parsedTracks);
+        
+        // Process tracks efficiently in a single pass
+        const processedTracks = processTracksEfficiently(parsedTracks);
+        
+        // Update localStorage if needed
+        if (processedTracks.length !== parsedTracks.length) {
+          console.log(`Processed ${parsedTracks.length - processedTracks.length} duplicate tracks`);
+          localStorage.setItem('tracks', JSON.stringify(processedTracks));
+        }
+        
+        setTracks(processedTracks);
       } catch (error) {
         console.error('Error loading tracks:', error);
         setTracks([]);
@@ -192,21 +200,14 @@ const AdminDashboard: React.FC = () => {
     loadTracks();
   }, []);
 
-  // Function to clean duplicates manually
+  // Function to clean duplicates manually with improved efficiency
   const cleanDuplicates = () => {
-    const uniqueTracks = removeDuplicates(tracks);
-    if (uniqueTracks.length !== tracks.length) {
-      const removedCount = tracks.length - uniqueTracks.length;
-      
-      // Sort tracks by release date (newest first)
-      const sortedTracks = uniqueTracks.sort((a, b) => {
-        const dateA = new Date(a.releaseDate);
-        const dateB = new Date(b.releaseDate);
-        return dateB.getTime() - dateA.getTime();
-      });
-      
-      setTracks(sortedTracks);
-      localStorage.setItem('tracks', JSON.stringify(sortedTracks));
+    const processedTracks = processTracksEfficiently(tracks);
+    const removedCount = tracks.length - processedTracks.length;
+    
+    if (removedCount > 0) {
+      setTracks(processedTracks);
+      localStorage.setItem('tracks', JSON.stringify(processedTracks));
       alert(`Removed ${removedCount} duplicate tracks`);
     } else {
       alert('No duplicate tracks found');
@@ -377,14 +378,12 @@ const AdminDashboard: React.FC = () => {
         throw new Error('Failed to fetch track details');
       }
 
-      // Check for duplicates
+      // Efficient duplicate check using Map
       const normalizedUrl = normalizeSpotifyUrl(formData.spotifyUrl);
-      const isDuplicate = tracks.some(track => 
-        track.id !== editingId && 
-        normalizeSpotifyUrl(track.spotifyUrl) === normalizedUrl
-      );
-
-      if (isDuplicate) {
+      const trackMap = new Map(tracks.map(t => [normalizeSpotifyUrl(t.spotifyUrl), t]));
+      const existingTrack = trackMap.get(normalizedUrl);
+      
+      if (existingTrack && existingTrack.id !== editingId) {
         setFetchState({
           loading: false,
           error: 'This track already exists in the database'
@@ -406,17 +405,18 @@ const AdminDashboard: React.FC = () => {
         soundcloudUrl: ''
       };
 
-      // Update tracks array and save to localStorage
+      // Update tracks efficiently
       const updatedTracks = editingId
         ? tracks.map(track => track.id === editingId ? newTrack : track)
         : [...tracks, newTrack];
-      localStorage.setItem('tracks', JSON.stringify(updatedTracks));
+        
+      // Sort in the same operation
+      updatedTracks.sort((a, b) => new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime());
       
-      // Update state
+      localStorage.setItem('tracks', JSON.stringify(updatedTracks));
       setTracks(updatedTracks);
       setFetchState({ loading: false, error: null });
       
-      // Close dialog
       console.log('Closing dialog after import...');
       setOpen(false);
       setFormData(initialFormData);

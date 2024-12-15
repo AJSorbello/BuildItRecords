@@ -10,12 +10,104 @@ export class SpotifyService {
   private static instance: SpotifyService;
   private accessToken: string | null = null;
   private tokenExpiration = 0;
+  private requestQueue: Array<() => Promise<any>> = [];
+  private isProcessingQueue = false;
+  private rateLimitWindow = 0;
+  private requestCount = 0;
+  private readonly MAX_REQUESTS_PER_WINDOW = 100;
+  private readonly RATE_LIMIT_WINDOW_MS = 30000; // 30 seconds
+  private cache: Map<string, { data: any; timestamp: number }> = new Map();
+  private readonly CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 
   private constructor() {
     this.spotifyApi = SpotifyApi.withClientCredentials(
       process.env.REACT_APP_SPOTIFY_CLIENT_ID || '',
       process.env.REACT_APP_SPOTIFY_CLIENT_SECRET || ''
     );
+    this.initializeRateLimitWindow();
+    setInterval(() => this.cleanCache(), this.CACHE_DURATION);
+  }
+
+  private initializeRateLimitWindow() {
+    this.rateLimitWindow = Date.now();
+    this.requestCount = 0;
+    
+    // Reset window periodically
+    setInterval(() => {
+      this.rateLimitWindow = Date.now();
+      this.requestCount = 0;
+    }, this.RATE_LIMIT_WINDOW_MS);
+  }
+
+  private async executeWithRateLimit<T>(
+    key: string,
+    operation: () => Promise<T>,
+    cacheDuration: number = this.CACHE_DURATION
+  ): Promise<T> {
+    // Check cache first
+    const cached = this.cache.get(key);
+    if (cached && Date.now() - cached.timestamp < cacheDuration) {
+      return cached.data as T;
+    }
+
+    return new Promise<T>((resolve, reject) => {
+      const task = async () => {
+        try {
+          // Check if we need to wait for rate limit
+          const now = Date.now();
+          if (this.requestCount >= this.MAX_REQUESTS_PER_WINDOW) {
+            const timeToWait = this.RATE_LIMIT_WINDOW_MS - (now - this.rateLimitWindow);
+            if (timeToWait > 0) {
+              await new Promise(resolve => setTimeout(resolve, timeToWait));
+              this.rateLimitWindow = Date.now();
+              this.requestCount = 0;
+            }
+          }
+
+          // Execute operation
+          const result = await operation();
+          this.requestCount++;
+
+          // Cache the result
+          this.cache.set(key, {
+            data: result,
+            timestamp: Date.now()
+          });
+
+          resolve(result);
+        } catch (error) {
+          if (error instanceof Error && error.message.includes('rate limit')) {
+            // Retry after delay if rate limited
+            setTimeout(() => task(), this.RATE_LIMIT_WINDOW_MS);
+          } else {
+            reject(error);
+          }
+        }
+      };
+
+      this.requestQueue.push(task);
+      this.processQueue();
+    });
+  }
+
+  private async processQueue() {
+    if (this.isProcessingQueue) return;
+    this.isProcessingQueue = true;
+
+    while (this.requestQueue.length > 0) {
+      const task = this.requestQueue.shift();
+      if (task) {
+        try {
+          await task();
+        } catch (error) {
+          console.error('Error processing queue task:', error);
+        }
+        // Add small delay between requests
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+    }
+
+    this.isProcessingQueue = false;
   }
 
   public static getInstance(): SpotifyService {
@@ -26,8 +118,15 @@ export class SpotifyService {
   }
 
   private async ensureValidToken(): Promise<void> {
-    if (!this.spotifyApi.getAccessToken()) {
+    const now = Date.now();
+    if (!this.accessToken || now >= this.tokenExpiration) {
       await this.spotifyApi.authenticate();
+      const token = await this.spotifyApi.getAccessToken();
+      if (!token) {
+        throw new Error('Failed to get access token');
+      }
+      this.accessToken = token.access_token;
+      this.tokenExpiration = now + 3600000; // 1 hour
     }
   }
 
@@ -125,31 +224,20 @@ export class SpotifyService {
   }
 
   async getTrackDetailsByUrl(trackUrl: string): Promise<Track | null> {
-    try {
-      console.log('Processing track URL:', trackUrl);
+    const cacheKey = `track:${trackUrl}`;
+    
+    return this.executeWithRateLimit(cacheKey, async () => {
       const trackId = this.extractTrackId(trackUrl);
       if (!trackId) {
-        console.error('Failed to extract track ID from URL:', trackUrl);
         throw new Error('Invalid Spotify URL');
       }
-      console.log('Extracted track ID:', trackId);
 
       await this.ensureValidToken();
-      console.log('Token validated, fetching track details...');
       const track = await this.spotifyApi.tracks.get(trackId);
-      console.log('Track details fetched:', track.name);
-      
       const label = await this.determineLabelFromUrl(trackUrl);
-      console.log('Determined label:', label);
       
       return this.convertSpotifyTrackToTrack(track, label);
-    } catch (error) {
-      console.error('Error getting track details by URL:', error);
-      if (error instanceof Error) {
-        console.error('Error details:', error.message);
-      }
-      return null;
-    }
+    });
   }
 
   async searchTracks(query: string): Promise<Track[]> {
@@ -501,70 +589,104 @@ export class SpotifyService {
   }
 
   async getArtistDetailsByName(artistName: string, trackTitle?: string): Promise<SpotifyArtist | null> {
-    try {
+    const cacheKey = `artist:${artistName}:${trackTitle || ''}`;
+    
+    return this.executeWithRateLimit(cacheKey, async () => {
       await this.ensureValidToken();
       
-      // First try to find the specific track
-      if (trackTitle) {
-        console.log('Searching for specific track:', trackTitle, 'by', artistName);
-        const trackResults = await this.spotifyApi.search(`track:${trackTitle} artist:${artistName}`, ['track']);
-        
-        if (trackResults.tracks.items.length > 0) {
-          // Find the track that matches both title and artist
-          const matchingTrack = trackResults.tracks.items.find(track => 
-            track.artists.some(artist => 
-              artist.name.toLowerCase() === artistName.toLowerCase()
-            )
-          );
-
-          if (matchingTrack) {
-            console.log('Found matching track:', {
-              title: matchingTrack.name,
-              artists: matchingTrack.artists.map(a => a.name)
-            });
-
-            // Get the matching artist from the track
-            const matchingArtist = matchingTrack.artists.find(
-              artist => artist.name.toLowerCase() === artistName.toLowerCase()
+      try {
+        // First try with exact track and artist match
+        if (trackTitle) {
+          const trackSearchQuery = `track:"${trackTitle}" artist:"${artistName}"`;
+          console.log('Searching with track query:', trackSearchQuery);
+          const trackResults = await this.spotifyApi.search(trackSearchQuery, ['track']);
+          
+          if (trackResults.tracks.items.length > 0) {
+            // Find exact matches first
+            const exactMatch = trackResults.tracks.items.find(track => 
+              track.artists.some(artist => 
+                artist.name.toLowerCase() === artistName.toLowerCase()
+              )
             );
 
-            if (matchingArtist) {
-              console.log('Found exact artist match from track:', matchingArtist.name);
-              return await this.getArtistDetails(matchingArtist.id);
+            if (exactMatch) {
+              const matchingArtist = exactMatch.artists.find(
+                artist => artist.name.toLowerCase() === artistName.toLowerCase()
+              );
+
+              if (matchingArtist) {
+                console.log('Found exact artist match from track:', matchingArtist.name);
+                return this.getArtistDetails(matchingArtist.id);
+              }
+            }
+
+            // If no exact match, try the first artist that's close enough
+            const closeMatch = trackResults.tracks.items[0].artists[0];
+            if (closeMatch) {
+              console.log('Found close artist match:', closeMatch.name);
+              return this.getArtistDetails(closeMatch.id);
             }
           }
         }
-      }
 
-      // Fallback to previous search strategies if track search fails
-      const searchStrategies = [
-        `artist:${artistName} genre:electronic`,
-        `${artistName} genre:electronic genre:techno`,
-        artistName
-      ];
+        // Try artist-specific search with multiple strategies
+        const searchStrategies = [
+          `artist:"${artistName}"`,
+          `artist:"${artistName}" genre:electronic`,
+          `artist:"${artistName}" genre:house`,
+          `artist:"${artistName}" genre:techno`,
+          artistName // fallback to simple search
+        ];
 
-      for (const searchQuery of searchStrategies) {
-        console.log(`Trying fallback search query: ${searchQuery}`);
-        const results = await this.spotifyApi.search(searchQuery, ['artist']);
-        
-        if (results.artists.items.length > 0) {
-          const exactMatch = results.artists.items.find(
-            a => a.name.toLowerCase() === artistName.toLowerCase()
-          );
+        for (const searchQuery of searchStrategies) {
+          console.log('Trying artist search query:', searchQuery);
+          const results = await this.spotifyApi.search(searchQuery, ['artist']);
+          
+          if (results.artists.items.length > 0) {
+            // Try exact match first
+            const exactMatch = results.artists.items.find(
+              a => a.name.toLowerCase() === artistName.toLowerCase()
+            );
 
-          if (exactMatch) {
-            console.log('Found exact artist match from search:', exactMatch.name);
-            return await this.getArtistDetails(exactMatch.id);
+            if (exactMatch) {
+              console.log('Found exact artist match:', exactMatch.name);
+              return this.getArtistDetails(exactMatch.id);
+            }
+
+            // If no exact match, try fuzzy matching
+            const closeMatch = results.artists.items[0];
+            const artistNameNormalized = artistName.toLowerCase().replace(/[^a-z0-9]/g, '');
+            const closeMatchNameNormalized = closeMatch.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+            
+            if (closeMatchNameNormalized.includes(artistNameNormalized) || 
+                artistNameNormalized.includes(closeMatchNameNormalized)) {
+              console.log('Found fuzzy match:', closeMatch.name);
+              return this.getArtistDetails(closeMatch.id);
+            }
           }
         }
-      }
 
-      console.log(`No artist found for: ${artistName}`);
-      return null;
-    } catch (error) {
-      console.error('Error getting artist details by name:', error);
-      return null;
-    }
+        // Try searching by track title as artist name (some artists name tracks after themselves)
+        if (trackTitle) {
+          const artistAsTrackQuery = `artist:"${trackTitle}"`;
+          const results = await this.spotifyApi.search(artistAsTrackQuery, ['artist']);
+          
+          if (results.artists.items.length > 0) {
+            const bestMatch = results.artists.items[0];
+            if (bestMatch) {
+              console.log('Found artist through track title search:', bestMatch.name);
+              return this.getArtistDetails(bestMatch.id);
+            }
+          }
+        }
+
+        console.log('No artist found for:', artistName);
+        return null;
+      } catch (error) {
+        console.error('Error searching for artist:', error);
+        return null;
+      }
+    });
   }
 
   async getArtistDetails(artistId: string): Promise<SpotifyArtist | null> {
@@ -614,6 +736,21 @@ export class SpotifyService {
       console.error('Error getting artist details:', error);
       return null;
     }
+  }
+
+  // Clear expired cache entries periodically
+  private cleanCache() {
+    const now = Date.now();
+    for (const [key, value] of this.cache.entries()) {
+      if (now - value.timestamp > this.CACHE_DURATION) {
+        this.cache.delete(key);
+      }
+    }
+  }
+
+  // Public method to clear cache if needed
+  public clearCache() {
+    this.cache.clear();
   }
 }
 
