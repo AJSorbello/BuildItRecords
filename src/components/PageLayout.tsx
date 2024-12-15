@@ -10,7 +10,7 @@ import BuildItDeepLogo from '../assets/png/deep/BuildIt_Deep.png';
 
 const Main = styled('main')({
   flexGrow: 1,
-  padding: '24px',
+  padding: '24px 0',
   backgroundColor: '#121212',
   minHeight: 'calc(100vh - 180px)',
   marginTop: '180px',
@@ -84,9 +84,7 @@ const PageLayout: React.FC<PageLayoutProps> = ({ children, label }) => {
         <LogoHeader>
           <FullLogo src={logoSrc} alt={`${label} logo`} />
         </LogoHeader>
-        <Container maxWidth="lg">
-          {children}
-        </Container>
+        {children}
       </Main>
     </ContentWrapper>
   );

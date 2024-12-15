@@ -11,7 +11,9 @@ import { Layout } from './components/Layout';
 import { darkTheme } from './theme/theme';
 
 // Import pages
-import HomePage from './pages/HomePage';
+import RecordsHome from './pages/labels/RecordsHome';
+import TechHome from './pages/labels/TechHome';
+import DeepHome from './pages/labels/DeepHome';
 import ReleasesPage from './pages/ReleasesPage';
 import ArtistsPage from './pages/ArtistsPage';
 import PlaylistsPage from './pages/PlaylistsPage';
@@ -41,7 +43,7 @@ const router = createBrowserRouter(
       
       {/* Records Routes */}
       <Route path="/records" element={<Layout />}>
-        <Route index element={<HomePage label="RECORDS" />} />
+        <Route index element={<RecordsHome />} />
         <Route path="releases" element={<ReleasesPage label="RECORDS" />} />
         <Route path="artists" element={<ArtistsPage />} />
         <Route path="artists/:artistName" element={<ArtistDetailPage />} />
@@ -51,7 +53,7 @@ const router = createBrowserRouter(
 
       {/* Tech Routes */}
       <Route path="/tech" element={<Layout />}>
-        <Route index element={<HomePage label="TECH" />} />
+        <Route index element={<TechHome />} />
         <Route path="releases" element={<ReleasesPage label="TECH" />} />
         <Route path="artists" element={<ArtistsPage />} />
         <Route path="artists/:artistName" element={<ArtistDetailPage />} />
@@ -61,7 +63,7 @@ const router = createBrowserRouter(
 
       {/* Deep Routes */}
       <Route path="/deep" element={<Layout />}>
-        <Route index element={<HomePage label="DEEP" />} />
+        <Route index element={<DeepHome />} />
         <Route path="releases" element={<ReleasesPage label="DEEP" />} />
         <Route path="artists" element={<ArtistsPage />} />
         <Route path="artists/:artistName" element={<ArtistDetailPage />} />
@@ -83,7 +85,9 @@ const router = createBrowserRouter(
       </Route>
 
       {/* Legal Route */}
-      <Route path="/legal" element={<LegalPage />} />
+      <Route path="/legal" element={<Layout />}>
+        <Route index element={<LegalPage />} />
+      </Route>
 
       {/* 404 Route */}
       <Route path="*" element={<NotFoundPage />} />

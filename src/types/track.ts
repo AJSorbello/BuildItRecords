@@ -29,6 +29,7 @@ export interface Track {
   beatportUrl: string;
   soundcloudUrl: string;
   popularity?: number;
+  featured?: boolean;
 }
 
 export interface SpotifyApiTrack {
