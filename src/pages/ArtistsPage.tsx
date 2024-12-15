@@ -36,19 +36,24 @@ interface CachedArtistData {
   timestamp: number;
 }
 
-const getArtists = async (label: LabelType): Promise<Artist[]> => {
+const getArtists = async (label: LabelType, page = 1, pageSize = 10): Promise<{ artists: Artist[], totalCount: number }> => {
   console.log('Getting artists for label:', label);
   
   // Get tracks from localStorage
   const storedTracks = localStorage.getItem('tracks');
   if (!storedTracks) {
     console.log('No tracks found in localStorage');
-    return [];
+    return { artists: [], totalCount: 0 };
   }
   
   try {
     const allTracks = JSON.parse(storedTracks) as Track[];
     const labelValue = RECORD_LABELS[label];
+    
+    if (!labelValue) {
+      console.error('Invalid label:', label);
+      return { artists: [], totalCount: 0 };
+    }
     
     console.log('Looking for tracks with label:', labelValue);
     console.log('Total tracks found:', allTracks.length);
@@ -61,22 +66,29 @@ const getArtists = async (label: LabelType): Promise<Artist[]> => {
     // Create a Map for O(1) lookups
     const artistTrackMap = new Map<string, { tracks: Track[]; artist: Artist }>();
     
-    // First pass: Group tracks by artist and create/update artist entries - O(n)
+    // Filter and group tracks by artist
     const filteredTracks = allTracks.filter(track => 
+      track.recordLabel && 
       track.recordLabel.toLowerCase() === labelValue.toLowerCase()
     );
     console.log('Filtered tracks for label:', filteredTracks.length);
+    
+    // Log any tracks with missing record labels for debugging
+    const invalidTracks = allTracks.filter(track => !track.recordLabel);
+    if (invalidTracks.length > 0) {
+      console.warn('Found tracks with missing record labels:', invalidTracks);
+    }
     
     filteredTracks.forEach(track => {
       const artistName = track.artist;
       const artistEntry = artistTrackMap.get(artistName);
       
       if (!artistEntry) {
-        // Check cache first
         const cachedData = artistCache[artistName];
         const isValidCache = cachedData && (now - cachedData.timestamp) < CACHE_DURATION;
         
-        const defaultImage = 'https://via.placeholder.com/300?text=Artist+Image';
+        // Use track's album cover as the default image instead of placeholder
+        const defaultImage = track.albumCover || 'https://via.placeholder.com/300?text=Artist+Image';
         artistTrackMap.set(artistName, {
           tracks: [track],
           artist: isValidCache ? cachedData.artist : {
@@ -94,119 +106,99 @@ const getArtists = async (label: LabelType): Promise<Artist[]> => {
         });
       } else {
         artistEntry.tracks.push(track);
-      }
-    });
-
-    // Convert to array for processing
-    const artistsToProcess = Array.from(artistTrackMap.values());
-    const uncachedArtists = artistsToProcess.filter(({ artist }) => {
-      const cachedData = artistCache[artist.name];
-      return !cachedData || (now - cachedData.timestamp) >= CACHE_DURATION;
-    });
-
-    // Process uncached artists in small batches to respect rate limits
-    if (uncachedArtists.length > 0) {
-      const batchSize = 3;
-      const delay = 1100; // Slightly over 1 second to respect rate limits
-
-      for (let i = 0; i < uncachedArtists.length; i += batchSize) {
-        const batch = uncachedArtists.slice(i, i + batchSize);
-        
-        await Promise.all(
-          batch.map(async ({ artist, tracks }) => {
-            try {
-              // Use the most recent track for artist lookup
-              const latestTrack = tracks.reduce((latest, current) => {
-                return new Date(current.releaseDate) > new Date(latest.releaseDate) ? current : latest;
-              }, tracks[0]);
-
-              if (latestTrack) {
-                const cleanTrackTitle = latestTrack.trackTitle.replace(/[\s-]+(Original Mix|Remix)$/i, '');
-                const primaryArtist = artist.name.split(/,|&/)[0].trim();
-                
-                const spotifyArtist = await spotifyService.getArtistDetailsByName(primaryArtist, cleanTrackTitle);
-
-                // Safely handle potentially null/undefined values
-                if (spotifyArtist && spotifyArtist.images && spotifyArtist.images.length > 0) {
-                  const bestImage = spotifyArtist.images[0];
-                  if (bestImage && bestImage.url) {
-                    artist.image = bestImage.url;
-                    artist.imageUrl = bestImage.url;
-                    artist.spotifyId = spotifyArtist.id || null;
-                    artist.spotifyUrl = spotifyArtist.external_urls?.spotify || null;
-                    
-                    // Update cache
-                    artistCache[artist.name] = {
-                      artist,
-                      timestamp: now
-                    };
-                  }
-                }
-              }
-            } catch (error) {
-              console.error(`Error fetching Spotify data for ${artist.name}:`, error);
-            }
-          })
-        );
-
-        // Add delay between batches
-        if (i + batchSize < uncachedArtists.length) {
-          await new Promise(resolve => setTimeout(resolve, delay));
+        // Update artist image if current track has album cover and artist doesn't have image
+        if (track.albumCover && (!artistEntry.artist.image || artistEntry.artist.image.includes('placeholder'))) {
+          artistEntry.artist.image = track.albumCover;
+          artistEntry.artist.imageUrl = track.albumCover;
         }
       }
+    });
 
-      // Save updated cache
-      localStorage.setItem('cachedArtists', JSON.stringify(artistCache));
-    }
+    // Convert to array and sort alphabetically
+    const allArtists = Array.from(artistTrackMap.values())
+      .map(({ artist }) => artist)
+      .sort((a, b) => a.name.localeCompare(b.name));
 
-    // Return all artists
-    return artistsToProcess.map(({ artist }) => artist);
+    const totalCount = allArtists.length;
+    const startIndex = (page - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    const paginatedArtists = allArtists.slice(startIndex, endIndex);
+
+    return { artists: paginatedArtists, totalCount };
   } catch (error) {
-    console.error('Error loading artists:', error);
-    return [];
+    console.error('Error getting artists:', error);
+    return { artists: [], totalCount: 0 };
   }
 };
 
 const ArtistsPage: React.FC = () => {
   const [artists, setArtists] = useState<Artist[]>([]);
-  const [displayedArtists, setDisplayedArtists] = useState<Artist[]>([]);
-  const [visibleCount, setVisibleCount] = useState(10);
+  const [totalArtists, setTotalArtists] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const location = useLocation();
   const navigate = useNavigate();
-  const label = location.pathname.split('/')[1]?.toUpperCase() as LabelType || 'RECORDS';
+
+  // Get label from URL, defaulting to RECORDS if invalid or not present
+  const getCurrentLabel = (): LabelType => {
+    const pathParts = location.pathname.split('/');
+    // Format is /records/artists, /tech/artists, /deep/artists
+    const labelFromPath = pathParts[1]?.toUpperCase() as LabelType;
+    if (!labelFromPath || !['RECORDS', 'TECH', 'DEEP'].includes(labelFromPath)) {
+      return 'RECORDS';
+    }
+    return labelFromPath;
+  };
+
+  const label = getCurrentLabel();
+  const pageSize = 10;
+
+  // Redirect to default route if on invalid path
+  useEffect(() => {
+    const currentLabel = getCurrentLabel();
+    if (location.pathname === '/artists') {
+      navigate('/records/artists');
+    } else if (currentLabel === 'RECORDS' && location.pathname !== '/records/artists') {
+      navigate('/records/artists');
+    }
+  }, [location.pathname, navigate]);
 
   useEffect(() => {
-    const loadArtists = async () => {
+    const loadInitialArtists = async () => {
       setLoading(true);
-      const fetchedArtists = await getArtists(label);
-      // Sort artists alphabetically by name
-      const sortedArtists = fetchedArtists.sort((a, b) => a.name.localeCompare(b.name));
-      setArtists(sortedArtists);
-      setDisplayedArtists(sortedArtists.slice(0, visibleCount));
+      const { artists: initialArtists, totalCount } = await getArtists(label, 1, pageSize);
+      setArtists(initialArtists);
+      setTotalArtists(totalCount);
+      setCurrentPage(1);
       setLoading(false);
     };
-    loadArtists();
+    loadInitialArtists();
   }, [label]);
 
-  useEffect(() => {
-    const filtered = artists
-      .filter(artist => artist.name.toLowerCase().includes(searchTerm.toLowerCase()))
-      .sort((a, b) => a.name.localeCompare(b.name)); // Keep sort order when filtering
-    setDisplayedArtists(filtered.slice(0, visibleCount));
-  }, [searchTerm, artists, visibleCount]);
-
-  const loadMore = () => {
-    setVisibleCount(prev => prev + 10);
+  const loadMoreArtists = async () => {
+    if (loading || artists.length >= totalArtists) return;
+    
+    setLoading(true);
+    const nextPage = currentPage + 1;
+    const { artists: newArtists } = await getArtists(label, nextPage, pageSize);
+    
+    setArtists(prev => {
+      const combined = [...prev, ...newArtists];
+      // Ensure no duplicates and maintain sort order
+      return Array.from(new Map(combined.map(a => [a.id, a])).values())
+        .sort((a, b) => a.name.localeCompare(b.name));
+    });
+    setCurrentPage(nextPage);
+    setLoading(false);
   };
 
   // Intersection Observer setup
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && displayedArtists.length < artists.length) {
-          loadMore();
+        if (entries[0].isIntersecting && artists.length < totalArtists) {
+          loadMoreArtists();
         }
       },
       { threshold: 0.1 }
@@ -218,16 +210,28 @@ const ArtistsPage: React.FC = () => {
     }
 
     return () => observer.disconnect();
-  }, [displayedArtists.length, artists.length]);
+  }, [artists.length, totalArtists]);
 
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(event.target.value);
-    setVisibleCount(10); // Reset visible count when searching
+    setCurrentPage(1);
+    // Reset artists and load first page with search term
+    const searchArtists = async () => {
+      setLoading(true);
+      const { artists: searchResults, totalCount } = await getArtists(label, 1, pageSize);
+      const filtered = searchResults.filter(artist => 
+        artist.name.toLowerCase().includes(event.target.value.toLowerCase())
+      );
+      setArtists(filtered);
+      setTotalArtists(totalCount);
+      setLoading(false);
+    };
+    searchArtists();
   };
 
   const handleLabelChange = (event: any) => {
     const newLabel = event.target.value as LabelType;
-    navigate(`/${newLabel.toLowerCase()}`);
+    navigate(`/${newLabel.toLowerCase()}/artists`);
   };
 
   return (
@@ -251,7 +255,7 @@ const ArtistsPage: React.FC = () => {
       </Box>
 
       <Grid container spacing={3}>
-        {displayedArtists.map((artist) => (
+        {artists.map((artist) => (
           <Grid item xs={12} sm={6} md={4} lg={3} key={artist.id}>
             <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
               <CardMedia
@@ -281,11 +285,11 @@ const ArtistsPage: React.FC = () => {
       )}
 
       {/* Sentinel element for infinite scroll */}
-      {!loading && displayedArtists.length < artists.length && (
+      {!loading && artists.length < totalArtists && (
         <Box id="sentinel" sx={{ height: '20px', my: 4 }} />
       )}
 
-      {!loading && displayedArtists.length === 0 && (
+      {!loading && artists.length === 0 && (
         <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
           <Typography>No artists found</Typography>
         </Box>
