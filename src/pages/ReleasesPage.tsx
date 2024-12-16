@@ -239,7 +239,7 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
       display: 'flex',
       flexDirection: 'column',
       minHeight: '100vh',
-      mt: { xs: 8, sm: 10 },
+      mt: { xs: 8, md: 10 },
       width: '100%',
       overflow: 'hidden',
       boxSizing: 'border-box'
@@ -267,7 +267,7 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
       }}>
         {/* Featured Section Container */}
         <Box sx={{ 
-          p: { xs: 1, sm: 4 },
+          p: { xs: 1, md: 4 },
           boxSizing: 'border-box',
           width: '100%'
         }}>
@@ -275,23 +275,23 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
             sx={{ 
               bgcolor: 'rgba(0, 0, 0, 0.2)',
               borderRadius: 2,
-              p: { xs: 1, sm: 4 },
-              mb: { xs: 4, sm: 8 },
+              p: { xs: 1, md: 4 },
+              mb: { xs: 4, md: 8 },
               boxSizing: 'border-box',
               width: '100%'
             }}
           >
-            <Grid container spacing={{ xs: 1, sm: 4 }} sx={{ position: 'relative', zIndex: 1 }}>
+            <Grid container spacing={{ xs: 1, md: 4 }} sx={{ position: 'relative', zIndex: 1 }}>
               {/* Featured Release */}
-              <Grid item xs={12} md={8}>
+              <Grid item xs={12} xl={8}>
                 <Typography 
                   variant="h5" 
                   gutterBottom 
                   sx={{ 
-                    mb: { xs: 2, sm: 3 },
+                    mb: { xs: 2, md: 3 },
                     fontWeight: 'bold',
                     color: '#fff',
-                    fontSize: { xs: '1.25rem', sm: '1.5rem' }
+                    fontSize: { xs: '1.25rem', md: '1.5rem' }
                   }}
                 >
                   Featured Release
@@ -335,17 +335,17 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
                       display: 'flex', 
                       flexDirection: 'column',
                       justifyContent: 'space-between',
-                      p: { xs: 2, sm: 4 },
+                      p: { xs: 2, md: 4 },
                       minHeight: '300px' // Ensure minimum height for content
                     }}>
                       <Box>
-                        <Typography variant="h5" sx={{ color: '#fff', mb: { xs: 2, sm: 3 } }}>
+                        <Typography variant="h5" sx={{ color: '#fff', mb: { xs: 2, md: 3 } }}>
                           {currentTracks[0].trackTitle}
                         </Typography>
-                        <Typography variant="h6" sx={{ color: '#B0B0B0', mb: { xs: 2, sm: 3 } }}>
+                        <Typography variant="h6" sx={{ color: '#B0B0B0', mb: { xs: 2, md: 3 } }}>
                           {currentTracks[0].artist}
                         </Typography>
-                        <Box sx={{ display: 'flex', gap: 3, mb: { xs: 2, sm: 4 }, alignItems: 'center' }}>
+                        <Box sx={{ display: 'flex', gap: 3, mb: { xs: 2, md: 4 }, alignItems: 'center' }}>
                           <Box>
                             <Typography variant="body2" sx={{ color: '#B0B0B0', mb: 1 }}>
                               RELEASED
@@ -372,7 +372,7 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
                               justifyContent: 'center',
                               gap: 1,
                               bgcolor: 'rgba(29, 185, 84, 0.1)',
-                              p: { xs: 1, sm: 2 },
+                              p: { xs: 1, md: 2 },
                               borderRadius: 1,
                               '&:hover': {
                                 bgcolor: 'rgba(29, 185, 84, 0.2)',
@@ -398,7 +398,7 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
                               justifyContent: 'center',
                               gap: 1,
                               bgcolor: 'rgba(0, 162, 255, 0.1)',
-                              p: { xs: 1, sm: 2 },
+                              p: { xs: 1, md: 2 },
                               borderRadius: 1,
                               '&:hover': {
                                 bgcolor: 'rgba(0, 162, 255, 0.2)',
@@ -420,10 +420,10 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
               </Grid>
 
               {/* Top 10 Tracks */}
-              <Grid item xs={12} md={4}>
+              <Grid item xs={12} xl={4}>
                 <Box sx={{ 
                   bgcolor: 'rgba(0, 0, 0, 0.3)', 
-                  p: { xs: 2, sm: 3 },
+                  p: { xs: 2, md: 3 },
                   borderRadius: 2,
                   height: '100%',
                   display: 'flex',
@@ -433,11 +433,11 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
                     variant="h5" 
                     gutterBottom 
                     sx={{ 
-                      mb: { xs: 2, sm: 3 },
+                      mb: { xs: 2, md: 3 },
                       fontWeight: 'bold',
                       textAlign: 'center',
                       color: '#fff',
-                      fontSize: { xs: '1.25rem', sm: '1.5rem' }
+                      fontSize: { xs: '1.25rem', md: '1.5rem' }
                     }}
                   >
                     Top 10 Most Plays on Spotify
@@ -454,7 +454,7 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
                           display: 'flex',
                           alignItems: 'center',
                           gap: 2,
-                          p: { xs: 1, sm: 2 },
+                          p: { xs: 1, md: 2 },
                           bgcolor: 'rgba(255, 255, 255, 0.05)',
                           borderRadius: 1,
                           transition: 'all 0.2s',
@@ -468,7 +468,7 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
                           sx={{ 
                             minWidth: '24px',
                             color: '#B0B0B0',
-                            fontSize: { xs: '0.875rem', sm: '1rem' }
+                            fontSize: { xs: '0.875rem', md: '1rem' }
                           }}
                         >
                           {index + 1}.
@@ -481,8 +481,8 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
                           minWidth: 0 // Allows text truncation to work
                         }}>
                           <Box sx={{ 
-                            width: { xs: 48, sm: 56 }, 
-                            height: { xs: 48, sm: 56 },
+                            width: { xs: 48, md: 56 }, 
+                            height: { xs: 48, md: 56 },
                             position: 'relative',
                             flexShrink: 0,
                             borderRadius: 1,
@@ -510,7 +510,7 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
                               noWrap
                               sx={{ 
                                 color: '#fff',
-                                fontSize: { xs: '0.875rem', sm: '1rem' },
+                                fontSize: { xs: '0.875rem', md: '1rem' },
                                 fontWeight: 500
                               }}
                             >
@@ -520,7 +520,7 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
                               noWrap
                               sx={{ 
                                 color: '#B0B0B0',
-                                fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                                fontSize: { xs: '0.75rem', md: '0.875rem' }
                               }}
                             >
                               {track.artist}
@@ -532,7 +532,7 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
                             href={track.spotifyUrl} 
                             target="_blank"
                             sx={{ 
-                              display: { xs: 'none', sm: 'flex' },
+                              display: { xs: 'none', md: 'flex' },
                               color: '#1DB954'
                             }}
                           >
@@ -548,97 +548,81 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
           </Box>
 
           {/* Catalog Section */}
-          <Box sx={{ 
-            mt: { xs: 4, sm: 8 }, 
-            pt: { xs: 2, sm: 4 },
-            position: 'relative',
-            zIndex: 0
-          }}>
-            <Typography variant="h5" sx={{ mb: { xs: 2, sm: 3 }, color: '#fff' }}>
-              Catalog
-            </Typography>
-            <Grid container spacing={{ xs: 2, sm: 4 }}>
-              {currentTracks.slice(1).map((track, index) => (
-                <Grid item xs={12} sm={6} md={3} key={track.id} ref={index === currentTracks.length - 2 ? lastTrackElementRef : null}>
-                  <ReleaseCard sx={{
+          <Grid container spacing={{ xs: 2, md: 4 }}>
+            {currentTracks.slice(1).map((track, index) => (
+              <Grid item xs={12} md={6} xl={3} key={track.id} ref={index === currentTracks.length - 2 ? lastTrackElementRef : null}>
+                <ReleaseCard sx={{
+                  width: '100%',
+                  maxWidth: { xs: '100%', md: 'none' }
+                }}>
+                  <Box sx={{ 
                     width: '100%',
-                    maxWidth: { xs: '100%', sm: 'none' }
+                    position: 'relative',
+                    paddingTop: '100%',
+                    overflow: 'hidden',
+                    boxSizing: 'border-box'
                   }}>
-                    <Box sx={{ 
-                      width: '100%',
-                      position: 'relative',
-                      paddingTop: '100%',
-                      overflow: 'hidden',
-                      boxSizing: 'border-box'
-                    }}>
-                      <CardMedia
-                        component="img"
-                        sx={{ 
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'cover'
-                        }}
-                        image={track.albumCover}
-                        alt={track.trackTitle}
-                      />
+                    <CardMedia
+                      component="img"
+                      sx={{ 
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover'
+                      }}
+                      image={track.albumCover}
+                      alt={track.trackTitle}
+                    />
+                  </Box>
+                  <CardContent sx={{ p: { xs: 1.5, md: 2 } }}>
+                    <Typography 
+                      variant="h6" 
+                      sx={{ 
+                        color: 'text.primary',
+                        fontSize: { xs: '1rem', md: '1.25rem' }
+                      }}
+                    >
+                      {track.trackTitle}
+                    </Typography>
+                    <Typography 
+                      variant="subtitle1" 
+                      color="text.secondary"
+                      sx={{ fontSize: { xs: '0.875rem', md: '1rem' } }}
+                    >
+                      {track.artist}
+                    </Typography>
+                    <Typography 
+                      variant="body2" 
+                      color="text.secondary"
+                      sx={{ fontSize: { xs: '0.75rem', md: '0.875rem' } }}
+                    >
+                      {new Date(track.releaseDate).toLocaleDateString()}
+                    </Typography>
+                    
+                    <Box sx={{ mt: { xs: 1, md: 2 }, display: 'flex', gap: 1 }}>
+                      {track.beatportUrl && (
+                        <IconLink href={track.beatportUrl} target="_blank">
+                          <SiBeatport size={20} />
+                        </IconLink>
+                      )}
+                      {track.spotifyUrl && (
+                        <IconLink href={track.spotifyUrl} target="_blank">
+                          <FaSpotify size={20} />
+                        </IconLink>
+                      )}
+                      {track.soundcloudUrl && (
+                        <IconLink href={track.soundcloudUrl} target="_blank">
+                          <FaSoundcloud size={20} />
+                        </IconLink>
+                      )}
                     </Box>
-                    <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
-                      <Typography 
-                        variant="h6" 
-                        sx={{ 
-                          color: 'text.primary',
-                          fontSize: { xs: '1rem', sm: '1.25rem' }
-                        }}
-                      >
-                        {track.trackTitle}
-                      </Typography>
-                      <Typography 
-                        variant="subtitle1" 
-                        color="text.secondary"
-                        sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}
-                      >
-                        {track.artist}
-                      </Typography>
-                      <Typography 
-                        variant="body2" 
-                        color="text.secondary"
-                        sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
-                      >
-                        {new Date(track.releaseDate).toLocaleDateString()}
-                      </Typography>
-                      
-                      <Box sx={{ mt: { xs: 1, sm: 2 }, display: 'flex', gap: 1 }}>
-                        {track.beatportUrl && (
-                          <IconLink href={track.beatportUrl} target="_blank">
-                            <SiBeatport size={20} />
-                          </IconLink>
-                        )}
-                        {track.spotifyUrl && (
-                          <IconLink href={track.spotifyUrl} target="_blank">
-                            <FaSpotify size={20} />
-                          </IconLink>
-                        )}
-                        {track.soundcloudUrl && (
-                          <IconLink href={track.soundcloudUrl} target="_blank">
-                            <FaSoundcloud size={20} />
-                          </IconLink>
-                        )}
-                      </Box>
-                    </CardContent>
-                  </ReleaseCard>
-                </Grid>
-              ))}
-            </Grid>
-          </Box>
-
-          {loading && (
-            <LoadingContainer>
-              <CircularProgress />
-            </LoadingContainer>
-          )}
+                  </CardContent>
+                </ReleaseCard>
+              </Grid>
+            ))}
+          </Grid>
         </Box>
       </Box>
     </Box>

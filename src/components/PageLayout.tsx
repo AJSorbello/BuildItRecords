@@ -13,14 +13,21 @@ const Main = styled('main', {
   backgroundColor: '#121212',
   marginTop: 0,
   marginLeft: isMobile ? 0 : '240px',
-  transition: 'margin-left 0.3s ease'
+  width: isMobile ? '100%' : `calc(100% - 240px)`,
+  transition: 'margin-left 0.3s ease, width 0.3s ease',
+  maxWidth: isMobile ? '100%' : `calc(100% - 240px)`,
+  boxSizing: 'border-box'
 }));
 
 const ContentWrapper = styled(Box)({
   display: 'flex',
   position: 'relative',
   backgroundColor: '#121212',
-  flex: 1
+  flex: 1,
+  width: '100%',
+  overflow: 'hidden',
+  maxWidth: '100vw',
+  boxSizing: 'border-box'
 });
 
 interface PageLayoutProps {
@@ -53,7 +60,7 @@ const getSidebar = (
 
 const PageLayout: React.FC<PageLayoutProps> = ({ children, label }) => {
   const theme = useTheme();
-  const isMobile = useMediaQuery('(max-width:900px)');
+  const isMobile = useMediaQuery(theme.breakpoints.down('xl'));
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const handleDrawerToggle = () => {
