@@ -1,12 +1,12 @@
 import React from 'react';
-import { AppBar, Tabs, Tab, Box, styled } from '@mui/material';
+import { AppBar, Tabs, Tab, Box, styled, useMediaQuery, useTheme } from '@mui/material';
 import { useLocation, useNavigate } from 'react-router-dom';
 import RecordsSquareLogo from '../assets/png/records/BuildIt_Records_Square.png';
 import TechSquareLogo from '../assets/png/tech/BuildIt_Tech_Square.png';
 import DeepSquareLogo from '../assets/png/deep/BuildIt_Deep_Square.png';
 
 const StyledAppBar = styled(AppBar)(({ theme }) => ({
-  backgroundColor: '#000000 !important',
+  background: 'linear-gradient(180deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.7) 50%, rgba(0,0,0,0.5) 100%)',
   boxShadow: 'none',
   borderBottom: 'none',
   height: '64px',
@@ -18,14 +18,14 @@ const StyledAppBar = styled(AppBar)(({ theme }) => ({
   display: 'flex',
   alignItems: 'center',
   '& .MuiToolbar-root': {
-    backgroundColor: '#000000'
+    background: 'transparent'
   }
 }));
 
 const StyledTabs = styled(Tabs)({
   width: '100%',
   height: '64px',
-  backgroundColor: '#000000',
+  backgroundColor: 'transparent',
   '& .MuiTabs-indicator': {
     backgroundColor: '#02FF95',
   },
@@ -33,7 +33,7 @@ const StyledTabs = styled(Tabs)({
     justifyContent: 'space-between',
     height: '100%',
     alignItems: 'center',
-    backgroundColor: '#000000',
+    backgroundColor: 'transparent',
   },
 });
 
@@ -82,6 +82,8 @@ const TabContent = styled(Box)({
 const TopNavigation = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery('(max-width:900px)');
 
   const handleChange = (event: React.SyntheticEvent, newValue: string) => {
     navigate(`/${newValue}`);
@@ -110,9 +112,13 @@ const TopNavigation = () => {
 
   return (
     <StyledAppBar>
-      <Box sx={{ width: '100%', bgcolor: '#000000' }}>
+      <Box sx={{ 
+        width: '100%', 
+        background: 'transparent',
+        pl: isMobile ? '48px' : 0 // Add padding when mobile to account for hamburger menu
+      }}>
         <StyledTabs
-          sx={{ bgcolor: '#000000' }}
+          sx={{ background: 'transparent' }}
           value={currentLabel}
           onChange={handleChange}
           aria-label="label navigation"

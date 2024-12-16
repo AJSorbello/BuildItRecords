@@ -1,34 +1,26 @@
-import React from 'react';
-import { Box, Container, styled } from '@mui/material';
+import React, { useState } from 'react';
+import { Box, Container, styled, useTheme, useMediaQuery } from '@mui/material';
 import TopNavigation from './TopNavigation';
 import RecordsSidebar from './RecordsSidebar';
 import TechSidebar from './TechSidebar';
 import DeepSidebar from './DeepSidebar';
 
-const Main = styled('main')({
+const Main = styled('main', {
+  shouldForwardProp: (prop) => prop !== 'isMobile'
+})<{ isMobile?: boolean }>(({ isMobile }) => ({
   flexGrow: 1,
   padding: '24px 0',
   backgroundColor: '#121212',
   marginTop: 0,
-  marginLeft: 0
-});
+  marginLeft: isMobile ? 0 : '240px',
+  transition: 'margin-left 0.3s ease'
+}));
 
 const ContentWrapper = styled(Box)({
   display: 'flex',
   position: 'relative',
   backgroundColor: '#121212',
-  flex: 1,
-  '& .MuiDrawer-root': {
-    width: '0px',
-    flexShrink: 0,
-    '& .MuiDrawer-paper': {
-      width: '240px',
-      boxSizing: 'border-box',
-      backgroundColor: '#000000',
-      border: 'none',
-      marginTop: '180px'
-    }
-  }
+  flex: 1
 });
 
 interface PageLayoutProps {
@@ -36,22 +28,42 @@ interface PageLayoutProps {
   label: 'records' | 'tech' | 'deep';
 }
 
-const getSidebar = (label: 'records' | 'tech' | 'deep') => {
+const getSidebar = (
+  label: 'records' | 'tech' | 'deep',
+  open: boolean,
+  onClose: () => void,
+  isMobile: boolean
+) => {
+  const drawerVariant = isMobile ? "temporary" as const : "permanent" as const;
+  const sidebarProps = {
+    variant: drawerVariant,
+    open,
+    onClose
+  };
+
   switch (label) {
     case 'tech':
-      return <TechSidebar />;
+      return <TechSidebar {...sidebarProps} />;
     case 'deep':
-      return <DeepSidebar />;
+      return <DeepSidebar {...sidebarProps} />;
     default:
-      return <RecordsSidebar />;
+      return <RecordsSidebar {...sidebarProps} />;
   }
 };
 
 const PageLayout: React.FC<PageLayoutProps> = ({ children, label }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery('(max-width:900px)');
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  const handleDrawerToggle = () => {
+    setMobileOpen(!mobileOpen);
+  };
+
   return (
     <ContentWrapper>
-      {getSidebar(label)}
-      <Main>
+      {getSidebar(label, mobileOpen, handleDrawerToggle, isMobile)}
+      <Main isMobile={isMobile}>
         {children}
       </Main>
     </ContentWrapper>

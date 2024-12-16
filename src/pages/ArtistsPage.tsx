@@ -133,6 +133,7 @@ const getArtists = async (label: LabelType, page = 1, pageSize = 10): Promise<{ 
 
 const ArtistsPage: React.FC = () => {
   const [artists, setArtists] = useState<Artist[]>([]);
+  const [allArtists, setAllArtists] = useState<Artist[]>([]);
   const [totalArtists, setTotalArtists] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -168,6 +169,7 @@ const ArtistsPage: React.FC = () => {
     const loadInitialArtists = async () => {
       setLoading(true);
       const { artists: initialArtists, totalCount } = await getArtists(label, 1, pageSize);
+      setAllArtists(initialArtists);
       setArtists(initialArtists);
       setTotalArtists(totalCount);
       setCurrentPage(1);
@@ -183,14 +185,50 @@ const ArtistsPage: React.FC = () => {
     const nextPage = currentPage + 1;
     const { artists: newArtists } = await getArtists(label, nextPage, pageSize);
     
-    setArtists(prev => {
+    setAllArtists(prev => {
       const combined = [...prev, ...newArtists];
-      // Ensure no duplicates and maintain sort order
       return Array.from(new Map(combined.map(a => [a.id, a])).values())
         .sort((a, b) => a.name.localeCompare(b.name));
     });
+    
+    if (searchTerm) {
+      const filteredNewArtists = newArtists.filter(artist => 
+        artist.name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setArtists(prev => {
+        const combined = [...prev, ...filteredNewArtists];
+        return Array.from(new Map(combined.map(a => [a.id, a])).values())
+          .sort((a, b) => a.name.localeCompare(b.name));
+      });
+    } else {
+      setArtists(prev => {
+        const combined = [...prev, ...newArtists];
+        return Array.from(new Map(combined.map(a => [a.id, a])).values())
+          .sort((a, b) => a.name.localeCompare(b.name));
+      });
+    }
+    
     setCurrentPage(nextPage);
     setLoading(false);
+  };
+
+  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const searchValue = event.target.value;
+    setSearchTerm(searchValue);
+    setCurrentPage(1);
+
+    if (!searchValue.trim()) {
+      // If search is cleared, show all artists
+      setArtists(allArtists);
+      setTotalArtists(allArtists.length);
+    } else {
+      // Filter from all artists
+      const filtered = allArtists.filter(artist => 
+        artist.name.toLowerCase().includes(searchValue.toLowerCase())
+      );
+      setArtists(filtered);
+      setTotalArtists(filtered.length);
+    }
   };
 
   // Intersection Observer setup
@@ -212,46 +250,16 @@ const ArtistsPage: React.FC = () => {
     return () => observer.disconnect();
   }, [artists.length, totalArtists]);
 
-  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(event.target.value);
-    setCurrentPage(1);
-    // Reset artists and load first page with search term
-    const searchArtists = async () => {
-      setLoading(true);
-      const { artists: searchResults, totalCount } = await getArtists(label, 1, pageSize);
-      const filtered = searchResults.filter(artist => 
-        artist.name.toLowerCase().includes(event.target.value.toLowerCase())
-      );
-      setArtists(filtered);
-      setTotalArtists(totalCount);
-      setLoading(false);
-    };
-    searchArtists();
-  };
-
-  const handleLabelChange = (event: any) => {
-    const newLabel = event.target.value as LabelType;
-    navigate(`/${newLabel.toLowerCase()}/artists`);
-  };
-
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: { xs: 4, sm: 3 }, mt: { xs: 8, sm: 10 } }}>
       <Box sx={{ mb: 3, display: 'flex', gap: 2 }}>
         <TextField
           label="Search Artists"
           variant="outlined"
           value={searchTerm}
           onChange={handleSearchChange}
-          sx={{ width: 300 }}
+          sx={{ width: '100%', maxWidth: 300 }}
         />
-        <FormControl sx={{ minWidth: 200 }}>
-          <InputLabel>Label</InputLabel>
-          <Select value={label} onChange={handleLabelChange} label="Label">
-            <MenuItem value="RECORDS">Build It Records</MenuItem>
-            <MenuItem value="TECH">Build It Tech</MenuItem>
-            <MenuItem value="DEEP">Build It Deep</MenuItem>
-          </Select>
-        </FormControl>
       </Box>
 
       <Grid container spacing={3}>
