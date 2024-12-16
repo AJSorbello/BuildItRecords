@@ -37,35 +37,46 @@ const RecordsPage = () => {
   useEffect(() => {
     const recordsTracks = getTracksByLabel(RECORD_LABELS.RECORDS);
     const recordsArtists = getArtistsByLabel(RECORD_LABELS.RECORDS);
-    
+
     console.log('Tracks:', recordsTracks); // Debug log
     console.log('Artists:', recordsArtists); // Debug log
-    
+
     setTracks(recordsTracks);
     setArtists(recordsArtists);
   }, []);
 
   return (
     <PageLayout label="records">
-      <Box sx={{ maxWidth: 1200, margin: '0 auto', padding: 3 }}>
-        <Typography variant="h4" component="h1" gutterBottom sx={{ color: '#FFFFFF', mb: 4 }}>
+      <Box sx={{
+        width: '100%',
+        // Removed global padding. We'll apply padding to specific elements
+      }}>
+          {/* Add padding left and top to Typography heading */}
+        <Typography variant="h4" component="h1" gutterBottom sx={{
+          color: '#FFFFFF',
+          mb: 4,
+          pl: 3, // Add padding left to only heading
+          pt: 2 // Add padding top to heading
+        }}>
           Records Releases
         </Typography>
-        
-        <Box mb={6}>
+
+          {/* Move padding to the container box */}
+        <Box mb={6} sx={{ pl: 3 }}>
           <Typography variant="h5" gutterBottom sx={{ color: '#FFFFFF', mb: 3 }}>
             Latest Releases
           </Typography>
           <TrackList tracks={tracks} />
         </Box>
 
-        <Box>
+        {/* Move padding to the container box, including bottom padding */}
+        <Box sx={{ pl: 3, pb: 3 }}>
           <Typography variant="h5" gutterBottom sx={{ color: '#FFFFFF', mb: 4 }}>
             Artists
           </Typography>
-          <Grid container spacing={3} justifyContent="center">
-            {artists.map((artist) => (
-              <Grid item xs={12} sm={6} md={4} key={artist.id}>
+          <Grid container spacing={3}>
+            {artists.map((artist, index) => (
+              <Grid item xs={12} sm={6} md={4} lg={3} key={index}>
                 <ArtistCard>
                   <CardMedia
                     component="img"

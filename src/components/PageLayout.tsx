@@ -12,12 +12,8 @@ const Main = styled('main')({
   flexGrow: 1,
   padding: '24px 0',
   backgroundColor: '#121212',
-  minHeight: 'calc(100vh - 180px)',
-  marginTop: '180px',
-  marginLeft: 240,
-  width: 'calc(100% - 240px)',
-  position: 'relative',
-  top: '64px', // Adjust for TopNavigation height
+  marginTop: 0,
+  marginLeft: 0
 });
 
 const FullLogo = styled('img')({
@@ -33,7 +29,6 @@ const LogoHeader = styled(Box)({
   display: 'flex',
   alignItems: 'center',
   backgroundColor: '#121212',
-  borderBottom: '1px solid rgba(255, 255, 255, 0.12)',
   position: 'fixed',
   top: '64px', // Adjust for TopNavigation height
   left: 0,
@@ -43,9 +38,20 @@ const LogoHeader = styled(Box)({
 
 const ContentWrapper = styled(Box)({
   display: 'flex',
-  minHeight: '100vh',
   position: 'relative',
   backgroundColor: '#121212',
+  flex: 1,
+  '& .MuiDrawer-root': {
+    width: '0px',
+    flexShrink: 0,
+    '& .MuiDrawer-paper': {
+      width: '240px',
+      boxSizing: 'border-box',
+      backgroundColor: '#000000',
+      border: 'none',
+      marginTop: '180px'
+    }
+  }
 });
 
 interface PageLayoutProps {
