@@ -93,51 +93,67 @@ const RecordsHome = () => {
 
   return (
     <PageLayout label="records">
-      <Box sx={{ maxWidth: 1200, margin: '0 auto', padding: 3 }}>
+      <Box sx={{ 
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        width: '100%',
+        maxWidth: '1200px',
+        mx: 'auto',
+        p: 3
+      }}>
         <Typography 
-          variant="h4" 
+          variant="h3" 
           component="h1" 
           gutterBottom 
           sx={{ 
-            color: '#FFFFFF', 
-            mb: 4,
-            textAlign: 'left'
+            color: '#FFFFFF',
+            mb: 2,
+            fontWeight: 'bold',
+            textAlign: 'center'
           }}
         >
           Build It Records
         </Typography>
+        <Typography 
+          variant="h5"
+          sx={{ 
+            color: '#AAAAAA',
+            mb: 6,
+            textAlign: 'center'
+          }}
+        >
+          House Music for the Underground
+        </Typography>
 
-        <Box mb={6}>
-          <Typography 
-            variant="h5" 
-            gutterBottom 
-            sx={{ 
-              color: '#FFFFFF', 
-              mb: 3,
-              textAlign: 'left'
-            }}
-          >
-            {otherVersions.length > 0 ? 'Featured EP' : 'Featured Release'}
-          </Typography>
+        <Typography 
+          variant="h4" 
+          gutterBottom 
+          sx={{ 
+            color: '#FFFFFF',
+            mb: 4,
+            fontWeight: 'bold'
+          }}
+        >
+          Latest Release
+        </Typography>
 
-          {/* Main Track */}
-          {mainTrack && (
-            <Box mb={4}>
-              <TrackList tracks={[mainTrack]} />
-            </Box>
-          )}
+        {mainTrack && (
+          <Box mb={4}>
+            <TrackList tracks={[mainTrack]} />
+          </Box>
+        )}
 
-          {/* Other Versions */}
-          {otherVersions.length > 0 && (
-            <Grid container spacing={3}>
-              {otherVersions.map((track) => (
-                <Grid item xs={12} sm={6} md={4} key={track.id}>
-                  <TrackList tracks={[track]} />
-                </Grid>
-              ))}
-            </Grid>
-          )}
-        </Box>
+        {/* Other Versions */}
+        {otherVersions.length > 0 && (
+          <Grid container spacing={3}>
+            {otherVersions.map((track) => (
+              <Grid item xs={12} sm={6} md={4} key={track.id}>
+                <TrackList tracks={[track]} />
+              </Grid>
+            ))}
+          </Grid>
+        )}
       </Box>
     </PageLayout>
   );

@@ -48,6 +48,7 @@ const RecordsSidebar: React.FC<RecordsSidebarProps> = ({ open = true, onClose, v
         }
       }}
       sx={{
+        ...sx,
         width: drawerWidth,
         flexShrink: 0,
         '& .MuiDrawer-paper': {
@@ -56,8 +57,7 @@ const RecordsSidebar: React.FC<RecordsSidebarProps> = ({ open = true, onClose, v
           backgroundColor: '#000000',
           marginTop: variant === 'temporary' ? 0 : '180px',
           border: 'none'
-        },
-        ...sx
+        }
       }}
     >
       {variant === 'temporary' && (

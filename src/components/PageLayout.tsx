@@ -9,24 +9,24 @@ const Main = styled('main', {
   shouldForwardProp: (prop) => prop !== 'isMobile'
 })<{ isMobile?: boolean }>(({ isMobile }) => ({
   flexGrow: 1,
-  padding: '24px 0',
+  padding: 0,
   backgroundColor: '#121212',
-  marginTop: 0,
+  marginTop: '64px', // Height of TopNavigation
   marginLeft: isMobile ? 0 : '240px',
-  width: isMobile ? '100%' : `calc(100% - 240px)`,
-  transition: 'margin-left 0.3s ease, width 0.3s ease',
-  maxWidth: isMobile ? '100%' : `calc(100% - 240px)`,
-  boxSizing: 'border-box'
+  width: isMobile ? '100%' : 'calc(100% - 240px)',
+  position: 'relative',
+  transition: 'margin-left 0.3s ease',
+  boxSizing: 'border-box',
+  minWidth: 0 // Prevent flex items from growing beyond their container
 }));
 
 const ContentWrapper = styled(Box)({
   display: 'flex',
   position: 'relative',
   backgroundColor: '#121212',
-  flex: 1,
   width: '100%',
+  minWidth: 0, // Prevent flex items from growing beyond their container
   overflow: 'hidden',
-  maxWidth: '100vw',
   boxSizing: 'border-box'
 });
 
@@ -68,12 +68,17 @@ const PageLayout: React.FC<PageLayoutProps> = ({ children, label }) => {
   };
 
   return (
-    <ContentWrapper>
+    <Box sx={{ 
+      display: 'flex',
+      width: '100%',
+      minWidth: 0,
+      overflow: 'hidden'
+    }}>
       {getSidebar(label, mobileOpen, handleDrawerToggle, isMobile)}
       <Main isMobile={isMobile}>
         {children}
       </Main>
-    </ContentWrapper>
+    </Box>
   );
 };
 
