@@ -12,11 +12,6 @@ import { getData } from '../utils/dataInitializer';
 
 const ITEMS_PER_PAGE = 10;
 
-interface ReleaseGroupProps {
-  mainTrack: Track;
-  versions: Track[];
-}
-
 const ReleaseCard = styled(Card)(({ theme }) => ({
   backgroundColor: 'rgba(0, 0, 0, 0.2)',
   backdropFilter: 'blur(10px)',
@@ -48,127 +43,6 @@ const LoadingContainer = styled(Box)({
   height: '100vh',
 });
 
-const ReleaseGroup: React.FC<ReleaseGroupProps> = ({ mainTrack, versions }) => {
-  const [expanded, setExpanded] = useState(false);
-  const hasVersions = versions.length > 1;
-
-  return (
-    <ReleaseCard>
-      <CardMedia
-        component="img"
-        sx={{
-          width: '100%',
-          aspectRatio: '1/1',
-          objectFit: 'cover',
-          backgroundColor: 'rgba(0, 0, 0, 0.1)'
-        }}
-        image={mainTrack.albumCover || 'https://via.placeholder.com/300'}
-        alt={mainTrack.trackTitle}
-        loading="lazy"
-      />
-      <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography 
-            variant="h6" 
-            component="div" 
-            sx={{ 
-              color: 'text.primary',
-              fontSize: { xs: '1rem', sm: '1.25rem' }
-            }}
-          >
-            {mainTrack.trackTitle}
-          </Typography>
-          {hasVersions && (
-            <IconButton size="small" onClick={() => setExpanded(!expanded)}>
-              {expanded ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
-            </IconButton>
-          )}
-        </Box>
-        <Typography 
-          variant="subtitle1" 
-          color="text.secondary"
-          sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}
-        >
-          {mainTrack.artist}
-        </Typography>
-        <Typography 
-          variant="body2" 
-          color="text.secondary"
-          sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
-        >
-          {new Date(mainTrack.releaseDate).toLocaleDateString()}
-        </Typography>
-        
-        <Box sx={{ mt: { xs: 1, sm: 2 }, display: 'flex', gap: 1 }}>
-          {mainTrack.beatportUrl && (
-            <IconLink href={mainTrack.beatportUrl} target="_blank">
-              <SiBeatport size={20} />
-            </IconLink>
-          )}
-          {mainTrack.spotifyUrl && (
-            <IconLink href={mainTrack.spotifyUrl} target="_blank">
-              <FaSpotify size={20} />
-            </IconLink>
-          )}
-          {mainTrack.soundcloudUrl && (
-            <IconLink href={mainTrack.soundcloudUrl} target="_blank">
-              <FaSoundcloud size={20} />
-            </IconLink>
-          )}
-        </Box>
-
-        {expanded && hasVersions && (
-          <Box sx={{ mt: { xs: 1, sm: 2 } }}>
-            <Typography 
-              variant="subtitle2" 
-              gutterBottom
-              sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
-            >
-              Other Versions:
-            </Typography>
-            {versions.slice(1).map((version) => (
-              <Box key={version.id} sx={{ mt: 1 }}>
-                <Typography 
-                  variant="body2"
-                  sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
-                >
-                  {version.trackTitle.includes('(') 
-                    ? version.trackTitle.match(/\((.*?)\)/)?.[1] || 'Original Mix'
-                    : 'Original Mix'}
-                </Typography>
-                <Typography 
-                  variant="body2" 
-                  color="text.secondary"
-                  sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
-                >
-                  {new Date(version.releaseDate).toLocaleDateString()}
-                </Typography>
-                <Box sx={{ mt: 0.5, display: 'flex', gap: 1 }}>
-                  {version.beatportUrl && (
-                    <IconLink href={version.beatportUrl} target="_blank">
-                      <SiBeatport size={16} />
-                    </IconLink>
-                  )}
-                  {version.spotifyUrl && (
-                    <IconLink href={version.spotifyUrl} target="_blank">
-                      <FaSpotify size={16} />
-                    </IconLink>
-                  )}
-                  {version.soundcloudUrl && (
-                    <IconLink href={version.soundcloudUrl} target="_blank">
-                      <FaSoundcloud size={16} />
-                    </IconLink>
-                  )}
-                </Box>
-              </Box>
-            ))}
-          </Box>
-        )}
-      </CardContent>
-    </ReleaseCard>
-  );
-};
-
 interface ReleasesPageProps {
   label: LabelKey;
 }
@@ -177,18 +51,9 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const observer = useRef<IntersectionObserver | null>(null);
-  const lastTrackElementRef = useCallback((node: HTMLDivElement) => {
-    if (loading) return;
-    if (observer.current) observer.current.disconnect();
-    observer.current = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting && hasMore) {
-        setPage(prevPage => prevPage + 1);
-      }
-    });
-    if (node) observer.current.observe(node);
-  }, [loading, hasMore]);
+  const loadingRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const loadTracks = () => {
@@ -212,13 +77,6 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
   }, [label]);
 
   const currentTracks = tracks.slice(0, page * ITEMS_PER_PAGE);
-  const hasMoreTracks = currentTracks.length < tracks.length;
-
-  // Helper function to format popularity score
-  const formatPopularity = (popularity?: number) => {
-    if (popularity === undefined) return '';
-    return `${popularity}% Popular`;
-  };
 
   const topTracks = useMemo(() => {
     return [...tracks]
@@ -540,7 +398,7 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
             {/* Catalog Section */}
             <Grid container spacing={{ xs: 2, md: 4 }}>
               {currentTracks.slice(1).map((track, index) => (
-                <Grid item xs={12} md={6} xl={3} key={track.id} ref={index === currentTracks.length - 2 ? lastTrackElementRef : null}>
+                <Grid item xs={12} md={6} xl={3} key={track.id} ref={index === currentTracks.length - 2 ? loadingRef : null}>
                   <ReleaseCard sx={{
                     width: '100%',
                     maxWidth: { xs: '100%', md: 'none' }
