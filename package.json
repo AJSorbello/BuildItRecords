@@ -10,7 +10,8 @@
     "server": "node server/server.js",
     "dev": "concurrently \"npm run server\" \"npm run start\"",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
-    "type-check": "tsc"
+    "type-check": "tsc",
+    "vercel-build": "npm run build"
   },
   "dependencies": {
     "@emotion/react": "^11.11.3",

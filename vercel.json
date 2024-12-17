@@ -1,21 +1,23 @@
 {
   "version": 2,
-  "buildCommand": "npm run build",
-  "outputDirectory": "build",
   "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build"
+    },
     {
       "src": "server/server.js",
       "use": "@vercel/node"
     }
   ],
-  "routes": [
+  "rewrites": [
     {
-      "src": "/api/(.*)",
-      "dest": "server/server.js"
+      "source": "/api/(.*)",
+      "destination": "/server/server.js"
     },
     {
-      "src": "/(.*)",
-      "dest": "/index.html"
+      "source": "/(.*)",
+      "destination": "/"
     }
   ]
 }
