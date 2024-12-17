@@ -103,10 +103,15 @@ interface SpotifyTrackData {
 }
 
 const validateRecordLabel = (label: string): RecordLabel => {
-  if (Object.values(RECORD_LABELS).includes(label as RecordLabel)) {
-    return label as RecordLabel;
-  }
-  return RECORD_LABELS.RECORDS; // Default to RECORDS if invalid
+  // Convert input to lowercase for comparison
+  const lowerLabel = label.toLowerCase();
+  
+  // Check against lowercase versions of valid labels
+  const validLabel = Object.values(RECORD_LABELS).find(
+    validLabel => validLabel.toLowerCase() === lowerLabel
+  );
+
+  return validLabel || RECORD_LABELS.RECORDS; // Return the properly capitalized version or default
 };
 
 interface ImportProgress {
@@ -506,9 +511,6 @@ const AdminDashboard: React.FC = () => {
     setFetchState({ loading: true, error: null });
 
     try {
-      const initialTrackCount = tracks.length;
-      
-      // Get the imported tracks directly
       const importedTracks = await spotifyService.importLabelTracks(
         importLabel as RecordLabel,
         50,
@@ -518,36 +520,29 @@ const AdminDashboard: React.FC = () => {
       );
 
       // Update tracks with new ones and sort
-      const updatedTracks = [...tracks];
-      for (const track of importedTracks) {
-        if (!updatedTracks.some(t => t.id === track.id)) {
-          updatedTracks.push(track);
-        }
-      }
-      
-      // Sort by release date (newest first)
-      const sortedTracks = updatedTracks.sort((a, b) => {
-        const dateA = new Date(a.releaseDate);
-        const dateB = new Date(b.releaseDate);
-        return dateB.getTime() - dateA.getTime();
+      setTracks(prevTracks => {
+        const trackMap = new Map(prevTracks.map(track => [track.id, track]));
+        
+        // Add new tracks, overwriting any existing ones with the same ID
+        importedTracks.forEach(track => {
+          track.recordLabel = importLabel as RecordLabel; // Ensure label is set
+          trackMap.set(track.id, track);
+        });
+
+        // Convert back to array and sort by release date
+        const updatedTracks = Array.from(trackMap.values()).sort((a, b) => {
+          return new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime();
+        });
+
+        // Save to localStorage
+        localStorage.setItem('tracks', JSON.stringify(updatedTracks));
+        
+        return updatedTracks;
       });
-      
-      // Update state with sorted tracks
-      setTracks(sortedTracks);
-      localStorage.setItem('tracks', JSON.stringify(sortedTracks));
-      
-      // Calculate new tracks added
-      const newTracksCount = importedTracks.length;
-      
-      // Show success message with count
-      alert(`Successfully imported ${newTracksCount} new tracks from ${importLabel}`);
-      
-      // Reset state
-      setImportDialogOpen(false);
-      setImportLabel('');
-      setImportProgress(null);
-      setFetchState({ loading: false, error: null });
-      setImporting(false);
+
+      // Show success message
+      alert(`Successfully imported ${importedTracks.length} tracks for ${importLabel}`);
+
     } catch (error) {
       console.error('Error importing tracks:', error);
       setFetchState({
@@ -556,6 +551,9 @@ const AdminDashboard: React.FC = () => {
       });
     } finally {
       setImporting(false);
+      setImportDialogOpen(false);
+      setImportLabel('');
+      setImportProgress(null);
     }
   };
 
@@ -571,19 +569,30 @@ const AdminDashboard: React.FC = () => {
   const filteredTracks = tracks.filter(track => {
     const matchesSearch = searchQuery.toLowerCase() === '' || 
       track.trackTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      track.artist.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      track.spotifyUrl.toLowerCase().includes(searchQuery.toLowerCase());
+      track.artist.toLowerCase().includes(searchQuery.toLowerCase());
     
-    const matchesLabel = selectedLabel === 'All' || track.recordLabel === selectedLabel;
+    const matchesLabel = selectedLabel === 'All' || 
+      (track.recordLabel && track.recordLabel.trim() === selectedLabel.trim());
+    
+    if (selectedLabel !== 'All' && matchesLabel) {
+      console.log(`Track ${track.trackTitle} matches label ${selectedLabel}`);
+    }
     
     return matchesSearch && matchesLabel;
   });
 
-  // Calculate pagination values
+  // Calculate pagination
   const indexOfLastTrack = currentPage * tracksPerPage;
   const indexOfFirstTrack = indexOfLastTrack - tracksPerPage;
   const currentTracks = filteredTracks.slice(indexOfFirstTrack, indexOfLastTrack);
   const totalPages = Math.ceil(filteredTracks.length / tracksPerPage);
+
+  useEffect(() => {
+    if (selectedLabel !== 'All') {
+      console.log(`Filtered ${filteredTracks.length} tracks for label: ${selectedLabel}`);
+      console.log('Sample tracks:', filteredTracks.slice(0, 3));
+    }
+  }, [selectedLabel, filteredTracks]);
 
   return (
     <Container sx={{ py: 4 }}>
