@@ -19,5 +19,11 @@
       "source": "/(.*)",
       "destination": "/"
     }
-  ]
+  ],
+  "git": {
+    "deploymentEnabled": {
+      "main": true,
+      "working-releases": false
+    }
+  }
 }
