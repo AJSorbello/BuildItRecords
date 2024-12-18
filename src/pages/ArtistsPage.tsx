@@ -1,11 +1,13 @@
-import React, { useEffect, useState } from 'react';
-import { Box, Grid, Card, CardMedia, CardContent, Typography, TextField, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
+import React, { useEffect, useState, useMemo } from 'react';
+import { Box, Grid, Card, CardMedia, CardContent, Typography, TextField, FormControl, InputLabel, Select, MenuItem, CircularProgress, IconButton } from '@mui/material';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { RECORD_LABELS } from '../constants/labels';
 import { generateId } from '../utils/idGenerator';
 import { spotifyService } from '../services/SpotifyService';
 import { Track } from '../types/track';
 import type { SpotifyApi } from '@spotify/web-api-ts-sdk';
+import { FaSpotify, FaSoundcloud } from 'react-icons/fa';
+import { SiBeatport } from 'react-icons/si';
 
 interface Artist {
   id: string;
@@ -35,7 +37,7 @@ interface CachedArtistData {
   timestamp: number;
 }
 
-const getArtists = async (label: LabelType, page = 1, pageSize = 10): Promise<{ artists: Artist[], totalCount: number }> => {
+const getArtists = async (label: LabelType): Promise<{ artists: Artist[], totalCount: number }> => {
   console.log('Getting artists for label:', label);
   
   try {
@@ -66,7 +68,6 @@ const getArtists = async (label: LabelType, page = 1, pageSize = 10): Promise<{ 
       }
     } catch (error) {
       console.warn('Error reading artist cache:', error);
-      // Continue with empty cache
     }
     
     const now = Date.now();
@@ -78,7 +79,9 @@ const getArtists = async (label: LabelType, page = 1, pageSize = 10): Promise<{ 
         console.warn('Track missing record label:', track);
         return false;
       }
-      return track.recordLabel.toLowerCase() === labelValue.toLowerCase();
+      const isMatch = track.recordLabel.toLowerCase() === labelValue.toLowerCase();
+      console.log(`Track ${track.trackTitle} label match: ${isMatch}`);
+      return isMatch;
     });
     
     console.log('Filtered tracks for label:', filteredTracks.length);
@@ -91,260 +94,293 @@ const getArtists = async (label: LabelType, page = 1, pageSize = 10): Promise<{ 
         continue;
       }
       
-      const artistEntry = artistTrackMap.get(artistName);
-      if (!artistEntry) {
-        const cachedData = artistCache[artistName];
-        const isValidCache = cachedData && (now - cachedData.timestamp) < CACHE_DURATION;
-        
-        // Use track's album cover as the default image
-        const defaultImage = track.albumCover || 'https://via.placeholder.com/300?text=Artist+Image';
-        
-        artistTrackMap.set(artistName, {
-          tracks: [track],
-          artist: isValidCache ? cachedData.artist : {
-            id: generateId(),
-            name: artistName,
-            image: defaultImage,
-            imageUrl: defaultImage,
-            bio: `Artist on ${labelValue}`,
-            recordLabel: labelValue,
-            spotifyUrl: track.spotifyUrl || '',
-            beatportUrl: '',
-            soundcloudUrl: '',
-            bandcampUrl: ''
+      try {
+        const artistEntry = artistTrackMap.get(artistName);
+        if (!artistEntry) {
+          const cachedData = artistCache[artistName];
+          const isValidCache = cachedData && (now - cachedData.timestamp) < CACHE_DURATION;
+          
+          if (isValidCache) {
+            console.log(`Using cached data for artist: ${artistName}`);
+            artistTrackMap.set(artistName, {
+              tracks: [track],
+              artist: cachedData.artist
+            });
+          } else {
+            console.log(`Creating new artist entry for: ${artistName}`);
+            
+            // Try to fetch artist profile image from Spotify
+            let artistImage = 'https://via.placeholder.com/300?text=Artist+Image';
+            try {
+              if (track.spotifyUrl) {
+                const artistId = track.spotifyUrl.split('/artist/')[1]?.split('?')[0];
+                if (artistId) {
+                  const spotifyArtist = await spotifyService.getArtist(artistId);
+                  if (spotifyArtist.images && spotifyArtist.images.length > 0) {
+                    artistImage = spotifyArtist.images[0].url;
+                  }
+                }
+              }
+            } catch (error) {
+              console.warn(`Failed to fetch Spotify image for ${artistName}:`, error);
+            }
+            
+            const newArtist: Artist = {
+              id: generateId(),
+              name: artistName,
+              bio: '',
+              image: artistImage,
+              imageUrl: artistImage,
+              recordLabel: labelValue,
+              spotifyUrl: track.spotifyUrl || null,
+              beatportUrl: track.beatportUrl,
+              soundcloudUrl: track.soundcloudUrl
+            };
+            
+            artistTrackMap.set(artistName, {
+              tracks: [track],
+              artist: newArtist
+            });
+            
+            // Update cache
+            artistCache[artistName] = {
+              artist: newArtist,
+              timestamp: now
+            };
           }
-        });
-      } else {
-        artistEntry.tracks.push(track);
-        // Update artist image if current track has album cover and artist doesn't have image
-        if (track.albumCover && (!artistEntry.artist.image || artistEntry.artist.image.includes('placeholder'))) {
-          artistEntry.artist.image = track.albumCover;
-          artistEntry.artist.imageUrl = track.albumCover;
+        } else {
+          artistEntry.tracks.push(track);
+          
+          // Update URLs if they're not set
+          if (!artistEntry.artist.spotifyUrl && track.spotifyUrl) {
+            artistEntry.artist.spotifyUrl = track.spotifyUrl;
+            
+            // Try to update artist image if it's still using placeholder
+            if (artistEntry.artist.imageUrl.includes('placeholder')) {
+              try {
+                const artistId = track.spotifyUrl.split('/artist/')[1]?.split('?')[0];
+                if (artistId) {
+                  const spotifyArtist = await spotifyService.getArtist(artistId);
+                  if (spotifyArtist.images && spotifyArtist.images.length > 0) {
+                    artistEntry.artist.imageUrl = spotifyArtist.images[0].url;
+                    artistEntry.artist.image = spotifyArtist.images[0].url;
+                  }
+                }
+              } catch (error) {
+                console.warn(`Failed to fetch Spotify image for ${artistName}:`, error);
+              }
+            }
+          }
+          if (!artistEntry.artist.beatportUrl && track.beatportUrl) {
+            artistEntry.artist.beatportUrl = track.beatportUrl;
+          }
+          if (!artistEntry.artist.soundcloudUrl && track.soundcloudUrl) {
+            artistEntry.artist.soundcloudUrl = track.soundcloudUrl;
+          }
         }
-        // Update Spotify info if available
-        if (track.spotifyUrl && !artistEntry.artist.spotifyUrl) {
-          artistEntry.artist.spotifyUrl = track.spotifyUrl;
-        }
+      } catch (error) {
+        console.error(`Error processing track for artist ${artistName}:`, error);
+        continue;
       }
     }
-
-    // Update cache with new artist data
+    
+    // Save updated cache
     try {
-      const newCache: Record<string, CachedArtistData> = {};
-      artistTrackMap.forEach(({ artist }, artistName) => {
-        newCache[artistName] = {
-          artist,
-          timestamp: now
-        };
-      });
-      localStorage.setItem('cachedArtists', JSON.stringify(newCache));
+      localStorage.setItem('cachedArtists', JSON.stringify(artistCache));
     } catch (error) {
-      console.warn('Error updating artist cache:', error);
+      console.warn('Error saving artist cache:', error);
     }
-
-    // Convert to array and sort alphabetically
+    
+    // Convert map to array and sort alphabetically
     const allArtists = Array.from(artistTrackMap.values())
-      .map(({ artist }) => artist)
+      .map(entry => entry.artist)
       .sort((a, b) => a.name.localeCompare(b.name));
-
-    const totalCount = allArtists.length;
-    const startIndex = (page - 1) * pageSize;
-    const endIndex = startIndex + pageSize;
-    const paginatedArtists = allArtists.slice(startIndex, endIndex);
-
-    return { artists: paginatedArtists, totalCount };
+    
+    console.log(`Returning ${allArtists.length} artists`);
+    return {
+      artists: allArtists,
+      totalCount: allArtists.length
+    };
+    
   } catch (error) {
-    console.error('Error getting artists:', error);
-    return { artists: [], totalCount: 0 };
+    console.error('Error in getArtists:', error);
+    throw error;
   }
 };
 
 const ArtistsPage: React.FC = () => {
   const [artists, setArtists] = useState<Artist[]>([]);
-  const [allArtists, setAllArtists] = useState<Artist[]>([]);
-  const [totalArtists, setTotalArtists] = useState(0);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Get label from URL, defaulting to RECORDS if invalid or not present
-  const getCurrentLabel = (): LabelType => {
-    const pathParts = location.pathname.split('/');
-    const labelFromPath = pathParts[1]?.toUpperCase() as LabelType;
-    return ['RECORDS', 'TECH', 'DEEP'].includes(labelFromPath) ? labelFromPath : 'RECORDS';
-  };
-
-  const label = getCurrentLabel();
-  const pageSize = 10;
-
-  // Redirect to default route if on invalid path
-  useEffect(() => {
-    const currentLabel = getCurrentLabel();
-    if (location.pathname === '/artists') {
-      navigate('/records/artists');
-    } else if (currentLabel === 'RECORDS' && location.pathname !== '/records/artists') {
-      navigate('/records/artists');
-    }
-  }, [location.pathname, navigate]);
+  const label = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    return (params.get('label') || 'RECORDS') as LabelType;
+  }, [location.search]);
 
   useEffect(() => {
-    const loadInitialArtists = async () => {
+    const loadArtists = async () => {
+      console.log('Starting to load artists...');
+      setLoading(true);
+      setError(null);
+      
       try {
-        setError(null);
-        setLoading(true);
-        const { artists: initialArtists, totalCount } = await getArtists(label, 1, pageSize);
-        setAllArtists(initialArtists);
-        setArtists(initialArtists);
-        setTotalArtists(totalCount);
-        setCurrentPage(1);
+        console.log('Fetching artists for label:', label);
+        const { artists: fetchedArtists } = await getArtists(label);
+        console.log('Successfully fetched artists:', fetchedArtists.length);
+        setArtists(fetchedArtists);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load artists');
         console.error('Error loading artists:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load artists');
       } finally {
         setLoading(false);
       }
     };
-    loadInitialArtists();
+
+    loadArtists();
   }, [label]);
 
-  const loadMoreArtists = async () => {
-    if (loading || artists.length >= totalArtists) return;
-    
-    try {
-      setLoading(true);
-      const nextPage = currentPage + 1;
-      const { artists: newArtists } = await getArtists(label, nextPage, pageSize);
-      
-      setAllArtists(prev => {
-        const combined = [...prev, ...newArtists];
-        return Array.from(new Map(combined.map(a => [a.id, a])).values())
-          .sort((a, b) => a.name.localeCompare(b.name));
-      });
-      
-      if (searchTerm) {
-        const filteredNewArtists = newArtists.filter(artist => 
-          artist.name.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-        setArtists(prev => {
-          const combined = [...prev, ...filteredNewArtists];
-          return Array.from(new Map(combined.map(a => [a.id, a])).values())
-            .sort((a, b) => a.name.localeCompare(b.name));
-        });
-      } else {
-        setArtists(prev => {
-          const combined = [...prev, ...newArtists];
-          return Array.from(new Map(combined.map(a => [a.id, a])).values())
-            .sort((a, b) => a.name.localeCompare(b.name));
-        });
-      }
-      
-      setCurrentPage(nextPage);
-    } catch (err) {
-      console.error('Error loading more artists:', err);
-      // Don't set error state here to avoid disrupting the UI
-    } finally {
-      setLoading(false);
-    }
+  const handleLabelChange = (event: any) => {
+    const newLabel = event.target.value as LabelType;
+    console.log('Label changed to:', newLabel);
+    navigate(`/artists?label=${newLabel}`);
   };
 
-  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const searchValue = event.target.value.trim();
-    setSearchTerm(searchValue);
-    setCurrentPage(1);
-
-    if (!searchValue) {
-      setArtists(allArtists);
-      setTotalArtists(allArtists.length);
-    } else {
-      const filtered = allArtists.filter(artist => 
-        artist.name.toLowerCase().includes(searchValue.toLowerCase())
-      );
-      setArtists(filtered);
-      setTotalArtists(filtered.length);
-    }
-  };
-
-  // Intersection Observer setup with error handling
-  useEffect(() => {
-    if (!artists.length || loading || error) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && artists.length < totalArtists) {
-          loadMoreArtists();
-        }
-      },
-      { threshold: 0.5 }
+  if (loading) {
+    return (
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center',
+        minHeight: '60vh'
+      }}>
+        <CircularProgress />
+      </Box>
     );
+  }
 
-    const sentinel = document.querySelector('#sentinel');
-    if (sentinel) {
-      observer.observe(sentinel);
-    }
-
-    return () => observer.disconnect();
-  }, [artists.length, totalArtists, loading, error]);
+  if (error) {
+    return (
+      <Box sx={{ 
+        p: 3, 
+        textAlign: 'center',
+        color: 'error.main',
+        bgcolor: 'error.light',
+        borderRadius: 1,
+        m: 2
+      }}>
+        <Typography variant="h6">Error Loading Artists</Typography>
+        <Typography>{error}</Typography>
+      </Box>
+    );
+  }
 
   return (
-    <Box sx={{ p: { xs: 4, sm: 3 }, mt: { xs: 8, sm: 10 } }}>
-      <Box sx={{ mb: 3, display: 'flex', gap: 2 }}>
-        <TextField
-          label="Search Artists"
-          variant="outlined"
-          value={searchTerm}
-          onChange={handleSearchChange}
-          sx={{ width: '100%', maxWidth: 300 }}
-        />
+    <Box sx={{ p: { xs: 2, sm: 3 }, mt: { xs: 8, sm: 10 } }}>
+      <Box sx={{ mb: 4 }}>
+        <FormControl fullWidth>
+          <InputLabel id="label-select-label">Record Label</InputLabel>
+          <Select
+            labelId="label-select-label"
+            value={label}
+            label="Record Label"
+            onChange={handleLabelChange}
+          >
+            {Object.entries(RECORD_LABELS).map(([key, value]) => (
+              <MenuItem key={key} value={key}>
+                {value}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
       </Box>
 
-      <Grid container spacing={3}>
-        {artists.map((artist) => (
-          <Grid item xs={12} sm={6} md={4} lg={3} key={artist.id}>
-            <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-              <CardMedia
-                component="img"
-                height="300"
-                image={artist.imageUrl || artist.image}
-                alt={artist.name}
-                sx={{ objectFit: 'cover' }}
-              />
-              <CardContent sx={{ flexGrow: 1 }}>
-                <Typography gutterBottom variant="h5" component="h2">
-                  {artist.name}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {artist.bio}
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
-
-      {loading && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
-          <Typography>Loading artists...</Typography>
+      {artists.length === 0 ? (
+        <Box sx={{ textAlign: 'center', py: 4 }}>
+          <Typography variant="h6" color="text.secondary">
+            No artists found for {RECORD_LABELS[label]}
+          </Typography>
         </Box>
-      )}
-
-      {error && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
-          <Typography color="error">{error}</Typography>
-        </Box>
-      )}
-
-      {/* Sentinel element for infinite scroll */}
-      {!loading && artists.length < totalArtists && (
-        <Box id="sentinel" sx={{ height: '20px', my: 4 }} />
-      )}
-
-      {!loading && artists.length === 0 && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
-          <Typography>No artists found</Typography>
-        </Box>
+      ) : (
+        <Grid container spacing={3}>
+          {artists.map((artist) => (
+            <Grid item xs={12} sm={6} md={4} lg={3} key={artist.id}>
+              <Card sx={{ 
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                transition: 'transform 0.2s',
+                '&:hover': {
+                  transform: 'scale(1.02)'
+                }
+              }}>
+                <CardMedia
+                  component="img"
+                  height="300"
+                  image={artist.imageUrl || 'https://via.placeholder.com/300'}
+                  alt={artist.name}
+                  sx={{ objectFit: 'cover' }}
+                />
+                <CardContent sx={{ flexGrow: 1 }}>
+                  <Typography gutterBottom variant="h6" component="div" noWrap>
+                    {artist.name}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{
+                    display: '-webkit-box',
+                    WebkitLineClamp: 3,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                    mb: 2
+                  }}>
+                    {artist.bio || `Artist on ${RECORD_LABELS[label as LabelType]}`}
+                  </Typography>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    gap: 1,
+                    justifyContent: 'flex-start',
+                    mt: 'auto'
+                  }}>
+                    {artist.spotifyUrl && (
+                      <IconButton
+                        href={artist.spotifyUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        size="small"
+                        sx={{ color: '#1DB954' }}
+                      >
+                        <FaSpotify />
+                      </IconButton>
+                    )}
+                    {artist.beatportUrl && (
+                      <IconButton
+                        href={artist.beatportUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        size="small"
+                        sx={{ color: '#02FF95' }}
+                      >
+                        <SiBeatport />
+                      </IconButton>
+                    )}
+                    {artist.soundcloudUrl && (
+                      <IconButton
+                        href={artist.soundcloudUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        size="small"
+                        sx={{ color: '#FF3300' }}
+                      >
+                        <FaSoundcloud />
+                      </IconButton>
+                    )}
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
       )}
     </Box>
   );

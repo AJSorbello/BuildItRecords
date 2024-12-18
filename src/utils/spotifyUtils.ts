@@ -147,13 +147,33 @@ export const convertSpotifyReleaseToRelease = (spotifyRelease: SpotifyPlaylist):
   };
 };
 
-export const getSimplifiedTrackDetails = async (trackUrl: string) => {
+export const getTrackDetails = async (trackUrl: string) => {
   try {
-    const details = await spotifyService.getSimplifiedTrackDetails(trackUrl);
-    console.log('Simplified Track Details:', details);
+    const details = await spotifyService.getTrackDetailsByUrl(trackUrl);
+    console.log('Track Details:', details);
     return details;
   } catch (error) {
-    console.error('Error fetching simplified track details:', error);
-    throw error;
+    console.error('Error getting track details:', error);
+    return null;
+  }
+};
+
+export const getSimplifiedTrackDetails = async (trackUrl: string) => {
+  try {
+    const details = await getTrackDetails(trackUrl);
+    if (!details) return null;
+    return {
+      id: details.id,
+      title: details.trackTitle,
+      artist: details.artist,
+      label: details.recordLabel,
+      artwork: details.albumCover || '',
+      albumName: details.album?.name || '',
+      releaseDate: details.album?.releaseDate || details.releaseDate,
+      spotifyUrl: details.spotifyUrl
+    };
+  } catch (error) {
+    console.error('Error getting simplified track details:', error);
+    return null;
   }
 };

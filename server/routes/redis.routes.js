@@ -30,11 +30,14 @@ router.get('/tracks/:label', async (req, res) => {
   }
 });
 
-router.post('/tracks/:label', async (req, res) => {
+router.post('/tracks', async (req, res) => {
   try {
     const redisService = req.app.get('redisService');
-    const { label } = req.params;
-    const tracks = req.body;
+    const { label, tracks, duration } = req.body;
+
+    if (!label || !tracks || !duration) {
+      return res.status(400).json({ message: 'Missing required fields: label, tracks, or duration' });
+    }
 
     // Store tracks both as JSON and in label cache
     await redisService.batchSetTracks(tracks);

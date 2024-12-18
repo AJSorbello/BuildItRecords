@@ -3,7 +3,7 @@ import { RecordLabel } from '../constants/labels';
 
 class RedisService {
   private static instance: RedisService;
-  private readonly API_URL = '/api/redis';
+  private readonly API_URL = 'http://localhost:3001/api/redis';
   private readonly TRACKS_CACHE_DURATION = 300; // 5 minutes in seconds
   private readonly CACHE_HITS = new Map<string, number>();
   private readonly CACHE_MISSES = new Map<string, number>();
@@ -39,12 +39,18 @@ class RedisService {
 
   async setTracksForLabel(label: RecordLabel, tracks: Track[]): Promise<void> {
     try {
-      await fetch(`${this.API_URL}/tracks/${label}`, {
+      const payload = { 
+        label,
+        tracks, 
+        duration: this.TRACKS_CACHE_DURATION 
+      };
+      console.log('Sending tracks to Redis:', payload);
+      await fetch(`${this.API_URL}/tracks`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ tracks, duration: this.TRACKS_CACHE_DURATION }),
+        body: JSON.stringify(payload),
       });
     } catch (error) {
       console.error('Redis set error:', error);

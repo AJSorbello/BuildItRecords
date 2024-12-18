@@ -1,26 +1,41 @@
 class CircuitBreaker {
-  constructor(options = {}) {
-    this.failureThreshold = options.failureThreshold || 5;
-    this.resetTimeout = options.resetTimeout || 60000; // 1 minute
-    this.monitorInterval = options.monitorInterval || 5000; // 5 seconds
-    this.failureCount = 0;
+  constructor(failureThreshold = 5, resetTimeout = 60000) {
+    this.failureThreshold = failureThreshold;
+    this.resetTimeout = resetTimeout;
+    this.failures = 0;
     this.lastFailureTime = null;
-    this.state = 'CLOSED'; // CLOSED, OPEN, HALF_OPEN
-    this.startMonitoring();
+    this.state = 'CLOSED';
   }
 
-  startMonitoring() {
-    setInterval(() => {
-      if (this.state === 'OPEN' && 
-          Date.now() - this.lastFailureTime >= this.resetTimeout) {
+  isOpen() {
+    if (this.state === 'OPEN') {
+      const now = Date.now();
+      if (this.lastFailureTime && (now - this.lastFailureTime) > this.resetTimeout) {
         this.state = 'HALF_OPEN';
-        console.log('Circuit breaker state changed to HALF_OPEN');
+        return false;
       }
-    }, this.monitorInterval);
+      return true;
+    }
+    return false;
+  }
+
+  recordSuccess() {
+    this.failures = 0;
+    this.state = 'CLOSED';
+    this.lastFailureTime = null;
+  }
+
+  recordFailure() {
+    this.failures += 1;
+    this.lastFailureTime = Date.now();
+    
+    if (this.failures >= this.failureThreshold) {
+      this.state = 'OPEN';
+    }
   }
 
   async execute(operation) {
-    if (this.state === 'OPEN') {
+    if (this.isOpen()) {
       if (Date.now() - this.lastFailureTime >= this.resetTimeout) {
         this.state = 'HALF_OPEN';
       } else {
@@ -30,39 +45,25 @@ class CircuitBreaker {
 
     try {
       const result = await operation();
-      if (this.state === 'HALF_OPEN') {
-        this.state = 'CLOSED';
-        this.failureCount = 0;
-        console.log('Circuit breaker state changed to CLOSED');
-      }
+      this.recordSuccess();
       return result;
     } catch (error) {
-      this.handleFailure();
+      this.recordFailure();
       throw error;
-    }
-  }
-
-  handleFailure() {
-    this.failureCount++;
-    this.lastFailureTime = Date.now();
-
-    if (this.failureCount >= this.failureThreshold) {
-      this.state = 'OPEN';
-      console.log('Circuit breaker state changed to OPEN');
     }
   }
 
   getState() {
     return {
       state: this.state,
-      failureCount: this.failureCount,
+      failures: this.failures,
       lastFailureTime: this.lastFailureTime
     };
   }
 
   reset() {
     this.state = 'CLOSED';
-    this.failureCount = 0;
+    this.failures = 0;
     this.lastFailureTime = null;
     console.log('Circuit breaker reset to CLOSED state');
   }

@@ -81,13 +81,6 @@ export interface SpotifyTrack {
   releaseDate: string;
 }
 
-export interface SimplifiedTrackOutput {
-  trackTitle: string;
-  artistName: string;
-  recordLabel: RecordLabel;
-  artwork: string;
-}
-
 export interface SpotifyPlaylist {
   id: string;
   name: string;

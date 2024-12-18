@@ -3,10 +3,37 @@ import { Track, SpotifyImage, SpotifyApiTrack, SpotifyPlaylist, Album } from '..
 import { RecordLabel, RECORD_LABELS, LABEL_URLS } from '../constants/labels';
 import { redisService } from './RedisService';
 
+export interface ISpotifyService {
+  getArtist(artistId: string): Promise<SpotifyArtist>;
+  getTrackMetrics(trackId: string): Promise<{ popularity: number }>;
+  searchTracks(query: string): Promise<Track[]>;
+  searchTracksByLabel(labelName: string): Promise<Track[]>;
+  getTrackDetails(trackId: string): Promise<Track | null>;
+  getTrackDetailsByUrl(trackUrl: string): Promise<Track | null>;
+  getPlaylist(playlistId: string): Promise<SpotifyPlaylist | null>;
+  getTracksByLabel(label: RecordLabel): Promise<Track[]>;
+  getLabelReleases(labelName: string): Promise<Track[]>;
+  getTrackPopularity(trackId: string): Promise<number>;
+  getArtistDetailsByName(artistName: string, trackTitle?: string): Promise<SpotifyArtist | null>;
+  searchArtist(query: string): Promise<SpotifyArtist | null>;
+  getArtistById(artistId: string): Promise<SpotifyArtist | null>;
+  importLabelTracks(
+    label: RecordLabel,
+    batchSize?: number,
+    onProgress?: (imported: number, total: number) => void
+  ): Promise<Track[]>;
+  clearCache(): void;
+  isAuthenticated(): boolean;
+  getLoginUrl(): string;
+  handleRedirect(hash: string): boolean;
+  logout(): void;
+  warmupCache(labels: RecordLabel[]): Promise<void>;
+}
+
 /**
  * Service for interacting with the Spotify Web API
  */
-export class SpotifyService {
+export class SpotifyService implements ISpotifyService {
   private spotifyApi: SpotifyApi;
   private static instance: SpotifyService;
   private accessToken: string | null = null;
@@ -502,30 +529,6 @@ export class SpotifyService {
     return RECORD_LABELS.RECORDS;
   }
 
-  async getSimplifiedTrackDetails(trackUrl: string) {
-    try {
-      const trackId = this.extractTrackId(trackUrl);
-      if (!trackId) {
-        throw new Error('Invalid Spotify track URL');
-      }
-
-      await this.ensureValidToken();
-      const track = await this.spotifyApi.tracks.get(trackId);
-      
-      return {
-        id: track.id,
-        trackTitle: track.name,
-        artist: track.artists[0]?.name || 'Unknown Artist',
-        albumCover: track.album.images[0]?.url || '',
-        previewUrl: track.preview_url,
-        spotifyUrl: track.external_urls.spotify
-      };
-    } catch (error) {
-      console.error('Error getting simplified track details:', error);
-      return null;
-    }
-  }
-
   async getLabelReleases(labelName: string): Promise<Track[]> {
     try {
       await this.ensureValidToken();
@@ -679,6 +682,16 @@ export class SpotifyService {
     }
   }
 
+  async getArtist(artistId: string): Promise<SpotifyArtist> {
+    return await this.executeWithRateLimit(
+      `artist:${artistId}`,
+      async () => {
+        await this.ensureValidToken();
+        return await this.spotifyApi.artists.get(artistId);
+      }
+    );
+  }
+
   // Remove unused cache-related code
   private cleanCache() {
     // This functionality is now handled by Redis TTL
@@ -732,4 +745,4 @@ export class SpotifyService {
 
 }
 
-export const spotifyService = SpotifyService.getInstance();
+export const spotifyService: ISpotifyService = SpotifyService.getInstance();

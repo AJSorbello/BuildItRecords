@@ -21,16 +21,34 @@ export interface Track {
   trackTitle: string;
   artist: string;
   albumCover: string;
-  album: Album;
+  album: {
+    name: string;
+    releaseDate: string;
+    images: {
+      url: string;
+      height: number;
+      width: number;
+    }[];
+  };
   recordLabel: RecordLabel;
   spotifyUrl: string;
   releaseDate: string;
   previewUrl: string | null;
-  beatportUrl: string;
-  soundcloudUrl: string;
+  beatportUrl?: string;
+  soundcloudUrl?: string;
   popularity?: number;
   featured?: boolean;
   spotifyId?: string;
+  // Additional fields for future scalability
+  genres?: string[];
+  duration?: number;
+  isExplicit?: boolean;
+  artists?: { 
+    id: string;
+    name: string;
+    spotifyUrl: string;
+    images?: { url: string; height: number; width: number; }[];
+  }[];
 }
 
 export interface SpotifyApiTrack {
