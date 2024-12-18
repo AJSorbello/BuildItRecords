@@ -14,7 +14,6 @@ interface Artist {
   image: string;
   imageUrl: string;
   recordLabel: string;
-  spotifyId?: string | null;
   spotifyUrl?: string | null;
   beatportUrl?: string;
   soundcloudUrl?: string;
@@ -39,14 +38,14 @@ interface CachedArtistData {
 const getArtists = async (label: LabelType, page = 1, pageSize = 10): Promise<{ artists: Artist[], totalCount: number }> => {
   console.log('Getting artists for label:', label);
   
-  // Get tracks from localStorage
-  const storedTracks = localStorage.getItem('tracks');
-  if (!storedTracks) {
-    console.log('No tracks found in localStorage');
-    return { artists: [], totalCount: 0 };
-  }
-  
   try {
+    // Get tracks from localStorage with error handling
+    const storedTracks = localStorage.getItem('tracks');
+    if (!storedTracks) {
+      console.log('No tracks found in localStorage');
+      return { artists: [], totalCount: 0 };
+    }
+    
     const allTracks = JSON.parse(storedTracks) as Track[];
     const labelValue = RECORD_LABELS[label];
     
@@ -58,37 +57,48 @@ const getArtists = async (label: LabelType, page = 1, pageSize = 10): Promise<{ 
     console.log('Looking for tracks with label:', labelValue);
     console.log('Total tracks found:', allTracks.length);
     
-    // Get cached artist data
-    const cachedArtistsData = localStorage.getItem('cachedArtists');
-    const artistCache: Record<string, CachedArtistData> = cachedArtistsData ? JSON.parse(cachedArtistsData) : {};
+    // Get cached artist data with error handling
+    let artistCache: Record<string, CachedArtistData> = {};
+    try {
+      const cachedArtistsData = localStorage.getItem('cachedArtists');
+      if (cachedArtistsData) {
+        artistCache = JSON.parse(cachedArtistsData);
+      }
+    } catch (error) {
+      console.warn('Error reading artist cache:', error);
+      // Continue with empty cache
+    }
+    
     const now = Date.now();
-
-    // Create a Map for O(1) lookups
     const artistTrackMap = new Map<string, { tracks: Track[]; artist: Artist }>();
     
     // Filter and group tracks by artist
-    const filteredTracks = allTracks.filter(track => 
-      track.recordLabel && 
-      track.recordLabel.toLowerCase() === labelValue.toLowerCase()
-    );
+    const filteredTracks = allTracks.filter(track => {
+      if (!track.recordLabel) {
+        console.warn('Track missing record label:', track);
+        return false;
+      }
+      return track.recordLabel.toLowerCase() === labelValue.toLowerCase();
+    });
+    
     console.log('Filtered tracks for label:', filteredTracks.length);
     
-    // Log any tracks with missing record labels for debugging
-    const invalidTracks = allTracks.filter(track => !track.recordLabel);
-    if (invalidTracks.length > 0) {
-      console.warn('Found tracks with missing record labels:', invalidTracks);
-    }
-    
-    filteredTracks.forEach(track => {
-      const artistName = track.artist;
-      const artistEntry = artistTrackMap.get(artistName);
+    // Process tracks and build artist map
+    for (const track of filteredTracks) {
+      const artistName = track.artist?.trim();
+      if (!artistName) {
+        console.warn('Track missing artist name:', track);
+        continue;
+      }
       
+      const artistEntry = artistTrackMap.get(artistName);
       if (!artistEntry) {
         const cachedData = artistCache[artistName];
         const isValidCache = cachedData && (now - cachedData.timestamp) < CACHE_DURATION;
         
-        // Use track's album cover as the default image instead of placeholder
+        // Use track's album cover as the default image
         const defaultImage = track.albumCover || 'https://via.placeholder.com/300?text=Artist+Image';
+        
         artistTrackMap.set(artistName, {
           tracks: [track],
           artist: isValidCache ? cachedData.artist : {
@@ -111,8 +121,26 @@ const getArtists = async (label: LabelType, page = 1, pageSize = 10): Promise<{ 
           artistEntry.artist.image = track.albumCover;
           artistEntry.artist.imageUrl = track.albumCover;
         }
+        // Update Spotify info if available
+        if (track.spotifyUrl && !artistEntry.artist.spotifyUrl) {
+          artistEntry.artist.spotifyUrl = track.spotifyUrl;
+        }
       }
-    });
+    }
+
+    // Update cache with new artist data
+    try {
+      const newCache: Record<string, CachedArtistData> = {};
+      artistTrackMap.forEach(({ artist }, artistName) => {
+        newCache[artistName] = {
+          artist,
+          timestamp: now
+        };
+      });
+      localStorage.setItem('cachedArtists', JSON.stringify(newCache));
+    } catch (error) {
+      console.warn('Error updating artist cache:', error);
+    }
 
     // Convert to array and sort alphabetically
     const allArtists = Array.from(artistTrackMap.values())
@@ -137,6 +165,7 @@ const ArtistsPage: React.FC = () => {
   const [totalArtists, setTotalArtists] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const location = useLocation();
   const navigate = useNavigate();
@@ -144,12 +173,8 @@ const ArtistsPage: React.FC = () => {
   // Get label from URL, defaulting to RECORDS if invalid or not present
   const getCurrentLabel = (): LabelType => {
     const pathParts = location.pathname.split('/');
-    // Format is /records/artists, /tech/artists, /deep/artists
     const labelFromPath = pathParts[1]?.toUpperCase() as LabelType;
-    if (!labelFromPath || !['RECORDS', 'TECH', 'DEEP'].includes(labelFromPath)) {
-      return 'RECORDS';
-    }
-    return labelFromPath;
+    return ['RECORDS', 'TECH', 'DEEP'].includes(labelFromPath) ? labelFromPath : 'RECORDS';
   };
 
   const label = getCurrentLabel();
@@ -167,13 +192,20 @@ const ArtistsPage: React.FC = () => {
 
   useEffect(() => {
     const loadInitialArtists = async () => {
-      setLoading(true);
-      const { artists: initialArtists, totalCount } = await getArtists(label, 1, pageSize);
-      setAllArtists(initialArtists);
-      setArtists(initialArtists);
-      setTotalArtists(totalCount);
-      setCurrentPage(1);
-      setLoading(false);
+      try {
+        setError(null);
+        setLoading(true);
+        const { artists: initialArtists, totalCount } = await getArtists(label, 1, pageSize);
+        setAllArtists(initialArtists);
+        setArtists(initialArtists);
+        setTotalArtists(totalCount);
+        setCurrentPage(1);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load artists');
+        console.error('Error loading artists:', err);
+      } finally {
+        setLoading(false);
+      }
     };
     loadInitialArtists();
   }, [label]);
@@ -181,48 +213,52 @@ const ArtistsPage: React.FC = () => {
   const loadMoreArtists = async () => {
     if (loading || artists.length >= totalArtists) return;
     
-    setLoading(true);
-    const nextPage = currentPage + 1;
-    const { artists: newArtists } = await getArtists(label, nextPage, pageSize);
-    
-    setAllArtists(prev => {
-      const combined = [...prev, ...newArtists];
-      return Array.from(new Map(combined.map(a => [a.id, a])).values())
-        .sort((a, b) => a.name.localeCompare(b.name));
-    });
-    
-    if (searchTerm) {
-      const filteredNewArtists = newArtists.filter(artist => 
-        artist.name.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-      setArtists(prev => {
-        const combined = [...prev, ...filteredNewArtists];
-        return Array.from(new Map(combined.map(a => [a.id, a])).values())
-          .sort((a, b) => a.name.localeCompare(b.name));
-      });
-    } else {
-      setArtists(prev => {
+    try {
+      setLoading(true);
+      const nextPage = currentPage + 1;
+      const { artists: newArtists } = await getArtists(label, nextPage, pageSize);
+      
+      setAllArtists(prev => {
         const combined = [...prev, ...newArtists];
         return Array.from(new Map(combined.map(a => [a.id, a])).values())
           .sort((a, b) => a.name.localeCompare(b.name));
       });
+      
+      if (searchTerm) {
+        const filteredNewArtists = newArtists.filter(artist => 
+          artist.name.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+        setArtists(prev => {
+          const combined = [...prev, ...filteredNewArtists];
+          return Array.from(new Map(combined.map(a => [a.id, a])).values())
+            .sort((a, b) => a.name.localeCompare(b.name));
+        });
+      } else {
+        setArtists(prev => {
+          const combined = [...prev, ...newArtists];
+          return Array.from(new Map(combined.map(a => [a.id, a])).values())
+            .sort((a, b) => a.name.localeCompare(b.name));
+        });
+      }
+      
+      setCurrentPage(nextPage);
+    } catch (err) {
+      console.error('Error loading more artists:', err);
+      // Don't set error state here to avoid disrupting the UI
+    } finally {
+      setLoading(false);
     }
-    
-    setCurrentPage(nextPage);
-    setLoading(false);
   };
 
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const searchValue = event.target.value;
+    const searchValue = event.target.value.trim();
     setSearchTerm(searchValue);
     setCurrentPage(1);
 
-    if (!searchValue.trim()) {
-      // If search is cleared, show all artists
+    if (!searchValue) {
       setArtists(allArtists);
       setTotalArtists(allArtists.length);
     } else {
-      // Filter from all artists
       const filtered = allArtists.filter(artist => 
         artist.name.toLowerCase().includes(searchValue.toLowerCase())
       );
@@ -231,24 +267,26 @@ const ArtistsPage: React.FC = () => {
     }
   };
 
-  // Intersection Observer setup
+  // Intersection Observer setup with error handling
   useEffect(() => {
+    if (!artists.length || loading || error) return;
+
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && artists.length < totalArtists) {
           loadMoreArtists();
         }
       },
-      { threshold: 0.1 }
+      { threshold: 0.5 }
     );
 
-    const sentinel = document.getElementById('sentinel');
+    const sentinel = document.querySelector('#sentinel');
     if (sentinel) {
       observer.observe(sentinel);
     }
 
     return () => observer.disconnect();
-  }, [artists.length, totalArtists]);
+  }, [artists.length, totalArtists, loading, error]);
 
   return (
     <Box sx={{ p: { xs: 4, sm: 3 }, mt: { xs: 8, sm: 10 } }}>
@@ -289,6 +327,12 @@ const ArtistsPage: React.FC = () => {
       {loading && (
         <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
           <Typography>Loading artists...</Typography>
+        </Box>
+      )}
+
+      {error && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+          <Typography color="error">{error}</Typography>
         </Box>
       )}
 

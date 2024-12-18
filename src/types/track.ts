@@ -30,6 +30,7 @@ export interface Track {
   soundcloudUrl: string;
   popularity?: number;
   featured?: boolean;
+  spotifyId?: string;
 }
 
 export interface SpotifyApiTrack {
