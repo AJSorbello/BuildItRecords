@@ -1,6 +1,7 @@
 import { SpotifyApi, Track as SpotifyTrackSDK, Artist as SpotifyArtist, SearchResults } from '@spotify/web-api-ts-sdk';
 import { Track, SpotifyImage, SpotifyApiTrack, SpotifyPlaylist, Album } from '../types/track';
 import { RecordLabel, RECORD_LABELS, LABEL_URLS } from '../constants/labels';
+import { redisService } from './RedisService';
 
 /**
  * Service for interacting with the Spotify Web API
@@ -16,8 +17,6 @@ export class SpotifyService {
   private requestCount = 0;
   private readonly MAX_REQUESTS_PER_WINDOW = 100;
   private readonly RATE_LIMIT_WINDOW_MS = 30000; // 30 seconds
-  private cache: Map<string, { data: any; timestamp: number }> = new Map();
-  private readonly CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 
   private constructor() {
     this.spotifyApi = SpotifyApi.withClientCredentials(
@@ -25,7 +24,6 @@ export class SpotifyService {
       process.env.REACT_APP_SPOTIFY_CLIENT_SECRET || ''
     );
     this.initializeRateLimitWindow();
-    setInterval(() => this.cleanCache(), this.CACHE_DURATION);
   }
 
   private initializeRateLimitWindow() {
@@ -42,15 +40,33 @@ export class SpotifyService {
   private async executeWithRateLimit<T>(
     key: string,
     operation: () => Promise<T>,
-    cacheDuration: number = this.CACHE_DURATION
+    cacheDuration: number = 24 * 60 * 60 * 1000 // 24 hours
   ): Promise<T> {
-    // Check cache first
-    const cached = this.cache.get(key);
-    if (cached && Date.now() - cached.timestamp < cacheDuration) {
-      return cached.data as T;
+    // Check Redis cache first
+    const isArtistKey = key.startsWith('artist:');
+    const cached = isArtistKey 
+      ? await redisService.getArtistDetails(key.replace('artist:', ''))
+      : await redisService.getTracksForLabel(key as RecordLabel);
+      
+    if (cached) {
+      return cached as T;
     }
 
-    return new Promise<T>((resolve, reject) => {
+    // If not in cache, execute operation
+    const result = await this.addToQueue(operation);
+
+    // Cache the result
+    if (isArtistKey) {
+      await redisService.setArtistDetails(key.replace('artist:', ''), result);
+    } else {
+      await redisService.setTracksForLabel(key as RecordLabel, result as Track[]);
+    }
+
+    return result;
+  }
+
+  private async addToQueue(operation: () => Promise<any>): Promise<any> {
+    return new Promise((resolve, reject) => {
       const task = async () => {
         try {
           // Check if we need to wait for rate limit
@@ -67,12 +83,6 @@ export class SpotifyService {
           // Execute operation
           const result = await operation();
           this.requestCount++;
-
-          // Cache the result
-          this.cache.set(key, {
-            data: result,
-            timestamp: Date.now()
-          });
 
           resolve(result);
         } catch (error) {
@@ -214,13 +224,35 @@ export class SpotifyService {
   }
 
   private extractTrackId(trackUrl: string): string | null {
-    const match = trackUrl.match(/track\/([a-zA-Z0-9]+)/);
-    return match ? match[1] : null;
+    if (!trackUrl) return null;
+    
+    try {
+      const url = new URL(trackUrl);
+      const pathParts = url.pathname.split('/');
+      const trackIndex = pathParts.indexOf('track');
+      if (trackIndex !== -1 && trackIndex + 1 < pathParts.length) {
+        return pathParts[trackIndex + 1];
+      }
+    } catch (error) {
+      console.error('Error extracting track ID:', error);
+    }
+    return null;
   }
 
   private extractPlaylistId(playlistUrl: string): string | null {
-    const match = playlistUrl.match(/playlist\/([a-zA-Z0-9]+)/);
-    return match ? match[1] : null;
+    if (!playlistUrl) return null;
+    
+    try {
+      const url = new URL(playlistUrl);
+      const pathParts = url.pathname.split('/');
+      const playlistIndex = pathParts.indexOf('playlist');
+      if (playlistIndex !== -1 && playlistIndex + 1 < pathParts.length) {
+        return pathParts[playlistIndex + 1];
+      }
+    } catch (error) {
+      console.error('Error extracting playlist ID:', error);
+    }
+    return null;
   }
 
   async getTrackDetailsByUrl(trackUrl: string): Promise<Track | null> {
@@ -229,14 +261,20 @@ export class SpotifyService {
     return this.executeWithRateLimit(cacheKey, async () => {
       const trackId = this.extractTrackId(trackUrl);
       if (!trackId) {
-        throw new Error('Invalid Spotify URL');
+        console.error('Could not extract track ID from URL:', trackUrl);
+        return null;
       }
 
-      await this.ensureValidToken();
-      const track = await this.spotifyApi.tracks.get(trackId);
-      const label = await this.determineLabelFromUrl(trackUrl);
-      
-      return this.convertSpotifyTrackToTrack(track, label);
+      try {
+        await this.ensureValidToken();
+        const track = await this.spotifyApi.tracks.get(trackId);
+        const label = await this.determineLabelFromUrl(trackUrl);
+        
+        return this.convertSpotifyTrackToTrack(track, label);
+      } catch (error) {
+        console.error('Error getting track details:', error);
+        return null;
+      }
     });
   }
 
@@ -404,6 +442,43 @@ export class SpotifyService {
     }
   }
 
+  async getTracksByLabel(label: RecordLabel): Promise<Track[]> {
+    const cacheKey = label;
+    return this.executeWithRateLimit<Track[]>(cacheKey, async () => {
+      await this.ensureValidToken();
+      
+      try {
+        const playlistUrl = LABEL_URLS[label];
+        if (!playlistUrl) {
+          console.error(`No playlist URL found for label: ${label}`);
+          return [];
+        }
+
+        const playlistId = this.extractPlaylistId(playlistUrl);
+        if (!playlistId) {
+          console.error(`Could not extract playlist ID from URL: ${playlistUrl}`);
+          return [];
+        }
+
+        const playlist = await this.spotifyApi.playlists.getPlaylist(playlistId);
+        if (!playlist || !playlist.tracks.items) {
+          return [];
+        }
+
+        // Filter out episodes and map only tracks
+        const trackPromises = playlist.tracks.items
+          .filter(item => item.track && 'album' in item.track) // Only include tracks, not episodes
+          .map(item => this.convertSpotifyTrackToTrack(item.track as SpotifyTrackSDK, label));
+
+        const tracks = await Promise.all(trackPromises);
+        return tracks;
+      } catch (error) {
+        console.error('Error fetching tracks by label:', error);
+        return [];
+      }
+    });
+  }
+
   private async determineLabelFromUrl(spotifyUrl: string): Promise<RecordLabel> {
     console.log('Determining label for URL:', spotifyUrl);
     const trackId = this.extractTrackId(spotifyUrl);
@@ -416,30 +491,6 @@ export class SpotifyService {
       // For now, let's default to Build It Records since we need to set up proper playlists
       console.log('Defaulting to Build It Records until playlists are properly configured');
       return RECORD_LABELS.RECORDS;
-
-      // Commented out playlist checking until proper playlists are configured
-      /*
-      for (const [label, playlistUrl] of Object.entries(LABEL_URLS)) {
-        console.log('Checking playlist for label:', label);
-        const playlistId = this.extractPlaylistId(playlistUrl);
-        if (!playlistId) {
-          console.log('No playlist ID found for label:', label);
-          continue;
-        }
-
-        const playlist = await this.getPlaylist(playlistId);
-        if (!playlist) {
-          console.log('Could not fetch playlist for label:', label);
-          continue;
-        }
-
-        const trackInPlaylist = playlist.tracks.items.some(item => item.track.id === trackId);
-        if (trackInPlaylist) {
-          console.log('Track found in playlist for label:', label);
-          return label as RecordLabel;
-        }
-      }
-      */
     } catch (error) {
       console.error('Error in determineLabelFromUrl:', error);
       if (error instanceof Error) {
@@ -478,13 +529,33 @@ export class SpotifyService {
   async getLabelReleases(labelName: string): Promise<Track[]> {
     try {
       await this.ensureValidToken();
-      const searchResults = await this.spotifyApi.search(`label:${labelName}`, ['track']);
-      const tracks = await Promise.all(
-        searchResults.tracks.items.map(async (track: SpotifyTrackSDK) => {
-          const label = await this.determineLabelFromUrl(track.external_urls.spotify);
-          return this.convertSpotifyTrackToTrack(track, label);
-        })
-      );
+      
+      // Get the playlist ID for the given label
+      const playlistUrl = LABEL_URLS[labelName as keyof typeof LABEL_URLS];
+      if (!playlistUrl) {
+        console.error('No playlist URL found for label:', labelName);
+        return [];
+      }
+
+      const playlistId = this.extractPlaylistId(playlistUrl);
+      if (!playlistId) {
+        console.error('Could not extract playlist ID from URL:', playlistUrl);
+        return [];
+      }
+
+      // Fetch the playlist tracks
+      const playlist = await this.spotifyApi.playlists.getPlaylist(playlistId);
+      if (!playlist || !playlist.tracks.items) {
+        console.error('Could not fetch playlist or no tracks found');
+        return [];
+      }
+
+      // Convert playlist tracks to our Track type
+      const trackPromises = playlist.tracks.items
+        .filter(item => item.track && 'album' in item.track) // Filter out episodes and null tracks
+        .map(item => this.convertSpotifyTrackToTrack(item.track as SpotifyTrackSDK, labelName as RecordLabel));
+
+      const tracks = await Promise.all(trackPromises);
       return tracks;
     } catch (error) {
       console.error('Error getting label releases:', error);
@@ -527,71 +598,10 @@ export class SpotifyService {
     }
   }
 
-  async getTracksByLabel(label: RecordLabel): Promise<Track[]> {
-    try {
-      await this.ensureValidToken();
-      const searchResults = await this.spotifyApi.search(`label:${label}`, ['track']);
-      const tracks = await Promise.all(
-        searchResults.tracks.items.map(async (track: SpotifyTrackSDK) => {
-          const label = await this.determineLabelFromUrl(track.external_urls.spotify);
-          const popularity = await this.getTrackPopularity(track.id);
-          return {
-            ...(await this.convertSpotifyTrackToTrack(track, label)),
-            popularity
-          };
-        })
-      );
-      return tracks;
-    } catch (error) {
-      console.error('Error getting tracks by label:', error);
-      return [];
-    }
-  }
-
-  isAuthenticated(): boolean {
-    return !!this.accessToken && Date.now() < this.tokenExpiration;
-  }
-
-  getLoginUrl(): string {
-    return `https://accounts.spotify.com/authorize?client_id=${process.env.REACT_APP_SPOTIFY_CLIENT_ID}&response_type=token&redirect_uri=${encodeURIComponent(process.env.REACT_APP_SPOTIFY_REDIRECT_URI || '')}&scope=user-read-private%20playlist-read-private`;
-  }
-
-  handleRedirect(hash: string): boolean {
-    const params = new URLSearchParams(hash);
-    const accessToken = params.get('access_token');
-    if (accessToken) {
-      this.accessToken = accessToken;
-      this.tokenExpiration = Date.now() + 3600 * 1000; // 1 hour
-      return true;
-    }
-    return false;
-  }
-
-  logout(): void {
-    this.accessToken = null;
-    this.tokenExpiration = 0;
-  }
-
-  async searchArtist(query: string): Promise<SpotifyArtist | null> {
-    try {
-      await this.ensureValidToken();
-      const results = await this.spotifyApi.search(query, ['artist']);
-      
-      if (results.artists.items.length > 0) {
-        return results.artists.items[0];
-      }
-      
-      return null;
-    } catch (error) {
-      console.error('Error searching for artist:', error);
-      return null;
-    }
-  }
-
   async getArtistDetailsByName(artistName: string, trackTitle?: string): Promise<SpotifyArtist | null> {
     const cacheKey = `artist:${artistName}:${trackTitle || ''}`;
     
-    return this.executeWithRateLimit(cacheKey, async () => {
+    return this.executeWithRateLimit<SpotifyArtist | null>(cacheKey, async () => {
       await this.ensureValidToken();
       
       try {
@@ -738,20 +748,69 @@ export class SpotifyService {
     }
   }
 
-  // Clear expired cache entries periodically
-  private cleanCache() {
-    const now = Date.now();
-    for (const [key, value] of this.cache.entries()) {
-      if (now - value.timestamp > this.CACHE_DURATION) {
-        this.cache.delete(key);
+  async searchArtist(query: string): Promise<SpotifyArtist | null> {
+    const cacheKey = `artist:${query}`;
+    return this.executeWithRateLimit<SpotifyArtist | null>(cacheKey, async () => {
+      const searchResults = await this.spotifyApi.search(query, ['artist']);
+      const artists = searchResults.artists.items;
+      if (artists && artists.length > 0) {
+        return artists[0];
       }
-    }
+      return null;
+    });
+  }
+
+  // Remove unused cache-related code
+  private cleanCache() {
+    // This functionality is now handled by Redis TTL
   }
 
   // Public method to clear cache if needed
   public clearCache() {
-    this.cache.clear();
+    return redisService.clearCache();
   }
+
+  isAuthenticated(): boolean {
+    return !!this.accessToken && Date.now() < this.tokenExpiration;
+  }
+
+  getLoginUrl(): string {
+    return `https://accounts.spotify.com/authorize?client_id=${process.env.REACT_APP_SPOTIFY_CLIENT_ID}&response_type=token&redirect_uri=${encodeURIComponent(process.env.REACT_APP_SPOTIFY_REDIRECT_URI || '')}&scope=user-read-private%20playlist-read-private`;
+  }
+
+  handleRedirect(hash: string): boolean {
+    const params = new URLSearchParams(hash);
+    const accessToken = params.get('access_token');
+    if (accessToken) {
+      this.accessToken = accessToken;
+      this.tokenExpiration = Date.now() + 3600 * 1000; // 1 hour
+      return true;
+    }
+    return false;
+  }
+
+  logout(): void {
+    this.accessToken = null;
+    this.tokenExpiration = 0;
+  }
+
+  // Add cache warming method
+  async warmupCache(labels: RecordLabel[]): Promise<void> {
+    console.log('Starting cache warmup for labels:', labels);
+    
+    const warmupPromises = labels.map(async (label) => {
+      try {
+        const tracks = await this.getTracksByLabel(label);
+        console.log(`Cached ${tracks.length} tracks for label: ${label}`);
+      } catch (error) {
+        console.error(`Failed to warmup cache for label ${label}:`, error);
+      }
+    });
+
+    await Promise.all(warmupPromises);
+    console.log('Cache warmup completed');
+  }
+
 }
 
 export const spotifyService = SpotifyService.getInstance();

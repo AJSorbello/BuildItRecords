@@ -5,8 +5,10 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const Redis = require('ioredis');
+const RedisService = require('./services/RedisService'); // Import RedisService
 const { validateSpotifyUrl } = require('./utils/validation');
 const { classifyTrack } = require('./utils/trackClassifier');
+const redisRoutes = require('./routes/redis.routes');
 
 // Initialize Express app
 const app = express();
@@ -15,8 +17,42 @@ const port = process.env.PORT || 3001;
 
 // Redis client setup
 const redis = new Redis({
-  host: process.env.REDIS_HOST || 'localhost',
-  port: process.env.REDIS_PORT || 6379,
+  host: 'redis-10915.c1.us-west-2-2.ec2.redns.redis-cloud.com',
+  port: 10915,
+  username: 'default',
+  password: 'VzstngD3amNjTMZu6He1CCkv8GGOmyGS',
+  retryStrategy: (times) => {
+    const delay = Math.min(times * 50, 2000);
+    console.log(`Retrying Redis connection... Attempt ${times}`);
+    return delay;
+  },
+  maxRetriesPerRequest: 3,
+  connectTimeout: 10000,
+  tls: true
+});
+
+redis.on('error', (error) => {
+  console.error('Redis connection error:', error);
+});
+
+redis.on('connect', () => {
+  console.log('Successfully connected to Redis Cloud');
+});
+
+redis.on('ready', async () => {
+  console.log('Redis client is ready to accept commands');
+  const redisService = new RedisService(redis);
+  
+  try {
+    // Initialize search index
+    await redisService.createSearchIndex();
+    console.log('Redis search index created/verified successfully');
+    
+    // Store the RedisService instance on the app for route handlers
+    app.set('redisService', redisService);
+  } catch (error) {
+    console.error('Error initializing Redis features:', error);
+  }
 });
 
 // Middleware
@@ -64,6 +100,7 @@ app.use('/api/tracks', cacheMiddleware, tracksRouter);
 app.use('/api/artists', cacheMiddleware, artistsRouter);
 app.use('/api/albums', cacheMiddleware, albumsRouter);
 app.use('/api/process', processRouter);
+app.use('/api/redis', redisRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -79,6 +116,17 @@ app.use((err, req, res, next) => {
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ status: 'healthy' });
+});
+
+// Redis test endpoint
+app.get('/api/redis/test', async (req, res) => {
+  try {
+    await redis.ping();
+    res.json({ status: 'Redis connected' });
+  } catch (error) {
+    console.error('Redis test error:', error);
+    res.status(500).json({ error: 'Redis connection failed' });
+  }
 });
 
 // Spotify endpoint
