@@ -8,6 +8,7 @@ export interface Release {
   title: string;
   artist: string;
   artwork: string;
+  artistImage?: string;
   releaseDate: string;
   tracks: Track[];
   label: RecordLabel;

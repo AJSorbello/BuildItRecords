@@ -16,44 +16,52 @@ app.set('trust proxy', 1); // Trust first proxy
 const port = process.env.PORT || 3001;
 
 // Redis client setup
-const redis = new Redis({
-  host: 'redis-10915.c1.us-west-2-2.ec2.redns.redis-cloud.com',
-  port: 10915,
-  username: 'default',
-  password: 'VzstngD3amNjTMZu6He1CCkv8GGOmyGS',
-  retryStrategy: (times) => {
-    const delay = Math.min(times * 50, 2000);
-    console.log(`Retrying Redis connection... Attempt ${times}`);
-    return delay;
-  },
-  maxRetriesPerRequest: 3,
-  connectTimeout: 10000,
-  tls: true
-});
+let redis;
+try {
+  redis = new Redis(
+    `rediss://${process.env.REDIS_USERNAME}:${process.env.REDIS_PASSWORD}@${process.env.REDIS_HOST}:${process.env.REDIS_PORT}`,
+    {
+      tls: {
+        rejectUnauthorized: false
+      },
+      retryStrategy: (times) => {
+        const maxRetryTime = 3000;
+        const delay = Math.min(times * 50, maxRetryTime);
+        console.log(`Retrying Redis connection... Attempt ${times}`);
+        return delay;
+      },
+      maxRetriesPerRequest: 3,
+      connectTimeout: 10000,
+      enableOfflineQueue: false
+    }
+  );
 
-redis.on('error', (error) => {
-  console.error('Redis connection error:', error);
-});
+  redis.on('error', (error) => {
+    console.error('Redis connection error:', error);
+  });
 
-redis.on('connect', () => {
-  console.log('Successfully connected to Redis Cloud');
-});
+  redis.on('connect', () => {
+    console.log('Successfully connected to Redis Cloud');
+  });
 
-redis.on('ready', async () => {
-  console.log('Redis client is ready to accept commands');
-  const redisService = new RedisService(redis);
-  
-  try {
-    // Initialize search index
-    await redisService.createSearchIndex();
-    console.log('Redis search index created/verified successfully');
+  redis.on('ready', async () => {
+    console.log('Redis client is ready to accept commands');
+    const redisService = new RedisService(redis);
     
-    // Store the RedisService instance on the app for route handlers
-    app.set('redisService', redisService);
-  } catch (error) {
-    console.error('Error initializing Redis features:', error);
-  }
-});
+    try {
+      // Initialize search index
+      await redisService.createSearchIndex();
+      console.log('Redis search index created/verified successfully');
+      
+      // Store the RedisService instance on the app for route handlers
+      app.set('redisService', redisService);
+    } catch (err) {
+      console.error('Error initializing Redis search index:', err);
+    }
+  });
+} catch (error) {
+  console.error('Error creating Redis client:', error);
+}
 
 // Middleware
 app.use(helmet());
