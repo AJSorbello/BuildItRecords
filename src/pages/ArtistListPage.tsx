@@ -83,6 +83,33 @@ const ArtistListPage: React.FC = () => {
   const [artists, setArtists] = useState<Artist[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const fetchArtistImage = async (artistName: string, track: Release) => {
+    try {
+      // Extract primary artist name if it's a collaboration
+      const primaryArtist = artistName.split(/[,&]|\bfeat\b|\bft\b|\bx\b|\bvs\b/i)[0].trim();
+      console.log('Fetching image for primary artist:', primaryArtist);
+
+      // Try to get artist details from Spotify
+      const artistDetails = await spotifyService.getArtistDetailsByName(primaryArtist, track.title);
+      
+      if (artistDetails?.images?.[0]?.url) {
+        console.log('Found Spotify image for artist:', primaryArtist);
+        // Update local storage with the new image
+        const storedImages = JSON.parse(localStorage.getItem('artistImages') || '{}');
+        storedImages[artistName] = artistDetails.images[0].url;
+        localStorage.setItem('artistImages', JSON.stringify(storedImages));
+        return artistDetails.images[0].url;
+      } else {
+        console.log('No Spotify image found for artist:', primaryArtist);
+        // Fall back to track album cover if no artist image found
+        return track.artwork || 'https://via.placeholder.com/300';
+      }
+    } catch (error) {
+      console.error('Error fetching artist image:', error);
+      return track.artwork || 'https://via.placeholder.com/300';
+    }
+  };
+
   useEffect(() => {
     const loadArtists = async () => {
       try {
@@ -97,158 +124,87 @@ const ArtistListPage: React.FC = () => {
         const artistsWithSpotifyDetails = await Promise.all(
           filteredArtists.map(async (artist) => {
             try {
-              console.log(`Searching Spotify for artist: ${artist.name}`);
-              // Try to get artist details from Spotify using artist name first
-              const spotifyArtist = await spotifyService.getArtistDetailsByName(artist.name);
-
-              if (spotifyArtist) {
-                console.log(`Found Spotify artist: ${spotifyArtist.name}`);
-                // Get valid artist profile images and sort by size
-                const validImages = spotifyArtist.images
-                  .filter(img => {
-                    // More thorough image validation
-                    const isValid = img.url && 
-                      img.width && 
-                      img.height && 
-                      img.url.startsWith('https://');
-                    
-                    if (!isValid) {
-                      console.log(`Filtered out invalid image for ${artist.name}:`, img);
-                    }
-                    return isValid;
-                  })
-                  .sort((a, b) => (b.width || 0) - (a.width || 0));
-
-                if (validImages.length > 0) {
-                  const profileImage = validImages[0];
-                  console.log(`Using Spotify profile image for ${artist.name}: ${profileImage.url}`);
-                  
-                  // Validate the image URL before using it
-                  try {
-                    const response = await fetch(profileImage.url, { 
-                      method: 'HEAD',
-                      headers: {
-                        'Accept': 'image/*'
-                      }
-                    });
-                    
-                    if (response.ok && response.headers.get('content-type')?.startsWith('image/')) {
-                      return {
-                        ...artist,
-                        image: profileImage.url,
-                        genres: spotifyArtist.genres || [],
-                        spotifyId: spotifyArtist.id
-                      };
-                    } else {
-                      console.warn(`Invalid Spotify image URL for ${artist.name}: ${profileImage.url}`);
-                    }
-                  } catch (error) {
-                    console.warn(`Error validating image URL for ${artist.name}:`, error);
-                  }
-                } else {
-                  console.log(`No valid Spotify profile images found for ${artist.name}`);
-                }
-              } 
+              // Extract only the first artist name for the search
+              const primaryArtist = artist.name.split(/[,&]/)[0].trim();
+              console.log(`Processing artist: ${primaryArtist} (from: ${artist.name})`);
               
-              // If no valid artist image found, try with a track title
+              // Try to get artist details from Spotify using artist name first
+              const spotifyArtist = await spotifyService.getArtistDetailsByName(primaryArtist);
+
+              if (spotifyArtist && spotifyArtist.images?.length > 0) {
+                console.log(`Found Spotify artist: ${spotifyArtist.name}`);
+                console.log(`Image URL: ${spotifyArtist.images[0].url}`);
+                
+                return {
+                  ...artist,
+                  image: spotifyArtist.images[0].url,
+                  genres: spotifyArtist.genres || [],
+                  spotifyId: spotifyArtist.id
+                };
+              }
+
+              // If no artist found with just the name, try with a track title
               const firstRelease = artist.releases[0];
               if (firstRelease) {
-                console.log(`Trying with track title for ${artist.name}: ${firstRelease.title}`);
+                // Remove any "Original Mix" or "Remix" suffixes for better search
+                const cleanTrackTitle = firstRelease.title.replace(/[\s-]+(Original Mix|Remix)$/i, '');
+                console.log(`Trying with track title for ${primaryArtist}: ${cleanTrackTitle}`);
+                
                 const spotifyArtistWithTrack = await spotifyService.getArtistDetailsByName(
-                  artist.name,
-                  firstRelease.title
+                  primaryArtist,
+                  cleanTrackTitle
                 );
 
-                if (spotifyArtistWithTrack) {
-                  const validImages = spotifyArtistWithTrack.images
-                    .filter(img => {
-                      const isValid = img.url && 
-                        img.width && 
-                        img.height && 
-                        img.url.startsWith('https://');
-                      
-                      if (!isValid) {
-                        console.log(`Filtered out invalid track-based image for ${artist.name}:`, img);
-                      }
-                      return isValid;
-                    })
-                    .sort((a, b) => (b.width || 0) - (a.width || 0));
-
-                  if (validImages.length > 0) {
-                    const profileImage = validImages[0];
-                    console.log(`Found Spotify profile image using track for ${artist.name}: ${profileImage.url}`);
-                    
-                    // Validate the image URL before using it
-                    try {
-                      const response = await fetch(profileImage.url, { 
-                        method: 'HEAD',
-                        headers: {
-                          'Accept': 'image/*'
-                        }
-                      });
-                      
-                      if (response.ok && response.headers.get('content-type')?.startsWith('image/')) {
-                        return {
-                          ...artist,
-                          image: profileImage.url,
-                          genres: spotifyArtistWithTrack.genres || [],
-                          spotifyId: spotifyArtistWithTrack.id
-                        };
-                      } else {
-                        console.warn(`Invalid Spotify image URL from track search for ${artist.name}: ${profileImage.url}`);
-                      }
-                    } catch (error) {
-                      console.warn(`Error validating track-based image URL for ${artist.name}:`, error);
-                    }
-                  }
-                }
-              }
-
-              // Fall back to release artwork if no valid Spotify image was found
-              if (artist.releases[0]?.artwork) {
-                console.log(`Falling back to release artwork for ${artist.name}: ${artist.releases[0].artwork}`);
-                try {
-                  const response = await fetch(artist.releases[0].artwork, { 
-                    method: 'HEAD',
-                    headers: {
-                      'Accept': 'image/*'
-                    }
-                  });
+                if (spotifyArtistWithTrack && spotifyArtistWithTrack.images?.length > 0) {
+                  console.log(`Found Spotify artist using track: ${spotifyArtistWithTrack.name}`);
+                  console.log(`Image URL: ${spotifyArtistWithTrack.images[0].url}`);
                   
-                  if (response.ok && response.headers.get('content-type')?.startsWith('image/')) {
-                    return {
-                      ...artist,
-                      image: artist.releases[0].artwork
-                    };
-                  } else {
-                    console.warn(`Invalid release artwork URL for ${artist.name}: ${artist.releases[0].artwork}`);
-                  }
-                } catch (error) {
-                  console.warn(`Error validating release artwork URL for ${artist.name}:`, error);
+                  return {
+                    ...artist,
+                    image: spotifyArtistWithTrack.images[0].url,
+                    genres: spotifyArtistWithTrack.genres || [],
+                    spotifyId: spotifyArtistWithTrack.id
+                  };
                 }
               }
 
-              // If all attempts fail, return artist without image
-              console.warn(`No valid image found for ${artist.name}`);
+              // If no Spotify image found, use default image
+              console.log(`No Spotify profile image found for ${primaryArtist}`);
               return {
                 ...artist,
-                image: undefined // Explicitly set to undefined to indicate no valid image
+                image: '/default-artist-image.jpg'
               };
-
             } catch (error) {
               console.error(`Error getting Spotify details for ${artist.name}:`, error);
             }
 
-            // Only fall back to release artwork if we couldn't get a Spotify image
-            console.log(`Falling back to release artwork for ${artist.name}`);
+            // If all attempts fail, return artist without image
+            console.warn(`No valid image found for ${artist.name}`);
             return {
               ...artist,
-              image: artist.releases[0]?.artwork
+              image: undefined // Explicitly set to undefined to indicate no valid image
             };
           })
         );
 
-        setArtists(artistsWithSpotifyDetails);
+        // Fetch artist images
+        const artistsWithImages = await Promise.all(
+          artistsWithSpotifyDetails.map(async (artist) => {
+            if (!artist.image) {
+              const firstRelease = artist.releases[0];
+              if (firstRelease) {
+                const image = await fetchArtistImage(artist.name, firstRelease);
+                return {
+                  ...artist,
+                  image
+                };
+              }
+            }
+            return artist;
+          })
+        );
+
+        setArtists(artistsWithImages);
       } catch (error) {
         console.error('Error loading artists:', error);
       } finally {

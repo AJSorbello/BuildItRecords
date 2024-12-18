@@ -1,18 +1,62 @@
-const redis = require('../config/redis');
+const redisPool = require('../config/redisPool');
 
 class RedisService {
   constructor() {
-    this.redis = redis;
     this.TRACKS_CACHE_DURATION = 24 * 60 * 60; // 24 hours in seconds
     this.ARTIST_CACHE_DURATION = 24 * 60 * 60; // 24 hours in seconds
+    this.isConnected = false;
+    this.retryAttempts = 0;
+    this.maxRetries = 3;
+    this.initializeService();
+  }
+
+  async initializeService() {
+    try {
+      // Wait for pool to be ready
+      await this.waitForConnection();
+      await this.createSearchIndex();
+      console.log('Redis service initialized successfully');
+    } catch (error) {
+      console.error('Failed to initialize Redis service:', error);
+    }
+  }
+
+  async waitForConnection(timeout = 5000) {
+    return new Promise((resolve, reject) => {
+      const start = Date.now();
+      
+      const checkConnection = async () => {
+        if (this.retryAttempts >= this.maxRetries) {
+          return reject(new Error('Max retry attempts reached'));
+        }
+
+        try {
+          await redisPool.executeCommand('ping');
+          this.isConnected = true;
+          return resolve();
+        } catch (error) {
+          this.retryAttempts++;
+          console.log(`Connection attempt ${this.retryAttempts} failed, retrying...`);
+          
+          if (Date.now() - start > timeout) {
+            return reject(new Error('Connection timeout'));
+          }
+          
+          setTimeout(checkConnection, 1000);
+        }
+      };
+
+      checkConnection();
+    });
   }
 
   async createSearchIndex() {
     try {
       // Check if index exists
-      const indices = await this.redis.call('FT._LIST');
+      const indices = await redisPool.executeCommand('call', 'FT._LIST');
       if (!indices.includes('idx:tracks')) {
-        await this.redis.call(
+        await redisPool.executeCommand(
+          'call',
           'FT.CREATE',
           'idx:tracks',
           'ON', 'HASH',
@@ -22,15 +66,21 @@ class RedisService {
           'artist', 'TEXT', 'SORTABLE',
           'label', 'TAG', 'SORTABLE'
         );
+        console.log('Search index created successfully');
       }
     } catch (error) {
-      console.error('Error creating search index:', error);
+      if (error.message.includes('Index already exists')) {
+        console.log('Search index already exists');
+      } else {
+        console.error('Error creating search index:', error);
+        throw error;
+      }
     }
   }
 
   async getTracksForLabel(label) {
     try {
-      const tracks = await this.redis.get(`tracks:${label}`);
+      const tracks = await redisPool.executeCommand('get', `tracks:${label}`);
       return tracks ? JSON.parse(tracks) : null;
     } catch (error) {
       console.error('Error getting tracks for label:', error);
@@ -40,7 +90,8 @@ class RedisService {
 
   async setTracksForLabel(label, tracks) {
     try {
-      await this.redis.setex(
+      await redisPool.executeCommand(
+        'setex',
         `tracks:${label}`,
         this.TRACKS_CACHE_DURATION,
         JSON.stringify(tracks)
@@ -52,7 +103,7 @@ class RedisService {
 
   async getArtistDetails(artistId) {
     try {
-      const artist = await this.redis.get(`artist:${artistId}`);
+      const artist = await redisPool.executeCommand('get', `artist:${artistId}`);
       return artist ? JSON.parse(artist) : null;
     } catch (error) {
       console.error('Error getting artist details:', error);
@@ -62,7 +113,8 @@ class RedisService {
 
   async setArtistDetails(artistId, details) {
     try {
-      await this.redis.setex(
+      await redisPool.executeCommand(
+        'setex',
         `artist:${artistId}`,
         this.ARTIST_CACHE_DURATION,
         JSON.stringify(details)
@@ -74,7 +126,7 @@ class RedisService {
 
   async clearCache() {
     try {
-      await this.redis.flushdb();
+      await redisPool.executeCommand('flushdb');
       console.log('Cache cleared successfully');
     } catch (error) {
       console.error('Error clearing cache:', error);

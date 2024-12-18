@@ -4,8 +4,8 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-const Redis = require('ioredis');
-const RedisService = require('./services/RedisService'); // Import RedisService
+const redisPool = require('./config/redisPool');
+const RedisService = require('./services/RedisService');
 const { validateSpotifyUrl } = require('./utils/validation');
 const { classifyTrack } = require('./utils/trackClassifier');
 const redisRoutes = require('./routes/redis.routes');
@@ -15,53 +15,18 @@ const app = express();
 app.set('trust proxy', 1); // Trust first proxy
 const port = process.env.PORT || 3001;
 
-// Redis client setup
-let redis;
-try {
-  redis = new Redis(
-    `rediss://${process.env.REDIS_USERNAME}:${process.env.REDIS_PASSWORD}@${process.env.REDIS_HOST}:${process.env.REDIS_PORT}`,
-    {
-      tls: {
-        rejectUnauthorized: false
-      },
-      retryStrategy: (times) => {
-        const maxRetryTime = 3000;
-        const delay = Math.min(times * 50, maxRetryTime);
-        console.log(`Retrying Redis connection... Attempt ${times}`);
-        return delay;
-      },
-      maxRetriesPerRequest: 3,
-      connectTimeout: 10000,
-      enableOfflineQueue: false
-    }
-  );
+// Initialize Redis service
+const redisService = new RedisService();
 
-  redis.on('error', (error) => {
-    console.error('Redis connection error:', error);
-  });
-
-  redis.on('connect', () => {
-    console.log('Successfully connected to Redis Cloud');
-  });
-
-  redis.on('ready', async () => {
-    console.log('Redis client is ready to accept commands');
-    const redisService = new RedisService(redis);
-    
-    try {
-      // Initialize search index
-      await redisService.createSearchIndex();
-      console.log('Redis search index created/verified successfully');
-      
-      // Store the RedisService instance on the app for route handlers
-      app.set('redisService', redisService);
-    } catch (err) {
-      console.error('Error initializing Redis search index:', err);
-    }
-  });
-} catch (error) {
-  console.error('Error creating Redis client:', error);
-}
+// Create search index after Redis is ready
+redisPool.pool[0].on('ready', async () => {
+  try {
+    await redisService.createSearchIndex();
+    console.log('Redis search index created/verified successfully');
+  } catch (err) {
+    console.error('Error initializing Redis search index:', err);
+  }
+});
 
 // Middleware
 app.use(helmet());
@@ -79,7 +44,7 @@ app.use(limiter);
 const cacheMiddleware = async (req, res, next) => {
   try {
     const cacheKey = `spotify:${req.originalUrl}`;
-    const cachedData = await redis.get(cacheKey);
+    const cachedData = await redisPool.executeCommand('get', cacheKey);
     
     if (cachedData) {
       return res.json(JSON.parse(cachedData));
@@ -87,13 +52,14 @@ const cacheMiddleware = async (req, res, next) => {
     
     res.sendResponse = res.json;
     res.json = (body) => {
-      redis.setex(cacheKey, 3600, JSON.stringify(body)); // Cache for 1 hour
+      redisPool.executeCommand('setex', cacheKey, 3600, JSON.stringify(body)); // Cache for 1 hour
       res.sendResponse(body);
     };
     
     next();
   } catch (error) {
-    next(error);
+    console.error('Cache middleware error:', error);
+    next();
   }
 };
 
@@ -129,11 +95,32 @@ app.get('/health', (req, res) => {
 // Redis test endpoint
 app.get('/api/redis/test', async (req, res) => {
   try {
-    await redis.ping();
+    await redisPool.executeCommand('ping');
     res.json({ status: 'Redis connected' });
   } catch (error) {
     console.error('Redis test error:', error);
     res.status(500).json({ error: 'Redis connection failed' });
+  }
+});
+
+// Redis health check endpoint
+app.get('/api/redis/health', async (req, res) => {
+  try {
+    const stats = redisPool.getPoolStats();
+    const pingResult = await redisPool.executeCommand('ping');
+    
+    res.json({
+      status: pingResult === 'PONG' ? 'healthy' : 'unhealthy',
+      poolStats: stats,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Redis health check error:', error);
+    res.status(503).json({
+      status: 'unhealthy',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
   }
 });
 

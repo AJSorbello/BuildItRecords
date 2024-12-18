@@ -1,53 +1,38 @@
 const Redis = require('ioredis');
 require('dotenv').config();
 
-const redisConfig = {
-  host: process.env.REDIS_HOST,
-  port: Number(process.env.REDIS_PORT),
-  username: process.env.REDIS_USERNAME,
-  password: process.env.REDIS_PASSWORD,
-  tls: process.env.REDIS_TLS === 'true' ? {
-    rejectUnauthorized: false,
-    servername: process.env.REDIS_HOST
-  } : undefined,
-  retryStrategy: (times) => {
-    const delay = Math.min(times * 50, 2000);
-    return delay;
-  },
-  reconnectOnError: (err) => {
-    const targetError = 'READONLY';
-    if (err.message.includes(targetError)) {
-      return true; // Only reconnect on specific errors
+const redis = new Redis(
+  `rediss://${process.env.REDIS_USERNAME}:${process.env.REDIS_PASSWORD}@${process.env.REDIS_HOST}:${process.env.REDIS_PORT}`,
+  {
+    tls: process.env.REDIS_TLS === 'true' ? {
+      rejectUnauthorized: false
+    } : undefined,
+    retryStrategy: (times) => {
+      const maxRetryTime = 3000;
+      const delay = Math.min(times * 50, maxRetryTime);
+      console.log(`Retrying Redis connection... Attempt ${times}`);
+      return delay;
+    },
+    maxRetriesPerRequest: 3,
+    connectTimeout: 10000,
+    enableOfflineQueue: false,
+    reconnectOnError: (err) => {
+      console.log('Redis reconnect on error:', err);
+      return true;
     }
-    return false;
-  },
-  maxRetriesPerRequest: 3,
-  autoResendUnfulfilledCommands: true,
-  autoResubscribe: true
-};
+  }
+);
 
-console.log('Connecting to Redis...');
-
-const redis = new Redis(redisConfig);
-
-redis.on('connect', () => {
-  console.log('Connected to Redis successfully!');
+redis.on('error', (error) => {
+  console.error('Redis connection error:', error);
 });
 
-redis.on('error', (err) => {
-  if (err.code === 'ECONNRESET') {
-    console.log('Redis connection reset, attempting to reconnect...');
-  } else {
-    console.error('Redis connection error:', err);
-  }
+redis.on('connect', () => {
+  console.log('Successfully connected to Redis Cloud');
 });
 
 redis.on('ready', () => {
   console.log('Redis client is ready to accept commands');
-});
-
-redis.on('reconnecting', () => {
-  console.log('Redis client is reconnecting...');
 });
 
 module.exports = redis;

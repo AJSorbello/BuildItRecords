@@ -602,42 +602,49 @@ export class SpotifyService {
     try {
       await this.ensureValidToken();
       
-      // First try searching with the exact artist name
-      const artistQuery = `artist:"${artistName}"`;
-      const searchResults = await this.spotifyApi.search(artistQuery, ['artist']);
-      
-      if (searchResults.artists.items.length > 0) {
-        // Find exact match first
-        const exactMatch = searchResults.artists.items.find(
-          artist => artist.name.toLowerCase() === artistName.toLowerCase()
-        );
-        
-        if (exactMatch) {
-          return await this.spotifyApi.artists.get(exactMatch.id);
-        }
-        
-        // If no exact match, get the first result
-        const artistId = searchResults.artists.items[0].id;
-        return await this.spotifyApi.artists.get(artistId);
-      }
-      
-      // If no results, try with track title as additional context
+      // First try to search by artist name only
+      let searchQuery = artistName;
       if (trackTitle) {
-        const query = `artist:${artistName} track:${trackTitle}`;
-        const trackSearchResults = await this.spotifyApi.search(query, ['track']);
-        
-        if (trackSearchResults.tracks?.items.length > 0) {
-          const track = trackSearchResults.tracks.items[0];
-          const matchingArtist = track.artists.find(
-            artist => artist.name.toLowerCase() === artistName.toLowerCase()
-          );
-          
-          if (matchingArtist) {
-            return await this.spotifyApi.artists.get(matchingArtist.id);
-          }
-        }
+        // If track title is provided, include it in the search for better accuracy
+        searchQuery = `${artistName} ${trackTitle}`;
       }
+
+      console.log('Searching Spotify for artist:', searchQuery);
+      const results = await this.spotifyApi.search(searchQuery, ['artist'], undefined, 10);
       
+      if (!results.artists.items.length) {
+        console.log('No artists found for query:', searchQuery);
+        return null;
+      }
+
+      // Sort artists by popularity and image availability
+      const sortedArtists = results.artists.items
+        .filter(artist => artist.images?.length > 0)
+        .sort((a, b) => {
+          // First prioritize exact name matches
+          const aExactMatch = a.name.toLowerCase() === artistName.toLowerCase();
+          const bExactMatch = b.name.toLowerCase() === artistName.toLowerCase();
+          if (aExactMatch && !bExactMatch) return -1;
+          if (!aExactMatch && bExactMatch) return 1;
+          
+          // Then sort by popularity
+          return (b.popularity || 0) - (a.popularity || 0);
+        });
+
+      if (sortedArtists.length > 0) {
+        const bestMatch = sortedArtists[0];
+        console.log('Found best matching artist:', {
+          name: bestMatch.name,
+          popularity: bestMatch.popularity,
+          images: bestMatch.images?.length
+        });
+        
+        // Get full artist details
+        const fullArtist = await this.spotifyApi.artists.get(bestMatch.id);
+        return fullArtist;
+      }
+
+      console.log('No suitable artist found with images');
       return null;
     } catch (error) {
       console.error('Error getting artist details:', error);
