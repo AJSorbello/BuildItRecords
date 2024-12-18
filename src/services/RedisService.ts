@@ -8,7 +8,10 @@ class RedisService {
   private readonly CACHE_HITS = new Map<string, number>();
   private readonly CACHE_MISSES = new Map<string, number>();
 
-  private constructor() {}
+  // Private constructor for singleton pattern
+  private constructor() {
+    // Initialization is handled through getInstance()
+  }
 
   public static getInstance(): RedisService {
     if (!RedisService.instance) {

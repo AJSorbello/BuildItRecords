@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Box, Typography, Grid, Card, CardContent, CardMedia, IconButton, CircularProgress } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { FaSpotify, FaSoundcloud } from 'react-icons/fa';
@@ -10,7 +10,7 @@ import { RECORD_LABELS } from '../constants/labels';
 import { LabelKey } from '../types/labels';
 import { getData } from '../utils/dataInitializer';
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 20;
 
 const ReleaseCard = styled(Card)(({ theme }) => ({
   backgroundColor: 'rgba(0, 0, 0, 0.2)',
@@ -48,41 +48,70 @@ interface ReleasesPageProps {
 }
 
 const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
-  const [tracks, setTracks] = useState<Track[]>([]);
+  const [allTracks, setAllTracks] = useState<Track[]>([]);
+  const [displayedTracks, setDisplayedTracks] = useState<Track[]>([]);
   const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const observer = useRef<IntersectionObserver | null>(null);
-  const loadingRef = useRef<HTMLDivElement>(null);
+  const [hasMore, setHasMore] = useState(true);
 
   useEffect(() => {
     const loadTracks = () => {
+      setLoading(true);
       const data = getData();
       const labelTracks = data.tracks.filter(track => 
         track.recordLabel.toLowerCase() === RECORD_LABELS[label].toLowerCase()
       );
       
-      // Sort tracks by release date (newest first)
       const sortedTracks = labelTracks.sort((a, b) => {
         const dateA = new Date(a.releaseDate);
         const dateB = new Date(b.releaseDate);
         return dateB.getTime() - dateA.getTime();
       });
 
-      setTracks(sortedTracks);
+      setAllTracks(sortedTracks);
+      setDisplayedTracks(sortedTracks.slice(0, ITEMS_PER_PAGE));
+      setHasMore(sortedTracks.length > ITEMS_PER_PAGE);
       setLoading(false);
     };
 
     loadTracks();
   }, [label]);
 
-  const currentTracks = tracks.slice(0, page * ITEMS_PER_PAGE);
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!hasMore || loading) return;
+
+      const scrollPosition = window.innerHeight + window.scrollY;
+      const threshold = document.documentElement.offsetHeight - 800; // Load more when 800px from bottom
+
+      if (scrollPosition > threshold) {
+        loadMoreTracks();
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [hasMore, loading, displayedTracks.length]);
+
+  const loadMoreTracks = () => {
+    const currentLength = displayedTracks.length;
+    const nextTracks = allTracks.slice(
+      currentLength,
+      currentLength + ITEMS_PER_PAGE
+    );
+    
+    if (nextTracks.length > 0) {
+      setDisplayedTracks(prev => [...prev, ...nextTracks]);
+      setHasMore(currentLength + nextTracks.length < allTracks.length);
+    } else {
+      setHasMore(false);
+    }
+  };
 
   const topTracks = useMemo(() => {
-    return [...tracks]
+    return [...allTracks]
       .sort((a, b) => ((b.popularity || 0) - (a.popularity || 0)))
       .slice(0, 10);
-  }, [tracks]);
+  }, [allTracks]);
 
   if (loading) {
     return (
@@ -144,7 +173,7 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
                   >
                     Featured Release
                   </Typography>
-                  {currentTracks.length > 0 && (
+                  {displayedTracks.length > 0 && (
                     <ReleaseCard sx={{ 
                       display: 'flex',
                       flexDirection: 'column',
@@ -174,8 +203,8 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
                             height: '100%',
                             objectFit: 'cover'
                           }}
-                          image={currentTracks[0].albumCover}
-                          alt={currentTracks[0].trackTitle}
+                          image={displayedTracks[0].albumCover}
+                          alt={displayedTracks[0].trackTitle}
                         />
                       </Box>
                       <Box sx={{ 
@@ -188,10 +217,10 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
                       }}>
                         <Box>
                           <Typography variant="h5" sx={{ color: '#fff', mb: { xs: 2, md: 3 } }}>
-                            {currentTracks[0].trackTitle}
+                            {displayedTracks[0].trackTitle}
                           </Typography>
                           <Typography variant="h6" sx={{ color: '#B0B0B0', mb: { xs: 2, md: 3 } }}>
-                            {currentTracks[0].artist}
+                            {displayedTracks[0].artist}
                           </Typography>
                           <Box sx={{ display: 'flex', gap: 3, mb: { xs: 2, md: 4 }, alignItems: 'center' }}>
                             <Box>
@@ -199,7 +228,7 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
                                 RELEASED
                               </Typography>
                               <Typography variant="body1" sx={{ color: '#fff' }}>
-                                {new Date(currentTracks[0].releaseDate).toLocaleDateString()}
+                                {new Date(displayedTracks[0].releaseDate).toLocaleDateString()}
                               </Typography>
                             </Box>
                           </Box>
@@ -209,9 +238,9 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
                           gap: 2,
                           flexDirection: 'column'
                         }}>
-                          {currentTracks[0].spotifyUrl && (
+                          {displayedTracks[0].spotifyUrl && (
                             <IconLink 
-                              href={currentTracks[0].spotifyUrl} 
+                              href={displayedTracks[0].spotifyUrl} 
                               target="_blank" 
                               rel="noopener noreferrer"
                               sx={{ 
@@ -235,9 +264,9 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
                               </Typography>
                             </IconLink>
                           )}
-                          {currentTracks[0].beatportUrl && (
+                          {displayedTracks[0].beatportUrl && (
                             <IconLink 
-                              href={currentTracks[0].beatportUrl} 
+                              href={displayedTracks[0].beatportUrl} 
                               target="_blank" 
                               rel="noopener noreferrer"
                               sx={{ 
@@ -295,7 +324,7 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
                       flexDirection: 'column',
                       gap: 1
                     }}>
-                      {topTracks.slice(0, 10).map((track, index) => (
+                      {topTracks.map((track, index) => (
                         <Box
                           key={track.id}
                           sx={{
@@ -396,9 +425,9 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
             </Box>
 
             {/* Catalog Section */}
-            <Grid container spacing={{ xs: 2, md: 4 }}>
-              {currentTracks.slice(1).map((track, index) => (
-                <Grid item xs={12} md={6} xl={3} key={track.id} ref={index === currentTracks.length - 2 ? loadingRef : null}>
+            <Grid container spacing={3} sx={{ p: 3 }}>
+              {displayedTracks.slice(1).map((track, index) => (
+                <Grid item xs={12} sm={6} md={4} lg={3} key={track.id || index}>
                   <ReleaseCard sx={{
                     width: '100%',
                     maxWidth: { xs: '100%', md: 'none' }
@@ -471,6 +500,27 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
                 </Grid>
               ))}
             </Grid>
+
+            {/* Loading indicator */}
+            {hasMore && (
+              <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
+                <CircularProgress size={24} />
+              </Box>
+            )}
+
+            {/* No more releases indicator */}
+            {!hasMore && displayedTracks.length > 0 && (
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  textAlign: 'center', 
+                  p: 2, 
+                  color: 'text.secondary' 
+                }}
+              >
+                No more releases to load
+              </Typography>
+            )}
           </Box>
         </Box>
       </Box>
