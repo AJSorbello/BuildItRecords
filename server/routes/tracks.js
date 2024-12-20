@@ -15,19 +15,32 @@ const limiter = rateLimit({
 // Apply rate limiting to all routes
 router.use(limiter);
 
+// Cache durations
+const CACHE_DURATION = {
+    SHORT: 60 * 60, // 1 hour
+    MEDIUM: 24 * 60 * 60, // 1 day
+    LONG: 7 * 24 * 60 * 60 // 1 week
+};
+
 // Helper function to format track data
 const formatTrackData = (spotifyData) => ({
+    id: spotifyData.id,
     artists: spotifyData.artists.map(artist => ({
+        id: artist.id,
         name: artist.name
     })),
     name: spotifyData.name,
     album: {
+        id: spotifyData.album.id,
         name: spotifyData.album.name,
-        label: spotifyData.album.label || 'Unknown Label'
+        label: spotifyData.album.label || 'Unknown Label',
+        images: spotifyData.album.images
     },
     duration_ms: spotifyData.duration_ms,
     popularity: spotifyData.popularity,
-    preview_url: spotifyData.preview_url
+    preview_url: spotifyData.preview_url,
+    external_urls: spotifyData.external_urls,
+    cached_at: Date.now()
 });
 
 // Helper function to get Spotify access token
@@ -55,6 +68,45 @@ async function getSpotifyToken() {
     return tokenResponse.data.access_token;
 }
 
+// Helper function to fetch track from Spotify
+async function fetchTrackFromSpotify(trackId, accessToken) {
+    const response = await axios.get(`https://api.spotify.com/v1/tracks/${trackId}`, {
+        headers: { 'Authorization': `Bearer ${accessToken}` }
+    });
+    return response.data;
+}
+
+// Helper function to handle track caching
+async function getTrackWithCache(trackId, redisService) {
+    try {
+        // Try to get from cache first
+        const cachedTrack = await redisService.getTrackJson(trackId);
+        
+        if (cachedTrack) {
+            const cacheAge = Date.now() - cachedTrack.cached_at;
+            if (cacheAge < CACHE_DURATION.MEDIUM * 1000) {
+                return { track: cachedTrack, source: 'cache' };
+            }
+        }
+
+        // If not in cache or cache is stale, fetch from Spotify
+        const accessToken = await getSpotifyToken();
+        const spotifyTrack = await fetchTrackFromSpotify(trackId, accessToken);
+        const formattedTrack = formatTrackData(spotifyTrack);
+
+        // Cache the track
+        await redisService.setTrackJson(trackId, formattedTrack);
+
+        return { track: formattedTrack, source: 'spotify' };
+    } catch (error) {
+        // If Spotify fetch fails but we have cached data, return it
+        if (error.response?.status === 404 && cachedTrack) {
+            return { track: cachedTrack, source: 'cache-fallback' };
+        }
+        throw error;
+    }
+}
+
 // Search tracks
 router.get('/search', [
     query('q').notEmpty().withMessage('Search query is required'),
@@ -65,8 +117,18 @@ router.get('/search', [
 ], async (req, res) => {
     try {
         const { q, limit = 20, offset = 0 } = req.query;
-        const accessToken = await getSpotifyToken();
+        const redisService = req.app.get('redisService');
+        
+        // Try to get results from cache
+        const cacheKey = `search:${q}:${limit}:${offset}`;
+        const cachedResults = await redisService.getCacheByLabel(cacheKey);
+        
+        if (cachedResults) {
+            return res.set('X-Data-Source', 'cache').json(cachedResults);
+        }
 
+        // If not in cache, fetch from Spotify
+        const accessToken = await getSpotifyToken();
         const searchResponse = await axios.get(
             `https://api.spotify.com/v1/search`,
             {
@@ -83,7 +145,14 @@ router.get('/search', [
         );
 
         const tracks = searchResponse.data.tracks.items.map(formatTrackData);
-        res.json({
+        
+        // Cache the results
+        await redisService.setCacheWithLabel(cacheKey, tracks, 'search');
+        
+        // Cache individual tracks
+        await redisService.batchSetTracks(tracks);
+
+        res.set('X-Data-Source', 'spotify').json({
             tracks,
             total: searchResponse.data.tracks.total,
             offset,
@@ -109,18 +178,11 @@ router.get('/:trackId', [
     try {
         const { trackId } = req.params;
         const { fields } = req.query;
+        const redisService = req.app.get('redisService');
         
-        const accessToken = await getSpotifyToken();
-        const trackResponse = await axios.get(
-            `https://api.spotify.com/v1/tracks/${trackId}`,
-            {
-                headers: {
-                    'Authorization': `Bearer ${accessToken}`
-                }
-            }
-        );
-
-        let formattedTrack = formatTrackData(trackResponse.data);
+        const { track, source } = await getTrackWithCache(trackId, redisService);
+        
+        let formattedTrack = track;
 
         // Apply field filtering if requested
         if (fields) {
@@ -133,7 +195,7 @@ router.get('/:trackId', [
             }, {});
         }
 
-        res.json(formattedTrack);
+        res.set('X-Data-Source', source).json(formattedTrack);
 
     } catch (error) {
         console.error('Error fetching track:', error);
@@ -154,38 +216,18 @@ router.post('/batch', [
 ], async (req, res) => {
     try {
         const { trackIds, fields } = req.body;
-        const accessToken = await getSpotifyToken();
-
-        const trackResponses = await Promise.all(
-            trackIds.map(async id => {
-                try {
-                    const response = await axios.get(
-                        `https://api.spotify.com/v1/tracks/${id}`,
-                        {
-                            headers: {
-                                'Authorization': `Bearer ${accessToken}`
-                            }
-                        }
-                    );
-                    return { success: true, data: response.data };
-                } catch (error) {
-                    return { 
-                        success: false, 
-                        id, 
-                        error: error.response?.data?.error?.message || error.message 
-                    };
-                }
-            })
+        const redisService = req.app.get('redisService');
+        
+        const results = await Promise.all(
+            trackIds.map(id => getTrackWithCache(id, redisService)
+                .then(result => ({ id, ...result }))
+                .catch(error => ({ id, error: error.message }))
+            )
         );
 
-        const results = {
-            successful: [],
-            failed: []
-        };
-
-        trackResponses.forEach(response => {
-            if (response.success) {
-                let formattedTrack = formatTrackData(response.data);
+        const tracks = results.reduce((acc, { id, track, error }) => {
+            if (track) {
+                let formattedTrack = track;
                 
                 // Apply field filtering if requested
                 if (fields) {
@@ -198,16 +240,13 @@ router.post('/batch', [
                     }, {});
                 }
                 
-                results.successful.push(formattedTrack);
-            } else {
-                results.failed.push({
-                    trackId: response.id,
-                    error: response.error
-                });
+                acc[id] = formattedTrack;
             }
-        });
+            if (error) acc[id] = { error };
+            return acc;
+        }, {});
 
-        res.json(results);
+        res.json(tracks);
 
     } catch (error) {
         console.error('Error fetching tracks:', error);
@@ -227,8 +266,18 @@ router.get('/recommendations', [
 ], async (req, res) => {
     try {
         const { seed_tracks, limit = 20 } = req.query;
-        const accessToken = await getSpotifyToken();
+        const redisService = req.app.get('redisService');
+        
+        // Try to get results from cache
+        const cacheKey = `recommendations:${seed_tracks}:${limit}`;
+        const cachedResults = await redisService.getCacheByLabel(cacheKey);
+        
+        if (cachedResults) {
+            return res.set('X-Data-Source', 'cache').json(cachedResults);
+        }
 
+        // If not in cache, fetch from Spotify
+        const accessToken = await getSpotifyToken();
         const recommendationsResponse = await axios.get(
             'https://api.spotify.com/v1/recommendations',
             {
@@ -243,7 +292,14 @@ router.get('/recommendations', [
         );
 
         const recommendations = recommendationsResponse.data.tracks.map(formatTrackData);
-        res.json(recommendations);
+        
+        // Cache the results
+        await redisService.setCacheWithLabel(cacheKey, recommendations, 'recommendations');
+        
+        // Cache individual tracks
+        await redisService.batchSetTracks(recommendations);
+
+        res.set('X-Data-Source', 'spotify').json(recommendations);
 
     } catch (error) {
         console.error('Recommendations error:', error);

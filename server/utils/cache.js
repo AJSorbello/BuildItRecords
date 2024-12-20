@@ -4,36 +4,68 @@ const redis = new Redis({
     port: process.env.REDIS_PORT || 6379,
 });
 
-const CACHE_TTL = 3600; // 1 hour in seconds
+const CACHE_TTL = {
+    SHORT: 60 * 60,     // 1 hour
+    MEDIUM: 24 * 60 * 60, // 24 hours
+    LONG: 7 * 24 * 60 * 60 // 7 days
+};
+
+const getCacheTTL = (path) => {
+    if (path.includes('/search')) return CACHE_TTL.SHORT;
+    if (path.includes('/artists')) return CACHE_TTL.MEDIUM;
+    if (path.includes('/tracks')) return CACHE_TTL.MEDIUM;
+    return CACHE_TTL.SHORT;
+};
 
 const cacheMiddleware = async (req, res, next) => {
     if (req.method !== 'GET') return next();
 
-    const cacheKey = `spotify:${req.originalUrl}`;
+    const redisService = req.app.get('redisService');
+    if (!redisService) {
+        console.warn('Redis service not available');
+        return next();
+    }
+
+    const cacheKey = `api:${req.originalUrl}`;
     try {
-        const cachedData = await redis.get(cacheKey);
+        const cachedData = await redisService.getCacheByLabel(cacheKey);
         if (cachedData) {
-            return res.json(JSON.parse(cachedData));
+            console.log(`Cache hit for: ${req.originalUrl}`);
+            return res.set('X-Data-Source', 'cache').json(cachedData);
         }
         
-        // Modify res.json to cache the response
+        // Store original json method
         const originalJson = res.json;
+        
+        // Override json method to cache response
         res.json = function(data) {
-            redis.setex(cacheKey, CACHE_TTL, JSON.stringify(data));
+            const ttl = getCacheTTL(req.path);
+            redisService.setCacheWithLabel(cacheKey, data, 'api')
+                .catch(err => console.error('Failed to cache response:', err));
+            
             return originalJson.call(this, data);
         };
         
         next();
     } catch (error) {
-        console.error('Cache error:', error);
+        console.error('Cache middleware error:', error);
         next();
     }
 };
 
 const clearCache = async (pattern) => {
-    const keys = await redis.keys(`spotify:${pattern}`);
-    if (keys.length > 0) {
-        await redis.del(keys);
+    const redisService = req.app.get('redisService');
+    if (!redisService) {
+        console.warn('Redis service not available');
+        return;
+    }
+
+    try {
+        await redisService.clearCache();
+        console.log(`Cache cleared for pattern: ${pattern}`);
+    } catch (error) {
+        console.error('Failed to clear cache:', error);
+        throw error;
     }
 };
 

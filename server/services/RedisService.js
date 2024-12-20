@@ -1,11 +1,14 @@
-const RedisPool = require('../config/redisPool');
+const Redis = require('redis');
 
 class RedisService {
   constructor() {
     this.TRACKS_CACHE_DURATION = 24 * 60 * 60; // 24 hours in seconds
     this.ARTIST_CACHE_DURATION = 24 * 60 * 60; // 24 hours in seconds
-    this.redisPool = new RedisPool(); // Initialize RedisPool in constructor
+    this.SEARCH_CACHE_DURATION = 1 * 60 * 60; // 1 hour in seconds
+    this.client = null;
     this.initialized = false;
+    this.retryAttempts = 3;
+    this.retryDelay = 1000; // 1 second
   }
 
   async init() {
@@ -14,17 +17,148 @@ class RedisService {
     }
 
     try {
-      await this.redisPool.initializePool(); // Initialize the pool
-      await this.createSearchIndex();
+      this.client = Redis.createClient({
+        socket: {
+          host: process.env.REDIS_HOST || 'localhost',
+          port: process.env.REDIS_PORT || 6379
+        }
+      });
+
+      // Handle errors
+      this.client.on('error', (err) => {
+        console.error('Redis error:', err);
+        this.initialized = false;
+      });
+
+      await this.client.connect();
       this.initialized = true;
+      console.log('Redis service initialized successfully');
       
       // Start health check
       this.startHealthCheck();
-      console.log('Redis service initialized successfully');
     } catch (error) {
       console.error('Failed to initialize Redis service:', error);
       throw error;
     }
+  }
+
+  async retryOperation(operation, retries = this.retryAttempts) {
+    let lastError;
+    
+    for (let i = 0; i < retries; i++) {
+      try {
+        return await operation();
+      } catch (error) {
+        lastError = error;
+        console.warn(`Redis operation failed (attempt ${i + 1}/${retries}):`, error.message);
+        
+        if (i < retries - 1) {
+          await new Promise(resolve => setTimeout(resolve, this.retryDelay * Math.pow(2, i)));
+        }
+      }
+    }
+    
+    throw lastError;
+  }
+
+  async setTrackJson(trackId, trackData) {
+    return this.retryOperation(async () => {
+      const key = `track:${trackId}`;
+      await this.client.set(key, JSON.stringify(trackData));
+      await this.client.expire(key, this.TRACKS_CACHE_DURATION);
+      return true;
+    });
+  }
+
+  async getTrackJson(trackId) {
+    return this.retryOperation(async () => {
+      const key = `track:${trackId}`;
+      const data = await this.client.get(key);
+      return data ? JSON.parse(data) : null;
+    });
+  }
+
+  async batchSetTracks(tracks) {
+    if (!Array.isArray(tracks)) {
+      throw new Error('Tracks must be an array');
+    }
+
+    return this.retryOperation(async () => {
+      const multi = this.client.multi();
+      
+      for (const track of tracks) {
+        const key = `track:${track.id}`;
+        multi.set(key, JSON.stringify(track));
+        multi.expire(key, this.TRACKS_CACHE_DURATION);
+      }
+
+      await multi.exec();
+      console.log(`Successfully cached ${tracks.length} tracks`);
+      return true;
+    });
+  }
+
+  async setCacheWithLabel(key, value, label) {
+    return this.retryOperation(async () => {
+      const ttl = this._getLabelTTL(label);
+      await this.client.set(key, JSON.stringify(value));
+      await this.client.expire(key, ttl);
+      return true;
+    });
+  }
+
+  async getCacheByLabel(key) {
+    return this.retryOperation(async () => {
+      const data = await this.client.get(key);
+      return data ? JSON.parse(data) : null;
+    });
+  }
+
+  _getLabelTTL(label) {
+    switch (label?.toLowerCase()) {
+      case 'search':
+        return this.SEARCH_CACHE_DURATION;
+      case 'track':
+        return this.TRACKS_CACHE_DURATION;
+      case 'artist':
+        return this.ARTIST_CACHE_DURATION;
+      default:
+        return this.SEARCH_CACHE_DURATION; // Default to shortest duration
+    }
+  }
+
+  async clearCache() {
+    return this.retryOperation(async () => {
+      await this.client.flushDb();
+      console.log('Cache cleared successfully');
+      return true;
+    });
+  }
+
+  async startHealthCheck() {
+    const checkHealth = async () => {
+      try {
+        await this.client.ping();
+      } catch (error) {
+        console.error('Redis health check failed:', error);
+        this.initialized = false;
+        
+        // Try to reinitialize
+        try {
+          await this.init();
+        } catch (reinitError) {
+          console.error('Failed to reinitialize Redis:', reinitError);
+        }
+      }
+    };
+
+    // Run health check every minute
+    setInterval(checkHealth, 60000);
+  }
+
+  async createSearchIndex() {
+    // Temporarily disabled
+    return;
   }
 
   async waitForConnection(timeout = 30000) {
@@ -33,7 +167,7 @@ class RedisService {
       
       const checkConnection = async () => {
         try {
-          await this.redisPool.executeCommand('ping');
+          await this.client.ping();
           console.log('Redis connection established');
           return resolve();
         } catch (error) {
@@ -51,77 +185,16 @@ class RedisService {
     });
   }
 
-  async createSearchIndex() {
-    try {
-      // Check if index exists
-      const indices = await this.redisPool.executeCommand('FT._LIST');
-      const indexExists = indices.includes('idx:tracks');
-
-      if (!indexExists) {
-        // Create the index if it doesn't exist
-        await this.redisPool.executeCommand(
-          'FT.CREATE',
-          'idx:tracks',
-          'ON', 'JSON',
-          'PREFIX', '1', 'track:',
-          'SCHEMA',
-          '$.name', 'AS', 'name', 'TEXT',
-          '$.artists[*].name', 'AS', 'artist', 'TEXT',
-          '$.album.name', 'AS', 'album', 'TEXT',
-          '$.popularity', 'AS', 'popularity', 'NUMERIC',
-          '$.label', 'AS', 'label', 'TAG'
-        );
-        console.log('Search index created successfully');
-      } else {
-        console.log('Search index already exists');
-      }
-    } catch (error) {
-      console.error('Error creating search index:', error);
-      throw error;
-    }
-  }
-
-  async setTrackJson(trackId, trackData) {
-    const key = `track:${trackId}`;
-    await this.redisPool.executeCommand('JSON.SET', key, '$', JSON.stringify(trackData));
-    await this.redisPool.executeCommand('EXPIRE', key, this.TRACKS_CACHE_DURATION);
-  }
-
-  async getTrackJson(trackId) {
-    const key = `track:${trackId}`;
-    return JSON.parse(await this.redisPool.executeCommand('JSON.GET', key));
-  }
-
   async setArtistJson(artistId, artistData) {
     const key = `artist:${artistId}`;
-    await this.redisPool.executeCommand('JSON.SET', key, '$', JSON.stringify(artistData));
-    await this.redisPool.executeCommand('EXPIRE', key, this.ARTIST_CACHE_DURATION);
+    await this.client.set(key, JSON.stringify(artistData));
+    await this.client.expire(key, this.ARTIST_CACHE_DURATION);
   }
 
   async getArtistJson(artistId) {
     const key = `artist:${artistId}`;
-    return JSON.parse(await this.redisPool.executeCommand('JSON.GET', key));
-  }
-
-  async batchSetTracks(tracks) {
-    if (!Array.isArray(tracks)) {
-      throw new Error('Tracks must be an array');
-    }
-
-    const pipeline = this.redisPool.pipeline();
-    
-    for (const track of tracks) {
-      const key = `track:${track.id}`;
-      pipeline.json.set(key, '$', track);
-    }
-
-    try {
-      await pipeline.exec();
-      console.log(`Successfully cached ${tracks.length} tracks`);
-    } catch (error) {
-      console.error('Error caching tracks:', error);
-      throw error;
-    }
+    const data = await this.client.get(key);
+    return data ? JSON.parse(data) : null;
   }
 
   async searchTracks(query, { label = null, minPopularity = 0 } = {}) {
@@ -133,32 +206,19 @@ class RedisService {
       searchQuery += ` @popularity:[${minPopularity} +inf]`;
     }
 
-    const results = await this.redisPool.executeCommand(
-      'FT.SEARCH', 'idx:tracks', searchQuery,
-      'LIMIT', '0', '20'
-    );
+    const results = await this.client.sendCommand(['FT.SEARCH', 'idx:tracks', searchQuery, 'LIMIT', '0', '20']);
     return this._parseSearchResults(results);
   }
 
   async trackPopularityTS(trackId, popularity) {
     const key = `ts:popularity:track:${trackId}`;
     const timestamp = Date.now();
-    await this.redisPool.executeCommand('TS.ADD', key, timestamp, popularity);
+    await this.client.sendCommand(['TS.ADD', key, timestamp, popularity]);
   }
 
   async getPopularityHistory(trackId, fromTimestamp, toTimestamp = '+') {
     const key = `ts:popularity:track:${trackId}`;
-    return await this.redisPool.executeCommand('TS.RANGE', key, fromTimestamp, toTimestamp);
-  }
-
-  startHealthCheck() {
-    setInterval(async () => {
-      try {
-        await this.redisPool.executeCommand('ping');
-      } catch (error) {
-        console.error('Redis health check failed:', error);
-      }
-    }, 30000); // Check every 30 seconds
+    return await this.client.sendCommand(['TS.RANGE', key, fromTimestamp, toTimestamp]);
   }
 
   _parseSearchResults(results) {
@@ -174,24 +234,9 @@ class RedisService {
     }, []);
   }
 
-  async setCacheWithLabel(key, value, label) {
-    const ttl = this._getLabelTTL(label);
-    await this.redisPool.executeCommand('SET', key, JSON.stringify(value), 'EX', ttl);
-  }
-
-  async getCacheByLabel(key) {
-    const value = await this.redisPool.executeCommand('GET', key);
-    return value ? JSON.parse(value) : null;
-  }
-
-  _getLabelTTL(label) {
-    // You can customize TTL based on label if needed
-    return this.TRACKS_CACHE_DURATION;
-  }
-
   async getTracksForLabel(label) {
     try {
-      const tracks = await this.redisPool.executeCommand('get', `tracks:${label}`);
+      const tracks = await this.client.get(`tracks:${label}`);
       return tracks ? JSON.parse(tracks) : null;
     } catch (error) {
       console.error('Error getting tracks for label:', error);
@@ -201,12 +246,7 @@ class RedisService {
 
   async setTracksForLabel(label, tracks) {
     try {
-      await this.redisPool.executeCommand(
-        'setex',
-        `tracks:${label}`,
-        this.TRACKS_CACHE_DURATION,
-        JSON.stringify(tracks)
-      );
+      await this.client.setex(`tracks:${label}`, this.TRACKS_CACHE_DURATION, JSON.stringify(tracks));
     } catch (error) {
       console.error('Error setting tracks for label:', error);
     }
@@ -214,7 +254,7 @@ class RedisService {
 
   async getArtistDetails(artistId) {
     try {
-      const artist = await this.redisPool.executeCommand('get', `artist:${artistId}`);
+      const artist = await this.client.get(`artist:${artistId}`);
       return artist ? JSON.parse(artist) : null;
     } catch (error) {
       console.error('Error getting artist details:', error);
@@ -224,24 +264,32 @@ class RedisService {
 
   async setArtistDetails(artistId, details) {
     try {
-      await this.redisPool.executeCommand(
-        'setex',
-        `artist:${artistId}`,
-        this.ARTIST_CACHE_DURATION,
-        JSON.stringify(details)
-      );
+      await this.client.setex(`artist:${artistId}`, this.ARTIST_CACHE_DURATION, JSON.stringify(details));
     } catch (error) {
       console.error('Error setting artist details:', error);
     }
   }
 
-  async clearCache() {
-    try {
-      await this.redisPool.executeCommand('flushdb');
-      console.log('Cache cleared successfully');
-    } catch (error) {
-      console.error('Error clearing cache:', error);
-    }
+  async getAllTrackKeys() {
+    return this.retryOperation(async () => {
+      return await this.client.keys('track:*');
+    });
+  }
+
+  async getAllTracks() {
+    return this.retryOperation(async () => {
+      const keys = await this.getAllTrackKeys();
+      if (keys.length === 0) return [];
+
+      const tracks = await Promise.all(
+        keys.map(async (key) => {
+          const data = await this.client.get(key);
+          return data ? JSON.parse(data) : null;
+        })
+      );
+
+      return tracks.filter(track => track !== null);
+    });
   }
 }
 

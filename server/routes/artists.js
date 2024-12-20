@@ -3,7 +3,6 @@ const router = express.Router();
 const axios = require('axios');
 const { query, param, body } = require('express-validator');
 const { validateRequest, isValidSpotifyId } = require('../utils/validation');
-const { cacheMiddleware } = require('../utils/cache');
 const { getSpotifyToken } = require('../utils/spotify');
 
 // Format artist data
@@ -14,20 +13,44 @@ const formatArtistData = (spotifyData) => ({
     popularity: spotifyData.popularity,
     followers: spotifyData.followers.total,
     images: spotifyData.images,
-    external_urls: spotifyData.external_urls
+    external_urls: spotifyData.external_urls,
+    cached_at: Date.now()
 });
 
 // Get artist by ID
 router.get('/:artistId', [
     param('artistId').custom(isValidSpotifyId).withMessage('Invalid Spotify artist ID'),
     query('fields').optional().isString(),
-    validateRequest,
-    cacheMiddleware
+    validateRequest
 ], async (req, res) => {
     try {
         const { artistId } = req.params;
         const { fields } = req.query;
+        const redisService = req.app.get('redisService');
         
+        // Try to get from cache first
+        if (redisService) {
+            const cachedArtist = await redisService.getArtistJson(artistId);
+            if (cachedArtist) {
+                console.log(`Using cached data for artist: ${artistId}`);
+                let responseData = cachedArtist;
+                
+                // Apply field filtering if requested
+                if (fields) {
+                    const requestedFields = fields.split(',');
+                    responseData = requestedFields.reduce((filtered, field) => {
+                        if (field in cachedArtist) {
+                            filtered[field] = cachedArtist[field];
+                        }
+                        return filtered;
+                    }, {});
+                }
+                
+                return res.set('X-Data-Source', 'cache').json(responseData);
+            }
+        }
+
+        // If not in cache or no Redis service, fetch from Spotify
         const accessToken = await getSpotifyToken();
         const artistResponse = await axios.get(
             `https://api.spotify.com/v1/artists/${artistId}`,
@@ -40,6 +63,12 @@ router.get('/:artistId', [
 
         let formattedArtist = formatArtistData(artistResponse.data);
 
+        // Cache the artist data
+        if (redisService) {
+            await redisService.setArtistJson(artistId, formattedArtist)
+                .catch(err => console.error('Failed to cache artist:', err));
+        }
+
         // Apply field filtering if requested
         if (fields) {
             const requestedFields = fields.split(',');
@@ -51,13 +80,12 @@ router.get('/:artistId', [
             }, {});
         }
 
-        res.json(formattedArtist);
+        res.set('X-Data-Source', 'spotify').json(formattedArtist);
 
     } catch (error) {
         console.error('Error fetching artist:', error);
         res.status(error.response?.status || 500).json({
-            error: 'Failed to fetch artist data',
-            message: error.response?.data?.error?.message || error.message
+            message: error.message || 'Internal server error'
         });
     }
 });
@@ -66,13 +94,23 @@ router.get('/:artistId', [
 router.get('/:artistId/top-tracks', [
     param('artistId').custom(isValidSpotifyId).withMessage('Invalid Spotify artist ID'),
     query('market').optional().isString().isLength({ min: 2, max: 2 }),
-    validateRequest,
-    cacheMiddleware
+    validateRequest
 ], async (req, res) => {
     try {
         const { artistId } = req.params;
         const market = req.query.market || 'US';
+        const redisService = req.app.get('redisService');
         
+        // Try to get from cache first
+        if (redisService) {
+            const cachedTopTracks = await redisService.getTopTracksJson(artistId, market);
+            if (cachedTopTracks) {
+                console.log(`Using cached data for top tracks of artist: ${artistId}`);
+                return res.set('X-Data-Source', 'cache').json(cachedTopTracks);
+            }
+        }
+
+        // If not in cache or no Redis service, fetch from Spotify
         const accessToken = await getSpotifyToken();
         const topTracksResponse = await axios.get(
             `https://api.spotify.com/v1/artists/${artistId}/top-tracks`,
@@ -98,13 +136,18 @@ router.get('/:artistId/top-tracks', [
             }
         }));
 
-        res.json(topTracks);
+        // Cache the top tracks data
+        if (redisService) {
+            await redisService.setTopTracksJson(artistId, market, topTracks)
+                .catch(err => console.error('Failed to cache top tracks:', err));
+        }
+
+        res.set('X-Data-Source', 'spotify').json(topTracks);
 
     } catch (error) {
         console.error('Error fetching top tracks:', error);
         res.status(error.response?.status || 500).json({
-            error: 'Failed to fetch top tracks',
-            message: error.response?.data?.error?.message || error.message
+            message: error.message || 'Internal server error'
         });
     }
 });
@@ -115,8 +158,7 @@ router.get('/:artistId/albums', [
     query('include_groups').optional().isString(),
     query('limit').optional().isInt({ min: 1, max: 50 }).toInt(),
     query('offset').optional().isInt({ min: 0 }).toInt(),
-    validateRequest,
-    cacheMiddleware
+    validateRequest
 ], async (req, res) => {
     try {
         const { artistId } = req.params;
@@ -125,7 +167,18 @@ router.get('/:artistId/albums', [
             limit = 20,
             offset = 0
         } = req.query;
+        const redisService = req.app.get('redisService');
         
+        // Try to get from cache first
+        if (redisService) {
+            const cachedAlbums = await redisService.getAlbumsJson(artistId, include_groups, limit, offset);
+            if (cachedAlbums) {
+                console.log(`Using cached data for albums of artist: ${artistId}`);
+                return res.set('X-Data-Source', 'cache').json(cachedAlbums);
+            }
+        }
+
+        // If not in cache or no Redis service, fetch from Spotify
         const accessToken = await getSpotifyToken();
         const albumsResponse = await axios.get(
             `https://api.spotify.com/v1/artists/${artistId}/albums`,
@@ -152,7 +205,18 @@ router.get('/:artistId/albums', [
             external_urls: album.external_urls
         }));
 
-        res.json({
+        // Cache the albums data
+        if (redisService) {
+            await redisService.setAlbumsJson(artistId, include_groups, limit, offset, {
+                albums,
+                total: albumsResponse.data.total,
+                offset,
+                limit
+            })
+                .catch(err => console.error('Failed to cache albums:', err));
+        }
+
+        res.set('X-Data-Source', 'spotify').json({
             albums,
             total: albumsResponse.data.total,
             offset,
@@ -162,8 +226,7 @@ router.get('/:artistId/albums', [
     } catch (error) {
         console.error('Error fetching albums:', error);
         res.status(error.response?.status || 500).json({
-            error: 'Failed to fetch albums',
-            message: error.response?.data?.error?.message || error.message
+            message: error.message || 'Internal server error'
         });
     }
 });
@@ -171,12 +234,22 @@ router.get('/:artistId/albums', [
 // Get artist's related artists
 router.get('/:artistId/related', [
     param('artistId').custom(isValidSpotifyId).withMessage('Invalid Spotify artist ID'),
-    validateRequest,
-    cacheMiddleware
+    validateRequest
 ], async (req, res) => {
     try {
         const { artistId } = req.params;
+        const redisService = req.app.get('redisService');
         
+        // Try to get from cache first
+        if (redisService) {
+            const cachedRelatedArtists = await redisService.getRelatedArtistsJson(artistId);
+            if (cachedRelatedArtists) {
+                console.log(`Using cached data for related artists of artist: ${artistId}`);
+                return res.set('X-Data-Source', 'cache').json(cachedRelatedArtists);
+            }
+        }
+
+        // If not in cache or no Redis service, fetch from Spotify
         const accessToken = await getSpotifyToken();
         const relatedResponse = await axios.get(
             `https://api.spotify.com/v1/artists/${artistId}/related-artists`,
@@ -188,13 +261,19 @@ router.get('/:artistId/related', [
         );
 
         const relatedArtists = relatedResponse.data.artists.map(formatArtistData);
-        res.json(relatedArtists);
+
+        // Cache the related artists data
+        if (redisService) {
+            await redisService.setRelatedArtistsJson(artistId, relatedArtists)
+                .catch(err => console.error('Failed to cache related artists:', err));
+        }
+
+        res.set('X-Data-Source', 'spotify').json(relatedArtists);
 
     } catch (error) {
         console.error('Error fetching related artists:', error);
         res.status(error.response?.status || 500).json({
-            error: 'Failed to fetch related artists',
-            message: error.response?.data?.error?.message || error.message
+            message: error.message || 'Internal server error'
         });
     }
 });
@@ -202,11 +281,22 @@ router.get('/:artistId/related', [
 // Get artist's releases (including collaborations)
 router.get('/:artistId/releases', [
     param('artistId').custom(isValidSpotifyId).withMessage('Invalid Spotify artist ID'),
-    validateRequest,
-    cacheMiddleware
+    validateRequest
 ], async (req, res) => {
     try {
         const { artistId } = req.params;
+        const redisService = req.app.get('redisService');
+        
+        // Try to get from cache first
+        if (redisService) {
+            const cachedReleases = await redisService.getReleasesJson(artistId);
+            if (cachedReleases) {
+                console.log(`Using cached data for releases of artist: ${artistId}`);
+                return res.set('X-Data-Source', 'cache').json(cachedReleases);
+            }
+        }
+
+        // If not in cache or no Redis service, fetch from Spotify
         const accessToken = await getSpotifyToken();
 
         // Get artist's tracks and singles
@@ -237,13 +327,18 @@ router.get('/:artistId/releases', [
             }))
         }));
 
-        res.json(releases);
+        // Cache the releases data
+        if (redisService) {
+            await redisService.setReleasesJson(artistId, releases)
+                .catch(err => console.error('Failed to cache releases:', err));
+        }
+
+        res.set('X-Data-Source', 'spotify').json(releases);
 
     } catch (error) {
         console.error('Error fetching releases:', error);
         res.status(error.response?.status || 500).json({
-            error: 'Failed to fetch releases',
-            message: error.response?.data?.error?.message || error.message
+            message: error.message || 'Internal server error'
         });
     }
 });
@@ -290,8 +385,7 @@ router.post('/batch', [
     } catch (error) {
         console.error('Error processing artists:', error);
         res.status(500).json({
-            error: 'Failed to process artist profiles',
-            message: error.message
+            message: error.message || 'Internal server error'
         });
     }
 });

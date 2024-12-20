@@ -20,7 +20,7 @@
       "@/*": ["src/*"]
     },
     "downlevelIteration": true,
-    "types": ["node"]
+    "types": ["node", "jest"]
   },
   "ts-node": {
     "transpileOnly": true,

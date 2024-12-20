@@ -1,165 +1,113 @@
-const Redis = require('ioredis');
-const CircuitBreaker = require('../utils/circuitBreaker');
+const { createClient } = require('redis');
 
 class RedisPool {
-  constructor(options = {}) {
-    this.minConnections = options.minConnections || 3;
-    this.maxConnections = options.maxConnections || 10;
-    this.connectionTimeout = options.connectionTimeout || 5000;
-    this.pool = [];
+  constructor() {
+    this.client = null;
     this.isInitialized = false;
-    this.circuitBreaker = new CircuitBreaker();
+    this.connectionAttempts = 0;
+    this.maxAttempts = 5;
+    this.initializeConnection();
   }
 
-  createConnection() {
-    const redis = new Redis({
-      host: process.env.REDIS_HOST || 'localhost',
-      port: Number(process.env.REDIS_PORT) || 6379,
-      username: process.env.REDIS_USERNAME,
-      password: process.env.REDIS_PASSWORD,
-      tls: process.env.REDIS_TLS === 'true' ? {
-        rejectUnauthorized: false,
-        requestCert: true,
-        ca: null
-      } : undefined,
-      retryStrategy: (times) => {
-        if (times > 10) {
-          console.error('Max Redis retry attempts reached');
-          return null; // stop retrying
-        }
-        const delay = Math.min(times * 1000, 5000);
-        console.log(`Retrying Redis connection in ${delay}ms (attempt ${times})`);
-        return delay;
-      },
-      reconnectOnError: (err) => {
-        const targetError = 'READONLY';
-        if (err.message.includes(targetError)) {
-          return true;
-        }
-        if (err.message.includes('ECONNRESET')) {
-          console.log('Connection reset by peer, reconnecting...');
-          return true;
-        }
-        return false;
-      },
-      maxRetriesPerRequest: 3,
-      connectTimeout: 10000,
-      enableOfflineQueue: true,
-      enableReadyCheck: true,
-      autoResubscribe: true,
-      autoResendUnfulfilledCommands: true,
-      keepAlive: 30000,
-      noDelay: true,
-      commandTimeout: 5000,
-      lazyConnect: true,
-      retryBackoff: 200
-    });
+  async initializeConnection() {
+    if (this.connectionAttempts >= this.maxAttempts) {
+      console.error('Max connection attempts reached');
+      return;
+    }
 
-    redis.on('error', (err) => {
-      if (err.message.includes('ECONNRESET')) {
-        console.log('Connection reset by peer, will auto-reconnect');
-        return;
+    this.connectionAttempts++;
+
+    try {
+      this.client = createClient({
+        socket: {
+          host: 'localhost',
+          port: 6379,
+          reconnectStrategy: (retries) => {
+            if (retries > 10) {
+              console.error('Max reconnection attempts reached');
+              return new Error('Max reconnection attempts reached');
+            }
+            return Math.min(retries * 100, 3000);
+          }
+        }
+      });
+
+      this.client.on('connect', () => {
+        console.log('Redis connected');
+        this.connectionAttempts = 0;
+      });
+
+      this.client.on('ready', () => {
+        console.log('Redis ready');
+        this.isInitialized = true;
+      });
+
+      this.client.on('error', (err) => {
+        console.error('Redis error:', err.message);
+        if (err.message.includes('ECONNRESET') || err.message.includes('Connection is closed')) {
+          this.handleConnectionError();
+        }
+      });
+
+      this.client.on('end', () => {
+        console.log('Redis connection ended');
+        this.isInitialized = false;
+        this.handleConnectionError();
+      });
+
+      await this.client.connect();
+    } catch (error) {
+      console.error('Failed to initialize Redis:', error.message);
+      throw error;
+    }
+  }
+
+  async handleConnectionError() {
+    if (this.client) {
+      try {
+        await this.client.quit();
+      } catch (error) {
+        console.error('Error disconnecting Redis:', error.message);
       }
-      console.error('Redis connection error:', err);
-      this.circuitBreaker.recordFailure();
-    });
+    }
 
-    redis.on('connect', () => {
-      console.log('Redis connection established');
-      this.circuitBreaker.recordSuccess();
-    });
-
-    redis.on('ready', () => {
-      console.log('Redis connection is ready');
-    });
-
-    redis.on('reconnecting', (delay) => {
-      console.log(`Redis reconnecting in ${delay}ms...`);
-    });
-
-    redis.on('end', () => {
-      console.log('Redis connection ended, will try to reconnect');
-    });
-
-    return redis;
+    setTimeout(() => {
+      this.initializeConnection();
+    }, 1000);
   }
 
   async initializePool() {
     if (this.isInitialized) {
-      console.log('Redis pool already initialized');
       return;
     }
 
-    console.log('Initializing Redis pool...');
-    
     try {
-      for (let i = 0; i < this.minConnections; i++) {
-        const connection = this.createConnection();
-        await connection.connect();
-        
-        // Test the connection
-        try {
-          await connection.ping();
-          this.pool.push(connection);
-          console.log(`Redis pool initialized with ${i + 1} connections`);
-        } catch (err) {
-          console.error('Connection test failed:', err);
-          throw err;
-        }
-      }
-      
-      this.isInitialized = true;
-      console.log('Redis pool initialized successfully');
+      await this.client.ping();
+      console.log('Redis connection established');
     } catch (error) {
-      console.error('Failed to initialize Redis pool:', error);
+      console.error('Failed to initialize Redis:', error.message);
       throw error;
     }
-  }
-
-  async getConnection() {
-    if (!this.isInitialized) {
-      throw new Error('Redis pool not initialized');
-    }
-
-    if (this.circuitBreaker.isOpen()) {
-      throw new Error('Circuit breaker is open');
-    }
-
-    // Simple round-robin for now
-    const connection = this.pool.shift();
-    this.pool.push(connection);
-    return connection;
   }
 
   async executeCommand(command, ...args) {
-    const connection = await this.getConnection();
+    if (!this.client || !this.isInitialized) {
+      throw new Error('Redis client not initialized');
+    }
+
     try {
-      const result = await connection[command](...args);
-      this.circuitBreaker.recordSuccess();
+      const result = await this.client[command](...args);
       return result;
     } catch (error) {
-      this.circuitBreaker.recordFailure();
+      if (error.message.includes('ECONNRESET') || error.message.includes('Connection is closed')) {
+        await this.handleConnectionError();
+        throw new Error('Redis connection error, please retry');
+      }
+      console.error(`Error executing Redis command ${command}:`, error.message);
       throw error;
     }
   }
-
-  pipeline() {
-    if (!this.isInitialized) {
-      throw new Error('Redis pool not initialized');
-    }
-    return this.pool[0].pipeline();
-  }
-
-  getPoolStats() {
-    return {
-      poolSize: this.pool.length,
-      isInitialized: this.isInitialized,
-      circuitBreakerState: this.circuitBreaker.getState()
-    };
-  }
 }
 
-// Create a singleton instance
 const redisPool = new RedisPool();
-
 module.exports = redisPool;
