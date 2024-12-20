@@ -7,9 +7,9 @@ export const RECORD_LABELS = {
 } as const;
 
 export const LABEL_URLS = {
-  [RECORD_LABELS.RECORDS]: 'https://open.spotify.com/playlist/37i9dQZF1DX0XUsuxWHRQd',
-  [RECORD_LABELS.TECH]: 'https://open.spotify.com/playlist/37i9dQZF1DX5wZFk4qBaWP',
-  [RECORD_LABELS.DEEP]: 'https://open.spotify.com/playlist/37i9dQZF1DX6GJXiuZRiGr'
+  [RECORD_LABELS.RECORDS]: 'https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M',  // Today's Top Hits
+  [RECORD_LABELS.TECH]: 'https://open.spotify.com/playlist/37i9dQZF1DX6J5NfMJS675',     // Dance Rising
+  [RECORD_LABELS.DEEP]: 'https://open.spotify.com/playlist/37i9dQZF1DX8tZsk68tuDw'      // Dance Classics
 } as const;
 
 export const LABEL_COLORS = {

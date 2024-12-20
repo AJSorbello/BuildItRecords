@@ -47,7 +47,16 @@ export interface Track {
     id: string;
     name: string;
     spotifyUrl: string;
-    images?: { url: string; height: number; width: number; }[];
+    profileImage?: { 
+      url: string;
+      height: number;
+      width: number;
+    } | null;
+    images?: { 
+      url: string;
+      height: number;
+      width: number;
+    }[];
   }[];
 }
 

@@ -1,113 +1,102 @@
-const { createClient } = require('redis');
+const Redis = require('redis');
+const config = require('./environment');
 
 class RedisPool {
   constructor() {
     this.client = null;
-    this.isInitialized = false;
-    this.connectionAttempts = 0;
-    this.maxAttempts = 5;
-    this.initializeConnection();
+    this.isConnected = false;
+    this.retryAttempts = 3;
+    this.retryDelay = 1000; // 1 second
   }
 
-  async initializeConnection() {
-    if (this.connectionAttempts >= this.maxAttempts) {
-      console.error('Max connection attempts reached');
-      return;
-    }
-
-    this.connectionAttempts++;
+  async connect() {
+    if (this.isConnected) return;
 
     try {
-      this.client = createClient({
+      this.client = Redis.createClient({
         socket: {
-          host: 'localhost',
-          port: 6379,
-          reconnectStrategy: (retries) => {
-            if (retries > 10) {
-              console.error('Max reconnection attempts reached');
-              return new Error('Max reconnection attempts reached');
-            }
-            return Math.min(retries * 100, 3000);
+          host: config.redis.host,
+          port: config.redis.port,
+          tls: config.redis.tls,
+        },
+        username: config.redis.username || undefined,
+        password: config.redis.password || undefined,
+        retry_strategy: (options) => {
+          if (options.attempt > this.retryAttempts) {
+            return new Error('Redis connection retry limit exceeded');
           }
+          return this.retryDelay * Math.pow(2, options.attempt - 1);
         }
+      });
+
+      // Handle connection events
+      this.client.on('error', (err) => {
+        console.error('Redis connection error:', err);
+        this.isConnected = false;
       });
 
       this.client.on('connect', () => {
-        console.log('Redis connected');
-        this.connectionAttempts = 0;
-      });
-
-      this.client.on('ready', () => {
-        console.log('Redis ready');
-        this.isInitialized = true;
-      });
-
-      this.client.on('error', (err) => {
-        console.error('Redis error:', err.message);
-        if (err.message.includes('ECONNRESET') || err.message.includes('Connection is closed')) {
-          this.handleConnectionError();
-        }
-      });
-
-      this.client.on('end', () => {
-        console.log('Redis connection ended');
-        this.isInitialized = false;
-        this.handleConnectionError();
+        console.log('Redis connected successfully');
+        this.isConnected = true;
       });
 
       await this.client.connect();
     } catch (error) {
-      console.error('Failed to initialize Redis:', error.message);
-      throw error;
-    }
-  }
-
-  async handleConnectionError() {
-    if (this.client) {
-      try {
-        await this.client.quit();
-      } catch (error) {
-        console.error('Error disconnecting Redis:', error.message);
-      }
-    }
-
-    setTimeout(() => {
-      this.initializeConnection();
-    }, 1000);
-  }
-
-  async initializePool() {
-    if (this.isInitialized) {
-      return;
-    }
-
-    try {
-      await this.client.ping();
-      console.log('Redis connection established');
-    } catch (error) {
-      console.error('Failed to initialize Redis:', error.message);
+      console.error('Failed to connect to Redis:', error);
       throw error;
     }
   }
 
   async executeCommand(command, ...args) {
-    if (!this.client || !this.isInitialized) {
-      throw new Error('Redis client not initialized');
+    if (!this.isConnected) {
+      await this.connect();
     }
 
     try {
-      const result = await this.client[command](...args);
-      return result;
-    } catch (error) {
-      if (error.message.includes('ECONNRESET') || error.message.includes('Connection is closed')) {
-        await this.handleConnectionError();
-        throw new Error('Redis connection error, please retry');
+      switch (command) {
+        case 'setex':
+          return await this.client.setEx(args[0], args[1], args[2]);
+        case 'get':
+          return await this.client.get(args[0]);
+        case 'set':
+          return await this.client.set(args[0], args[1]);
+        case 'del':
+          return await this.client.del(args[0]);
+        case 'keys':
+          return await this.client.keys(args[0]);
+        case 'flushdb':
+          return await this.client.flushDb();
+        case 'ping':
+          return await this.client.ping();
+        case 'zadd':
+          return await this.client.zAdd(args[0], { score: args[1], value: args[2] });
+        case 'zrange':
+          return await this.client.zRange(args[0], args[1], args[2]);
+        case 'zremrangebyscore':
+          return await this.client.zRemRangeByScore(args[0], args[1], args[2]);
+        case 'zrangebyscore':
+          return await this.client.zRangeByScore(args[0], args[1], args[2], args[3]);
+        case 'sadd':
+          return await this.client.sAdd(args[0], args[1]);
+        case 'smembers':
+          return await this.client.sMembers(args[0]);
+        case 'type':
+          return await this.client.type(args[0]);
+        default:
+          throw new Error(`Unsupported Redis command: ${command}`);
       }
-      console.error(`Error executing Redis command ${command}:`, error.message);
+    } catch (error) {
+      console.error(`Redis command error (${command}):`, error);
       throw error;
+    }
+  }
+
+  async disconnect() {
+    if (this.client) {
+      await this.client.quit();
+      this.isConnected = false;
     }
   }
 }
 
-const redisPool = new RedisPool();
-module.exports = redisPool;
+module.exports = new RedisPool();

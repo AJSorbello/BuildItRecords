@@ -28,6 +28,21 @@ export interface ISpotifyService {
   handleRedirect(hash: string): boolean;
   logout(): void;
   warmupCache(labels: RecordLabel[]): Promise<void>;
+  getArtistsForLabel(label: RecordLabel): Promise<{
+    id: string;
+    name: string;
+    spotifyUrl: string;
+    profileImage?: {
+      url: string;
+      height: number;
+      width: number;
+    } | null;
+    images?: {
+      url: string;
+      height: number;
+      width: number;
+    }[];
+  }[]>;
 }
 
 /**
@@ -193,60 +208,57 @@ export class SpotifyService implements ISpotifyService {
 
   private async convertSpotifyTrackToTrack(track: SpotifyTrackSDK, label: RecordLabel): Promise<Track> {
     try {
-      // Get track metrics
       const metrics = await this.getTrackMetrics(track.id);
+      
+      // Fetch artist details to get profile images
+      const artistPromises = track.artists.map(async artist => {
+        const artistDetails = await this.getArtist(artist.id);
+        const artistData = {
+          id: artist.id,
+          name: artist.name,
+          spotifyUrl: artist.external_urls.spotify,
+          profileImage: artistDetails.images?.[0] || null, // This is already a SpotifyImage object
+          images: artistDetails.images || []
+        };
 
-      // Create album object
-      const album: Album = {
-        name: track.album.name,
-        releaseDate: track.album.release_date,
-        images: track.album.images.map(img => ({
-          url: img.url,
-          height: img.height ?? 0,
-          width: img.width ?? 0
-        }))
-      };
+        // Cache artist details
+        await redisService.setArtistDetails(artist.id, {
+          ...artistData,
+          genres: artistDetails.genres || [],
+          label: label
+        });
+        
+        return artistData;
+      });
 
-      return {
+      const artists = await Promise.all(artistPromises);
+
+      const trackData: Track = {
         id: track.id,
         trackTitle: track.name,
         artist: track.artists[0]?.name || 'Unknown Artist',
+        albumCover: track.album.images[0]?.url || '',
+        album: {
+          name: track.album.name,
+          releaseDate: track.album.release_date,
+          images: track.album.images || []
+        },
         recordLabel: label,
         spotifyUrl: track.external_urls.spotify,
-        albumCover: track.album.images[0]?.url || '',
-        album: album,
         releaseDate: track.album.release_date,
-        previewUrl: track.preview_url,
-        beatportUrl: '',
-        soundcloudUrl: '',
-        popularity: metrics.popularity
+        previewUrl: track.preview_url || null,
+        popularity: metrics.popularity,
+        artists: artists,
+        spotifyId: track.id
       };
+
+      // Cache the track data
+      await redisService.setTracksForLabel(label, [trackData]);
+      
+      return trackData;
     } catch (error) {
       console.error('Error converting track:', error);
-      // Create album object for error case
-      const album: Album = {
-        name: track.album.name,
-        releaseDate: track.album.release_date,
-        images: track.album.images.map(img => ({
-          url: img.url,
-          height: img.height ?? 0,
-          width: img.width ?? 0
-        }))
-      };
-
-      return {
-        id: track.id,
-        trackTitle: track.name,
-        artist: track.artists[0]?.name || 'Unknown Artist',
-        recordLabel: label,
-        spotifyUrl: track.external_urls.spotify,
-        albumCover: track.album.images[0]?.url || '',
-        album: album,
-        releaseDate: track.album.release_date,
-        previewUrl: track.preview_url,
-        beatportUrl: '',
-        soundcloudUrl: ''
-      };
+      throw error;
     }
   }
 
@@ -369,6 +381,27 @@ export class SpotifyService implements ISpotifyService {
     }
   }
 
+  async getTracksByLabel(label: RecordLabel): Promise<Track[]> {
+    try {
+      // Use server API instead of direct Spotify API
+      const response = await fetch(`/api/redis/tracks/${label}`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch tracks for label ${label}`);
+      }
+      
+      const data = await response.json();
+      if (!Array.isArray(data)) {
+        console.error('Unexpected response format:', data);
+        return [];
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error fetching tracks by label:', error);
+      return [];
+    }
+  }
+
   async importLabelTracks(
     label: RecordLabel,
     batchSize = 50,
@@ -467,43 +500,6 @@ export class SpotifyService implements ISpotifyService {
       console.error('Error importing label tracks:', error);
       return [];
     }
-  }
-
-  async getTracksByLabel(label: RecordLabel): Promise<Track[]> {
-    const cacheKey = label;
-    return this.executeWithRateLimit<Track[]>(cacheKey, async () => {
-      await this.ensureValidToken();
-      
-      try {
-        const playlistUrl = LABEL_URLS[label];
-        if (!playlistUrl) {
-          console.error(`No playlist URL found for label: ${label}`);
-          return [];
-        }
-
-        const playlistId = this.extractPlaylistId(playlistUrl);
-        if (!playlistId) {
-          console.error(`Could not extract playlist ID from URL: ${playlistUrl}`);
-          return [];
-        }
-
-        const playlist = await this.spotifyApi.playlists.getPlaylist(playlistId);
-        if (!playlist || !playlist.tracks.items) {
-          return [];
-        }
-
-        // Filter out episodes and map only tracks
-        const trackPromises = playlist.tracks.items
-          .filter(item => item.track && 'album' in item.track) // Only include tracks, not episodes
-          .map(item => this.convertSpotifyTrackToTrack(item.track as SpotifyTrackSDK, label));
-
-        const tracks = await Promise.all(trackPromises);
-        return tracks;
-      } catch (error) {
-        console.error('Error fetching tracks by label:', error);
-        return [];
-      }
-    });
   }
 
   private async determineLabelFromUrl(spotifyUrl: string): Promise<RecordLabel> {
@@ -605,6 +601,14 @@ export class SpotifyService implements ISpotifyService {
     try {
       await this.ensureValidToken();
       
+      // Check Redis cache first using artist name as key
+      const cacheKey = `artist:name:${artistName.toLowerCase()}`;
+      const cachedArtist = await redisService.getArtistDetails(cacheKey);
+      if (cachedArtist) {
+        console.log('Found cached artist details for:', artistName);
+        return cachedArtist;
+      }
+
       // First try to search by artist name only
       let searchQuery = artistName;
       if (trackTitle) {
@@ -642,8 +646,25 @@ export class SpotifyService implements ISpotifyService {
           images: bestMatch.images?.length
         });
         
-        // Get full artist details
+        // Get full artist details including images
         const fullArtist = await this.spotifyApi.artists.get(bestMatch.id);
+        
+        // Ensure we have valid images
+        if (!fullArtist.images || fullArtist.images.length === 0) {
+          console.log('Artist found but no images available:', fullArtist.name);
+          return null;
+        }
+
+        // Cache the artist details with images
+        await redisService.setArtistDetails(cacheKey, {
+          ...fullArtist,
+          images: fullArtist.images.map(img => ({
+            url: img.url,
+            height: img.height,
+            width: img.width
+          }))
+        });
+
         return fullArtist;
       }
 
@@ -683,13 +704,37 @@ export class SpotifyService implements ISpotifyService {
   }
 
   async getArtist(artistId: string): Promise<SpotifyArtist> {
-    return await this.executeWithRateLimit(
-      `artist:${artistId}`,
-      async () => {
-        await this.ensureValidToken();
-        return await this.spotifyApi.artists.get(artistId);
+    try {
+      // Check Redis cache first
+      const cachedArtist = await redisService.getArtistDetails(artistId);
+      if (cachedArtist) {
+        console.log('Using cached artist data for:', artistId);
+        return cachedArtist;
       }
-    );
+
+      // If not in cache, fetch from Spotify
+      await this.ensureValidToken();
+      const artist = await this.spotifyApi.artists.get(artistId);
+      
+      if (!artist) {
+        throw new Error('Artist not found');
+      }
+
+      // Cache the artist details
+      await redisService.setArtistDetails(artistId, {
+        id: artist.id,
+        name: artist.name,
+        images: artist.images || [],
+        genres: artist.genres || [],
+        popularity: artist.popularity || 0,
+        profileImage: artist.images?.[0]?.url || null
+      });
+
+      return artist;
+    } catch (error) {
+      console.error('Error getting artist:', error);
+      throw error;
+    }
   }
 
   // Remove unused cache-related code
@@ -741,6 +786,57 @@ export class SpotifyService implements ISpotifyService {
 
     await Promise.all(warmupPromises);
     console.log('Cache warmup completed');
+  }
+
+  async getArtistsForLabel(label: RecordLabel): Promise<{
+    id: string;
+    name: string;
+    spotifyUrl: string;
+    profileImage?: {
+      url: string;
+      height: number;
+      width: number;
+    } | null;
+    images?: {
+      url: string;
+      height: number;
+      width: number;
+    }[];
+  }[]> {
+    try {
+      const tracks = await this.getTracksByLabel(label);
+      const artistMap = new Map<string, {
+        id: string;
+        name: string;
+        spotifyUrl: string;
+        profileImage?: {
+          url: string;
+          height: number;
+          width: number;
+        } | null;
+        images?: {
+          url: string;
+          height: number;
+          width: number;
+        }[];
+      }>();
+
+      // Collect unique artists from tracks
+      tracks.forEach(track => {
+        if (track.artists) {
+          track.artists.forEach(artist => {
+            if (!artistMap.has(artist.id)) {
+              artistMap.set(artist.id, artist);
+            }
+          });
+        }
+      });
+
+      return Array.from(artistMap.values());
+    } catch (error) {
+      console.error('Error getting artists for label:', error);
+      return [];
+    }
   }
 
 }

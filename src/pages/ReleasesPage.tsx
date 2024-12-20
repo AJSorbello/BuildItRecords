@@ -8,7 +8,7 @@ import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import { Track } from '../types/track';
 import { RECORD_LABELS } from '../constants/labels';
 import { LabelKey } from '../types/labels';
-import { getData } from '../utils/dataInitializer';
+import { redisService } from '../services/RedisService';
 
 const ITEMS_PER_PAGE = 20;
 
@@ -55,39 +55,25 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
   const [hasMore, setHasMore] = useState(true);
   const loadingRef = useRef(false);
 
-  // Memoize the filtered and sorted tracks
-  const filteredTracks = useMemo(() => {
-    try {
-      const data = getData();
-      return data.tracks
-        .filter(track => track.recordLabel.toLowerCase() === RECORD_LABELS[label].toLowerCase())
-        .sort((a, b) => {
-          const dateA = new Date(a.releaseDate);
-          const dateB = new Date(b.releaseDate);
-          return dateB.getTime() - dateA.getTime();
-        });
-    } catch (err) {
-      console.error('Error processing tracks:', err);
-      return [];
-    }
-  }, [label]);
-
-  // Memoize top tracks by popularity
-  const topTracks = useMemo(() => {
-    return [...allTracks]
-      .sort((a, b) => ((b.popularity || 0) - (a.popularity || 0)))
-      .slice(0, 10);
-  }, [allTracks]);
-
-  // Initial load
+  // Fetch tracks from Redis
   useEffect(() => {
-    const loadTracks = () => {
+    const loadTracks = async () => {
       try {
         setError(null);
         setLoading(true);
-        setAllTracks(filteredTracks);
-        setDisplayedTracks(filteredTracks.slice(0, ITEMS_PER_PAGE));
-        setHasMore(filteredTracks.length > ITEMS_PER_PAGE);
+        const tracks = await redisService.getTracksForLabel(RECORD_LABELS[label]);
+        if (tracks) {
+          const sortedTracks = tracks.sort((a, b) => {
+            const dateA = new Date(a.releaseDate);
+            const dateB = new Date(b.releaseDate);
+            return dateB.getTime() - dateA.getTime();
+          });
+          setAllTracks(sortedTracks);
+          setDisplayedTracks(sortedTracks.slice(0, ITEMS_PER_PAGE));
+          setHasMore(sortedTracks.length > ITEMS_PER_PAGE);
+        } else {
+          setError('No releases found');
+        }
       } catch (err) {
         console.error('Error loading tracks:', err);
         setError('Failed to load releases');
@@ -97,7 +83,14 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
     };
 
     loadTracks();
-  }, [filteredTracks]);
+  }, [label]);
+
+  // Memoize top tracks by popularity
+  const topTracks = useMemo(() => {
+    return [...allTracks]
+      .sort((a, b) => ((b.popularity || 0) - (a.popularity || 0)))
+      .slice(0, 10);
+  }, [allTracks]);
 
   // Infinite scroll with Intersection Observer
   useEffect(() => {

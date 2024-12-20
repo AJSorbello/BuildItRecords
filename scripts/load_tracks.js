@@ -1,212 +1,159 @@
-require('dotenv').config();
 const axios = require('axios');
-const Redis = require('redis');
+const RedisService = require('../server/services/RedisService');
+const config = require('../server/config/environment');
 
-const RECORD_LABELS = {
-    RECORDS: 'Build It Records',
-    TECH: 'Build It Tech',
-    DEEP: 'Build It Deep'
-};
+const LABELS = ['Build It Records', 'Build It Tech', 'Build It Deep'];
+const LIMIT = 50;
 
-async function delay(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+async function getSpotifyToken() {
+  const { clientId, clientSecret } = config.spotify;
+
+  try {
+    const response = await axios.post(
+      'https://accounts.spotify.com/api/token',
+      new URLSearchParams({
+        grant_type: 'client_credentials'
+      }).toString(),
+      {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Authorization': `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`
+        }
+      }
+    );
+
+    return response.data.access_token;
+  } catch (error) {
+    console.error('Failed to get Spotify token:', error.message);
+    throw error;
+  }
 }
 
-async function getSpotifyToken(clientId, clientSecret) {
-    try {
-        const tokenResponse = await axios.post(
-            'https://accounts.spotify.com/api/token',
-            new URLSearchParams({
-                grant_type: 'client_credentials'
-            }).toString(),
-            {
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'Authorization': `Basic ${Buffer.from(
-                        `${clientId}:${clientSecret}`
-                    ).toString('base64')}`
-                }
-            }
-        );
-        return tokenResponse.data.access_token;
-    } catch (error) {
-        console.error('Error getting Spotify token:', error.message);
-        if (error.response) {
-            console.error('Response data:', error.response.data);
+async function searchTracks(token, label, offset = 0) {
+  try {
+    const response = await axios.get(
+      `https://api.spotify.com/v1/search`,
+      {
+        params: {
+          q: `label:"${label}"`,
+          type: 'track',
+          limit: LIMIT,
+          offset: offset
+        },
+        headers: {
+          'Authorization': `Bearer ${token}`
         }
-        throw error;
-    }
-}
+      }
+    );
 
-async function searchLabelReleases(label, accessToken) {
-    const tracks = [];
-    let offset = 0;
-    const limit = 50;
-    let hasMore = true;
-
-    while (hasMore) {
-        try {
-            const response = await axios.get(
-                'https://api.spotify.com/v1/search',
-                {
-                    headers: {
-                        'Authorization': `Bearer ${accessToken}`
-                    },
-                    params: {
-                        q: `label:"${label}"`,
-                        type: 'track',
-                        offset,
-                        limit,
-                        market: 'US'
-                    }
-                }
-            );
-
-            const items = response.data.tracks.items;
-            if (items && items.length > 0) {
-                tracks.push(...items);
-            }
-
-            // Check if we've reached the end
-            if (!items || items.length < limit) {
-                hasMore = false;
-            } else {
-                offset += limit;
-                console.log(`Fetched ${tracks.length} tracks so far...`);
-                await delay(100); // Rate limiting
-            }
-        } catch (error) {
-            console.error(`Error searching tracks at offset ${offset}:`, error.message);
-            if (error.response?.status === 429) {
-                const retryAfter = error.response.headers['retry-after'] || 1;
-                console.log(`Rate limited. Waiting ${retryAfter} seconds...`);
-                await delay(retryAfter * 1000);
-                continue;
-            }
-            break;
-        }
-    }
-
-    return tracks;
-}
-
-async function processTracks(tracks, client, label) {
-    console.log(`\nProcessing ${tracks.length} tracks for ${label}`);
-    const results = {
-        success: [],
-        failed: []
-    };
-
-    for (const track of tracks) {
-        try {
-            const trackData = {
-                id: track.id,
-                name: track.name,
-                artists: track.artists.map(artist => ({
-                    id: artist.id,
-                    name: artist.name
-                })),
-                album: {
-                    id: track.album.id,
-                    name: track.album.name,
-                    images: track.album.images,
-                    release_date: track.album.release_date
-                },
-                duration_ms: track.duration_ms,
-                popularity: track.popularity,
-                preview_url: track.preview_url,
-                external_urls: track.external_urls,
-                label,
-                cached_at: Date.now()
-            };
-
-            await client.set(`track:${track.id}`, JSON.stringify(trackData));
-            await client.expire(`track:${track.id}`, 24 * 60 * 60); // 24 hours TTL
-            results.success.push(track.id);
-            console.log(`Cached: ${track.name}`);
-        } catch (error) {
-            results.failed.push({ id: track.id, error: error.message });
-            console.error(`Failed: ${track.id} - ${error.message}`);
-        }
-        await delay(100); // Rate limiting
-    }
-
-    return results;
+    return response.data.tracks;
+  } catch (error) {
+    console.error(`Failed to search tracks for ${label}:`, error.message);
+    throw error;
+  }
 }
 
 async function loadTracks() {
-    const client = Redis.createClient();
-    let accessToken;
-    
-    try {
-        await client.connect();
-        console.log('Connected to Redis');
+  const redisService = new RedisService();
+  
+  try {
+    console.log('Connected to Redis');
+    await redisService.init();
 
-        const clientId = process.env.REACT_APP_SPOTIFY_CLIENT_ID;
-        const clientSecret = process.env.REACT_APP_SPOTIFY_CLIENT_SECRET;
+    console.log('Authenticating with Spotify...');
+    const token = await getSpotifyToken();
+    console.log('Successfully authenticated with Spotify\n');
 
-        if (!clientId || !clientSecret) {
-            throw new Error('Missing Spotify credentials in environment variables');
+    let totalTracksProcessed = 0;
+    let totalTracksCached = 0;
+    let failedTracks = 0;
+
+    for (const label of LABELS) {
+      console.log(`\nSearching for releases from ${label}`);
+      let offset = 0;
+      let tracks = [];
+
+      while (true) {
+        const result = await searchTracks(token, label, offset);
+        if (!result.items || result.items.length === 0) break;
+
+        tracks = tracks.concat(result.items);
+        offset += result.items.length;
+        console.log(`Fetched ${tracks.length} tracks so far...`);
+
+        if (offset >= result.total) break;
+      }
+
+      console.log(`Found ${tracks.length} tracks for ${label}\n`);
+      console.log(`Processing ${tracks.length} tracks for ${label}`);
+
+      const labelTracks = [];
+      for (const track of tracks) {
+        try {
+          const trackData = {
+            id: track.id,
+            name: track.name,
+            artists: track.artists.map(artist => ({
+              id: artist.id,
+              name: artist.name
+            })),
+            album: {
+              id: track.album.id,
+              name: track.album.name,
+              images: track.album.images,
+              release_date: track.album.release_date
+            },
+            duration_ms: track.duration_ms,
+            popularity: track.popularity,
+            preview_url: track.preview_url,
+            external_urls: track.external_urls,
+            label: label,
+            cached_at: Date.now()
+          };
+
+          await redisService.setTrackJson(track.id, trackData);
+          labelTracks.push(trackData);
+          console.log(`Cached: ${track.name}`);
+          totalTracksCached++;
+        } catch (error) {
+          console.error(`Failed to cache track ${track.name}:`, error);
+          failedTracks++;
         }
+      }
 
-        console.log('Authenticating with Spotify...');
-        accessToken = await getSpotifyToken(clientId, clientSecret);
-        console.log('Successfully authenticated with Spotify');
+      // Store tracks by label
+      await redisService.setTracksForLabel(label, tracks);
 
-        const results = {
-            success: [],
-            failed: []
-        };
+      // Store individual tracks
+      for (const track of tracks) {
+        const trackKey = `track:${track.id}`;
+        await redisService.setTrack(trackKey, track);
+      }
 
-        // Process each record label
-        for (const [key, label] of Object.entries(RECORD_LABELS)) {
-            console.log(`\nSearching for releases from ${label}`);
-            const tracks = await searchLabelReleases(label, accessToken);
-            console.log(`Found ${tracks.length} tracks for ${label}`);
-
-            const labelResults = await processTracks(tracks, client, label);
-            results.success.push(...labelResults.success);
-            results.failed.push(...labelResults.failed);
-
-            // Add delay between labels
-            if (key !== Object.keys(RECORD_LABELS).slice(-1)[0]) {
-                console.log('\nWaiting before processing next label...');
-                await delay(2000);
-            }
-        }
-
-        // Print summary
-        console.log('\n=== Final Summary ===');
-        console.log(`Successfully cached: ${results.success.length} tracks`);
-        console.log(`Failed to cache: ${results.failed.length} tracks`);
-
-        if (results.failed.length > 0) {
-            console.log('\nFailed tracks:');
-            results.failed.forEach(({ id, error }) => {
-                console.log(`- ${id}: ${error}`);
-            });
-        }
-
-        // Verify Redis contents
-        const keys = await client.keys('track:*');
-        console.log(`\nTotal tracks in Redis: ${keys.length}`);
-
-        if (keys.length > 0) {
-            const sampleKey = keys[0];
-            const sampleData = await client.get(sampleKey);
-            console.log('\nSample track data:');
-            console.log(JSON.parse(sampleData));
-        }
-
-    } catch (error) {
-        console.error('Fatal error:', error.message);
-        if (error.response) {
-            console.error('Response data:', error.response.data);
-        }
-    } finally {
-        await client.quit();
-        console.log('\nRedis connection closed');
+      totalTracksProcessed += tracks.length;
+      console.log('\nWaiting before processing next label...\n');
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
+
+    console.log('\n=== Final Summary ===');
+    console.log(`Successfully cached: ${totalTracksCached} tracks`);
+    console.log(`Failed to cache: ${failedTracks} tracks\n`);
+
+    const allTracks = await redisService.getAllTracks();
+    console.log(`Total tracks in Redis: ${allTracks.length}\n`);
+
+    // Display sample track data
+    if (allTracks.length > 0) {
+      console.log('Sample track data:');
+      console.log(allTracks[0]);
+    }
+
+  } catch (error) {
+    console.error('Script failed:', error);
+  } finally {
+    console.log('\nRedis connection closed');
+    process.exit(0);
+  }
 }
 
-loadTracks().catch(console.error);
+loadTracks();

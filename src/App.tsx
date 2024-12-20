@@ -9,6 +9,9 @@ import {
 import { ThemeProvider, CssBaseline, Box } from '@mui/material';
 import { Layout } from './components/Layout';
 import { darkTheme } from './theme/theme';
+import { ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
+import theme from './theme/theme';
+import './styles/global.css';
 
 // Import pages
 import RecordsHome from './pages/labels/RecordsHome';
@@ -106,22 +109,24 @@ const App: React.FC = () => {
   }, []);
 
   return (
-    <ThemeProvider theme={darkTheme}>
-      <CssBaseline />
-      <Box sx={{ 
-        minHeight: '100vh',
-        backgroundColor: '#121212',
-        '& #root': {
-          // Remove aria-hidden from root when using dialogs
-          '&[aria-hidden="true"]': {
-            '& button': { display: 'none' },
-            '& [tabindex]': { display: 'none' }
+    <MuiThemeProvider theme={theme}>
+      <ThemeProvider theme={darkTheme}>
+        <CssBaseline />
+        <Box sx={{ 
+          minHeight: '100vh',
+          backgroundColor: '#121212',
+          '& #root': {
+            // Remove aria-hidden from root when using dialogs
+            '&[aria-hidden="true"]': {
+              '& button': { display: 'none' },
+              '& [tabindex]': { display: 'none' }
+            }
           }
-        }
-      }}>
-        <RouterProvider router={router} />
-      </Box>
-    </ThemeProvider>
+        }}>
+          <RouterProvider router={router} />
+        </Box>
+      </ThemeProvider>
+    </MuiThemeProvider>
   );
 };
 

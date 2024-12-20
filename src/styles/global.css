@@ -1,0 +1,28 @@
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes refresh {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.refresh-spin {
+  animation: spin 1s linear infinite;
+}
+
+.refresh {
+  animation: refresh 0.5s linear infinite;
+}

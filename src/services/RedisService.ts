@@ -57,6 +57,20 @@ class RedisService {
     }
   }
 
+  async getArtistsForLabel(label: RecordLabel): Promise<any[] | null> {
+    try {
+      const response = await fetch(`${this.API_URL}/label/${label}/artists`);
+      if (!response.ok) {
+        return null;
+      }
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Redis get artists error:', error);
+      return null;
+    }
+  }
+
   async getArtistDetails(artistId: string): Promise<any | null> {
     try {
       const cacheKey = `artist:${artistId}`;
@@ -69,19 +83,25 @@ class RedisService {
       this.CACHE_HITS.set(cacheKey, (this.CACHE_HITS.get(cacheKey) || 0) + 1);
       return data;
     } catch (error) {
-      console.error('Redis get error:', error);
+      console.error('Redis get artist details error:', error);
       return null;
     }
   }
 
   async setArtistDetails(artistId: string, details: any): Promise<void> {
     try {
+      const payload = {
+        artistId,
+        details,
+        duration: this.TRACKS_CACHE_DURATION
+      };
+      
       await fetch(`${this.API_URL}/artist/${artistId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ details, duration: this.TRACKS_CACHE_DURATION }),
+        body: JSON.stringify(payload),
       });
     } catch (error) {
       console.error('Redis set error:', error);

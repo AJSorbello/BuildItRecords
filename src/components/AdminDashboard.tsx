@@ -18,11 +18,14 @@ import {
   FormControl,
   InputLabel,
   Pagination,
-  Stack
+  Stack,
+  Snackbar,
+  Alert
 } from '@mui/material';
 import {
   Edit as EditIcon,
-  Delete as DeleteIcon
+  Delete as DeleteIcon,
+  Refresh as RefreshIcon
 } from '@mui/icons-material';
 import { RECORD_LABELS } from '../constants/labels';
 import { Track, SpotifyApiTrack } from '../types/track';
@@ -133,6 +136,10 @@ const AdminDashboard: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [tracksPerPage] = useState(10);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>('success');
+  const [refreshing, setRefreshing] = useState(false);
 
   // Function to remove duplicates and sort tracks in a single pass
   const processTracksEfficiently = (tracksArray: Track[]): Track[] => {
@@ -611,10 +618,31 @@ const AdminDashboard: React.FC = () => {
         <Box>
           <Button
             variant="contained"
-            onClick={handleImportDialogOpen}
-            sx={{ mr: 2 }}
+            color="primary"
+            onClick={async () => {
+              if (refreshing) return;
+              setRefreshing(true);
+              try {
+                const response = await fetch('/api/redis/warmup', {
+                  method: 'POST',
+                });
+                if (!response.ok) {
+                  throw new Error('Failed to warm up cache');
+                }
+                setSnackbarMessage('Cache refreshed successfully');
+                setSnackbarSeverity('success');
+              } catch (error) {
+                setSnackbarMessage('Failed to refresh cache');
+                setSnackbarSeverity('error');
+              } finally {
+                setRefreshing(false);
+                setSnackbarOpen(true);
+              }
+            }}
+            startIcon={<RefreshIcon className={refreshing ? 'refresh-spin' : ''} />}
+            disabled={refreshing}
           >
-            Import by Label
+            {refreshing ? 'Refreshing Cache...' : 'Refresh Cache'}
           </Button>
           <Button 
             variant="contained" 
@@ -1008,6 +1036,21 @@ const AdminDashboard: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Snackbar 
+        open={snackbarOpen} 
+        autoHideDuration={6000} 
+        onClose={() => setSnackbarOpen(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={() => setSnackbarOpen(false)} 
+          severity={snackbarSeverity}
+          sx={{ width: '100%' }}
+        >
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 };
