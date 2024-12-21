@@ -9,11 +9,7 @@ Release.init({
     primaryKey: true,
     allowNull: false
   },
-  name: {
-    type: DataTypes.STRING,
-    allowNull: false
-  },
-  trackTitle: {
+  title: {
     type: DataTypes.STRING,
     allowNull: false
   },
@@ -25,19 +21,43 @@ Release.init({
       key: 'id'
     }
   },
+  images: {
+    type: DataTypes.JSON,
+    allowNull: true
+  },
+  artworkUrl: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  artwork: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  releaseDate: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
+  genre: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  labelName: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
   featured: {
     type: DataTypes.BOOLEAN,
     defaultValue: false
-  },
-  album: {
-    type: DataTypes.JSON,
-    allowNull: true
   },
   spotifyUrl: {
     type: DataTypes.STRING,
     allowNull: true
   },
-  previewUrl: {
+  beatportUrl: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  soundcloudUrl: {
     type: DataTypes.STRING,
     allowNull: true
   },
