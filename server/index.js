@@ -4,8 +4,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const sequelize = require('./config/database');
 const { Label, Artist, Release } = require('./models');
-const syncRoutes = require('./routes/sync');
-const releasesRoutes = require('./routes/releases');
+const apiRoutes = require('./routes/api.routes');
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -15,9 +14,24 @@ app.use(cors());
 app.use(helmet());
 app.use(express.json());
 
-// Routes
-app.use('/api/sync', syncRoutes);
-app.use('/api/releases', releasesRoutes);
+// Debug middleware to log all requests
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
+  next();
+});
+
+// Mount API routes
+app.use('/api', apiRoutes);
+
+// 404 handler
+app.use((req, res) => {
+  console.log('404 Not Found:', req.method, req.originalUrl);
+  res.status(404).json({ 
+    success: false, 
+    message: 'Not Found',
+    path: req.originalUrl
+  });
+});
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -34,48 +48,63 @@ const initDatabase = async () => {
     await sequelize.authenticate();
     console.log('Database connection established successfully');
 
-    // Sync models with database
-    await sequelize.sync();
+    // Force sync to recreate tables with new structure
+    await sequelize.sync({ force: true });
     console.log('Models synchronized with database');
 
     // Create default labels if they don't exist
-    const labels = [
-      { id: 'build-it-records', name: 'records', displayName: 'Build It Records' },
-      { id: 'build-it-tech', name: 'tech', displayName: 'Build It Tech' },
-      { id: 'build-it-deep', name: 'deep', displayName: 'Build It Deep' }
-    ];
-
-    for (const label of labels) {
-      await Label.findOrCreate({
-        where: { id: label.id },
-        defaults: label
-      });
-    }
+    await Promise.all([
+      Label.findOrCreate({
+        where: { id: 'buildit-records' },
+        defaults: { 
+          id: 'buildit-records',
+          name: 'records',
+          displayName: 'Build It Records',
+          slug: 'buildit-records'
+        }
+      }),
+      Label.findOrCreate({
+        where: { id: 'buildit-tech' },
+        defaults: { 
+          id: 'buildit-tech',
+          name: 'tech',
+          displayName: 'Build It Tech',
+          slug: 'buildit-tech'
+        }
+      }),
+      Label.findOrCreate({
+        where: { id: 'buildit-deep' },
+        defaults: { 
+          id: 'buildit-deep',
+          name: 'deep',
+          displayName: 'Build It Deep',
+          slug: 'buildit-deep'
+        }
+      })
+    ]);
+    console.log('Default labels created');
   } catch (error) {
-    console.error('Unable to connect to the database:', error);
+    console.error('Database initialization error:', error);
     process.exit(1);
   }
+};
+
+const startServer = async () => {
+  await initDatabase();
+  app.listen(port, () => {
+    console.log(`Server is running on port ${port}`);
+    console.log('Available routes:');
+    app._router.stack.forEach(r => {
+      if (r.route && r.route.path) {
+        console.log(`${Object.keys(r.route.methods).join(',')} ${r.route.path}`);
+      }
+    });
+  });
 };
 
 // Start server
-const startServer = async () => {
-  try {
-    await initDatabase();
-    app.listen(port, () => {
-      console.log(`Server is running on port ${port}`);
-    });
-  } catch (error) {
-    console.error('Failed to start server:', error);
-    process.exit(1);
-  }
-};
+startServer();
 
 process.on('uncaughtException', (error) => {
   console.error('Uncaught Exception:', error);
 });
-
-process.on('unhandledRejection', (error) => {
-  console.error('Unhandled Rejection:', error);
-});
-
-startServer();

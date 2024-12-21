@@ -1,5 +1,4 @@
 const express = require('express');
-const { Pool } = require('pg');
 const router = express.Router();
 const SpotifyService = require('../services/SpotifyService');
 const { Label, Artist, Release, Track } = require('../models');
@@ -8,59 +7,70 @@ const { Op } = require('sequelize');
 // Cache for label lookups
 const labelCache = new Map();
 
-// Initialize PostgreSQL connection pool
-const pool = new Pool({
-  user: process.env.POSTGRES_USER,
-  host: process.env.POSTGRES_HOST,
-  database: process.env.POSTGRES_DB,
-  password: process.env.POSTGRES_PASSWORD,
-  port: parseInt(process.env.POSTGRES_PORT || '5432'),
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+const LABEL_SLUGS = {
+  'records': 'buildit-records',
+  'tech': 'buildit-tech',
+  'deep': 'buildit-deep'
+};
+
+// Normalize label path to handle different formats
+function normalizeLabelPath(path) {
+  const normalized = path.toLowerCase()
+    .replace(/build ?it ?/g, '')
+    .replace(/-/g, '');
+  
+  // Map common variations to standard paths
+  const pathMap = {
+    'records': 'records',
+    'tech': 'tech',
+    'deep': 'deep',
+    'builditrecords': 'records',
+    'buildittech': 'tech',
+    'builditdeep': 'deep'
+  };
+  
+  return pathMap[normalized] || normalized;
+}
+
+// Debug route to list all labels
+router.get('/labels', async (req, res) => {
+  try {
+    const labels = await Label.findAll();
+    res.json(labels);
+  } catch (error) {
+    console.error('Error fetching labels:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
-// Middleware to handle database errors
-const withDb = (handler) => async (req, res, next) => {
-  const client = await pool.connect();
+// Get releases by label path (e.g., /deep/releases)
+router.get('/:labelPath/releases', async (req, res) => {
   try {
-    req.db = client;
-    await handler(req, res);
-  } catch (error) {
-    console.error('Database error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  } finally {
-    client.release();
-  }
-};
-
-const LABEL_SLUGS = {
-  records: 'buildit-records',
-  tech: 'buildit-tech',
-  deep: 'buildit-deep'
-};
-
-// Get releases by label
-router.get('/releases/:labelSlug', withDb(async (req, res) => {
-  try {
-    const { labelSlug } = req.params;
+    const { labelPath } = req.params;
+    console.log('Received request for label path:', labelPath);
+    
+    const normalizedPath = normalizeLabelPath(labelPath);
+    console.log('Normalized path:', normalizedPath);
+    
+    const labelSlug = LABEL_SLUGS[normalizedPath];
+    console.log('Looking up label slug:', labelSlug);
     
     if (!labelSlug) {
-      return res.status(400).json({ success: false, message: 'Label parameter is required' });
+      console.log('Invalid label path:', labelPath);
+      return res.status(400).json({ success: false, message: 'Invalid label' });
     }
 
-    console.log('Fetching releases for label slug:', labelSlug);
-    
     // First, let's log all labels to debug
     const allLabels = await Label.findAll();
     console.log('Available labels:', allLabels.map(l => ({ id: l.id, name: l.name, slug: l.slug })));
     
     const label = await Label.findOne({
       where: {
-        [Op.or]: [
-          { slug: labelSlug },
-          { slug: labelSlug.toLowerCase() }
-        ]
+        slug: labelSlug
       }
     });
+
+    console.log('Found label:', label?.toJSON());
 
     if (!label) {
       console.log('Label not found for slug:', labelSlug);
@@ -68,54 +78,33 @@ router.get('/releases/:labelSlug', withDb(async (req, res) => {
     }
 
     console.log('Found label:', label.name, 'with ID:', label.id);
-    
+
     const releases = await Release.findAll({
       where: {
-        labelId: label.id
+        recordLabel: label.id
       },
-      include: [
-        {
-          model: Artist,
-          as: 'artist',
-          attributes: ['id', 'name', 'spotifyUrl', 'imageUrl']
-        }
-      ],
+      include: [{
+        model: Artist,
+        attributes: ['id', 'name', 'spotifyUrl', 'images']
+      }],
       order: [['releaseDate', 'DESC']]
     });
 
     console.log(`Found ${releases.length} releases for label ${label.name}`);
-    
-    // Transform the data to match the frontend types
-    const transformedReleases = releases.map(release => ({
-      id: release.id,
-      title: release.title,
-      artist: {
-        name: release.artist.name,
-        spotifyUrl: release.artist.spotifyUrl,
-        imageUrl: release.artist.imageUrl
-      },
-      imageUrl: release.imageUrl || release.artworkUrl || release.artwork,
-      releaseDate: release.releaseDate,
-      genre: release.genre,
-      labelName: label.name,
-      label: label.name,
-      stores: {
-        spotify: release.spotifyUrl,
-        beatport: release.beatportUrl,
-        soundcloud: release.soundcloudUrl
-      },
-      spotifyUrl: release.spotifyUrl
-    }));
-
-    res.json(transformedReleases);
+    return res.json(releases);
   } catch (error) {
-    console.error('Error fetching releases:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Error in /:labelPath/releases route:', error);
+    console.error('Stack trace:', error.stack);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Error fetching releases',
+      error: error.message 
+    });
   }
-}));
+});
 
 // Get all releases with pagination and filtering
-router.get('/api/releases', withDb(async (req, res) => {
+router.get('/releases', async (req, res) => {
   try {
     const { limit = 50, offset = 0, search } = req.query;
     
@@ -130,8 +119,7 @@ router.get('/api/releases', withDb(async (req, res) => {
       where: whereClause,
       include: [{
         model: Artist,
-        as: 'artist',
-        attributes: ['id', 'name', 'spotifyUrl', 'imageUrl'],
+        attributes: ['id', 'name', 'spotifyUrl', 'images'],
         required: true
       }],
       order: [['releaseDate', 'DESC']],
@@ -146,9 +134,9 @@ router.get('/api/releases', withDb(async (req, res) => {
       artist: {
         name: release.artist.name,
         spotifyUrl: release.artist.spotifyUrl,
-        imageUrl: release.artist.imageUrl
+        imageUrl: release.artist.images
       },
-      imageUrl: release.imageUrl || release.artworkUrl || release.artwork,
+      imageUrl: release.images || release.artworkUrl || release.artwork,
       releaseDate: release.releaseDate,
       genre: release.genre,
       labelName: release.labelName,
@@ -166,16 +154,15 @@ router.get('/api/releases', withDb(async (req, res) => {
     console.error('Error fetching releases:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
-}));
+});
 
 // Get all tracks
-router.get('/api/tracks', withDb(async (req, res) => {
+router.get('/tracks', async (req, res) => {
   try {
     const releases = await Release.findAll({
       include: [{
         model: Artist,
-        as: 'artist',
-        attributes: ['id', 'name', 'spotifyUrl', 'imageUrl']
+        attributes: ['id', 'name', 'spotifyUrl', 'images']
       }],
       order: [['releaseDate', 'DESC']]
     });
@@ -187,9 +174,9 @@ router.get('/api/tracks', withDb(async (req, res) => {
       artist: {
         name: release.artist.name,
         spotifyUrl: release.artist.spotifyUrl,
-        imageUrl: release.artist.imageUrl
+        imageUrl: release.artist.images
       },
-      imageUrl: release.imageUrl || release.artworkUrl || release.artwork,
+      imageUrl: release.images || release.artworkUrl || release.artwork,
       releaseDate: release.releaseDate,
       genre: release.genre,
       labelName: release.labelName,
@@ -207,10 +194,10 @@ router.get('/api/tracks', withDb(async (req, res) => {
     console.error('Error fetching all tracks:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
-}));
+});
 
 // Save tracks
-router.post('/api/tracks', withDb(async (req, res) => {
+router.post('/tracks', async (req, res) => {
   try {
     const tracks = req.body;
     console.log('Saving tracks:', tracks);
@@ -232,7 +219,7 @@ router.post('/api/tracks', withDb(async (req, res) => {
         defaults: {
           title: track.title,
           releaseDate: track.releaseDate,
-          imageUrl: track.imageUrl,
+          images: track.images,
           spotifyUrl: track.spotifyUrl,
           artistId: artist.id
         }
@@ -244,13 +231,14 @@ router.post('/api/tracks', withDb(async (req, res) => {
     console.error('Error saving tracks:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
-}));
+});
 
 // Get releases for a specific label
-router.get('/api/label/:label/releases', withDb(async (req, res) => {
+router.get('/:labelPath', async (req, res) => {
   try {
-    console.log('Fetching releases for label:', req.params.label);
-    const labelSlug = LABEL_SLUGS[req.params.label];
+    console.log('Fetching releases for label:', req.params.labelPath);
+    const normalizedPath = normalizeLabelPath(req.params.labelPath);
+    const labelSlug = LABEL_SLUGS[normalizedPath];
     console.log('Label slug:', labelSlug);
     
     if (!labelSlug) {
@@ -268,12 +256,11 @@ router.get('/api/label/:label/releases', withDb(async (req, res) => {
 
     const releases = await Release.findAll({
       where: {
-        labelId: label.id
+        recordLabel: label.id
       },
       include: [{
         model: Artist,
-        as: 'artist',
-        attributes: ['id', 'name', 'spotifyUrl', 'imageUrl'],
+        attributes: ['id', 'name', 'spotifyUrl', 'images'],
         required: true
       }],
       order: [['releaseDate', 'DESC']]
@@ -286,9 +273,9 @@ router.get('/api/label/:label/releases', withDb(async (req, res) => {
       artist: {
         name: release.artist.name,
         spotifyUrl: release.artist.spotifyUrl,
-        imageUrl: release.artist.imageUrl
+        imageUrl: release.artist.images
       },
-      imageUrl: release.imageUrl || release.artworkUrl || release.artwork,
+      imageUrl: release.images || release.artworkUrl || release.artwork,
       releaseDate: release.releaseDate,
       genre: release.genre,
       labelName: label.name,
@@ -306,12 +293,13 @@ router.get('/api/label/:label/releases', withDb(async (req, res) => {
     console.error('Error getting releases:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
-}));
+});
 
 // Sync releases for a specific label
-router.post('/api/label/:label/releases/sync', withDb(async (req, res) => {
+router.post('/:labelPath/releases/sync', async (req, res) => {
   try {
-    const labelSlug = LABEL_SLUGS[req.params.label];
+    const normalizedPath = normalizeLabelPath(req.params.labelPath);
+    const labelSlug = LABEL_SLUGS[normalizedPath];
     if (!labelSlug) {
       return res.status(404).json({ error: 'Label not found' });
     }
@@ -323,12 +311,13 @@ router.post('/api/label/:label/releases/sync', withDb(async (req, res) => {
     console.error('Error syncing releases:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
-}));
+});
 
 // Get artists for a specific label
-router.get('/api/label/:label/artists', withDb(async (req, res) => {
+router.get('/:labelPath/artists', async (req, res) => {
   try {
-    const labelSlug = LABEL_SLUGS[req.params.label];
+    const normalizedPath = normalizeLabelPath(req.params.labelPath);
+    const labelSlug = LABEL_SLUGS[normalizedPath];
     if (!labelSlug) {
       return res.status(404).json({ error: 'Label not found' });
     }
@@ -343,7 +332,7 @@ router.get('/api/label/:label/artists', withDb(async (req, res) => {
       include: [{
         model: Release,
         as: 'releases',
-        where: { labelId: label.id }
+        where: { recordLabel: label.id }
       }]
     });
 
@@ -351,7 +340,7 @@ router.get('/api/label/:label/artists', withDb(async (req, res) => {
     const transformedArtists = artists.map(artist => ({
       id: artist.id,
       name: artist.name,
-      imageUrl: artist.imageUrl,
+      imageUrl: artist.images,
       spotifyUrl: artist.spotifyUrl,
       genres: artist.genres,
       followers: artist.followers,
@@ -365,9 +354,9 @@ router.get('/api/label/:label/artists', withDb(async (req, res) => {
         artist: {
           name: release.artist.name,
           spotifyUrl: release.artist.spotifyUrl,
-          imageUrl: release.artist.imageUrl
+          imageUrl: release.artist.images
         },
-        imageUrl: release.imageUrl || release.artworkUrl || release.artwork,
+        imageUrl: release.images || release.artworkUrl || release.artwork,
         releaseDate: release.releaseDate,
         genre: release.genre,
         labelName: release.labelName,
@@ -385,22 +374,54 @@ router.get('/api/label/:label/artists', withDb(async (req, res) => {
     console.error('Error getting artists:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
-}));
+});
 
 // Get tracks by label
-router.get('/api/label/:label/tracks', withDb(async (req, res) => {
+router.get('/:labelPath/tracks', async (req, res) => {
   try {
-    const { label } = req.params;
-    const tracks = await Track.find({ recordLabel: label.toUpperCase() });
+    const { labelPath } = req.params;
+    console.log('Received request for label path:', labelPath);
+    
+    const normalizedPath = normalizeLabelPath(labelPath);
+    console.log('Normalized path:', normalizedPath);
+    
+    const labelSlug = LABEL_SLUGS[normalizedPath];
+    console.log('Looking up label slug:', labelSlug);
+    
+    if (!labelSlug) {
+      console.log('Invalid label path:', labelPath);
+      return res.status(400).json({ success: false, message: 'Invalid label' });
+    }
+
+    const label = await Label.findOne({
+      where: {
+        slug: labelSlug
+      }
+    });
+
+    if (!label) {
+      return res.status(404).json({ success: false, message: 'Label not found' });
+    }
+
+    const tracks = await Track.findAll({
+      where: {
+        recordLabel: label.id
+      },
+      include: [{
+        model: Artist,
+        attributes: ['id', 'name', 'spotifyId']
+      }]
+    });
+
     res.json(tracks);
   } catch (error) {
     console.error('Error fetching tracks by label:', error);
     res.status(500).json({ error: 'Failed to fetch tracks' });
   }
-}));
+});
 
 // Get artist details
-router.get('/api/artists/:artistId', withDb(async (req, res) => {
+router.get('/artists/:artistId', async (req, res) => {
   try {
     const { artistId } = req.params;
     
@@ -411,7 +432,7 @@ router.get('/api/artists/:artistId', withDb(async (req, res) => {
         include: [{
           model: Artist,
           as: 'artist',
-          attributes: ['name', 'spotifyUrl', 'imageUrl']
+          attributes: ['name', 'spotifyUrl', 'images']
         }]
       }]
     });
@@ -424,7 +445,7 @@ router.get('/api/artists/:artistId', withDb(async (req, res) => {
     const transformedArtist = {
       id: artist.id,
       name: artist.name,
-      imageUrl: artist.imageUrl,
+      imageUrl: artist.images,
       spotifyUrl: artist.spotifyUrl,
       genres: artist.genres,
       followers: artist.followers,
@@ -438,9 +459,9 @@ router.get('/api/artists/:artistId', withDb(async (req, res) => {
         artist: {
           name: release.artist.name,
           spotifyUrl: release.artist.spotifyUrl,
-          imageUrl: release.artist.imageUrl
+          imageUrl: release.artist.images
         },
-        imageUrl: release.imageUrl || release.artworkUrl || release.artwork,
+        imageUrl: release.images || release.artworkUrl || release.artwork,
         releaseDate: release.releaseDate,
         genre: release.genre,
         labelName: release.labelName,
@@ -458,6 +479,7 @@ router.get('/api/artists/:artistId', withDb(async (req, res) => {
     console.error('Error fetching artist:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
-}));
+});
 
+// Export the router
 module.exports = router;

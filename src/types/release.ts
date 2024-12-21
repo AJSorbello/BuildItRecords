@@ -6,23 +6,23 @@ import { SimpleArtist } from './artist';
 export interface Release {
   id: string;
   title: string;
+  name: string;
   artist: SimpleArtist;
   imageUrl: string;
-  artwork?: string;  // For backward compatibility
-  artworkUrl?: string;  // For backward compatibility
   releaseDate: string;
-  genre?: string;
-  labelName: RecordLabel;
-  label: RecordLabel;
+  recordLabel: RecordLabel;
   tracks?: Track[];
+  spotifyUrl?: string;
+  beatportUrl?: string;
+  soundcloudUrl?: string;
+  artwork?: string;
+  artworkUrl?: string;
+  genre?: string;
   stores?: {
     spotify?: string;
     beatport?: string;
     soundcloud?: string;
   };
-  spotifyUrl: string;
-  beatportUrl?: string;
-  soundcloudUrl?: string;
 }
 
 export interface ReleaseFormData {
@@ -37,10 +37,54 @@ export interface ReleaseFormData {
   soundcloudUrl: string;
 }
 
+export interface SpotifyAlbum {
+  id: string;
+  name: string;
+  release_date: string;
+  total_tracks: number;
+  images: Array<{
+    url: string;
+    height: number;
+    width: number;
+  }>;
+  artists: Array<{
+    id: string;
+    name: string;
+    external_urls: {
+      spotify: string;
+    };
+  }>;
+  external_urls: {
+    spotify: string;
+  };
+}
+
+export interface SpotifyRelease {
+  id: string;
+  name: string;
+  release_date: string;
+  external_urls: {
+    spotify: string;
+  };
+  images: Array<{
+    url: string;
+    height: number;
+    width: number;
+  }>;
+  artists: Array<{
+    id: string;
+    name: string;
+    external_urls: {
+      spotify: string;
+    };
+  }>;
+}
+
 export function convertSpotifyAlbumToRelease(album: SimplifiedAlbum, label: RecordLabel): Release {
   return {
     id: album.id,
     title: album.name,
+    name: album.name,
     artist: {
       id: album.artists[0]?.id,
       name: album.artists[0]?.name || '',
@@ -49,12 +93,31 @@ export function convertSpotifyAlbumToRelease(album: SimplifiedAlbum, label: Reco
     },
     imageUrl: album.images?.[0]?.url || '',
     releaseDate: album.release_date,
-    genre: '',
-    labelName: label,
-    label,
-    stores: {
-      spotify: album.external_urls?.spotify || '',
-    },
+    recordLabel: label,
+    tracks: [],
     spotifyUrl: album.external_urls?.spotify || '',
   };
 }
+
+export const createRelease = (data: Partial<Release>): Release => {
+  const defaultArtist: SimpleArtist = {
+    id: '',
+    name: '',
+    recordLabel: data.recordLabel || RecordLabel.RECORDS,
+    spotifyUrl: ''
+  };
+
+  return {
+    id: data.id || '',
+    title: data.title || '',
+    name: data.name || '',
+    artist: data.artist || defaultArtist,
+    imageUrl: data.imageUrl || '',
+    releaseDate: data.releaseDate || new Date().toISOString(),
+    recordLabel: data.recordLabel || RecordLabel.RECORDS,
+    tracks: data.tracks || [],
+    spotifyUrl: data.spotifyUrl || '',
+    beatportUrl: data.beatportUrl || '',
+    soundcloudUrl: data.soundcloudUrl || ''
+  };
+};

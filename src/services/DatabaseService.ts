@@ -34,16 +34,34 @@ class DatabaseService {
     }
   }
 
+  private getLabelPath(label: RecordLabel | string): string {
+    const labelMap: { [key: string]: string } = {
+      'Build It Records': 'records',
+      'Build It Tech': 'tech',
+      'Build It Deep': 'deep'
+    };
+    
+    const path = labelMap[label] || label.toLowerCase().replace(/build it /, '').replace(/-/g, '');
+    return path;
+  }
+
   // Tracks
   public async getTracks(label?: RecordLabel): Promise<Track[]> {
     if (label) {
-      return this.request<Track[]>(`/label/${label.toLowerCase()}/tracks`);
+      const labelPath = this.getLabelPath(label);
+      return this.request<Track[]>(`/${labelPath}/tracks`);
     }
     return this.request<Track[]>('/tracks');
   }
 
   public async getTracksByLabel(label: RecordLabel): Promise<Track[]> {
-    return this.request<Track[]>(`/label/${label.toLowerCase()}/tracks`);
+    const labelPath = this.getLabelPath(label);
+    return this.request<Track[]>(`/${labelPath}/tracks`);
+  }
+
+  public async getArtistsForLabel(label: string): Promise<Artist[]> {
+    const labelPath = this.getLabelPath(label);
+    return this.request<Artist[]>(`/${labelPath}/artists`);
   }
 
   public async addTrack(track: Track): Promise<string> {
@@ -72,7 +90,8 @@ class DatabaseService {
   }
 
   public async getReleasesByLabel(label: RecordLabel): Promise<Release[]> {
-    return this.request<Release[]>(`/releases/label/${label}`);
+    const labelPath = this.getLabelPath(label);
+    return this.request<Release[]>(`/${labelPath}/releases`);
   }
 
   // Artists
@@ -81,7 +100,8 @@ class DatabaseService {
   }
 
   public async getArtistsByLabel(label: RecordLabel): Promise<Artist[]> {
-    return this.request<Artist[]>(`/artists/label/${label}`);
+    const labelPath = this.getLabelPath(label);
+    return this.request<Artist[]>(`/${labelPath}/artists`);
   }
 
   public async getArtistById(id: string): Promise<Artist> {

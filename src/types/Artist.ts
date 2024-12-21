@@ -1,6 +1,7 @@
 import { SpotifyApi, Artist as SpotifyArtist } from '@spotify/web-api-ts-sdk';
 import { RecordLabel } from '../constants/labels';
 import { Track } from './track';
+import { Release } from './release';
 
 export interface ArtistFormData {
   name: string;
@@ -11,45 +12,54 @@ export interface ArtistFormData {
 }
 
 export interface SimpleArtist {
-  id?: string;
+  id: string;
   name: string;
   spotifyUrl: string;
-  recordLabel: string;
-  imageUrl?: string;
+  recordLabel: RecordLabel;
 }
 
 export interface Artist extends SimpleArtist {
-  bio?: string;
-  tracks?: Track[];
-  featured?: boolean;
-  socialLinks?: {
-    instagram?: string;
-    twitter?: string;
-    facebook?: string;
-    website?: string;
-  };
-  genres?: string[];
-  images?: Array<{
-    url: string;
-    height: number | null;
-    width: number | null;
-  }>;
-  followers?: {
+  bio: string;
+  genres: string[];
+  followers: {
     total: number;
   };
+  labels: RecordLabel[];
+  releases: Release[];
+  tracks?: Track[];
+  featured?: boolean;
+  images?: Array<{
+    url: string;
+    height: number;
+    width: number;
+  }>;
+  imageUrl?: string;
 }
 
-export function convertSpotifyArtistToArtist(
-  spotifyArtist: SpotifyArtist, 
-  recordLabel: RecordLabel = RecordLabel.RECORDS
-): Artist {
+export interface SpotifyArtist {
+  id: string;
+  name: string;
+  external_urls: {
+    spotify: string;
+  };
+  genres: string[];
+  followers: {
+    total: number;
+  };
+  images: Array<{
+    url: string;
+    height: number;
+    width: number;
+  }>;
+}
+
+export function convertSpotifyArtistToArtist(spotifyArtist: any, recordLabel: RecordLabel): SimpleArtist {
   return {
     id: spotifyArtist.id,
     name: spotifyArtist.name,
     spotifyUrl: spotifyArtist.external_urls.spotify,
-    recordLabel: recordLabel.toString(),
-    imageUrl: spotifyArtist.images && spotifyArtist.images.length > 0 ? spotifyArtist.images[0].url : '',
-    bio: ''
+    recordLabel: recordLabel,
+    imageUrl: spotifyArtist.images && spotifyArtist.images.length > 0 ? spotifyArtist.images[0].url : ''
   };
 }
 
@@ -57,15 +67,17 @@ export const createArtist = (data: Partial<Artist>): Artist => {
   return {
     id: data.id || '',
     name: data.name || '',
+    recordLabel: data.recordLabel || RecordLabel.RECORDS,
     spotifyUrl: data.spotifyUrl || '',
-    recordLabel: data.recordLabel || '',
     imageUrl: data.imageUrl || data.images?.[0]?.url || '',
     bio: data.bio || '',
+    genres: data.genres || [],
+    followers: data.followers || { total: 0 },
+    labels: data.labels || [data.recordLabel || RecordLabel.RECORDS],
+    releases: data.releases || [],
+    images: data.images || [],
     tracks: data.tracks || [],
     featured: data.featured || false,
-    socialLinks: data.socialLinks || {},
-    genres: data.genres || [],
-    images: data.images || [],
-    followers: data.followers || { total: 0 }
+    socialLinks: data.socialLinks || {}
   };
 };

@@ -38,9 +38,18 @@ const initialTrack: Track = {
     spotifyUrl: '',
     recordLabel: RecordLabel.RECORDS
   },
+  artists: [],
+  album: {
+    id: '',
+    name: '',
+    releaseDate: new Date().toISOString(),
+    totalTracks: 0,
+    images: []
+  },
   releaseDate: new Date().toISOString(),
   imageUrl: '',
   spotifyUrl: '',
+  previewUrl: '',
   recordLabel: RecordLabel.RECORDS
 };
 
@@ -91,9 +100,25 @@ export const AdminDashboard: React.FC = () => {
       id: track.id || '',
       name: track.name || track.trackTitle || '',
       trackTitle: track.trackTitle || track.name || '',
-      artist: track.artist || { name: 'Unknown Artist', id: '', spotifyUrl: '', recordLabel: track.recordLabel },
+      artist: track.artist || { 
+        id: '', 
+        name: 'Unknown Artist', 
+        spotifyUrl: '', 
+        recordLabel: track.recordLabel 
+      },
+      artists: track.artists || [],
+      album: track.album || {
+        id: '',
+        name: '',
+        releaseDate: track.releaseDate || new Date().toISOString(),
+        totalTracks: 0,
+        images: []
+      },
       releaseDate: track.releaseDate || new Date().toISOString(),
-      recordLabel: track.recordLabel || track.label || RecordLabel.RECORDS
+      imageUrl: track.imageUrl || '',
+      spotifyUrl: track.spotifyUrl || '',
+      previewUrl: track.previewUrl || '',
+      recordLabel: track.recordLabel || RecordLabel.RECORDS
     }));
   };
 
