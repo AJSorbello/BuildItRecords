@@ -5,7 +5,7 @@ import { styled } from '@mui/material/styles';
 import { OpenInNew, Instagram, Facebook, Twitter } from '@mui/icons-material';
 import { RECORD_LABELS } from '../constants/labels';
 import { databaseService } from '../services/DatabaseService';
-import { Artist } from '../types/Artist';
+import { Artist } from '../types/artist';
 import TrackList from '../components/TrackList';
 import PageLayout from '../components/PageLayout';
 
@@ -76,12 +76,15 @@ const DeepPage = () => {
             <Grid item xs={12} sm={6} md={4} key={artist.id}>
               <Card>
                 <Box sx={{ position: 'relative' }}>
-                  <CardMedia
-                    component="img"
-                    height="200"
-                    image={artist.imageUrl}
-                    alt={artist.name}
-                  />
+                  {artist.images.map((image, index) => (
+                    <CardMedia
+                      key={index}
+                      component="img"
+                      height="200"
+                      image={image.url || 'https://via.placeholder.com/200'}
+                      alt={artist.name}
+                    />
+                  ))}
                   <CardContent>
                     <Typography variant="h6" component="div">
                       {artist.name}

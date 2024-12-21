@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useMemo } from 'react';
-import { Box, Grid, Card, CardMedia, CardContent, Typography, TextField, FormControl, InputLabel, Select, MenuItem, CircularProgress, IconButton } from '@mui/material';
+import React, { useEffect, useState } from 'react';
+import { Box, Grid, Card, CardMedia, CardContent, Typography, TextField, FormControl, InputLabel, Select, MenuItem, CircularProgress, IconButton, Container } from '@mui/material';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { RECORD_LABELS } from '../constants/labels';
 import { spotifyService } from '../services/SpotifyService';
@@ -13,8 +13,7 @@ interface Artist {
   id: string;
   name: string;
   bio: string;
-  image: string;
-  imageUrl: string;
+  images: SpotifyImage[];
   recordLabel: string;
   spotifyUrl?: string | null;
   beatportUrl?: string;
@@ -49,7 +48,6 @@ const getArtists = async (label: LabelType): Promise<{ artists: Artist[], totalC
     
     const transformedArtists = artists.map(artist => ({
       ...artist,
-      image: artist.imageUrl || '' // Map imageUrl to image property
     }));
     
     return { 
@@ -77,18 +75,12 @@ const ArtistsPage: React.FC = () => {
   useEffect(() => {
     const fetchArtists = async () => {
       try {
-        const artists = await databaseService.getArtistsForLabel(RECORD_LABELS['Build It Records']);
-        if (!artists || artists.length === 0) {
-          console.error('No artists found or invalid response format');
-          return;
-        }
-        const transformedArtists = artists.map(artist => ({
-          ...artist,
-          image: artist.imageUrl || ''
-        }));
-        setArtists(transformedArtists);
-      } catch (error) {
-        console.error('Error fetching artists:', error);
+        const artistsData = await databaseService.getArtistsForLabel(RECORD_LABELS['Build It Records']);
+        setArtists(artistsData);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load artists');
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -131,111 +123,115 @@ const ArtistsPage: React.FC = () => {
   }
 
   return (
-    <Box sx={{ p: { xs: 2, sm: 3 }, mt: { xs: 8, sm: 10 } }}>
-      <Box sx={{ mb: 4 }}>
-        <FormControl fullWidth>
-          <InputLabel id="label-select-label">Record Label</InputLabel>
-          <Select
-            labelId="label-select-label"
-            value={label}
-            label="Record Label"
-            onChange={handleLabelChange}
-          >
-            {Object.entries(RECORD_LABELS).map(([key, value]) => (
-              <MenuItem key={key} value={key}>
-                {value}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-      </Box>
-
-      {artists.length === 0 ? (
-        <Box sx={{ textAlign: 'center', py: 4 }}>
-          <Typography variant="h6" color="text.secondary">
-            No artists found for {RECORD_LABELS['Build It Records']}
-          </Typography>
+    <Container maxWidth="lg">
+      <Box sx={{ my: 4 }}>
+        <Typography variant="h2" component="h1" gutterBottom>
+          Artists
+        </Typography>
+        <Box sx={{ mb: 4 }}>
+          <FormControl fullWidth>
+            <InputLabel id="label-select-label">Record Label</InputLabel>
+            <Select
+              labelId="label-select-label"
+              value={label}
+              label="Record Label"
+              onChange={handleLabelChange}
+            >
+              {Object.entries(RECORD_LABELS).map(([key, value]) => (
+                <MenuItem key={key} value={key}>
+                  {value}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
         </Box>
-      ) : (
-        <Grid container spacing={3}>
-          {artists.map((artist) => (
-            <Grid item xs={12} sm={6} md={4} lg={3} key={artist.id}>
-              <Card sx={{ 
-                height: '100%',
-                display: 'flex',
-                flexDirection: 'column',
-                transition: 'transform 0.2s',
-                '&:hover': {
-                  transform: 'scale(1.02)'
-                }
-              }}>
-                <CardMedia
-                  component="img"
-                  height="300"
-                  image={artist.imageUrl || 'https://via.placeholder.com/300'}
-                  alt={artist.name}
-                  sx={{ objectFit: 'cover' }}
-                />
-                <CardContent sx={{ flexGrow: 1 }}>
-                  <Typography gutterBottom variant="h6" component="div" noWrap>
-                    {artist.name}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{
-                    display: '-webkit-box',
-                    WebkitLineClamp: 3,
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden',
-                    mb: 2
-                  }}>
-                    {artist.bio || `Artist on ${RECORD_LABELS['Build It Records']}`}
-                  </Typography>
-                  <Box sx={{ 
-                    display: 'flex', 
-                    gap: 1,
-                    justifyContent: 'flex-start',
-                    mt: 'auto'
-                  }}>
-                    {artist.spotifyUrl && (
-                      <IconButton
-                        href={artist.spotifyUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        size="small"
-                        sx={{ color: '#1DB954' }}
-                      >
-                        <FaSpotify />
-                      </IconButton>
-                    )}
-                    {artist.beatportUrl && (
-                      <IconButton
-                        href={artist.beatportUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        size="small"
-                        sx={{ color: '#02FF95' }}
-                      >
-                        <SiBeatport />
-                      </IconButton>
-                    )}
-                    {artist.soundcloudUrl && (
-                      <IconButton
-                        href={artist.soundcloudUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        size="small"
-                        sx={{ color: '#FF3300' }}
-                      >
-                        <FaSoundcloud />
-                      </IconButton>
-                    )}
-                  </Box>
-                </CardContent>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
-      )}
-    </Box>
+        {artists.length === 0 ? (
+          <Box sx={{ textAlign: 'center', py: 4 }}>
+            <Typography variant="h6" color="text.secondary">
+              No artists found for {RECORD_LABELS['Build It Records']}
+            </Typography>
+          </Box>
+        ) : (
+          <Grid container spacing={3}>
+            {artists.map((artist) => (
+              <Grid item xs={12} sm={6} md={4} lg={3} key={artist.id}>
+                <Card sx={{ 
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  transition: 'transform 0.2s',
+                  '&:hover': {
+                    transform: 'scale(1.02)'
+                  }
+                }}>
+                  <CardMedia
+                    component="img"
+                    height="300"
+                    image={artist.images[0]?.url || 'https://via.placeholder.com/300'}
+                    alt={artist.name}
+                    sx={{ objectFit: 'cover' }}
+                  />
+                  <CardContent sx={{ flexGrow: 1 }}>
+                    <Typography gutterBottom variant="h6" component="div" noWrap>
+                      {artist.name}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{
+                      display: '-webkit-box',
+                      WebkitLineClamp: 3,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                      mb: 2
+                    }}>
+                      {artist.bio || `Artist on ${RECORD_LABELS['Build It Records']}`}
+                    </Typography>
+                    <Box sx={{ 
+                      display: 'flex', 
+                      gap: 1,
+                      justifyContent: 'flex-start',
+                      mt: 'auto'
+                    }}>
+                      {artist.spotifyUrl && (
+                        <IconButton
+                          href={artist.spotifyUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          size="small"
+                          sx={{ color: '#1DB954' }}
+                        >
+                          <FaSpotify />
+                        </IconButton>
+                      )}
+                      {artist.beatportUrl && (
+                        <IconButton
+                          href={artist.beatportUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          size="small"
+                          sx={{ color: '#02FF95' }}
+                        >
+                          <SiBeatport />
+                        </IconButton>
+                      )}
+                      {artist.soundcloudUrl && (
+                        <IconButton
+                          href={artist.soundcloudUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          size="small"
+                          sx={{ color: '#FF3300' }}
+                        >
+                          <FaSoundcloud />
+                        </IconButton>
+                      )}
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        )}
+      </Box>
+    </Container>
   );
 };
 

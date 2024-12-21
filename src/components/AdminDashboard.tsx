@@ -29,7 +29,7 @@ import {
 } from '@mui/material';
 import { RecordLabel, RECORD_LABELS } from '../constants/labels';
 import { Track } from '../types/track';
-import type { Artist } from '../types/Artist';
+import type { Artist } from '../types/artist';
 import { databaseService } from '../services/DatabaseService';
 import { processTracksEfficiently } from '../utils/trackUtils';
 

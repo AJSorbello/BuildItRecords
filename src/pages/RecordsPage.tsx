@@ -5,7 +5,7 @@ import { styled } from '@mui/material/styles';
 import { OpenInNew } from '@mui/icons-material';
 import { RECORD_LABELS } from '../constants/labels';
 import { databaseService } from '../services/DatabaseService';
-import { Artist } from '../types/Artist';
+import { Artist } from '../types/artist';
 import PageLayout from '../components/PageLayout';
 
 const IconLink = styled(Link)({
@@ -78,7 +78,7 @@ const RecordsPage = () => {
                   <CardMedia
                     component="img"
                     height="200"
-                    image={artist.imageUrl}
+                    image={artist.images && artist.images.length > 0 ? artist.images[0].url : 'https://via.placeholder.com/200'}
                     alt={artist.name}
                   />
                   <CardContent>

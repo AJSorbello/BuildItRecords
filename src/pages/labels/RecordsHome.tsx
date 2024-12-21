@@ -4,155 +4,138 @@ import { RECORD_LABELS } from '../../constants/labels';
 import { Track } from '../../types/track';
 import TrackList from '../../components/TrackList';
 import PageLayout from '../../components/PageLayout';
-import { spotifyService } from '../../services/SpotifyService';
-import { getData } from '../../utils/dataInitializer';
+import { useReleases } from '../../hooks/useReleases';
+
+interface Release {
+  id: string;
+  title: string;
+  imageUrl?: string;
+  releaseDate: string;
+  artist: {
+    name: string;
+    imageUrl?: string;
+    spotifyUrl?: string;
+  };
+  spotifyUrl?: string;
+}
 
 const RecordsHome = () => {
-  const [mainTrack, setMainTrack] = useState<Track | null>(null);
-  const [otherVersions, setOtherVersions] = useState<Track[]>([]);
+  const [mainTrack, setMainTrack] = useState<Release | null>(null);
+  const [otherVersions, setOtherVersions] = useState<Release[]>([]);
+  const { releases, loading, error } = useReleases({ label: 'records' });
 
   useEffect(() => {
     const fetchFeaturedTracks = async () => {
-      // Get tracks directly from getData like the releases page does
-      const data = getData();
-      const labelTracks = data.tracks.filter(track => 
-        track.recordLabel === RECORD_LABELS["Build It Records"]
-      );
-      console.log('All tracks from Records label:', labelTracks);
+      if (!releases || releases.length === 0) return;
       
-      // Sort tracks by release date (newest first)
-      const sortedTracks = labelTracks.sort((a, b) => {
+      // Sort releases by date (newest first)
+      const sortedReleases = [...releases].sort((a, b) => {
         const dateA = new Date(a.releaseDate);
         const dateB = new Date(b.releaseDate);
         return dateB.getTime() - dateA.getTime();
       });
-      console.log('Sorted tracks:', sortedTracks.map(t => ({ title: t.trackTitle, date: t.releaseDate })));
+      console.log('Sorted releases:', sortedReleases);
 
       // Get the latest release date
-      const latestDate = sortedTracks[0]?.releaseDate;
+      const latestDate = sortedReleases[0]?.releaseDate;
       console.log('Latest release date:', latestDate);
       
-      // Get all tracks from the latest release date
-      const latestTracks = sortedTracks.filter(track => 
-        track.releaseDate === latestDate
+      // Get all releases from the latest release date
+      const latestReleases = sortedReleases.filter(release => 
+        release.releaseDate === latestDate
       );
-      console.log('Tracks from latest release date:', latestTracks.map(t => t.trackTitle));
+      console.log('Latest releases:', latestReleases);
 
-      // Group tracks by base title (removing the remix/version part)
-      const getBaseTitle = (title: string) => {
-        return title.split('-')[0].trim();
-      };
-
-      const baseTitle = getBaseTitle(latestTracks[0]?.trackTitle || '');
-      console.log('Base title:', baseTitle);
-      
-      const releaseTracks = sortedTracks.filter(track => 
-        getBaseTitle(track.trackTitle) === baseTitle
-      );
-      console.log('All versions of the release:', releaseTracks.map(t => t.trackTitle));
-
-      if (releaseTracks.length > 0) {
-        try {
-          const tracksWithDetails = await Promise.all(
-            releaseTracks.map(async (track) => {
-              try {
-                const spotifyDetails = await spotifyService.getTrackDetailsByUrl(track.spotifyUrl);
-                return spotifyDetails ? {
-                  ...track,
-                  albumCover: spotifyDetails.albumCover,
-                  previewUrl: spotifyDetails.previewUrl
-                } : track;
-              } catch (error) {
-                console.error('Error fetching Spotify details:', error);
-                return track;
-              }
-            })
-          );
-          console.log('Final tracks with details:', tracksWithDetails.map(t => t.trackTitle));
-          
-          // Find the radio version or use the first track
-          const radioVersion = tracksWithDetails.find(t => 
-            t.trackTitle.toLowerCase().includes('radio')
-          ) || tracksWithDetails[0];
-          
-          // Filter out the radio version from other versions
-          const otherTracks = tracksWithDetails.filter(t => t !== radioVersion);
-          
-          setMainTrack(radioVersion);
-          setOtherVersions(otherTracks);
-        } catch (error) {
-          console.error('Error fetching Spotify details:', error);
-          setMainTrack(releaseTracks[0]);
-          setOtherVersions(releaseTracks.slice(1));
-        }
+      // Set the main track and other versions
+      if (latestReleases.length > 0) {
+        setMainTrack(latestReleases[0]);
+        setOtherVersions(latestReleases.slice(1));
       }
     };
 
     fetchFeaturedTracks();
-  }, []);
+  }, [releases]);
+
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+        <Typography>Loading releases...</Typography>
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+        <Typography color="error">{error}</Typography>
+      </Box>
+    );
+  }
 
   return (
     <PageLayout label="records">
-      <Box sx={{ 
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        width: '100%',
-        maxWidth: '1200px',
-        mx: 'auto',
-        p: 3
-      }}>
-        <Typography 
-          variant="h3" 
-          component="h1" 
-          gutterBottom 
-          sx={{ 
-            color: '#FFFFFF',
-            mb: 2,
-            fontWeight: 'bold',
-            textAlign: 'center'
-          }}
-        >
+      <Box sx={{ py: 4, px: { xs: 2, sm: 3 } }}>
+        <Typography variant="h4" component="h1" gutterBottom>
           Build It Records
-        </Typography>
-        <Typography 
-          variant="h5"
-          sx={{ 
-            color: '#AAAAAA',
-            mb: 6,
-            textAlign: 'center'
-          }}
-        >
-          House Music for the Underground
-        </Typography>
-
-        <Typography 
-          variant="h4" 
-          gutterBottom 
-          sx={{ 
-            color: '#FFFFFF',
-            mb: 4,
-            fontWeight: 'bold'
-          }}
-        >
-          Latest Release
         </Typography>
 
         {mainTrack && (
-          <Box mb={4}>
-            <TrackList tracks={[mainTrack]} />
+          <Box sx={{ mb: 4 }}>
+            <Typography variant="h5" gutterBottom>
+              Latest Release
+            </Typography>
+            <Grid container spacing={3}>
+              <Grid item xs={12} sm={6} md={4}>
+                <Box
+                  component="img"
+                  src={mainTrack.imageUrl || '/placeholder.jpg'}
+                  alt={mainTrack.title}
+                  sx={{
+                    width: '100%',
+                    height: 'auto',
+                    borderRadius: 1,
+                  }}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6} md={8}>
+                <Typography variant="h6">{mainTrack.title}</Typography>
+                <Typography variant="subtitle1" color="text.secondary">
+                  {mainTrack.artist.name}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Released: {new Date(mainTrack.releaseDate).toLocaleDateString()}
+                </Typography>
+              </Grid>
+            </Grid>
           </Box>
         )}
 
-        {/* Other Versions */}
         {otherVersions.length > 0 && (
-          <Grid container spacing={3}>
-            {otherVersions.map((track) => (
-              <Grid item xs={12} sm={6} md={4} key={track.id}>
-                <TrackList tracks={[track]} />
-              </Grid>
-            ))}
-          </Grid>
+          <Box>
+            <Typography variant="h5" gutterBottom>
+              Other Versions
+            </Typography>
+            <Grid container spacing={3}>
+              {otherVersions.map((release) => (
+                <Grid item xs={12} sm={6} md={4} key={release.id}>
+                  <Box
+                    component="img"
+                    src={release.imageUrl || '/placeholder.jpg'}
+                    alt={release.title}
+                    sx={{
+                      width: '100%',
+                      height: 'auto',
+                      borderRadius: 1,
+                    }}
+                  />
+                  <Typography variant="subtitle1">{release.title}</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {release.artist.name}
+                  </Typography>
+                </Grid>
+              ))}
+            </Grid>
+          </Box>
         )}
       </Box>
     </PageLayout>

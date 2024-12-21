@@ -2,26 +2,26 @@ import axios from 'axios';
 import { Track } from '../types/track';
 import { Release } from '../types/release';
 import { Artist } from '../types/artist';
-import { RecordLabel, RECORD_LABELS } from '../constants/labels';
+import { RecordLabel } from '../constants/labels';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
 
-class DatabaseService {
-  private static instance: DatabaseService;
+class ApiService {
+  private static instance: ApiService;
   private baseUrl: string;
 
   private constructor() {
     this.baseUrl = API_BASE_URL;
   }
 
-  public static getInstance(): DatabaseService {
-    if (!DatabaseService.instance) {
-      DatabaseService.instance = new DatabaseService();
+  public static getInstance(): ApiService {
+    if (!ApiService.instance) {
+      ApiService.instance = new ApiService();
     }
-    return DatabaseService.instance;
+    return ApiService.instance;
   }
 
-  private async request<T>(endpoint: string, options: any = {}): Promise<T> {
+  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     try {
       const response = await axios({
         url: `${this.baseUrl}${endpoint}`,
@@ -43,33 +43,20 @@ class DatabaseService {
     return this.request<Track[]>(`/tracks/label/${label}`);
   }
 
-  public async addTrack(track: Track): Promise<string> {
-    return this.request<string>('/tracks', {
-      method: 'POST',
-      data: track,
-    });
-  }
-
-  public async updateTrack(id: string, track: Partial<Track>): Promise<void> {
-    return this.request<void>(`/tracks/${id}`, {
-      method: 'PATCH',
-      data: track,
-    });
-  }
-
-  public async deleteTrack(id: string): Promise<void> {
-    return this.request<void>(`/tracks/${id}`, {
-      method: 'DELETE',
-    });
-  }
-
   // Releases
   public async getReleases(): Promise<Release[]> {
     return this.request<Release[]>('/releases');
   }
 
   public async getReleasesByLabel(label: RecordLabel): Promise<Release[]> {
-    return this.request<Release[]>(`/releases/label/${label}`);
+    // Convert label to the correct slug format
+    const labelMap: { [key in RecordLabel]: string } = {
+      [RecordLabel.RECORDS]: 'buildit-records',
+      [RecordLabel.TECH]: 'buildit-tech',
+      [RecordLabel.DEEP]: 'buildit-deep'
+    };
+    const labelSlug = labelMap[label];
+    return this.request<Release[]>(`/releases/${labelSlug}`);
   }
 
   // Artists
@@ -86,5 +73,5 @@ class DatabaseService {
   }
 }
 
-export const databaseService = DatabaseService.getInstance();
-export default DatabaseService;
+export const apiService = ApiService.getInstance();
+export default ApiService;

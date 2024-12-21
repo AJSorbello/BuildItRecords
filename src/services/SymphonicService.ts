@@ -122,14 +122,23 @@ class SymphonicService {
         artists: [{ 
           id: track.id, 
           name: track.artist,
-          imageUrl: '',
-          image: '',
-          bio: '',
+          images: [{
+            url: '',
+            height: 0,
+            width: 0
+          }],
+          external_urls: {
+            spotify: ''
+          },
+          genres: [],
+          followers: {
+            total: 0
+          },
           recordLabel: this.determineLabel(item.label_name),
           labels: [this.determineLabel(item.label_name)],
-          releases: [],
-          spotifyUrl: track.spotify_id ? `https://open.spotify.com/artist/${track.spotify_id}` : '',
-          genres: []
+          bio: '',
+          spotifyUrl: '',
+          releases: []
         }],
         albumCover: item.artwork_url,
         album: {

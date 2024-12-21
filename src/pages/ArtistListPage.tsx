@@ -18,17 +18,18 @@ const groupByArtists = (releases: Release[]): Artist[] => {
   const artistMap = new Map<string, Artist>();
 
   releases.forEach(release => {
-    if (!artistMap.has(release.artist)) {
-      artistMap.set(release.artist, {
-        name: release.artist,
+    const artistKey = release.artist.name;
+    if (!artistMap.has(artistKey)) {
+      artistMap.set(artistKey, {
+        name: release.artist.name,
         releases: [],
         genres: [],
         imageUrl: undefined,
-        spotifyUrl: undefined,
+        spotifyUrl: release.artist.spotifyUrl,
         id: undefined
       });
     }
-    const artist = artistMap.get(release.artist)!;
+    const artist = artistMap.get(artistKey)!;
     artist.releases.push(release);
   });
 

@@ -2,6 +2,7 @@ import React from 'react';
 import {
   Box,
   Typography,
+  Link,
   Button,
   Card,
   CardMedia,
@@ -18,7 +19,7 @@ interface FeaturedReleaseProps {
   release: Release;
 }
 
-export default function FeaturedRelease({ release }: FeaturedReleaseProps) {
+const FeaturedRelease: React.FC<FeaturedReleaseProps> = ({ release }) => {
   const { colors } = useTheme();
 
   const openLink = (url: string | undefined) => {
@@ -36,8 +37,8 @@ export default function FeaturedRelease({ release }: FeaturedReleaseProps) {
     }}>
       <CardMedia
         component="img"
-        image={release.artwork}
-        alt={`${release.title} by ${release.artist}`}
+        image={release.imageUrl || release.artwork || release.artworkUrl}
+        alt={`${release.title} by ${release.artist.name}`}
         sx={{
           height: 400,
           objectFit: 'cover'
@@ -48,60 +49,62 @@ export default function FeaturedRelease({ release }: FeaturedReleaseProps) {
         <Typography variant="h4" component="h1" sx={{ mb: 2, color: colors.text }}>
           {release.title}
         </Typography>
-        <Typography variant="h5" sx={{ mb: 3, color: colors.textSecondary }}>
-          {release.artist}
-        </Typography>
         
+        <Typography variant="h5" sx={{ mb: 2, color: colors.textSecondary }}>
+          {release.artist.name}
+        </Typography>
+
+        {release.genre && (
+          <Typography variant="body1" sx={{ mb: 2, color: colors.textSecondary }}>
+            {release.genre}
+          </Typography>
+        )}
+
+        <Typography variant="body2" sx={{ mb: 3, color: colors.textSecondary }}>
+          {new Date(release.releaseDate).toLocaleDateString(undefined, {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          })}
+        </Typography>
+
         <Stack direction="row" spacing={2}>
-          {release.spotifyUrl && (
+          {release.stores?.spotify && (
             <Button
               variant="contained"
               startIcon={<MusicNoteIcon />}
-              onClick={() => openLink(release.spotifyUrl)}
-              sx={{
-                bgcolor: '#1DB954',
-                '&:hover': {
-                  bgcolor: '#1ed760'
-                }
-              }}
+              onClick={() => openLink(release.stores?.spotify)}
+              sx={{ backgroundColor: colors.primary }}
             >
               Spotify
             </Button>
           )}
           
-          {release.beatportUrl && (
+          {release.stores?.beatport && (
             <Button
               variant="contained"
               startIcon={<AlbumIcon />}
-              onClick={() => openLink(release.beatportUrl)}
-              sx={{
-                bgcolor: '#FF6B00',
-                '&:hover': {
-                  bgcolor: '#ff7b1c'
-                }
-              }}
+              onClick={() => openLink(release.stores?.beatport)}
+              sx={{ backgroundColor: colors.primary }}
             >
               Beatport
             </Button>
           )}
           
-          {release.soundcloudUrl && (
+          {release.stores?.soundcloud && (
             <Button
               variant="contained"
               startIcon={<CloudQueueIcon />}
-              onClick={() => openLink(release.soundcloudUrl)}
-              sx={{
-                bgcolor: '#FF5500',
-                '&:hover': {
-                  bgcolor: '#ff6a1f'
-                }
-              }}
+              onClick={() => openLink(release.stores?.soundcloud)}
+              sx={{ backgroundColor: colors.primary }}
             >
-              Soundcloud
+              SoundCloud
             </Button>
           )}
         </Stack>
       </CardContent>
     </Card>
   );
-}
+};
+
+export default FeaturedRelease;

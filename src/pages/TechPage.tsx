@@ -5,8 +5,9 @@ import { styled } from '@mui/material/styles';
 import { OpenInNew } from '@mui/icons-material';
 import { RECORD_LABELS } from '../constants/labels';
 import { databaseService } from '../services/DatabaseService';
-import { Artist } from '../types/Artist';
+import { Artist } from '../types/artist';
 import PageLayout from '../components/PageLayout';
+import { useTheme } from '../contexts/ThemeContext';
 
 const IconLink = styled(Link)({
   color: '#FFFFFF',
@@ -20,12 +21,12 @@ const TechPage = () => {
   const [artists, setArtists] = useState<Artist[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { colors } = useTheme();
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        // Fetch artists
         const techArtists = await databaseService.getArtistsForLabel(RECORD_LABELS['Build It Tech']);
         if (techArtists.length === 0) {
           setError('No artists found');
@@ -66,49 +67,48 @@ const TechPage = () => {
   return (
     <PageLayout label="tech">
       <Box sx={{ flexGrow: 1, p: 3 }}>
-        <Typography variant="h4" gutterBottom>
-          Build It Tech Artists
-        </Typography>
-        
         <Grid container spacing={4}>
           {artists.map((artist) => (
             <Grid item xs={12} sm={6} md={4} key={artist.id}>
-              <Card>
-                <Box sx={{ position: 'relative' }}>
-                  <CardMedia
-                    component="img"
-                    height="200"
-                    image={artist.imageUrl}
-                    alt={artist.name}
-                  />
-                  <CardContent>
-                    <Typography variant="h6" component="div">
-                      {artist.name}
+              <Card 
+                sx={{ 
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  backgroundColor: colors.card,
+                  borderRadius: 2
+                }}
+              >
+                <CardMedia
+                  component="img"
+                  sx={{ height: 200, objectFit: 'cover' }}
+                  image={artist.imageUrl || 'https://via.placeholder.com/300x300?text=No+Image'}
+                  alt={artist.name}
+                />
+                <CardContent sx={{ flexGrow: 1 }}>
+                  <Typography gutterBottom variant="h5" component="h2" sx={{ color: colors.text }}>
+                    {artist.name}
+                  </Typography>
+                  {artist.genres && artist.genres.length > 0 && (
+                    <Typography variant="body2" sx={{ mb: 2, color: colors.textSecondary }}>
+                      {artist.genres.join(', ')}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{
-                      height: '3em',
-                      overflow: 'hidden',
-                      mb: 2
-                    }}>
-                      {artist.bio || `Artist on ${RECORD_LABELS['Build It Tech']}`}
-                    </Typography>
-                    <Box sx={{ 
-                      display: 'flex', 
-                      justifyContent: 'space-between',
-                      alignItems: 'center'
-                    }}>
-                      <Box>
-                        {artist.spotifyUrl && (
-                          <MuiLink href={artist.spotifyUrl} target="_blank" rel="noopener noreferrer">
-                            <IconButton size="small">
-                              <OpenInNew />
-                            </IconButton>
-                          </MuiLink>
-                        )}
-                      </Box>
-                    </Box>
-                  </CardContent>
-                </Box>
+                  )}
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    {artist.spotifyUrl && (
+                      <IconButton
+                        component="a"
+                        href={artist.spotifyUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        sx={{ color: colors.text }}
+                      >
+                        <OpenInNew />
+                      </IconButton>
+                    )}
+                    <IconLink to={`/artists/${artist.id}`}>View Details</IconLink>
+                  </Box>
+                </CardContent>
               </Card>
             </Grid>
           ))}

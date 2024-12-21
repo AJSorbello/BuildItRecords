@@ -1,6 +1,6 @@
 import { RECORD_LABELS, RecordLabel } from '../constants/labels';
-import type { Artist } from './Artist';
-import type { Album } from './Album';
+import { SimpleArtist } from './artist';
+import { Track as SpotifyTrack, Image } from '@spotify/web-api-ts-sdk';
 
 export interface SpotifyImage {
   url: string;
@@ -12,25 +12,60 @@ export interface Track {
   id: string;
   name: string;
   trackTitle: string;
-  artist: string;
-  artists: Artist[];
-  album: Album;
-  albumCover: string;
-  recordLabel: RecordLabel;
-  label: RecordLabel;
+  artist: SimpleArtist;
+  album?: {
+    id: string;
+    name: string;
+    images: SpotifyImage[];
+    release_date: string;
+    external_urls: {
+      spotify: string;
+    };
+  };
+  albumCover?: string;
+  imageUrl?: string;
+  duration_ms?: number;
   releaseDate: string;
-  previewUrl: string | null;
-  beatportUrl: string;
-  soundcloudUrl: string;
+  preview_url?: string | null;
+  external_urls?: {
+    spotify: string;
+  };
   spotifyUrl: string;
+  recordLabel: RecordLabel;
+  genre?: string;
+  genres?: string[];
   popularity?: number;
-  featured?: boolean;
-  genres: string[];
+  label?: RecordLabel;
+  stores?: {
+    spotify?: string;
+    beatport?: string;
+    soundcloud?: string;
+  };
 }
 
-// Helper function to convert legacy track format to full Track
+export interface SpotifyTrackModel {
+  id: string;
+  name: string;
+  artists: Array<{
+    id: string;
+    name: string;
+    external_urls: {
+      spotify: string;
+    };
+  }>;
+  external_urls: {
+    spotify: string;
+  };
+  album: {
+    images: Array<{
+      url: string;
+    }>;
+    release_date: string;
+  };
+  preview_url: string | null;
+}
+
 export function createTrack(legacyTrack: Partial<Track>): Track {
-  // Ensure we have a valid record label
   const validLabel = Object.values(RECORD_LABELS).find(
     label => label === legacyTrack.recordLabel || 
             label.toLowerCase() === legacyTrack.recordLabel?.toLowerCase()
@@ -39,68 +74,38 @@ export function createTrack(legacyTrack: Partial<Track>): Track {
   return {
     id: legacyTrack.id || '',
     name: legacyTrack.name || '',
-    trackTitle: legacyTrack.trackTitle || legacyTrack.name || '',
-    artist: legacyTrack.artist || '',
-    artists: legacyTrack.artists || [],
-    album: legacyTrack.album || {
-      id: '',
-      name: '',
-      releaseDate: new Date().toISOString(),
-      totalTracks: 1,
-      images: []
-    },
-    albumCover: legacyTrack.albumCover || '',
-    recordLabel: validLabel,
-    label: validLabel,
+    trackTitle: legacyTrack.name || '',
+    artist: legacyTrack.artist || { name: '', spotifyUrl: '' },
+    albumCover: legacyTrack.albumCover || legacyTrack.imageUrl || '',
     releaseDate: legacyTrack.releaseDate || new Date().toISOString(),
-    previewUrl: legacyTrack.previewUrl || null,
-    beatportUrl: legacyTrack.beatportUrl || '',
-    soundcloudUrl: legacyTrack.soundcloudUrl || '',
+    preview_url: legacyTrack.preview_url || null,
     spotifyUrl: legacyTrack.spotifyUrl || '',
-    popularity: legacyTrack.popularity || 0,
-    featured: legacyTrack.featured || false,
-    genres: legacyTrack.genres || []
+    recordLabel: validLabel,
+    popularity: legacyTrack.popularity,
+    genre: legacyTrack.genre,
+    genres: legacyTrack.genres,
+    label: validLabel,
+    stores: legacyTrack.stores || {
+      spotify: legacyTrack.spotifyUrl
+    }
   };
 }
 
-export interface SpotifyApiTrack {
-  id: string;
-  name: string;
-  artists: {
-    id: string;
-    name: string;
-    external_urls: {
-      spotify: string;
-    };
-  }[];
-  album: {
-    id: string;
-    name: string;
-    release_date: string;
-    images: SpotifyImage[];
-  };
-  preview_url: string | null;
-  external_urls: {
-    spotify: string;
-  };
-  duration_ms: number;
-}
-
-export interface SpotifyPlaylist {
-  id: string;
-  name: string;
-  description: string | null;
-  images: SpotifyImage[];
-  tracks: {
-    items: {
-      track: SpotifyApiTrack;
-      added_at: string;
-    }[];
-  };
-  external_urls: {
-    spotify: string;
-  };
-  owner: {
-    display_name: string;
+export function convertSpotifyTrackToTrack(spotifyTrack: SpotifyTrackModel, label: RecordLabel): Track {
+  return {
+    id: spotifyTrack.id,
+    name: spotifyTrack.name,
+    trackTitle: spotifyTrack.name,
+    artist: {
+      name: spotifyTrack.artists[0]?.name || '',
+      spotifyUrl: spotifyTrack.artists[0]?.external_urls?.spotify || '',
+    },
+    albumCover: spotifyTrack.album.images[0]?.url || '',
+    releaseDate: spotifyTrack.album.release_date,
+    preview_url: spotifyTrack.preview_url,
+    spotifyUrl: spotifyTrack.external_urls.spotify,
+    recordLabel: label,
+    popularity: undefined,
+    imageUrl: undefined,
   };
 }

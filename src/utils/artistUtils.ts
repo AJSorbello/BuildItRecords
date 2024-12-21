@@ -1,4 +1,4 @@
-import { Artist } from '../types/Artist';
+import { Artist } from '../types/artist';
 import { RecordLabel } from '../constants/labels';
 import { databaseService } from '../services/DatabaseService';
 
