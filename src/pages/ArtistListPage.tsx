@@ -228,6 +228,15 @@ const ArtistListPage: React.FC = () => {
       </PageLayout>
     );
   }
+  const fetchArtistDetails = async (artistName: string) => {
+    try {
+      const artistDetails = await spotifyService.getArtistDetailsByName(artistName);
+      return artistDetails;
+    } catch (error) {
+      console.error('Error fetching artist details:', error);
+      return null;
+    }
+  };
 
   return (
     <PageLayout label={label || 'records'}>

@@ -1,33 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Grid, Card, CardMedia, CardContent, Typography, TextField, FormControl, InputLabel, Select, MenuItem, CircularProgress, IconButton, Container } from '@mui/material';
+import { Box, Grid, Card, CardMedia, CardContent, Typography, FormControl, InputLabel, Select, MenuItem, CircularProgress, Container } from '@mui/material';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { RECORD_LABELS } from '../constants/labels';
-import { spotifyService } from '../services/SpotifyService';
+import { RecordLabel, LABEL_DISPLAY_NAMES } from '../constants/labels';
 import { databaseService } from '../services/DatabaseService';
-import { Track } from '../types/track';
-import type { SpotifyApi } from '@spotify/web-api-ts-sdk';
+import { Artist } from '../types/artist';
 import { FaSpotify, FaSoundcloud } from 'react-icons/fa';
 import { SiBeatport } from 'react-icons/si';
-
-interface Artist {
-  id: string;
-  name: string;
-  bio: string;
-  images: SpotifyImage[];
-  recordLabel: string;
-  spotifyUrl?: string | null;
-  beatportUrl?: string;
-  soundcloudUrl?: string;
-  bandcampUrl?: string;
-}
-
-type LabelType = 'RECORDS' | 'TECH' | 'DEEP';
-
-interface SpotifyImage {
-  url: string;
-  width: number | null;
-  height: number | null;
-}
 
 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 
@@ -36,22 +14,19 @@ interface CachedArtistData {
   timestamp: number;
 }
 
-const getArtists = async (label: LabelType): Promise<{ artists: Artist[], totalCount: number }> => {
+const getArtists = async (label: RecordLabel): Promise<{ artists: Artist[], totalCount: number }> => {
   console.log('Getting artists for label:', label);
   
   try {
-    const artists = await databaseService.getArtistsForLabel(RECORD_LABELS['Build It Records']);
+    const artists = await databaseService.getArtistsForLabel(label);
+    
     if (!artists || artists.length === 0) {
       console.log('No artists found in database');
       return { artists: [], totalCount: 0 };
     }
     
-    const transformedArtists = artists.map(artist => ({
-      ...artist,
-    }));
-    
     return { 
-      artists: transformedArtists,
+      artists,
       totalCount: artists.length 
     };
   } catch (error) {
@@ -68,27 +43,31 @@ const ArtistsPage: React.FC = () => {
   const navigate = useNavigate();
 
   const params = new URLSearchParams(location.search);
-  const label = (params.get('label') || 'RECORDS') as LabelType;
+  const label = (params.get('label') || RecordLabel.RECORDS) as RecordLabel;
 
   useEffect(() => {
     const fetchArtists = async () => {
+      setLoading(true);
       try {
-        const artistsData = await databaseService.getArtistsForLabel(RECORD_LABELS['Build It Records']);
-        setArtists(artistsData);
+        const { artists: fetchedArtists } = await getArtists(label);
+        setArtists(fetchedArtists);
+        setError(null);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load artists');
+        console.error('Error fetching artists:', err);
+        setError(err instanceof Error ? err.message : 'An unexpected error occurred.');
       } finally {
         setLoading(false);
       }
     };
-
+  
     fetchArtists();
-  }, []);
+  }, [label]);
 
   const handleLabelChange = (event: any) => {
-    const newLabel = event.target.value as LabelType;
-    console.log('Label changed to:', newLabel);
-    navigate(`/artists?label=${newLabel}`);
+    const newLabel = event.target.value as RecordLabel;
+    const searchParams = new URLSearchParams(location.search);
+    searchParams.set('label', newLabel);
+    navigate({ search: searchParams.toString() });
   };
 
   if (loading) {
@@ -121,32 +100,30 @@ const ArtistsPage: React.FC = () => {
   }
 
   return (
-    <Container maxWidth="lg">
+    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
+        <FormControl sx={{ minWidth: 200 }}>
+          <InputLabel id="label-select-label">Record Label</InputLabel>
+          <Select
+            labelId="label-select-label"
+            value={label}
+            label="Record Label"
+            onChange={handleLabelChange}
+          >
+            <MenuItem value={RecordLabel.RECORDS}>{LABEL_DISPLAY_NAMES[RecordLabel.RECORDS]}</MenuItem>
+            <MenuItem value={RecordLabel.TECH}>{LABEL_DISPLAY_NAMES[RecordLabel.TECH]}</MenuItem>
+            <MenuItem value={RecordLabel.DEEP}>{LABEL_DISPLAY_NAMES[RecordLabel.DEEP]}</MenuItem>
+          </Select>
+        </FormControl>
+      </Box>
       <Box sx={{ my: 4 }}>
         <Typography variant="h2" component="h1" gutterBottom>
           Artists
         </Typography>
-        <Box sx={{ mb: 4 }}>
-          <FormControl fullWidth>
-            <InputLabel id="label-select-label">Record Label</InputLabel>
-            <Select
-              labelId="label-select-label"
-              value={label}
-              label="Record Label"
-              onChange={handleLabelChange}
-            >
-              {Object.entries(RECORD_LABELS).map(([key, value]) => (
-                <MenuItem key={key} value={key}>
-                  {value}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </Box>
         {artists.length === 0 ? (
           <Box sx={{ textAlign: 'center', py: 4 }}>
             <Typography variant="h6" color="text.secondary">
-              No artists found for {RECORD_LABELS['Build It Records']}
+              No artists found for {LABEL_DISPLAY_NAMES[label]}
             </Typography>
           </Box>
         ) : (
@@ -165,7 +142,7 @@ const ArtistsPage: React.FC = () => {
                   <CardMedia
                     component="img"
                     height="300"
-                    image={artist.images[0]?.url || 'https://via.placeholder.com/300'}
+                    image={artist.images?.[0]?.url || 'https://via.placeholder.com/300'}
                     alt={artist.name}
                     sx={{ objectFit: 'cover' }}
                   />
@@ -180,7 +157,7 @@ const ArtistsPage: React.FC = () => {
                       overflow: 'hidden',
                       mb: 2
                     }}>
-                      {artist.bio || `Artist on ${RECORD_LABELS['Build It Records']}`}
+                      {artist.bio || `Artist on ${label}`}
                     </Typography>
                     <Box sx={{ 
                       display: 'flex', 

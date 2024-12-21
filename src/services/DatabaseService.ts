@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import { Track } from '../types/track';
 import { Release } from '../types/release';
 import { Artist } from '../types/artist';
@@ -11,7 +11,7 @@ class DatabaseService {
   private baseUrl: string;
 
   private constructor() {
-    this.baseUrl = API_BASE_URL;
+    this.baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:3000/api';
   }
 
   public static getInstance(): DatabaseService {
@@ -21,67 +21,67 @@ class DatabaseService {
     return DatabaseService.instance;
   }
 
-  private async request<T>(endpoint: string, options: any = {}): Promise<T> {
+  private async request<T>(url: string, options: any = {}): Promise<T> {
     try {
       const response = await axios({
-        url: `${this.baseUrl}${endpoint}`,
-        ...options,
+        url: `${this.baseUrl}${url}`,
+        ...options
       });
       return response.data;
     } catch (error) {
-      console.error('API request failed:', error);
+      console.error('API request failed:', { url, error: error instanceof Error ? error.message : String(error) });
       throw error;
     }
   }
 
   private getLabelPath(label: RecordLabel | string): string {
-    const labelMap: { [key: string]: string } = {
-      'Build It Records': 'records',
-      'Build It Tech': 'tech',
-      'Build It Deep': 'deep'
-    };
-    
-    const path = labelMap[label] || label.toLowerCase().replace(/build it /, '').replace(/-/g, '');
-    return path;
+    const normalizedLabel = label.toLowerCase().replace(/\s+/g, '-');
+    return `buildit-${normalizedLabel}`;
   }
 
   // Tracks
   public async getTracks(label?: RecordLabel): Promise<Track[]> {
-    if (label) {
-      const labelPath = this.getLabelPath(label);
-      return this.request<Track[]>(`/${labelPath}/tracks`);
-    }
-    return this.request<Track[]>('/tracks');
+    const url = label ? `/tracks?label=${encodeURIComponent(label)}` : '/tracks';
+    return this.request<Track[]>(url);
   }
 
   public async getTracksByLabel(label: RecordLabel): Promise<Track[]> {
-    const labelPath = this.getLabelPath(label);
-    return this.request<Track[]>(`/${labelPath}/tracks`);
+    return this.request<Track[]>(`/tracks?label=${encodeURIComponent(label)}`);
   }
 
-  public async getArtistsForLabel(label: string): Promise<Artist[]> {
-    const labelPath = this.getLabelPath(label);
-    return this.request<Artist[]>(`/${labelPath}/artists`);
+  public async getTracksForLabel(label: string): Promise<Track[]> {
+    return this.request<Track[]>(`/tracks?label=${encodeURIComponent(label)}`);
+  }
+
+  public async getArtistsForLabel(label: RecordLabel): Promise<Artist[]> {
+    try {
+      // Convert the label to the format expected by the backend
+      const labelValue = label.toLowerCase().replace('build-it-', '');
+      const response = await this.request<Artist[]>(`/artists?label=${encodeURIComponent(labelValue)}`);
+      return response.map(artist => ({
+        ...artist,
+        recordLabel: label
+      }));
+    } catch (error) {
+      console.error('Error fetching artists for label:', error);
+      throw error;
+    }
   }
 
   public async addTrack(track: Track): Promise<string> {
-    return this.request<string>('/tracks', {
+    const response = await this.request<{ id: string }>('/tracks', {
       method: 'POST',
-      data: track,
+      data: track
     });
+    return response.id;
   }
 
   public async updateTrack(id: string, track: Partial<Track>): Promise<void> {
-    return this.request<void>(`/tracks/${id}`, {
-      method: 'PATCH',
-      data: track,
-    });
+    await axios.put(`${this.baseUrl}/tracks/${id}`, track);
   }
 
   public async deleteTrack(id: string): Promise<void> {
-    return this.request<void>(`/tracks/${id}`, {
-      method: 'DELETE',
-    });
+    await axios.delete(`${this.baseUrl}/tracks/${id}`);
   }
 
   // Releases
@@ -90,8 +90,7 @@ class DatabaseService {
   }
 
   public async getReleasesByLabel(label: RecordLabel): Promise<Release[]> {
-    const labelPath = this.getLabelPath(label);
-    return this.request<Release[]>(`/${labelPath}/releases`);
+    return this.request<Release[]>(`/releases?label=${encodeURIComponent(label)}`);
   }
 
   // Artists
@@ -100,8 +99,7 @@ class DatabaseService {
   }
 
   public async getArtistsByLabel(label: RecordLabel): Promise<Artist[]> {
-    const labelPath = this.getLabelPath(label);
-    return this.request<Artist[]>(`/${labelPath}/artists`);
+    return this.request<Artist[]>(`/artists?label=${encodeURIComponent(label)}`);
   }
 
   public async getArtistById(id: string): Promise<Artist> {

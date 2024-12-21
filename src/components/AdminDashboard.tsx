@@ -30,32 +30,44 @@ interface FetchState {
 
 const initialTrack: Track = {
   id: '',
-  name: '',
-  trackTitle: '',
+  title: '',
   artist: {
     id: '',
     name: '',
     spotifyUrl: '',
     recordLabel: RecordLabel.RECORDS
   },
-  artists: [],
-  album: {
-    id: '',
-    name: '',
-    releaseDate: new Date().toISOString(),
-    totalTracks: 0,
-    images: []
-  },
-  releaseDate: new Date().toISOString(),
-  imageUrl: '',
+  recordLabel: RecordLabel.RECORDS,
+  artwork: '',
   spotifyUrl: '',
-  previewUrl: '',
-  recordLabel: RecordLabel.RECORDS
+  beatportUrl: '',
+  releaseDate: new Date().toISOString(),
+  albumCover: ''
 };
 
 const initialFetchState: FetchState = {
   loading: false,
   error: null
+};
+
+const transformTracks = (tracks: Track[]): Track[] => {
+  return tracks.map(track => ({
+    ...track,
+    id: track.id || '',
+    title: track.title || '',
+    artist: {
+      id: track.artist.id || '',
+      name: track.artist.name || 'Unknown Artist',
+      spotifyUrl: track.artist.spotifyUrl || '',
+      recordLabel: track.recordLabel
+    },
+    recordLabel: track.recordLabel || RecordLabel.RECORDS,
+    artwork: track.artwork || '',
+    spotifyUrl: track.spotifyUrl || '',
+    beatportUrl: track.beatportUrl || '',
+    releaseDate: track.releaseDate || new Date().toISOString(),
+    albumCover: track.albumCover || ''
+  }));
 };
 
 const getArtistString = (artist: SimpleArtist): string => {
@@ -64,21 +76,21 @@ const getArtistString = (artist: SimpleArtist): string => {
 
 export const AdminDashboard: React.FC = () => {
   const [tracks, setTracks] = useState<Track[]>([]);
-  const [selectedLabel, setSelectedLabel] = useState<RecordLabel | 'All'>('All');
+  const [selectedRecordLabel, setSelectedRecordLabel] = useState<RecordLabel | 'All'>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [fetchState, setFetchState] = useState<FetchState>(initialFetchState);
 
   useEffect(() => {
     fetchTracks();
-  }, [selectedLabel]);
+  }, [selectedRecordLabel]);
 
   const fetchTracks = async () => {
     try {
       setFetchState({ loading: true, error: null });
       const allTracks = await databaseService.getTracks(
-        selectedLabel === 'All' ? RecordLabel.RECORDS : selectedLabel
+        selectedRecordLabel === 'All' ? RecordLabel.RECORDS : selectedRecordLabel
       );
-      const processedTracks = processTracksEfficiently(allTracks);
+      const processedTracks = transformTracks(allTracks);
       setTracks(processedTracks);
       setFetchState({ loading: false, error: null });
     } catch (err) {
@@ -87,58 +99,32 @@ export const AdminDashboard: React.FC = () => {
   };
 
   const handleLabelChange = (event: any) => {
-    setSelectedLabel(event.target.value);
+    setSelectedRecordLabel(event.target.value);
   };
 
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(event.target.value);
   };
 
-  const processTracksEfficiently = (tracks: Track[]): Track[] => {
-    return tracks.map(track => ({
-      ...track,
-      id: track.id || '',
-      name: track.name || track.trackTitle || '',
-      trackTitle: track.trackTitle || track.name || '',
-      artist: track.artist || { 
-        id: '', 
-        name: 'Unknown Artist', 
-        spotifyUrl: '', 
-        recordLabel: track.recordLabel 
-      },
-      artists: track.artists || [],
-      album: track.album || {
-        id: '',
-        name: '',
-        releaseDate: track.releaseDate || new Date().toISOString(),
-        totalTracks: 0,
-        images: []
-      },
-      releaseDate: track.releaseDate || new Date().toISOString(),
-      imageUrl: track.imageUrl || '',
-      spotifyUrl: track.spotifyUrl || '',
-      previewUrl: track.previewUrl || '',
-      recordLabel: track.recordLabel || RecordLabel.RECORDS
-    }));
-  };
-
-  const filterTracks = (track: Track): boolean => {
-    if (!searchQuery) return true;
-
+  const filterTracks = (tracks: Track[]): Track[] => {
     const searchLower = searchQuery.toLowerCase();
-    const artistName = getArtistString(track.artist);
+    const selectedLabel = selectedRecordLabel as RecordLabel;
 
-    const matchesSearch = !searchQuery || (
-      (track.trackTitle || track.name || '').toLowerCase().includes(searchLower) ||
-      artistName.toLowerCase().includes(searchLower)
-    );
+    return tracks.filter(track => {
+      const matchesSearch = !searchQuery || (
+        track.title.toLowerCase().includes(searchLower) ||
+        track.artist.name.toLowerCase().includes(searchLower)
+      );
 
-    return matchesSearch;
+      const matchesLabel = !selectedLabel || track.recordLabel === selectedLabel;
+
+      return matchesSearch && matchesLabel;
+    });
   };
 
   const filteredTracks = useMemo(() => {
-    return tracks.filter(filterTracks);
-  }, [tracks, searchQuery]);
+    return filterTracks(tracks);
+  }, [tracks, searchQuery, selectedRecordLabel]);
 
   if (fetchState.loading) {
     return (
@@ -166,7 +152,7 @@ export const AdminDashboard: React.FC = () => {
         <FormControl sx={{ m: 1, minWidth: 200 }}>
           <InputLabel>Label</InputLabel>
           <Select
-            value={selectedLabel}
+            value={selectedRecordLabel}
             onChange={handleLabelChange}
             label="Label"
           >
@@ -200,8 +186,8 @@ export const AdminDashboard: React.FC = () => {
           <TableBody>
             {filteredTracks.map((track) => (
               <TableRow key={track.id}>
-                <TableCell>{track.trackTitle || track.name}</TableCell>
-                <TableCell>{getArtistString(track.artist)}</TableCell>
+                <TableCell>{track.title}</TableCell>
+                <TableCell>{track.artist.name}</TableCell>
                 <TableCell>{new Date(track.releaseDate).toLocaleDateString()}</TableCell>
                 <TableCell>{LABEL_DISPLAY_NAMES[track.recordLabel]}</TableCell>
                 <TableCell>

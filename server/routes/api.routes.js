@@ -481,5 +481,55 @@ router.get('/artists/:artistId', async (req, res) => {
   }
 });
 
+// Get all artists
+router.get('/artists', async (req, res) => {
+  try {
+    const { limit = 50, offset = 0, search, label } = req.query;
+    
+    let whereClause = {};
+    if (search) {
+      whereClause.name = { [Op.iLike]: `%${search}%` };
+    }
+    if (label) {
+      // Convert label to slug format
+      const normalizedLabel = normalizeLabelPath(label);
+      const labelSlug = LABEL_SLUGS[normalizedLabel];
+      if (!labelSlug) {
+        console.warn(`Invalid label: ${label}`);
+        return res.status(404).json({ error: `Label not found: ${label}` });
+      }
+      whereClause.recordLabel = labelSlug;
+    }
+
+    console.log('Fetching artists with where clause:', whereClause);
+
+    const artists = await Artist.findAll({
+      where: whereClause,
+      attributes: ['id', 'name', 'bio', 'images', 'recordLabel', 'spotifyUrl', 'beatportUrl', 'soundcloudUrl', 'bandcampUrl'],
+      order: [['name', 'ASC']],
+      offset: parseInt(offset),
+      limit: parseInt(limit)
+    });
+
+    // Transform the data to match the frontend types
+    const transformedArtists = artists.map(artist => ({
+      id: artist.id,
+      name: artist.name,
+      bio: artist.bio,
+      images: artist.images || [],
+      recordLabel: artist.recordLabel,
+      spotifyUrl: artist.spotifyUrl,
+      beatportUrl: artist.beatportUrl,
+      soundcloudUrl: artist.soundcloudUrl,
+      bandcampUrl: artist.bandcampUrl
+    }));
+
+    res.json(transformedArtists);
+  } catch (error) {
+    console.error('Error fetching artists:', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
 // Export the router
 module.exports = router;

@@ -13,26 +13,14 @@ Artist.init({
     type: DataTypes.STRING,
     allowNull: false
   },
-  spotifyUrl: {
-    type: DataTypes.STRING,
+  bio: {
+    type: DataTypes.TEXT,
     allowNull: true
   },
   images: {
     type: DataTypes.JSON,
     allowNull: true,
     defaultValue: []
-  },
-  genres: {
-    type: DataTypes.ARRAY(DataTypes.STRING),
-    defaultValue: []
-  },
-  followersCount: {
-    type: DataTypes.INTEGER,
-    defaultValue: 0
-  },
-  popularity: {
-    type: DataTypes.INTEGER,
-    defaultValue: 0
   },
   recordLabel: {
     type: DataTypes.STRING,
@@ -42,8 +30,20 @@ Artist.init({
       key: 'id'
     }
   },
-  bio: {
-    type: DataTypes.TEXT,
+  spotifyUrl: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  beatportUrl: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  soundcloudUrl: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  bandcampUrl: {
+    type: DataTypes.STRING,
     allowNull: true
   }
 }, {

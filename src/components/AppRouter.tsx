@@ -5,6 +5,7 @@ import AdminLogin from './AdminLogin';
 import AdminDashboard from './AdminDashboard';
 import Home from './Home';
 import SpotifyCallback from './SpotifyCallback';
+import ArtistsPage from '../pages/ArtistsPage';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -64,6 +65,7 @@ const AppRouter: React.FC = () => {
             <Route path="/records/*" element={<Home />} />
             <Route path="/tech/*" element={<Home />} />
             <Route path="/deep/*" element={<Home />} />
+            <Route path="/artists" element={<ArtistsPage />} />
           </Route>
         </Routes>
       </Router>
@@ -106,6 +108,7 @@ const AppRouter: React.FC = () => {
           <Route path="/records/*" element={<Home />} />
           <Route path="/tech/*" element={<Home />} />
           <Route path="/deep/*" element={<Home />} />
+          <Route path="/artists" element={<ArtistsPage />} />
         </Route>
       </Routes>
     </Router>

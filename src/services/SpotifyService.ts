@@ -7,12 +7,10 @@ import { convertSpotifyArtistToArtist, convertSpotifyTrackToTrack } from '../uti
 type RecordLabel = typeof RECORD_LABELS[keyof typeof RECORD_LABELS];
 
 class SpotifyService {
-  private spotifyApi: SpotifyApi | null = null;
+  private spotifyApi: SpotifyApi | null = null; // Fixed property name and initialization
   private static instance: SpotifyService;
 
-  private constructor() {
-    this.initializeSDK();
-  }
+  private constructor() {}
 
   private async initializeSDK() {
     try {
@@ -23,11 +21,11 @@ class SpotifyService {
         throw new Error('Spotify credentials are not configured');
       }
 
-      this.spotifyApi = SpotifyApi.withClientCredentials(clientId, clientSecret);
+      this.spotifyApi = SpotifyApi.withClientCredentials(clientId, clientSecret); // Fixed property name
       console.log('Spotify SDK initialized successfully');
     } catch (error) {
       console.error('Failed to initialize Spotify SDK:', error);
-      this.spotifyApi = null;
+      this.spotifyApi = null; // Ensure null on failure
     }
   }
 
@@ -94,7 +92,7 @@ class SpotifyService {
     try {
       const sdk = await this.ensureSDK();
       const response = await sdk.search(name, ['artist']);
-      return response.artists.items.map(artist => 
+      return response.artists.items.map(artist =>
         convertSpotifyArtistToArtist(artist, RECORD_LABELS.RECORDS)
       );
     } catch (error) {
@@ -118,7 +116,7 @@ class SpotifyService {
     try {
       const sdk = await this.ensureSDK();
       const response = await sdk.search(query, ['track']);
-      return response.tracks.items.map(track => 
+      return response.tracks.items.map(track =>
         convertSpotifyTrackToTrack(track, RECORD_LABELS.RECORDS)
       );
     } catch (error) {
@@ -135,6 +133,22 @@ class SpotifyService {
     } catch (error) {
       console.error('Error fetching track details:', error);
       return null;
+    }
+  }
+
+  public async getArtistDetailsByName(artistName: string) {
+    try {
+      const sdk = await this.ensureSDK(); // Fixed ensureSDK usage
+      const searchResults = await sdk.search(artistName, ['artist']);
+      if (searchResults.artists.items.length > 0) {
+        const artist = searchResults.artists.items[0];
+        const fullArtistDetails = await sdk.artists.get(artist.id);
+        return fullArtistDetails;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error fetching artist details:', error);
+      throw error;
     }
   }
 }
