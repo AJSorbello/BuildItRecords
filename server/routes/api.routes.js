@@ -2,7 +2,7 @@ const express = require('express');
 const { Pool } = require('pg');
 const router = express.Router();
 const SpotifyService = require('../services/SpotifyService');
-const { Label, Artist, Release } = require('../models');
+const { Label, Artist, Release, Track } = require('../models');
 const { Op } = require('sequelize');
 
 // Cache for label lookups
@@ -38,57 +38,53 @@ const LABEL_SLUGS = {
   deep: 'buildit-deep'
 };
 
-// Get releases by label with caching
-router.get('/:labelId/releases', withDb(async (req, res) => {
+// Get releases by label
+router.get('/releases/:labelSlug', withDb(async (req, res) => {
   try {
-    const { labelId } = req.params;
-    const { offset = 0, limit = 50 } = req.query;
+    const { labelSlug } = req.params;
     
-    // Check cache first
-    const cacheKey = `label:${labelId}`;
-    if (labelCache.has(cacheKey)) {
-      const cachedLabel = labelCache.get(cacheKey);
-      if (Date.now() - cachedLabel.timestamp < 5 * 60 * 1000) { // 5 minutes cache
-        return res.json(cachedLabel.releases);
-      }
+    if (!labelSlug) {
+      return res.status(400).json({ success: false, message: 'Label parameter is required' });
     }
+
+    console.log('Fetching releases for label slug:', labelSlug);
     
-    // First try direct slug match
-    let label = await Label.findOne({
+    // First, let's log all labels to debug
+    const allLabels = await Label.findAll();
+    console.log('Available labels:', allLabels.map(l => ({ id: l.id, name: l.name, slug: l.slug })));
+    
+    const label = await Label.findOne({
       where: {
-        slug: labelId
+        [Op.or]: [
+          { slug: labelSlug },
+          { slug: labelSlug.toLowerCase() }
+        ]
       }
     });
 
-    // If not found, try using the LABEL_SLUGS mapping
-    if (!label && LABEL_SLUGS[labelId]) {
-      label = await Label.findOne({
-        where: {
-          slug: LABEL_SLUGS[labelId]
-        }
-      });
-    }
-
     if (!label) {
-      return res.status(404).json({ error: 'Label not found' });
+      console.log('Label not found for slug:', labelSlug);
+      return res.status(404).json({ success: false, message: 'Label not found' });
     }
 
-    // Use a single query with JOIN to get releases and artists
+    console.log('Found label:', label.name, 'with ID:', label.id);
+    
     const releases = await Release.findAll({
       where: {
         labelId: label.id
       },
-      include: [{
-        model: Artist,
-        as: 'artist',
-        attributes: ['id', 'name', 'spotifyUrl', 'imageUrl'],
-        required: true
-      }],
-      order: [['releaseDate', 'DESC']],
-      offset: parseInt(offset),
-      limit: parseInt(limit)
+      include: [
+        {
+          model: Artist,
+          as: 'artist',
+          attributes: ['id', 'name', 'spotifyUrl', 'imageUrl']
+        }
+      ],
+      order: [['releaseDate', 'DESC']]
     });
 
+    console.log(`Found ${releases.length} releases for label ${label.name}`);
+    
     // Transform the data to match the frontend types
     const transformedReleases = releases.map(release => ({
       id: release.id,
@@ -111,12 +107,6 @@ router.get('/:labelId/releases', withDb(async (req, res) => {
       spotifyUrl: release.spotifyUrl
     }));
 
-    // Cache the result
-    labelCache.set(cacheKey, {
-      releases: transformedReleases,
-      timestamp: Date.now()
-    });
-
     res.json(transformedReleases);
   } catch (error) {
     console.error('Error fetching releases:', error);
@@ -125,7 +115,7 @@ router.get('/:labelId/releases', withDb(async (req, res) => {
 }));
 
 // Get all releases with pagination and filtering
-router.get('/releases', withDb(async (req, res) => {
+router.get('/api/releases', withDb(async (req, res) => {
   try {
     const { limit = 50, offset = 0, search } = req.query;
     
@@ -179,7 +169,7 @@ router.get('/releases', withDb(async (req, res) => {
 }));
 
 // Get all tracks
-router.get('/tracks', withDb(async (req, res) => {
+router.get('/api/tracks', withDb(async (req, res) => {
   try {
     const releases = await Release.findAll({
       include: [{
@@ -220,7 +210,7 @@ router.get('/tracks', withDb(async (req, res) => {
 }));
 
 // Save tracks
-router.post('/tracks', withDb(async (req, res) => {
+router.post('/api/tracks', withDb(async (req, res) => {
   try {
     const tracks = req.body;
     console.log('Saving tracks:', tracks);
@@ -257,7 +247,7 @@ router.post('/tracks', withDb(async (req, res) => {
 }));
 
 // Get releases for a specific label
-router.get('/:label/releases', withDb(async (req, res) => {
+router.get('/api/label/:label/releases', withDb(async (req, res) => {
   try {
     console.log('Fetching releases for label:', req.params.label);
     const labelSlug = LABEL_SLUGS[req.params.label];
@@ -319,7 +309,7 @@ router.get('/:label/releases', withDb(async (req, res) => {
 }));
 
 // Sync releases for a specific label
-router.post('/:label/releases/sync', withDb(async (req, res) => {
+router.post('/api/label/:label/releases/sync', withDb(async (req, res) => {
   try {
     const labelSlug = LABEL_SLUGS[req.params.label];
     if (!labelSlug) {
@@ -336,7 +326,7 @@ router.post('/:label/releases/sync', withDb(async (req, res) => {
 }));
 
 // Get artists for a specific label
-router.get('/:label/artists', withDb(async (req, res) => {
+router.get('/api/label/:label/artists', withDb(async (req, res) => {
   try {
     const labelSlug = LABEL_SLUGS[req.params.label];
     if (!labelSlug) {
@@ -397,8 +387,20 @@ router.get('/:label/artists', withDb(async (req, res) => {
   }
 }));
 
+// Get tracks by label
+router.get('/api/label/:label/tracks', withDb(async (req, res) => {
+  try {
+    const { label } = req.params;
+    const tracks = await Track.find({ recordLabel: label.toUpperCase() });
+    res.json(tracks);
+  } catch (error) {
+    console.error('Error fetching tracks by label:', error);
+    res.status(500).json({ error: 'Failed to fetch tracks' });
+  }
+}));
+
 // Get artist details
-router.get('/artists/:artistId', withDb(async (req, res) => {
+router.get('/api/artists/:artistId', withDb(async (req, res) => {
   try {
     const { artistId } = req.params;
     

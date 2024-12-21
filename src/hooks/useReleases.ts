@@ -17,6 +17,9 @@ export const useReleases = ({ label }: UseReleasesProps) => {
       try {
         setLoading(true);
         const labelEnum = labelIdToKey[label];
+        if (!labelEnum) {
+          throw new Error('Invalid label');
+        }
         const fetchedReleases = await apiService.getReleasesByLabel(labelEnum);
         setReleases(fetchedReleases);
       } catch (err) {

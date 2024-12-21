@@ -67,10 +67,8 @@ const ArtistsPage: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const label = useMemo(() => {
-    const params = new URLSearchParams(location.search);
-    return (params.get('label') || 'RECORDS') as LabelType;
-  }, [location.search]);
+  const params = new URLSearchParams(location.search);
+  const label = (params.get('label') || 'RECORDS') as LabelType;
 
   useEffect(() => {
     const fetchArtists = async () => {

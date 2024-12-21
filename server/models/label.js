@@ -1,43 +1,29 @@
-const { DataTypes } = require('sequelize');
+const { Model, DataTypes } = require('sequelize');
+const sequelize = require('../config/database');
 
-module.exports = (sequelize) => {
-  const Label = sequelize.define('Label', {
-    id: {
-      type: DataTypes.INTEGER,
-      primaryKey: true,
-      autoIncrement: true,
-    },
-    name: {
-      type: DataTypes.STRING,
-      allowNull: false,
-    },
-    slug: {
-      type: DataTypes.STRING,
-      allowNull: false,
-      unique: true,
-    },
-    description: {
-      type: DataTypes.TEXT,
-    },
-    logoUrl: {
-      type: DataTypes.STRING,
-    },
-    websiteUrl: {
-      type: DataTypes.STRING,
-    },
-    spotifyUrl: {
-      type: DataTypes.STRING,
-    },
-    beatportUrl: {
-      type: DataTypes.STRING,
-    },
-    soundcloudUrl: {
-      type: DataTypes.STRING,
-    },
-  }, {
-    tableName: 'labels',
-    timestamps: true,
-  });
+class Label extends Model {}
 
-  return Label;
-};
+Label.init({
+  id: {
+    type: DataTypes.STRING,
+    primaryKey: true,
+    allowNull: false
+  },
+  name: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    unique: true
+  },
+  displayName: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    unique: true
+  }
+}, {
+  sequelize,
+  modelName: 'Label',
+  tableName: 'labels',
+  timestamps: true
+});
+
+module.exports = Label;

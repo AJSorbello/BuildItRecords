@@ -1,116 +1,81 @@
 require('dotenv').config();
-const config = require('./config/environment');
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const path = require('path');
-const { Pool } = require('pg');
-const { sequelize } = require('./models');
-const SpotifyService = require('./services/SpotifyService');
-const { setupSpotifyRoutes } = require('./routes/spotify.routes');
-const apiRoutes = require('./routes/api.routes');
-const { setupAuthRoutes } = require('./routes/auth.routes');
+const sequelize = require('./config/database');
+const { Label, Artist, Release } = require('./models');
 const syncRoutes = require('./routes/sync');
 const releasesRoutes = require('./routes/releases');
 
 const app = express();
-const port = config.port;
+const port = process.env.PORT || 3001;
 
-// Initialize services
-const initServices = async () => {
+// Middleware
+app.use(cors());
+app.use(helmet());
+app.use(express.json());
+
+// Routes
+app.use('/api/sync', syncRoutes);
+app.use('/api/releases', releasesRoutes);
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Error:', err);
+  res.status(500).json({
+    success: false,
+    message: err.message || 'An unexpected error occurred'
+  });
+});
+
+// Test database connection and sync models
+const initDatabase = async () => {
   try {
-    // Initialize database connection
     await sequelize.authenticate();
     console.log('Database connection established successfully');
 
-    const spotifyService = new SpotifyService();
-    console.log('Spotify service initialized successfully');
+    // Sync models with database
+    await sequelize.sync();
+    console.log('Models synchronized with database');
 
-    return { spotifyService };
+    // Create default labels if they don't exist
+    const labels = [
+      { id: 'build-it-records', name: 'records', displayName: 'Build It Records' },
+      { id: 'build-it-tech', name: 'tech', displayName: 'Build It Tech' },
+      { id: 'build-it-deep', name: 'deep', displayName: 'Build It Deep' }
+    ];
+
+    for (const label of labels) {
+      await Label.findOrCreate({
+        where: { id: label.id },
+        defaults: label
+      });
+    }
   } catch (error) {
-    console.error('Failed to initialize services:', error);
-    throw error;
-  }
-};
-
-// Database connection
-const pool = new Pool({
-  user: process.env.POSTGRES_USER,
-  host: process.env.POSTGRES_HOST,
-  database: process.env.POSTGRES_DB,
-  password: process.env.POSTGRES_PASSWORD,
-  port: parseInt(process.env.POSTGRES_PORT || '5432'),
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-});
-
-// Test database connection
-const testDbConnection = async () => {
-  try {
-    const client = await pool.connect();
-    console.log('Successfully connected to PostgreSQL');
-    client.release();
-
-    // Test query
-    await pool.query('SELECT 1+1 AS result');
-    console.log('Database connection established successfully');
-  } catch (error) {
-    console.error('Error connecting to the database:', error);
-    throw error;
-  }
-};
-
-// Initialize Express routes and middleware
-const initExpress = (spotifyService) => {
-  // Security middleware
-  app.use(helmet({
-    contentSecurityPolicy: false,
-    crossOriginEmbedderPolicy: false
-  }));
-  
-  // CORS configuration
-  app.use(cors({
-    origin: process.env.NODE_ENV === 'production' 
-      ? ['https://builditrecords.com', 'https://www.builditrecords.com'] 
-      : ['http://localhost:3000'],
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true
-  }));
-
-  // Body parsing middleware
-  app.use(express.json());
-  app.use(express.urlencoded({ extended: true }));
-
-  // Setup routes
-  app.use('/api', apiRoutes);
-  app.use('/api/sync', syncRoutes);
-  app.use('/api/releases', releasesRoutes);
-  setupSpotifyRoutes(app);
-  setupAuthRoutes(app);
-
-  // Serve static files in production
-  if (config.env === 'production') {
-    app.use(express.static(path.join(__dirname, '../build')));
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(__dirname, '../build', 'index.html'));
-    });
+    console.error('Unable to connect to the database:', error);
+    process.exit(1);
   }
 };
 
 // Start server
 const startServer = async () => {
   try {
-    await testDbConnection();
-    const { spotifyService } = await initServices();
-    initExpress(spotifyService);
-
+    await initDatabase();
     app.listen(port, () => {
-      console.log(`Server running on port ${port} in ${config.env} mode`);
+      console.log(`Server is running on port ${port}`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);
     process.exit(1);
   }
 };
+
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+});
+
+process.on('unhandledRejection', (error) => {
+  console.error('Unhandled Rejection:', error);
+});
 
 startServer();

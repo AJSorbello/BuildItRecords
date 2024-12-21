@@ -37,10 +37,15 @@ const groupByArtists = (releases: Release[]): Artist[] => {
 };
 
 const filterByLabel = (artists: Artist[], label: 'records' | 'tech' | 'deep'): Artist[] => {
+  const labelMap = {
+    'records': 'build-it-records',
+    'tech': 'build-it-tech',
+    'deep': 'build-it-deep'
+  };
+  
   return artists.filter(artist => 
     artist.releases.some(release => 
-      release.beatportUrl?.includes(label) || 
-      release.soundcloudUrl?.includes(label)
+      release.recordLabel === labelMap[label]
     )
   );
 };

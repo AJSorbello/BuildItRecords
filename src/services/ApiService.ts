@@ -1,10 +1,10 @@
-import axios from 'axios';
+import axios, { AxiosRequestConfig } from 'axios';
 import { Track } from '../types/track';
 import { Release } from '../types/release';
 import { Artist } from '../types/artist';
 import { RecordLabel } from '../constants/labels';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
 class ApiService {
   private static instance: ApiService;
@@ -21,11 +21,11 @@ class ApiService {
     return ApiService.instance;
   }
 
-  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  private async request<T>(endpoint: string, config: Partial<AxiosRequestConfig> = {}): Promise<T> {
     try {
       const response = await axios({
+        ...config,
         url: `${this.baseUrl}${endpoint}`,
-        ...options,
       });
       return response.data;
     } catch (error) {
@@ -36,40 +36,27 @@ class ApiService {
 
   // Tracks
   public async getTracks(): Promise<Track[]> {
-    return this.request<Track[]>('/tracks');
-  }
-
-  public async getTracksByLabel(label: RecordLabel): Promise<Track[]> {
-    return this.request<Track[]>(`/tracks/label/${label}`);
+    return this.request<Track[]>('/api/tracks');
   }
 
   // Releases
   public async getReleases(): Promise<Release[]> {
-    return this.request<Release[]>('/releases');
+    return this.request<Release[]>('/api/releases');
   }
 
   public async getReleasesByLabel(label: RecordLabel): Promise<Release[]> {
-    // Convert label to the correct slug format
-    const labelMap: { [key in RecordLabel]: string } = {
-      [RecordLabel.RECORDS]: 'buildit-records',
-      [RecordLabel.TECH]: 'buildit-tech',
-      [RecordLabel.DEEP]: 'buildit-deep'
-    };
-    const labelSlug = labelMap[label];
-    return this.request<Release[]>(`/releases/${labelSlug}`);
+    // Convert the label enum value directly to a slug
+    const labelSlug = label.toLowerCase();
+    return this.request<Release[]>(`/api/releases/${labelSlug}`);
   }
 
   // Artists
   public async getArtists(): Promise<Artist[]> {
-    return this.request<Artist[]>('/artists');
+    return this.request<Artist[]>('/api/artists');
   }
 
-  public async getArtistsByLabel(label: RecordLabel): Promise<Artist[]> {
-    return this.request<Artist[]>(`/artists/label/${label}`);
-  }
-
-  public async getArtistById(id: string): Promise<Artist> {
-    return this.request<Artist>(`/artists/${id}`);
+  public async getArtist(id: string): Promise<Artist> {
+    return this.request<Artist>(`/api/artists/${id}`);
   }
 }
 

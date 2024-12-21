@@ -12,23 +12,42 @@ const sequelize = new Sequelize({
 });
 
 // Import models
-const Label = require('./label')(sequelize);
-const Artist = require('./artist')(sequelize);
-const Release = require('./release')(sequelize);
+const Artist = require('./artist');
+const Release = require('./release');
+const Label = require('./label');
 
 // Define associations
-Label.hasMany(Artist, { foreignKey: 'labelId', as: 'artists' });
-Artist.belongsTo(Label, { foreignKey: 'labelId', as: 'label' });
+// Label has many Artists
+Label.hasMany(Artist, {
+  foreignKey: 'recordLabel',
+  sourceKey: 'id'
+});
+Artist.belongsTo(Label, {
+  foreignKey: 'recordLabel',
+  targetKey: 'id'
+});
 
-Artist.hasMany(Release, { foreignKey: 'artistId', as: 'releases' });
-Release.belongsTo(Artist, { foreignKey: 'artistId', as: 'artist' });
+// Label has many Releases
+Label.hasMany(Release, {
+  foreignKey: 'recordLabel',
+  sourceKey: 'id'
+});
+Release.belongsTo(Label, {
+  foreignKey: 'recordLabel',
+  targetKey: 'id'
+});
 
-Label.hasMany(Release, { foreignKey: 'labelId', as: 'releases' });
-Release.belongsTo(Label, { foreignKey: 'labelId', as: 'label' });
+// Artist has many Releases
+Artist.hasMany(Release, {
+  foreignKey: 'artistId'
+});
+Release.belongsTo(Artist, {
+  foreignKey: 'artistId'
+});
 
 module.exports = {
   sequelize,
-  Label,
   Artist,
   Release,
+  Label
 };

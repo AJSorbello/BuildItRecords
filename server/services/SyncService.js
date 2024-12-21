@@ -1,6 +1,12 @@
 const { Label, Artist, Release } = require('../models');
 const SpotifyService = require('./SpotifyService');
 
+const LABEL_NAMES = {
+  'records': 'Build It Records',
+  'tech': 'Build It Tech',
+  'deep': 'Build It Deep'
+};
+
 class SyncService {
   static instance = null;
 
@@ -11,8 +17,13 @@ class SyncService {
     return SyncService.instance;
   }
 
-  async syncLabel(labelName, labelSlug) {
+  async syncLabel(labelSlug) {
     try {
+      const labelName = LABEL_NAMES[labelSlug];
+      if (!labelName) {
+        throw new Error(`Invalid label slug: ${labelSlug}`);
+      }
+
       // Create or update label
       const [label, created] = await Label.findOrCreate({
         where: { slug: labelSlug },
@@ -22,55 +33,32 @@ class SyncService {
         }
       });
 
-      // Get releases from Spotify
-      const spotifyReleases = await SpotifyService.getLabelReleases(labelName);
+      // Use SpotifyService to search and sync artists for this label
+      const results = await SpotifyService.syncLabelArtists(labelName);
       
-      for (const release of spotifyReleases) {
-        // Create or update artist
-        const [artist, artistCreated] = await Artist.findOrCreate({
-          where: { spotifyId: release.artist.spotifyId },
-          defaults: {
-            name: release.artist.name,
-            imageUrl: release.artist.imageUrl,
-            labelId: label.id
-          }
-        });
-
-        // Create or update release
-        await Release.findOrCreate({
-          where: { spotifyId: release.spotifyId },
-          defaults: {
-            title: release.name,
-            releaseDate: release.releaseDate,
-            imageUrl: release.imageUrl,
-            previewUrl: release.previewUrl,
-            artistId: artist.id,
-            labelId: label.id
-          }
-        });
-      }
-
-      return { success: true, message: `Synced ${spotifyReleases.length} releases for ${labelName}` };
+      return {
+        success: true,
+        label,
+        created,
+        results
+      };
     } catch (error) {
       console.error('Error syncing label:', error);
-      return { success: false, message: error.message };
+      throw error;
     }
   }
 
   async syncAllLabels() {
-    const labels = [
-      { name: 'Records', slug: 'records' },
-      { name: 'Tech', slug: 'tech' },
-      { name: 'Deep', slug: 'deep' }
-    ];
-
-    const results = [];
-    for (const label of labels) {
-      const result = await this.syncLabel(label.name, label.slug);
-      results.push({ label: label.name, ...result });
+    try {
+      const results = {};
+      for (const [slug, name] of Object.entries(LABEL_NAMES)) {
+        results[slug] = await this.syncLabel(slug);
+      }
+      return results;
+    } catch (error) {
+      console.error('Error syncing all labels:', error);
+      throw error;
     }
-
-    return results;
   }
 }
 

@@ -1,59 +1,59 @@
-const { DataTypes } = require('sequelize');
+const { Model, DataTypes } = require('sequelize');
+const sequelize = require('../config/database');
 
-module.exports = (sequelize) => {
-  const Release = sequelize.define('Release', {
-    id: {
-      type: DataTypes.INTEGER,
-      primaryKey: true,
-      autoIncrement: true,
-    },
-    title: {
-      type: DataTypes.STRING,
-      allowNull: false,
-    },
-    releaseDate: {
-      type: DataTypes.DATE,
-      allowNull: false,
-    },
-    albumArtUrl: {
-      type: DataTypes.STRING,
-    },
-    spotifyId: {
-      type: DataTypes.STRING,
-    },
-    spotifyUrl: {
-      type: DataTypes.STRING,
-    },
-    beatportUrl: {
-      type: DataTypes.STRING,
-    },
-    soundcloudUrl: {
-      type: DataTypes.STRING,
-    },
-    artistId: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      references: {
-        model: 'artists',
-        key: 'id',
-      },
-    },
-    labelId: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      references: {
-        model: 'labels',
-        key: 'id',
-      },
-    },
-    popularity: {
-      type: DataTypes.INTEGER,
-      defaultValue: 0,
-    },
-  }, {
-    tableName: 'releases',
-    timestamps: true,
-  });
+class Release extends Model {}
 
-  return Release;
-};
+Release.init({
+  id: {
+    type: DataTypes.STRING,
+    primaryKey: true,
+    allowNull: false
+  },
+  name: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  trackTitle: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  artistId: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    references: {
+      model: 'artists',
+      key: 'id'
+    }
+  },
+  featured: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
+  },
+  album: {
+    type: DataTypes.JSON,
+    allowNull: true
+  },
+  spotifyUrl: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  previewUrl: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  recordLabel: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    references: {
+      model: 'labels',
+      key: 'id'
+    }
+  }
+}, {
+  sequelize,
+  modelName: 'Release',
+  tableName: 'releases',
+  timestamps: true
+});
+
+module.exports = Release;

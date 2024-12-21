@@ -1,8 +1,8 @@
 import { Artist as SpotifyArtist, Track as SpotifyTrack } from '@spotify/web-api-ts-sdk';
-import { Artist } from '../types/artist';
+import { Artist, SimpleArtist } from '../types/artist';
 import { Track, SpotifyImage } from '../types/track';
 import { Release } from '../types/release';
-import { RecordLabel, RECORD_LABELS } from '../constants/labels';
+import { RecordLabel } from '../constants/labels';
 
 interface SpotifyAlbum {
   id: string;
@@ -49,47 +49,75 @@ export const extractSpotifyId = (url: string): string | null => {
 };
 
 export const determineLabelFromUrl = (url: string): RecordLabel => {
-  if (url.includes('records')) return RECORD_LABELS['Build It Records'];
-  if (url.includes('tech')) return RECORD_LABELS['Build It Tech'];
-  if (url.includes('deep')) return RECORD_LABELS['Build It Deep'];
-  return RECORD_LABELS['Build It Records']; // Default to Records
+  if (url.includes('records')) return RecordLabel.RECORDS;
+  if (url.includes('tech')) return RecordLabel.TECH;
+  if (url.includes('deep')) return RecordLabel.DEEP;
+  return RecordLabel.RECORDS; // Default to Records
 };
 
-export const convertSpotifyArtistToArtist = (spotifyArtist: SpotifyArtist): Artist => {
+export const convertSpotifyArtistToArtist = (spotifyArtist: SpotifyArtist, label: RecordLabel): Artist => {
   return {
     id: spotifyArtist.id,
     name: spotifyArtist.name,
     spotifyUrl: spotifyArtist.external_urls.spotify,
-    imageUrl: spotifyArtist.images[0]?.url || '',
+    recordLabel: label,
+    images: spotifyArtist.images,
     genres: spotifyArtist.genres,
-    followers: spotifyArtist.followers.total,
-    monthlyListeners: spotifyArtist.followers.total,
-    primaryLabel: determineLabelFromUrl(spotifyArtist.external_urls.spotify),
-    label: determineLabelFromUrl(spotifyArtist.external_urls.spotify),
+    followers: { total: spotifyArtist.followers.total },
+    bio: ''
   };
 };
 
 export const convertSpotifyTrackToTrack = (spotifyTrack: SpotifyTrack, label: RecordLabel): Track => {
+  const artist: SimpleArtist = {
+    id: spotifyTrack.artists[0]?.id || '',
+    name: spotifyTrack.artists[0]?.name || 'Unknown Artist',
+    spotifyUrl: spotifyTrack.artists[0]?.external_urls?.spotify || '',
+    recordLabel: label
+  };
+
+  const artists: SimpleArtist[] = spotifyTrack.artists.map(a => ({
+    id: a.id,
+    name: a.name,
+    spotifyUrl: a.external_urls.spotify,
+    recordLabel: label
+  }));
+
   return {
     id: spotifyTrack.id,
     name: spotifyTrack.name,
-    artist: {
-      name: spotifyTrack.artists[0].name,
-      spotifyUrl: spotifyTrack.artists[0].external_urls.spotify,
-    },
-    album: {
-      id: spotifyTrack.album.id,
-      name: spotifyTrack.album.name,
-      images: spotifyTrack.album.images,
-      release_date: spotifyTrack.album.release_date,
-      external_urls: spotifyTrack.album.external_urls,
-    },
-    duration_ms: spotifyTrack.duration_ms,
-    preview_url: spotifyTrack.preview_url || undefined,
-    external_urls: spotifyTrack.external_urls,
-    genre: spotifyTrack.album.genres?.[0] || '',
+    trackTitle: spotifyTrack.name,
+    artist,
+    artists,
+    album: spotifyTrack.album,
     releaseDate: spotifyTrack.album.release_date,
-    label,
+    imageUrl: spotifyTrack.album.images[0]?.url || '',
+    spotifyUrl: spotifyTrack.external_urls.spotify,
+    recordLabel: label,
+    preview_url: spotifyTrack.preview_url,
+    duration_ms: spotifyTrack.duration_ms,
+    popularity: spotifyTrack.popularity,
+    featured: false
+  };
+};
+
+export const convertSpotifyTrackToRelease = (spotifyTrack: SpotifyTrack, label: RecordLabel): Release => {
+  const artist: SimpleArtist = {
+    id: spotifyTrack.artists[0]?.id || '',
+    name: spotifyTrack.artists[0]?.name || 'Unknown Artist',
+    spotifyUrl: spotifyTrack.artists[0]?.external_urls?.spotify || '',
+    recordLabel: label
+  };
+
+  return {
+    id: spotifyTrack.id,
+    title: spotifyTrack.name,
+    artist,
+    imageUrl: spotifyTrack.album.images[0]?.url || '',
+    releaseDate: spotifyTrack.album.release_date,
+    spotifyUrl: spotifyTrack.external_urls.spotify,
+    labelName: label,
+    label
   };
 };
 
@@ -103,10 +131,16 @@ export const convertSpotifyReleaseToRelease = (spotifyRelease: any, label: Recor
   return {
     id: spotifyRelease.id,
     title: spotifyRelease.name,
-    artist: spotifyRelease.artists?.[0]?.name || '',
+    artist: {
+      id: spotifyRelease.artists?.[0]?.id || '',
+      name: spotifyRelease.artists?.[0]?.name || '',
+      spotifyUrl: spotifyRelease.artists?.[0]?.external_urls?.spotify || '',
+      recordLabel: label
+    },
     imageUrl: spotifyRelease.images?.[0]?.url || '',
     spotifyUrl: spotifyRelease.external_urls?.spotify || '',
     releaseDate: spotifyRelease.release_date || '',
+    labelName: label,
     label,
   };
 };

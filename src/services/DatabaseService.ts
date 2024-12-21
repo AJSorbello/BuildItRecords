@@ -35,12 +35,15 @@ class DatabaseService {
   }
 
   // Tracks
-  public async getTracks(): Promise<Track[]> {
+  public async getTracks(label?: RecordLabel): Promise<Track[]> {
+    if (label) {
+      return this.request<Track[]>(`/label/${label.toLowerCase()}/tracks`);
+    }
     return this.request<Track[]>('/tracks');
   }
 
   public async getTracksByLabel(label: RecordLabel): Promise<Track[]> {
-    return this.request<Track[]>(`/tracks/label/${label}`);
+    return this.request<Track[]>(`/label/${label.toLowerCase()}/tracks`);
   }
 
   public async addTrack(track: Track): Promise<string> {

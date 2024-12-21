@@ -1,11 +1,13 @@
 import { SpotifyApi } from '@spotify/web-api-ts-sdk';
 import { Track } from '../types/track';
 import { Artist } from '../types/artist';
-import { RecordLabel } from '../types/release';
+import { RECORD_LABELS } from '../constants/labels';
 import { convertSpotifyArtistToArtist, convertSpotifyTrackToTrack } from '../utils/spotifyUtils';
 
+type RecordLabel = typeof RECORD_LABELS[keyof typeof RECORD_LABELS];
+
 class SpotifyService {
-  private sdk: SpotifyApi | null = null;
+  private spotifyApi: SpotifyApi | null = null;
   private static instance: SpotifyService;
 
   private constructor() {
@@ -21,22 +23,22 @@ class SpotifyService {
         throw new Error('Spotify credentials are not configured');
       }
 
-      this.sdk = SpotifyApi.withClientCredentials(clientId, clientSecret);
+      this.spotifyApi = SpotifyApi.withClientCredentials(clientId, clientSecret);
       console.log('Spotify SDK initialized successfully');
     } catch (error) {
       console.error('Failed to initialize Spotify SDK:', error);
-      this.sdk = null;
+      this.spotifyApi = null;
     }
   }
 
   private async ensureSDK(): Promise<SpotifyApi> {
-    if (!this.sdk) {
+    if (!this.spotifyApi) {
       await this.initializeSDK();
-      if (!this.sdk) {
+      if (!this.spotifyApi) {
         throw new Error('Failed to initialize Spotify SDK');
       }
     }
-    return this.sdk;
+    return this.spotifyApi;
   }
 
   public static getInstance(): SpotifyService {
@@ -46,10 +48,10 @@ class SpotifyService {
     return SpotifyService.instance;
   }
 
-  async getLabelReleases(label: RecordLabel): Promise<Track[]> {
+  public async getTracksByLabel(label: RecordLabel): Promise<Track[]> {
     try {
       const sdk = await this.ensureSDK();
-      const response = await sdk.search.search(`label:${label}`, ['track'], undefined, 50);
+      const response = await sdk.search(`label:${label}`, ['track']);
       return response.tracks.items.map(track => convertSpotifyTrackToTrack(track, label));
     } catch (error) {
       console.error('Error fetching label releases:', error);
@@ -57,84 +59,79 @@ class SpotifyService {
     }
   }
 
-  async getArtistsByLabel(label: RecordLabel): Promise<Artist[]> {
+  public async getArtistsByLabel(label: RecordLabel): Promise<Artist[]> {
     try {
-      const releases = await this.getLabelReleases(label);
-      const artistIds = new Set(releases.map(release => release.artist.id).filter(Boolean));
       const sdk = await this.ensureSDK();
+      const tracks = await this.getTracksByLabel(label);
+      const artistIds = new Set(tracks.flatMap(track => track.artists.map(artist => artist.id)));
+
       const artists = await Promise.all(
-        Array.from(artistIds).map(async id => {
+        Array.from(artistIds).filter(id => id).map(async id => {
           const artist = await sdk.artists.get(id);
           return convertSpotifyArtistToArtist(artist, label);
         })
       );
+
       return artists;
     } catch (error) {
-      console.error('Error fetching artists by label:', error);
+      console.error('Error fetching artists:', error);
       return [];
     }
   }
 
-  async getArtist(id: string): Promise<Artist | null> {
+  public async getArtist(id: string): Promise<Artist | null> {
     try {
       const sdk = await this.ensureSDK();
       const artist = await sdk.artists.get(id);
-      return convertSpotifyArtistToArtist(artist);
+      return convertSpotifyArtistToArtist(artist, RECORD_LABELS.RECORDS);
     } catch (error) {
       console.error('Error fetching artist:', error);
       return null;
     }
   }
 
-  async getArtistDetailsByName(name: string): Promise<any | null> {
+  public async searchArtists(name: string): Promise<Artist[]> {
     try {
       const sdk = await this.ensureSDK();
-      const searchResults = await sdk.search(name, ['artist']);
-      const artists = searchResults.artists.items;
-      
-      if (artists.length > 0) {
-        // Get full artist details
-        const artistId = artists[0].id;
-        return await sdk.artists.get(artistId);
-      }
-      
-      return null;
+      const response = await sdk.search(name, ['artist']);
+      return response.artists.items.map(artist => 
+        convertSpotifyArtistToArtist(artist, RECORD_LABELS.RECORDS)
+      );
     } catch (error) {
-      console.error('Error getting artist details:', error);
-      return null;
+      console.error('Error searching artists:', error);
+      return [];
     }
   }
 
-  async getArtistTracks(artistId: string): Promise<Track[]> {
+  public async getArtistTracks(artistId: string): Promise<Track[]> {
     try {
       const sdk = await this.ensureSDK();
       const response = await sdk.artists.topTracks(artistId, 'US');
-      return response.tracks.map(track => convertSpotifyTrackToTrack(track, 'records'));
+      return response.tracks.map(track => convertSpotifyTrackToTrack(track, RECORD_LABELS.RECORDS));
     } catch (error) {
       console.error('Error fetching artist tracks:', error);
       return [];
     }
   }
 
-  async searchTracks(query: string): Promise<Track[]> {
+  public async searchTracks(query: string): Promise<Track[]> {
     try {
       const sdk = await this.ensureSDK();
-      const response = await sdk.search.search(query, ['track'], undefined, 20);
-      return response.tracks.items.map(track => convertSpotifyTrackToTrack(track, 'records'));
+      const response = await sdk.search(query, ['track']);
+      return response.tracks.items.map(track => 
+        convertSpotifyTrackToTrack(track, RECORD_LABELS.RECORDS)
+      );
     } catch (error) {
       console.error('Error searching tracks:', error);
       return [];
     }
   }
 
-  async getTrackDetailsByUrl(url: string): Promise<Track | null> {
+  public async getTrack(id: string): Promise<Track | null> {
     try {
-      const id = url.split('/').pop()?.split('?')[0];
-      if (!id) return null;
-      
       const sdk = await this.ensureSDK();
       const track = await sdk.tracks.get(id);
-      return convertSpotifyTrackToTrack(track, 'records');
+      return convertSpotifyTrackToTrack(track, RECORD_LABELS.RECORDS);
     } catch (error) {
       console.error('Error fetching track details:', error);
       return null;

@@ -1,46 +1,56 @@
-const { DataTypes } = require('sequelize');
+const { Model, DataTypes } = require('sequelize');
+const sequelize = require('../config/database');
 
-module.exports = (sequelize) => {
-  const Artist = sequelize.define('Artist', {
-    id: {
-      type: DataTypes.INTEGER,
-      primaryKey: true,
-      autoIncrement: true,
-    },
-    name: {
-      type: DataTypes.STRING,
-      allowNull: false,
-    },
-    bio: {
-      type: DataTypes.TEXT,
-    },
-    imageUrl: {
-      type: DataTypes.STRING,
-    },
-    spotifyId: {
-      type: DataTypes.STRING,
-    },
-    spotifyUrl: {
-      type: DataTypes.STRING,
-    },
-    beatportUrl: {
-      type: DataTypes.STRING,
-    },
-    soundcloudUrl: {
-      type: DataTypes.STRING,
-    },
-    labelId: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      references: {
-        model: 'labels',
-        key: 'id',
-      },
-    },
-  }, {
-    tableName: 'artists',
-    timestamps: true,
-  });
+class Artist extends Model {}
 
-  return Artist;
-};
+Artist.init({
+  id: {
+    type: DataTypes.STRING,
+    primaryKey: true,
+    allowNull: false
+  },
+  name: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  spotifyUrl: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  images: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    defaultValue: []
+  },
+  genres: {
+    type: DataTypes.ARRAY(DataTypes.STRING),
+    defaultValue: []
+  },
+  followersCount: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0
+  },
+  popularity: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0
+  },
+  recordLabel: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    references: {
+      model: 'labels',
+      key: 'id'
+    }
+  },
+  bio: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  }
+}, {
+  sequelize,
+  modelName: 'Artist',
+  tableName: 'artists',
+  timestamps: true
+});
+
+module.exports = Artist;
