@@ -1,5 +1,5 @@
 import { spotifyService } from '../spotify';
-import { describe, it, expect, fail } from '@jest/globals';
+import { describe, it, expect, test } from '@jest/globals';
 
 describe('SpotifyService', () => {
   // This is a real ISRC for "Bohemian Rhapsody" by Queen

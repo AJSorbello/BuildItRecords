@@ -14,7 +14,7 @@ export interface ISpotifyService {
   getPlaylist(playlistId: string): Promise<SpotifyPlaylist | null>;
   getTracksByLabel(label: RecordLabel): Promise<Track[]>;
   getLabelReleases(labelName: string): Promise<Track[]>;
-  getArtistDetailsByName(artistName: string): Promise<Artist | null>;
+  getArtistDetailsByName(artistName: string): Promise<SpotifyApiArtist | null>;
   searchArtist(query: string): Promise<Artist | null>;
   getArtistById(artistId: string): Promise<Artist | null>;
   importLabelTracks(label: RecordLabel, batchSize?: number, onProgress?: (imported: number, total: number) => void): Promise<Track[]>;
@@ -52,19 +52,22 @@ class SpotifyService implements ISpotifyService {
     this.clientSecret = process.env.REACT_APP_SPOTIFY_CLIENT_SECRET || '';
     this.redirectUri = process.env.REACT_APP_SPOTIFY_REDIRECT_URI || '';
 
+    const hasCredentials = {
+      clientId: Boolean(this.clientId),
+      clientSecret: Boolean(this.clientSecret),
+      redirectUri: Boolean(this.redirectUri)
+    };
+
+    console.log('Spotify credentials:', hasCredentials);
+
     if (!this.clientId || !this.clientSecret || !this.redirectUri) {
-      console.error('Missing Spotify credentials:', {
-        clientId: !!this.clientId,
-        clientSecret: !!this.clientSecret,
-        redirectUri: !!this.redirectUri
-      });
       throw new Error('Spotify credentials not found in environment variables');
     }
 
     const labelPlaylistMap: Record<RecordLabel, string> = {
-      'Build It Records': process.env.SPOTIFY_RECORDS_PLAYLIST_ID || '',
-      'Build It Tech': process.env.SPOTIFY_TECH_PLAYLIST_ID || '',
-      'Build It Deep': process.env.SPOTIFY_DEEP_PLAYLIST_ID || '',
+      'Build It Records': process.env.REACT_APP_SPOTIFY_RECORDS_PLAYLIST_ID || '',
+      'Build It Tech': process.env.REACT_APP_SPOTIFY_TECH_PLAYLIST_ID || '',
+      'Build It Deep': process.env.REACT_APP_SPOTIFY_DEEP_PLAYLIST_ID || '',
     };
 
     this.labelPlaylists = new Map(
@@ -100,52 +103,46 @@ class SpotifyService implements ISpotifyService {
     }
   }
 
-  private convertSpotifyArtistToArtist(spotifyArtist: SpotifyApiArtist): Artist {
-    return {
-      id: spotifyArtist.id,
-      name: spotifyArtist.name,
-      imageUrl: spotifyArtist.images[0]?.url || '',
-      images: spotifyArtist.images,
-      recordLabel: RECORD_LABELS['Build It Records'],
-      labels: [RECORD_LABELS['Build It Records']],
-      releases: [],
-      spotifyUrl: spotifyArtist.external_urls.spotify,
-      monthlyListeners: spotifyArtist.followers?.total,
-      genres: spotifyArtist.genres || []
-    };
-  }
+  private async convertSpotifyTrackToTrack(spotifyTrack: SpotifyApiTrack): Promise<Track> {
+    const artists = await Promise.all(
+      spotifyTrack.artists.map(async (artist) => {
+        return {
+          id: artist.id,
+          name: artist.name,
+          imageUrl: '',
+          image: '',
+          bio: '',
+          recordLabel: RECORD_LABELS['Build It Records'],
+          labels: [RECORD_LABELS['Build It Records']],
+          releases: [],
+          spotifyUrl: artist.external_urls.spotify,
+          genres: [],
+        };
+      })
+    );
 
-  private convertSpotifyTrackToTrack(spotifyTrack: SpotifyApiTrack): Track {
     return {
       id: spotifyTrack.id,
       name: spotifyTrack.name,
       trackTitle: spotifyTrack.name,
-      artist: spotifyTrack.artists[0]?.name || '',
-      artists: spotifyTrack.artists.map(artist => ({
-        id: artist.id,
-        name: artist.name,
-        imageUrl: '',
-        recordLabel: RECORD_LABELS['Build It Records'],
-        labels: [RECORD_LABELS['Build It Records']],
-        releases: [],
-        spotifyUrl: artist.external_urls.spotify,
-        external_urls: { spotify: artist.external_urls.spotify }
-      })),
+      artist: artists[0]?.name || '',
+      artists,
       album: {
         id: spotifyTrack.album.id,
         name: spotifyTrack.album.name,
-        images: spotifyTrack.album.images || [],
-        releaseDate: spotifyTrack.album.release_date || '',
-        totalTracks: 0  
+        releaseDate: spotifyTrack.album.release_date,
+        totalTracks: 1,
+        images: spotifyTrack.album.images
       },
+      albumCover: spotifyTrack.album.images[0]?.url || '',
       recordLabel: RECORD_LABELS['Build It Records'],
       label: RECORD_LABELS['Build It Records'],
-      albumCover: spotifyTrack.album.images[0]?.url || '',
-      spotifyUrl: spotifyTrack.external_urls.spotify,
-      previewUrl: spotifyTrack.preview_url || '',
-      releaseDate: spotifyTrack.album.release_date || '',
+      releaseDate: spotifyTrack.album.release_date,
+      previewUrl: spotifyTrack.preview_url,
       beatportUrl: '',
-      soundcloudUrl: ''
+      soundcloudUrl: '',
+      spotifyUrl: spotifyTrack.external_urls.spotify,
+      genres: []
     };
   }
 
@@ -153,7 +150,20 @@ class SpotifyService implements ISpotifyService {
     await this.ensureApiInitialized();
     try {
       const artist = await this.spotifyApi!.artists.get(artistId);
-      return this.convertSpotifyArtistToArtist(artist);
+      return {
+        id: artist.id,
+        name: artist.name,
+        imageUrl: artist.images[0]?.url || '',
+        image: artist.images[0]?.url || '',
+        bio: '',
+        images: artist.images,
+        recordLabel: RECORD_LABELS['Build It Records'],
+        labels: [RECORD_LABELS['Build It Records']],
+        releases: [],
+        spotifyUrl: artist.external_urls.spotify,
+        monthlyListeners: artist.followers?.total,
+        genres: artist.genres || []
+      };
     } catch (error) {
       console.error('Error fetching artist:', error);
       throw error;
@@ -165,7 +175,20 @@ class SpotifyService implements ISpotifyService {
     try {
       const results = await this.spotifyApi!.search(artistName, ['artist'], undefined, 1);
       return results.artists.items.length > 0
-        ? this.convertSpotifyArtistToArtist(results.artists.items[0])
+        ? {
+          id: results.artists.items[0].id,
+          name: results.artists.items[0].name,
+          imageUrl: results.artists.items[0].images[0]?.url || '',
+          image: results.artists.items[0].images[0]?.url || '',
+          bio: '',
+          images: results.artists.items[0].images,
+          recordLabel: RECORD_LABELS['Build It Records'],
+          labels: [RECORD_LABELS['Build It Records']],
+          releases: [],
+          spotifyUrl: results.artists.items[0].external_urls.spotify,
+          monthlyListeners: results.artists.items[0].followers?.total,
+          genres: results.artists.items[0].genres || []
+        }
         : null;
     } catch (error) {
       console.error('Error searching for artist:', error);
@@ -359,19 +382,21 @@ class SpotifyService implements ISpotifyService {
     return this.getPlaylistTracks(playlistId);
   }
 
-  async getArtistDetailsByName(artistName: string): Promise<Artist | null> {
-    await this.ensureApiInitialized();
+  async getArtistDetailsByName(artistName: string): Promise<SpotifyApiArtist | null> {
     try {
-      const results = await this.spotifyApi!.search(artistName, ['artist'], undefined, 1);
-      if (results.artists.items.length > 0) {
-        const artist = this.convertSpotifyArtistToArtist(results.artists.items[0]);
-        const topTracks = await this.spotifyApi!.artists.topTracks(artist.id, 'US');
-        artist.tracks = topTracks.tracks.map((track: any) => this.convertSpotifyTrackToTrack(track));
-        return artist;
+      await this.getAccessToken();
+      const searchResults = await this.spotifyApi?.search(artistName, ['artist']);
+      
+      if (!searchResults?.artists?.items?.length) {
+        console.log(`No artist found for: ${artistName}`);
+        return null;
       }
-      return null;
+
+      const artist = searchResults.artists.items[0];
+      console.log(`Found artist: ${artist.name}`);
+      return artist;
     } catch (error) {
-      console.error('Error searching for artist:', error);
+      console.error('Error getting artist details:', error);
       return null;
     }
   }
@@ -445,29 +470,26 @@ class SpotifyService implements ISpotifyService {
 
   private async refreshAccessToken(): Promise<void> {
     try {
-      const response = await fetch('https://accounts.spotify.com/api/token', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          Authorization: `Basic ${btoa(`${this.clientId}:${this.clientSecret}`)}`,
-        },
-        body: 'grant_type=client_credentials',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to refresh access token');
+      const token = await this.spotifyApi?.getAccessToken();
+      if (!token) {
+        throw new Error('Failed to get access token');
       }
-
-      const data = await response.json();
-      this.accessToken = data.access_token;
-      this.tokenExpirationTime = Date.now() + (data.expires_in * 1000);
+      this.accessToken = token.access_token;
+      this.tokenExpirationTime = Date.now() + (token.expires_in * 1000);
       
+      // Update the API instance with the new token
       if (this.spotifyApi) {
-        this.spotifyApi.setAccessToken(this.accessToken);
+        await this.spotifyApi.authenticate();
       }
     } catch (error) {
       console.error('Error refreshing access token:', error);
       throw error;
+    }
+  }
+
+  async getAccessToken(): Promise<void> {
+    if (this.accessTokenExpired()) {
+      await this.refreshAccessToken();
     }
   }
 

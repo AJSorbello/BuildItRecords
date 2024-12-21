@@ -127,13 +127,21 @@ const convertSpotifyReleaseToRelease = (spotifyRelease: SpotifyPlaylist, label: 
     id: spotifyRelease.id,
     title: spotifyRelease.name,
     artist: spotifyRelease.owner.display_name,
+    artwork: spotifyRelease.images[0]?.url || '',
     artworkUrl: spotifyRelease.images[0]?.url || '',
     releaseDate: new Date().toISOString(),
     genre: '',
     labelName: label,
+    label,
     stores: {
-      spotify: spotifyRelease.external_urls?.spotify || ''
-    }
+      spotify: spotifyRelease.external_urls?.spotify || '',
+      beatport: '',
+      soundcloud: ''
+    },
+    spotifyUrl: spotifyRelease.external_urls?.spotify || '',
+    beatportUrl: '',
+    soundcloudUrl: '',
+    tracks: []
   };
 };
 

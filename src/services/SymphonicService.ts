@@ -109,7 +109,11 @@ class SymphonicService {
       title: item.title,
       artist: item.artist,
       artwork: item.artwork_url,
+      artworkUrl: item.artwork_url,
       releaseDate: new Date(item.release_date).toISOString().split('T')[0],
+      genre: item.genre || 'Unknown',
+      labelName: this.determineLabel(item.label_name),
+      label: this.determineLabel(item.label_name),
       tracks: item.tracks.map(track => createTrack({
         id: track.id,
         trackTitle: track.title,
@@ -118,7 +122,9 @@ class SymphonicService {
         artists: [{ 
           id: track.id, 
           name: track.artist,
-          imageUrl: '',  
+          imageUrl: '',
+          image: '',
+          bio: '',
           recordLabel: this.determineLabel(item.label_name),
           labels: [this.determineLabel(item.label_name)],
           releases: [],
@@ -141,11 +147,13 @@ class SymphonicService {
         label: this.determineLabel(item.label_name),
         previewUrl: track.preview_url || null,
         spotifyUrl: track.spotify_id ? `https://open.spotify.com/track/${track.spotify_id}` : '',
-        releaseDate: new Date(item.release_date).toISOString().split('T')[0],
-        beatportUrl: '',
-        soundcloudUrl: ''
+        releaseDate: new Date(item.release_date).toISOString().split('T')[0]
       })),
-      label: this.determineLabel(item.label_name),
+      stores: {
+        spotify: item.stores?.spotify || '',
+        beatport: item.stores?.beatport || '',
+        soundcloud: item.stores?.soundcloud || ''
+      },
       spotifyUrl: item.stores?.spotify || '',
       beatportUrl: item.stores?.beatport || '',
       soundcloudUrl: item.stores?.soundcloud || ''

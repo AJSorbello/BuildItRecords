@@ -92,14 +92,10 @@ const ArtistListPage: React.FC = () => {
       console.log('Fetching image for primary artist:', primaryArtist);
 
       // Try to get artist details from Spotify
-      const artistDetails = await spotifyService.getArtistDetailsByName(primaryArtist, track.title);
+      const artistDetails = await spotifyService.getArtistDetailsByName(primaryArtist);
       
       if (artistDetails?.images?.[0]?.url) {
         console.log('Found Spotify image for artist:', primaryArtist);
-        // Update local storage with the new image
-        const storedImages = JSON.parse(localStorage.getItem('artistImages') || '{}');
-        storedImages[artistName] = artistDetails.images[0].url;
-        localStorage.setItem('artistImages', JSON.stringify(storedImages));
         return artistDetails.images[0].url;
       } else {
         console.log('No Spotify image found for artist:', primaryArtist);
@@ -154,8 +150,7 @@ const ArtistListPage: React.FC = () => {
                 console.log(`Trying with track title for ${primaryArtist}: ${cleanTrackTitle}`);
                 
                 const spotifyArtistWithTrack = await spotifyService.getArtistDetailsByName(
-                  primaryArtist,
-                  cleanTrackTitle
+                  primaryArtist
                 );
 
                 if (spotifyArtistWithTrack?.images && Array.isArray(spotifyArtistWithTrack.images) && spotifyArtistWithTrack.images.length > 0) {

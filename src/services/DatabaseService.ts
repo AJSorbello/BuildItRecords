@@ -38,27 +38,24 @@ class DatabaseService {
           releases: [],
           spotifyUrl: 'https://open.spotify.com/artist/1',
           genres: [],
-          bio: 'Artist 1 Bio'
+          bio: 'Artist 1 bio'
         }],
         album: {
           id: '1',
           name: 'Album 1',
-          images: [{
-            url: 'https://example.com/album1.jpg',
-            height: 640,
-            width: 640
-          }],
           releaseDate: '2024-01-01',
-          totalTracks: 12
+          totalTracks: 1,
+          images: []
         },
-        recordLabel: RECORD_LABELS['Build It Records'],
         albumCover: 'https://example.com/album1.jpg',
-        spotifyUrl: 'https://open.spotify.com/track/1',
-        beatportUrl: 'https://www.beatport.com/track/1',
-        soundcloudUrl: 'https://soundcloud.com/track/1',
-        previewUrl: 'https://example.com/preview1.mp3',
+        recordLabel: RECORD_LABELS['Build It Records'],
+        label: RECORD_LABELS['Build It Records'],
         releaseDate: '2024-01-01',
-        genres: ['House']
+        previewUrl: 'https://example.com/preview1.mp3',
+        beatportUrl: 'https://www.beatport.com/track/1',
+        soundcloudUrl: 'https://soundcloud.com/track1',
+        spotifyUrl: 'https://open.spotify.com/track/1',
+        genres: ['House', 'Tech House']
       }
     ];
   }
@@ -120,8 +117,10 @@ class DatabaseService {
           id: '1',
           name: 'Artist 1',
           imageUrl: 'https://example.com/artist1.jpg',
-          recordLabel: RECORD_LABELS.RECORDS,
-          labels: [RECORD_LABELS.RECORDS],
+          image: 'https://example.com/artist1.jpg',
+          bio: 'Artist 1 bio',
+          recordLabel: RECORD_LABELS['Build It Records'],
+          labels: [RECORD_LABELS['Build It Records']],
           releases: [],
           spotifyUrl: 'https://open.spotify.com/artist/1',
           genres: []
@@ -130,8 +129,10 @@ class DatabaseService {
           id: '2',
           name: 'Artist 2',
           imageUrl: 'https://example.com/artist2.jpg',
-          recordLabel: RECORD_LABELS.RECORDS,
-          labels: [RECORD_LABELS.RECORDS],
+          image: 'https://example.com/artist2.jpg',
+          bio: 'Artist 2 bio',
+          recordLabel: RECORD_LABELS['Build It Records'],
+          labels: [RECORD_LABELS['Build It Records']],
           releases: [],
           spotifyUrl: 'https://open.spotify.com/artist/2',
           genres: []

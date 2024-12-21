@@ -25,6 +25,7 @@ export interface Track {
   spotifyUrl: string;
   popularity?: number;
   featured?: boolean;
+  genres: string[];
 }
 
 // Helper function to convert legacy track format to full Track
@@ -57,7 +58,8 @@ export function createTrack(legacyTrack: Partial<Track>): Track {
     soundcloudUrl: legacyTrack.soundcloudUrl || '',
     spotifyUrl: legacyTrack.spotifyUrl || '',
     popularity: legacyTrack.popularity || 0,
-    featured: legacyTrack.featured || false
+    featured: legacyTrack.featured || false,
+    genres: legacyTrack.genres || []
   };
 }
 

@@ -99,6 +99,40 @@ const setupApiRoutes = (app) => {
     }
   });
 
+  // Get releases for a specific label
+  app.get('/:labelId/releases', async (req, res) => {
+    try {
+      const { labelId } = req.params;
+      const labelSlug = LABEL_SLUGS[labelId];
+      
+      if (!labelSlug) {
+        return res.status(404).json({ error: 'Label not found' });
+      }
+
+      const label = await Label.findOne({ where: { slug: labelSlug } });
+      if (!label) {
+        return res.status(404).json({ error: 'Label not found' });
+      }
+
+      const releases = await Release.findAll({
+        include: [
+          {
+            model: Artist,
+            as: 'artist',
+            attributes: ['name', 'imageUrl', 'spotifyUrl']
+          }
+        ],
+        where: { labelId: label.id },
+        order: [['releaseDate', 'DESC']]
+      });
+
+      res.json(releases);
+    } catch (error) {
+      console.error('Error fetching releases:', error);
+      res.status(500).json({ error: 'Failed to fetch releases' });
+    }
+  });
+
   // Sync releases for a specific label
   app.post('/:label/releases/sync', async (req, res) => {
     try {

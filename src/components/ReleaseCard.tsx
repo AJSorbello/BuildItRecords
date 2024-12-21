@@ -195,7 +195,7 @@ const ReleaseCard: React.FC<ReleaseCardProps> = ({ release, track, compact = fal
         
         {!compact && (
           <Box sx={{ mt: 2 }}>
-            {release?.tracks.map((track) => (
+            {release?.tracks?.map((track) => (
               <Box
                 key={track.id}
                 sx={{
