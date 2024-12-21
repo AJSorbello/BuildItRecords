@@ -1,5 +1,6 @@
 import { Release } from '../types/release';
 import { RecordLabel, RECORD_LABELS } from '../constants/labels';
+import { Track, createTrack } from '../types/track';
 
 interface SymphonicRelease {
   id: string;
@@ -109,14 +110,27 @@ class SymphonicService {
       artist: item.artist,
       artwork: item.artwork_url,
       releaseDate: new Date(item.release_date).toISOString().split('T')[0],
-      tracks: item.tracks.map(track => ({
+      tracks: item.tracks.map(track => createTrack({
         id: track.id,
         trackTitle: track.title,
+        name: track.title,
         artist: track.artist,
+        artists: [{ 
+          id: track.id, 
+          name: track.artist,
+          imageUrl: '',  
+          recordLabel: this.determineLabel(item.label_name),
+          labels: [this.determineLabel(item.label_name)],
+          releases: [],
+          spotifyUrl: track.spotify_id ? `https://open.spotify.com/artist/${track.spotify_id}` : '',
+          genres: []
+        }],
         albumCover: item.artwork_url,
         album: {
+          id: item.id,
           name: item.title,
           releaseDate: new Date(item.release_date).toISOString().split('T')[0],
+          totalTracks: item.tracks.length,
           images: [{
             url: item.artwork_url,
             height: 640,
@@ -124,6 +138,7 @@ class SymphonicService {
           }]
         },
         recordLabel: this.determineLabel(item.label_name),
+        label: this.determineLabel(item.label_name),
         previewUrl: track.preview_url || null,
         spotifyUrl: track.spotify_id ? `https://open.spotify.com/track/${track.spotify_id}` : '',
         releaseDate: new Date(item.release_date).toISOString().split('T')[0],
@@ -161,13 +176,14 @@ class SymphonicService {
   }
 
   private determineLabel(labelName: string): RecordLabel {
-    const normalizedName = labelName.toLowerCase();
-    if (normalizedName.includes('tech')) {
-      return RECORD_LABELS.TECH;
-    } else if (normalizedName.includes('deep')) {
-      return RECORD_LABELS.DEEP;
+    switch (labelName.toLowerCase()) {
+      case 'tech':
+        return RECORD_LABELS['Build It Tech'];
+      case 'deep':
+        return RECORD_LABELS['Build It Deep'];
+      default:
+        return RECORD_LABELS['Build It Records'];
     }
-    return RECORD_LABELS.RECORDS;
   }
 
   private delay(ms: number): Promise<void> {

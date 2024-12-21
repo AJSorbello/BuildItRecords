@@ -1,15 +1,27 @@
+import { SpotifyImage } from './track';
+import { Album } from './Album';
+import { Track } from './track';
+import { RecordLabel } from '../constants/labels';
+
 export interface Artist {
   id: string;
   name: string;
-  imageUrl: string;
-  labels: string[];
-  spotifyUrl?: string;
+  imageUrl: string;  // Primary image URL
+  image: string;  // Required for compatibility
+  images?: SpotifyImage[];  // Full array of Spotify images
+  recordLabel: RecordLabel;
+  labels: RecordLabel[];
+  bio: string;  // Make required
+  spotifyUrl: string;
   beatportUrl?: string;
   soundcloudUrl?: string;
   bandcampUrl?: string;
-  bio?: string;
   monthlyListeners?: number;
-  releases: string[]; // Array of release IDs
+  followers?: { total: number };
+  releases: string[];
+  genres: string[];
+  tracks?: Track[];
+  external_urls?: { spotify: string };
 }
 
 export interface ArtistFormData {

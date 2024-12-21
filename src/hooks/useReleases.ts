@@ -1,6 +1,4 @@
 import { useState, useEffect } from 'react';
-import { spotifyService } from '../services/SpotifyService';
-import { Release } from '../types/release';
 import { RecordLabel, RECORD_LABELS } from '../constants/labels';
 
 const SPOTIFY_IDS = {
@@ -21,88 +19,68 @@ const SOUNDCLOUD_URLS = {
   deep: 'https://soundcloud.com/builditdeep',
 } as const;
 
-type LabelId = keyof typeof SPOTIFY_IDS;
+export type LabelId = keyof typeof SPOTIFY_IDS;
+
+interface Release {
+  id: string;
+  title: string;
+  artist: {
+    name: string;
+  };
+  imageUrl: string;
+  releaseDate: string;
+}
 
 const labelIdToRecordLabel = (labelId: LabelId): RecordLabel => {
   switch (labelId) {
     case 'records':
-      return RECORD_LABELS.RECORDS;
+      return RECORD_LABELS['Build It Records'];
     case 'tech':
-      return RECORD_LABELS.TECH;
+      return RECORD_LABELS['Build It Tech'];
     case 'deep':
-      return RECORD_LABELS.DEEP;
+      return RECORD_LABELS['Build It Deep'];
   }
 };
 
-const useReleases = (labelId: LabelId) => {
+export const useReleases = (labelId: LabelId) => {
   const [releases, setReleases] = useState<Release[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const convertSpotifyToRelease = (spotifyRelease: any): Release => ({
-    id: spotifyRelease.id,
-    title: spotifyRelease.name,
-    artist: spotifyRelease.artists[0]?.name || 'Unknown Artist',
-    artwork: spotifyRelease.images[0]?.url || '',
-    releaseDate: spotifyRelease.release_date,
-    spotifyUrl: spotifyRelease.external_urls.spotify,
-    beatportUrl: BEATPORT_URLS[labelId],
-    soundcloudUrl: SOUNDCLOUD_URLS[labelId],
-    label: labelIdToRecordLabel(labelId),
-    tracks: spotifyRelease.tracks.items.map((track: {
-      id: string;
-      name: string;
-      artists: Array<{ name: string }>;
-      duration_ms: number;
-      preview_url: string | null;
-    }) => ({
-      id: track.id,
-      title: track.name,
-      artist: track.artists[0]?.name || 'Unknown Artist',
-      duration: track.duration_ms,
-      previewUrl: track.preview_url,
-    })),
-  });
+  const fetchReleases = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await fetch(`/${labelId}/releases`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch releases');
+      }
+      const data = await response.json();
+      setReleases(data);
+    } catch (err) {
+      console.error('Error fetching releases:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch releases');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const refreshReleases = () => {
+    fetchReleases();
+  };
 
   useEffect(() => {
-    const fetchReleases = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        
-        const allReleases = await spotifyService.getLabelReleases(SPOTIFY_IDS[labelId]);
-        const formattedReleases = allReleases.map(convertSpotifyToRelease);
-        
-        setReleases(formattedReleases);
-      } catch (error) {
-        setError(error as Error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchReleases();
   }, [labelId]);
 
   return {
     releases,
-    isLoading,
+    loading,
     error,
-    refetch: async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        
-        const allReleases = await spotifyService.getLabelReleases(SPOTIFY_IDS[labelId]);
-        const formattedReleases = allReleases.map(convertSpotifyToRelease);
-        
-        setReleases(formattedReleases);
-      } catch (error) {
-        setError(error as Error);
-      } finally {
-        setIsLoading(false);
-      }
-    },
+    refreshReleases,
+    spotifyUrl: `https://open.spotify.com/user/${SPOTIFY_IDS[labelId]}`,
+    beatportUrl: BEATPORT_URLS[labelId],
+    soundcloudUrl: SOUNDCLOUD_URLS[labelId],
   };
 };
 

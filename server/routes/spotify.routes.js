@@ -1,20 +1,18 @@
 const axios = require('axios');
 const config = require('../config/environment');
-const RedisService = require('../services/RedisService');
 const SpotifyService = require('../services/SpotifyService');
+const { Label, Artist, Release } = require('../models');
 
-const redisService = new RedisService();
 const spotifyService = new SpotifyService();
 
 // Helper function to fetch artist details
 async function getArtistDetails(artistId, accessToken) {
   console.log(`[Spotify] Fetching details for artist: ${artistId}`);
   try {
-    // Check cache first
-    const cachedArtist = await redisService.getArtistFromCache(artistId);
-    if (cachedArtist) {
-      console.log(`[Spotify] Found cached details for artist: ${artistId}`);
-      return cachedArtist;
+    const artist = await Artist.findByPk(artistId);
+    if (artist) {
+      console.log(`[Spotify] Found artist details for artist: ${artistId}`);
+      return artist;
     }
 
     const response = await axios.get(
@@ -27,8 +25,8 @@ async function getArtistDetails(artistId, accessToken) {
       }
     );
     
-    // Cache the artist details
-    await redisService.setArtistToCache(response.data);
+    // Save artist details to database
+    await Artist.create(response.data);
     
     console.log(`[Spotify] Successfully fetched details for artist: ${artistId}`);
     return response.data;
@@ -94,7 +92,7 @@ const setupSpotifyRoutes = (app) => {
   app.get('/api/spotify/tracks/label/:label', async (req, res) => {
     try {
       console.log(`[Spotify Routes] Getting tracks for label: ${req.params.label}`);
-      const tracks = await spotifyService.getTracksByLabel(req.params.label);
+      const tracks = await spotifyService.getTracksForLabel(req.params.label);
       res.json(tracks);
     } catch (error) {
       console.error('[Spotify Routes] Error getting tracks by label:', error);
@@ -102,14 +100,51 @@ const setupSpotifyRoutes = (app) => {
     }
   });
 
-  // Get artist details
-  app.get('/api/spotify/artists/:artistId', async (req, res) => {
+  // Get artists by label
+  app.get('/api/spotify/artists/label/:label', async (req, res) => {
     try {
-      const artistDetails = await spotifyService.getArtistDetails(req.params.artistId);
-      res.json(artistDetails);
+      console.log(`[Spotify Routes] Getting artists for label: ${req.params.label}`);
+      const artists = await spotifyService.getArtistsForLabel(req.params.label);
+      res.json(artists);
+    } catch (error) {
+      console.error('[Spotify Routes] Error getting artists by label:', error);
+      res.status(500).json({ error: 'Failed to get artists' });
+    }
+  });
+
+  // Get artist details
+  app.get('/api/spotify/artist/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const artist = await Artist.findByPk(id);
+      if (!artist) {
+        return res.status(404).json({ error: 'Artist not found' });
+      }
+      res.json(artist);
     } catch (error) {
       console.error('[Spotify Routes] Error getting artist details:', error);
       res.status(500).json({ error: 'Failed to get artist details' });
+    }
+  });
+
+  // Get release details
+  app.get('/api/spotify/release/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const release = await Release.findByPk(id, {
+        include: [{
+          model: Artist,
+          as: 'artist',
+          attributes: ['name', 'spotifyUrl']
+        }]
+      });
+      if (!release) {
+        return res.status(404).json({ error: 'Release not found' });
+      }
+      res.json(release);
+    } catch (error) {
+      console.error('[Spotify Routes] Error getting release details:', error);
+      res.status(500).json({ error: 'Failed to get release details' });
     }
   });
 

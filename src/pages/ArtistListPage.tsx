@@ -9,8 +9,9 @@ interface Artist {
   name: string;
   releases: Release[];
   genres: string[];
-  image?: string;
-  spotifyId?: string;
+  imageUrl?: string;
+  spotifyUrl?: string;
+  id?: string;
 }
 
 const groupByArtists = (releases: Release[]): Artist[] => {
@@ -22,8 +23,9 @@ const groupByArtists = (releases: Release[]): Artist[] => {
         name: release.artist,
         releases: [],
         genres: [],
-        image: undefined,
-        spotifyId: undefined
+        imageUrl: undefined,
+        spotifyUrl: undefined,
+        id: undefined
       });
     }
     const artist = artistMap.get(release.artist)!;
@@ -137,9 +139,10 @@ const ArtistListPage: React.FC = () => {
                 
                 return {
                   ...artist,
-                  image: spotifyArtist.images[0].url,
+                  imageUrl: spotifyArtist.images[0].url || '',
                   genres: spotifyArtist.genres || [],
-                  spotifyId: spotifyArtist.id
+                  spotifyUrl: spotifyArtist.external_urls?.spotify || '',
+                  id: spotifyArtist.id
                 };
               }
 
@@ -155,15 +158,17 @@ const ArtistListPage: React.FC = () => {
                   cleanTrackTitle
                 );
 
-                if (spotifyArtistWithTrack && spotifyArtistWithTrack.images?.length > 0) {
+                if (spotifyArtistWithTrack?.images && Array.isArray(spotifyArtistWithTrack.images) && spotifyArtistWithTrack.images.length > 0) {
                   console.log(`Found Spotify artist using track: ${spotifyArtistWithTrack.name}`);
-                  console.log(`Image URL: ${spotifyArtistWithTrack.images[0].url}`);
+                  const imageUrl = spotifyArtistWithTrack.images[0]?.url;
+                  console.log(`Image URL: ${imageUrl}`);
                   
                   return {
                     ...artist,
-                    image: spotifyArtistWithTrack.images[0].url,
+                    imageUrl: imageUrl || artist.imageUrl || '',
                     genres: spotifyArtistWithTrack.genres || [],
-                    spotifyId: spotifyArtistWithTrack.id
+                    spotifyUrl: spotifyArtistWithTrack.external_urls?.spotify || '',
+                    id: spotifyArtistWithTrack.id
                   };
                 }
               }
@@ -172,7 +177,7 @@ const ArtistListPage: React.FC = () => {
               console.log(`No Spotify profile image found for ${primaryArtist}`);
               return {
                 ...artist,
-                image: '/default-artist-image.jpg'
+                imageUrl: '/default-artist-image.jpg'
               };
             } catch (error) {
               console.error(`Error getting Spotify details for ${artist.name}:`, error);
@@ -182,7 +187,7 @@ const ArtistListPage: React.FC = () => {
             console.warn(`No valid image found for ${artist.name}`);
             return {
               ...artist,
-              image: undefined // Explicitly set to undefined to indicate no valid image
+              imageUrl: undefined // Explicitly set to undefined to indicate no valid image
             };
           })
         );
@@ -190,13 +195,13 @@ const ArtistListPage: React.FC = () => {
         // Fetch artist images
         const artistsWithImages = await Promise.all(
           artistsWithSpotifyDetails.map(async (artist) => {
-            if (!artist.image) {
+            if (!artist.imageUrl) {
               const firstRelease = artist.releases[0];
               if (firstRelease) {
                 const image = await fetchArtistImage(artist.name, firstRelease);
                 return {
                   ...artist,
-                  image
+                  imageUrl: image
                 };
               }
             }
@@ -237,7 +242,7 @@ const ArtistListPage: React.FC = () => {
                   <CardMediaWrapper>
                     <CardMedia
                       component="img"
-                      image={artist.image}
+                      image={artist.imageUrl}
                       alt={artist.name}
                       sx={{
                         width: '100%',

@@ -10,7 +10,7 @@ const TechHome = () => {
   const [latestTrack, setLatestTrack] = useState<Track[]>([]);
 
   useEffect(() => {
-    const tracks = getTracksByLabel(RECORD_LABELS.TECH);
+    const tracks = getTracksByLabel(RECORD_LABELS["Build It Tech"] as keyof typeof RECORD_LABELS);
     // Sort tracks by release date and get the latest one
     const sortedTracks = tracks.sort((a, b) => 
       new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime()

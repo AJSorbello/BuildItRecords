@@ -1,7 +1,22 @@
 import { spotifyService } from '../services/SpotifyService';
-import { Track, SpotifyPlaylist, SpotifyApiTrack } from '../types/track';
+import { Track, SpotifyPlaylist, SpotifyApiTrack, SpotifyImage, createTrack } from '../types/track';
 import { RecordLabel, RECORD_LABELS } from '../constants/labels';
 import { Release } from '../types/release';
+
+interface SpotifyArtist {
+  id: string;
+  name: string;
+  external_urls: {
+    spotify: string;
+  };
+}
+
+interface SpotifyAlbum {
+  id: string;
+  name: string;
+  release_date: string;
+  images: SpotifyImage[];
+}
 
 export const fetchTrackDetails = async (trackUrl: string): Promise<Track> => {
   try {
@@ -38,116 +53,91 @@ export const getLabelReleases = async (playlistId: string): Promise<Track[]> => 
   }
 };
 
-export const extractSpotifyId = (url: string): string | null => {
+const extractSpotifyId = (url: string): string | null => {
   if (!url) return null;
   
   try {
-    const match = url.match(/track\/([a-zA-Z0-9]+)(?:\?|$)/);
-    return match ? match[1] : null;
+    const urlObj = new URL(url);
+    const pathParts = urlObj.pathname.split('/');
+    return pathParts[pathParts.length - 1];
   } catch (error) {
-    console.error('Error extracting Spotify ID:', error);
+    console.error('Error parsing Spotify URL:', error);
     return null;
   }
 };
 
-export const normalizeSpotifyUrl = (url: string): string => {
+const normalizeSpotifyUrl = (url: string): string => {
   if (!url) return '';
   
   // Add https:// if missing
-  if (url.startsWith('ttps://')) {
-    url = 'h' + url;
-  }
-  if (!url.startsWith('http://') && !url.startsWith('https://')) {
-    url = 'https://' + url;
+  if (!url.startsWith('http')) {
+    url = `https://${url}`;
   }
   
-  // Remove any leading/trailing whitespace
-  url = url.trim();
-  
-  return url;
+  try {
+    const urlObj = new URL(url);
+    return urlObj.href;
+  } catch (error) {
+    console.error('Error normalizing Spotify URL:', error);
+    return url;
+  }
 };
 
-export const isValidSpotifyUrl = (url: string): boolean => {
+const isValidSpotifyUrl = (url: string): boolean => {
   if (!url) return false;
   
   try {
-    // Normalize the URL first
-    url = normalizeSpotifyUrl(url);
-    
-    // Verify it's a proper Spotify URL
-    if (!url.startsWith('https://open.spotify.com/track/')) {
-      return false;
-    }
-    
-    // Try to extract the track ID
-    const trackId = extractSpotifyId(url);
-    return trackId !== null;
+    const urlObj = new URL(url);
+    return urlObj.hostname === 'open.spotify.com';
   } catch (error) {
-    console.error('Error validating Spotify URL:', error);
     return false;
   }
 };
 
-export const determineLabelFromUrl = (spotifyUrl: string): RecordLabel => {
-  if (spotifyUrl.includes('records')) return RECORD_LABELS.RECORDS;
-  if (spotifyUrl.includes('tech')) return RECORD_LABELS.TECH;
-  if (spotifyUrl.includes('deep')) return RECORD_LABELS.DEEP;
-  return RECORD_LABELS.RECORDS;
+const determineLabelFromUrl = (spotifyUrl: string): RecordLabel => {
+  if (spotifyUrl.includes('records')) return RECORD_LABELS['Build It Records'];
+  if (spotifyUrl.includes('tech')) return RECORD_LABELS['Build It Tech'];
+  if (spotifyUrl.includes('deep')) return RECORD_LABELS['Build It Deep'];
+  return RECORD_LABELS['Build It Records']; // Default to Records
 };
 
-export const convertToDisplayTrack = (track: Track) => {
+const convertToDisplayTrack = (track: Track) => {
   return {
     id: track.id,
-    title: track.trackTitle,
+    title: track.name,
     artist: track.artist,
-    label: track.recordLabel,
-    artwork: track.albumCover || '',
-    albumName: track.album?.name || '',
-    releaseDate: track.album?.releaseDate || track.releaseDate,
-    spotifyUrl: track.spotifyUrl
+    artworkUrl: track.albumCover,
+    releaseDate: track.releaseDate,
+    genre: track.genres?.[0] || '',
+    labelName: track.recordLabel,
+    stores: {
+      spotify: track.spotifyUrl || ''
+    }
   };
 };
 
-export const formatDuration = (ms: number): string => {
+const formatDuration = (ms: number): string => {
   const minutes = Math.floor(ms / 60000);
   const seconds = Math.floor((ms % 60000) / 1000);
   return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 };
 
-export const convertSpotifyReleaseToRelease = (spotifyRelease: SpotifyPlaylist): Release => {
-  const label = determineLabelFromUrl(spotifyRelease.external_urls.spotify);
-
+const convertSpotifyReleaseToRelease = (spotifyRelease: SpotifyPlaylist, label: RecordLabel): Release => {
   return {
     id: spotifyRelease.id,
     title: spotifyRelease.name,
-    artist: spotifyRelease.owner.display_name || 'Various Artists',
-    artwork: spotifyRelease.images[0]?.url || '',
+    artist: spotifyRelease.owner.display_name,
+    artworkUrl: spotifyRelease.images[0]?.url || '',
     releaseDate: new Date().toISOString(),
-    tracks: spotifyRelease.tracks.items.map((item) => ({
-      id: item.track.id,
-      trackTitle: item.track.name,
-      artist: item.track.artists[0]?.name || 'Unknown Artist',
-      recordLabel: label,
-      previewUrl: item.track.preview_url || null,
-      spotifyUrl: item.track.external_urls.spotify,
-      releaseDate: item.track.album?.release_date || new Date().toISOString(),
-      albumCover: item.track.album.images[0]?.url || '',
-      album: {
-        name: item.track.album.name,
-        releaseDate: item.track.album.release_date,
-        images: item.track.album.images
-      },
-      beatportUrl: '',
-      soundcloudUrl: ''
-    })),
-    label: label as RecordLabel,
-    spotifyUrl: spotifyRelease.external_urls.spotify,
-    beatportUrl: '',
-    soundcloudUrl: ''
+    genre: '',
+    labelName: label,
+    stores: {
+      spotify: spotifyRelease.external_urls?.spotify || ''
+    }
   };
 };
 
-export const getTrackDetails = async (trackUrl: string) => {
+const getTrackDetails = async (trackUrl: string) => {
   try {
     const details = await spotifyService.getTrackDetailsByUrl(trackUrl);
     console.log('Track Details:', details);
@@ -158,22 +148,32 @@ export const getTrackDetails = async (trackUrl: string) => {
   }
 };
 
-export const getSimplifiedTrackDetails = async (trackUrl: string) => {
+const getSimplifiedTrackDetails = async (trackUrl: string) => {
   try {
     const details = await getTrackDetails(trackUrl);
     if (!details) return null;
+
     return {
       id: details.id,
-      title: details.trackTitle,
-      artist: details.artist,
-      label: details.recordLabel,
-      artwork: details.albumCover || '',
-      albumName: details.album?.name || '',
-      releaseDate: details.album?.releaseDate || details.releaseDate,
-      spotifyUrl: details.spotifyUrl
+      title: details.name,
+      artist: details.artists[0]?.name || 'Unknown Artist',
+      albumArt: details.album.images[0]?.url || ''
     };
   } catch (error) {
     console.error('Error getting simplified track details:', error);
     return null;
   }
+};
+
+export {
+  extractSpotifyId,
+  normalizeSpotifyUrl,
+  isValidSpotifyUrl,
+  createTrack,
+  determineLabelFromUrl,
+  convertToDisplayTrack,
+  formatDuration,
+  convertSpotifyReleaseToRelease,
+  getTrackDetails,
+  getSimplifiedTrackDetails
 };

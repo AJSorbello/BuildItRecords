@@ -14,12 +14,13 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 const config = {
   env: NODE_ENV,
   port: process.env.PORT || 3001,
-  redis: {
-    host: process.env.REDIS_HOST,
-    port: parseInt(process.env.REDIS_PORT),
-    username: process.env.REDIS_USERNAME,
-    password: process.env.REDIS_PASSWORD,
-    tls: process.env.REDIS_TLS === 'true',
+  database: {
+    host: process.env.DB_HOST || 'localhost',
+    port: parseInt(process.env.DB_PORT) || 5432,
+    username: process.env.DB_USER || 'postgres',
+    password: process.env.DB_PASSWORD || '',
+    name: process.env.DB_NAME || 'buildit_records',
+    dialect: 'postgres'
   },
   spotify: {
     clientId: process.env.SPOTIFY_CLIENT_ID,
@@ -31,20 +32,16 @@ const config = {
     passwordHash: process.env.ADMIN_PASSWORD_HASH,
   },
   jwt: {
-    secret: process.env.JWT_SECRET,
+    secret: process.env.JWT_SECRET || 'development-secret',
   },
 };
 
 // Validate required configuration
 const validateConfig = (config) => {
   const requiredFields = {
-    'redis.host': config.redis.host,
-    'redis.port': config.redis.port,
-    'redis.password': config.redis.password,
-    'spotify.clientId': config.spotify.clientId,
-    'spotify.clientSecret': config.spotify.clientSecret,
-    'spotify.redirectUri': config.spotify.redirectUri,
-    'jwt.secret': config.jwt.secret,
+    'database.host': config.database.host,
+    'database.port': config.database.port,
+    'database.name': config.database.name,
   };
 
   const missing = Object.entries(requiredFields)

@@ -16,7 +16,7 @@ const RecordsHome = () => {
       // Get tracks directly from getData like the releases page does
       const data = getData();
       const labelTracks = data.tracks.filter(track => 
-        track.recordLabel.toLowerCase() === RECORD_LABELS.RECORDS.toLowerCase()
+        track.recordLabel === RECORD_LABELS["Build It Records"]
       );
       console.log('All tracks from Records label:', labelTracks);
       

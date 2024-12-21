@@ -3,7 +3,7 @@ import { Box, Grid, Card, CardMedia, CardContent, Typography, TextField, FormCon
 import { useLocation, useNavigate } from 'react-router-dom';
 import { RECORD_LABELS } from '../constants/labels';
 import { spotifyService } from '../services/SpotifyService';
-import { redisService } from '../services/RedisService';
+import { databaseService } from '../services/DatabaseService';
 import { Track } from '../types/track';
 import type { SpotifyApi } from '@spotify/web-api-ts-sdk';
 import { FaSpotify, FaSoundcloud } from 'react-icons/fa';
@@ -41,17 +41,19 @@ const getArtists = async (label: LabelType): Promise<{ artists: Artist[], totalC
   console.log('Getting artists for label:', label);
   
   try {
-    const artists = await redisService.getArtistsForLabel(RECORD_LABELS[label]);
-    if (!artists) {
-      console.log('No artists found in Redis');
+    const artists = await databaseService.getArtistsForLabel(RECORD_LABELS['Build It Records']);
+    if (!artists || artists.length === 0) {
+      console.log('No artists found in database');
       return { artists: [], totalCount: 0 };
     }
     
+    const transformedArtists = artists.map(artist => ({
+      ...artist,
+      image: artist.imageUrl || '' // Map imageUrl to image property
+    }));
+    
     return { 
-      artists: artists.map(artist => ({
-        ...artist,
-        imageUrl: artist.image || artist.images?.[0]?.url
-      })), 
+      artists: transformedArtists,
       totalCount: artists.length 
     };
   } catch (error) {
@@ -73,26 +75,25 @@ const ArtistsPage: React.FC = () => {
   }, [location.search]);
 
   useEffect(() => {
-    const loadArtists = async () => {
-      console.log('Starting to load artists...');
-      setLoading(true);
-      setError(null);
-      
+    const fetchArtists = async () => {
       try {
-        console.log('Fetching artists for label:', label);
-        const { artists: fetchedArtists } = await getArtists(label);
-        console.log('Successfully fetched artists:', fetchedArtists.length);
-        setArtists(fetchedArtists);
-      } catch (err) {
-        console.error('Error loading artists:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load artists');
-      } finally {
-        setLoading(false);
+        const artists = await databaseService.getArtistsForLabel(RECORD_LABELS['Build It Records']);
+        if (!artists || artists.length === 0) {
+          console.error('No artists found or invalid response format');
+          return;
+        }
+        const transformedArtists = artists.map(artist => ({
+          ...artist,
+          image: artist.imageUrl || ''
+        }));
+        setArtists(transformedArtists);
+      } catch (error) {
+        console.error('Error fetching artists:', error);
       }
     };
 
-    loadArtists();
-  }, [label]);
+    fetchArtists();
+  }, []);
 
   const handleLabelChange = (event: any) => {
     const newLabel = event.target.value as LabelType;
@@ -152,7 +153,7 @@ const ArtistsPage: React.FC = () => {
       {artists.length === 0 ? (
         <Box sx={{ textAlign: 'center', py: 4 }}>
           <Typography variant="h6" color="text.secondary">
-            No artists found for {RECORD_LABELS[label]}
+            No artists found for {RECORD_LABELS['Build It Records']}
           </Typography>
         </Box>
       ) : (
@@ -186,7 +187,7 @@ const ArtistsPage: React.FC = () => {
                     overflow: 'hidden',
                     mb: 2
                   }}>
-                    {artist.bio || `Artist on ${RECORD_LABELS[label as LabelType]}`}
+                    {artist.bio || `Artist on ${RECORD_LABELS['Build It Records']}`}
                   </Typography>
                   <Box sx={{ 
                     display: 'flex', 

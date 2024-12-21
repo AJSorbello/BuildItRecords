@@ -10,7 +10,7 @@ const DeepHome = () => {
   const [latestTrack, setLatestTrack] = useState<Track[]>([]);
 
   useEffect(() => {
-    const tracks = getTracksByLabel(RECORD_LABELS.DEEP);
+    const tracks = getTracksByLabel(RECORD_LABELS["Build It Deep"]);
     // Sort tracks by release date and get the latest one
     const sortedTracks = tracks.sort((a, b) => 
       new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime()

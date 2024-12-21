@@ -19,17 +19,14 @@ import { spotifyService } from '../services/SpotifyService';
 import { Track, SpotifyImage } from '../types/track';
 
 interface Artist {
+  id: string;
   name: string;
-  bio: string;
-  image: string;
-  images?: SpotifyImage[];
-  spotifyId?: string;
-  spotifyUrl?: string;
-  instagramUrl?: string;
-  soundcloudUrl?: string;
-  tracks: Track[];
-  followers?: number;
-  genres?: string[];
+  imageUrl: string;
+  recordLabel: string;
+  labels: string[];
+  releases: any[];
+  spotifyUrl: string;
+  genres: string[];
 }
 
 const ArtistDetailPage: React.FC = () => {
@@ -57,39 +54,35 @@ const ArtistDetailPage: React.FC = () => {
 
         // Try to get Spotify artist details using tracks
         let spotifyArtist = null;
-        for (const track of artistTracks) {
-          if (spotifyArtist) break;
-          
-          const cleanTrackTitle = track.trackTitle.replace(/[\s-]+(Original Mix|Remix)$/i, '');
-          spotifyArtist = await spotifyService.getArtistDetailsByName(artistName, cleanTrackTitle);
-        }
-
+        spotifyArtist = await spotifyService.getArtistDetailsByName(artistName);
         if (spotifyArtist) {
           setArtist({
-            name: spotifyArtist.name,
-            bio: spotifyArtist.genres?.join(', ') || '',
-            image: spotifyArtist.images?.[0]?.url || artistTracks[0]?.albumCover || 'https://via.placeholder.com/300?text=No+Profile+Image',
-            images: spotifyArtist.images,
-            spotifyId: spotifyArtist.id,
-            spotifyUrl: spotifyArtist.external_urls?.spotify,
-            tracks: artistTracks,
-            followers: spotifyArtist.followers?.total,
-            genres: spotifyArtist.genres
+            ...spotifyArtist,
+            monthlyListeners: spotifyArtist.followers?.total,
+            genres: spotifyArtist.genres || []
           });
         } else if (artistTracks.length > 0) {
           // Use the first release's artwork as artist image
           setArtist({
-            name: artistName,
-            bio: '',
-            image: artistTracks[0].albumCover || 'https://via.placeholder.com/300?text=No+Profile+Image',
-            tracks: artistTracks
+            id: artistTracks[0].artists[0].id,
+            name: artistTracks[0].artists[0].name,
+            imageUrl: artistTracks[0].albumCover,
+            recordLabel: 'Records',
+            labels: ['Records'],
+            releases: [],
+            spotifyUrl: artistTracks[0].artists[0].spotifyUrl,
+            genres: []
           });
         } else {
           setArtist({
+            id: '',
             name: artistName,
-            bio: '',
-            image: 'https://via.placeholder.com/300?text=No+Tracks+Found',
-            tracks: []
+            imageUrl: 'https://via.placeholder.com/300?text=No+Tracks+Found',
+            recordLabel: 'Records',
+            labels: ['Records'],
+            releases: [],
+            spotifyUrl: '',
+            genres: []
           });
         }
       } catch (err) {
@@ -143,7 +136,7 @@ const ArtistDetailPage: React.FC = () => {
               <CardMedia
                 component="img"
                 height="300"
-                image={artist.image}
+                image={artist.imageUrl}
                 alt={artist.name}
                 sx={{ objectFit: 'cover' }}
               />
@@ -154,11 +147,6 @@ const ArtistDetailPage: React.FC = () => {
                 {artist.genres && artist.genres.length > 0 && (
                   <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)', mb: 1 }}>
                     {artist.genres.join(', ')}
-                  </Typography>
-                )}
-                {artist.followers && (
-                  <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)', mb: 2 }}>
-                    {artist.followers.toLocaleString()} followers
                   </Typography>
                 )}
                 <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2 }}>
@@ -173,28 +161,6 @@ const ArtistDetailPage: React.FC = () => {
                       <SpotifyIcon />
                     </IconButton>
                   )}
-                  {artist.instagramUrl && (
-                    <IconButton
-                      component={Link}
-                      href={artist.instagramUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      sx={{ color: 'white', '&:hover': { color: '#E1306C' } }}
-                    >
-                      <InstagramIcon />
-                    </IconButton>
-                  )}
-                  {artist.soundcloudUrl && (
-                    <IconButton
-                      component={Link}
-                      href={artist.soundcloudUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      sx={{ color: 'white', '&:hover': { color: '#FF3300' } }}
-                    >
-                      <SoundcloudIcon />
-                    </IconButton>
-                  )}
                 </Box>
               </CardContent>
             </Card>
@@ -207,7 +173,7 @@ const ArtistDetailPage: React.FC = () => {
                 Releases
               </Typography>
               <Grid container spacing={2}>
-                {artist.tracks.map((track, index) => (
+                {artist.releases.map((release, index) => (
                   <Grid item xs={12} key={index}>
                     <Paper
                       sx={{
@@ -226,18 +192,18 @@ const ArtistDetailPage: React.FC = () => {
                       <CardMedia
                         component="img"
                         sx={{ width: 60, height: 60, borderRadius: 1 }}
-                        image={track.albumCover || 'https://via.placeholder.com/60'}
-                        alt={track.trackTitle}
+                        image={release.imageUrl || 'https://via.placeholder.com/60'}
+                        alt={release.title}
                       />
                       <Box sx={{ flexGrow: 1 }}>
                         <Typography sx={{ color: 'white', fontWeight: 'bold' }}>
-                          {track.trackTitle}
+                          {release.title}
                         </Typography>
                         <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-                          {track.recordLabel}
+                          {release.recordLabel}
                         </Typography>
                         <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.5)' }}>
-                          {track.releaseDate ? new Date(track.releaseDate).toLocaleDateString() : 'Unknown'}
+                          {release.releaseDate ? new Date(release.releaseDate).toLocaleDateString() : 'Unknown'}
                         </Typography>
                       </Box>
                     </Paper>

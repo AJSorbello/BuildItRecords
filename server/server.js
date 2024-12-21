@@ -4,25 +4,25 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const path = require('path');
-const RedisService = require('./services/RedisService');
+const { sequelize } = require('./models');
 const SpotifyService = require('./services/SpotifyService');
 const { setupSpotifyRoutes } = require('./routes/spotify.routes');
-const { setupRedisRoutes } = require('./routes/redis.routes');
+const { setupApiRoutes } = require('./routes/api.routes');
 const { setupAuthRoutes } = require('./routes/auth.routes');
 
 const app = express();
 
-// Initialize Redis and Spotify services
+// Initialize services
 const initServices = async () => {
   try {
-    const redisService = new RedisService();
-    await redisService.init();
-    console.log('Redis service initialized successfully');
+    // Initialize database connection
+    await sequelize.authenticate();
+    console.log('Database connection established successfully');
 
     const spotifyService = new SpotifyService();
     console.log('Spotify service initialized successfully');
 
-    return { redisService, spotifyService };
+    return { spotifyService };
   } catch (error) {
     console.error('Failed to initialize services:', error);
     throw error;
@@ -30,7 +30,7 @@ const initServices = async () => {
 };
 
 // Initialize Express routes and middleware
-const initExpress = (redisService, spotifyService) => {
+const initExpress = (spotifyService) => {
   // Security middleware
   app.use(helmet({
     contentSecurityPolicy: false,
@@ -53,7 +53,7 @@ const initExpress = (redisService, spotifyService) => {
 
   // Setup routes
   setupSpotifyRoutes(app);
-  setupRedisRoutes(app, redisService, spotifyService);
+  setupApiRoutes(app);
   setupAuthRoutes(app);
 
   // Serve static files in production
@@ -68,8 +68,8 @@ const initExpress = (redisService, spotifyService) => {
 // Start server
 const startServer = async () => {
   try {
-    const { redisService, spotifyService } = await initServices();
-    initExpress(redisService, spotifyService);
+    const { spotifyService } = await initServices();
+    initExpress(spotifyService);
 
     const port = config.port;
     app.listen(port, () => {

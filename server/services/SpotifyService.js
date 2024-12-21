@@ -1,6 +1,12 @@
 const axios = require('axios');
-const RedisService = require('./RedisService');
 const querystring = require('querystring');
+const { Label, Artist, Release } = require('../models');
+
+const LABEL_PLAYLIST_MAP = {
+  'records': 'RECORDS',
+  'tech': 'TECH',
+  'deep': 'DEEP'
+};
 
 class SpotifyService {
   constructor() {
@@ -29,21 +35,17 @@ class SpotifyService {
     try {
       const auth = Buffer.from(`${this.clientId}:${this.clientSecret}`).toString('base64');
       const data = querystring.stringify({ grant_type: 'client_credentials' });
-      
-      const response = await axios.post('https://accounts.spotify.com/api/token', 
-        data,
-        {
-          headers: {
-            'Authorization': `Basic ${auth}`,
-            'Content-Type': 'application/x-www-form-urlencoded'
-          }
-        }
-      );
 
-      this.accessToken = response.data.access_token;
-      return this.accessToken;
+      const response = await axios.post('https://accounts.spotify.com/api/token', data, {
+        headers: {
+          'Authorization': `Basic ${auth}`,
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }
+      });
+
+      return response.data.access_token;
     } catch (error) {
-      console.error('Failed to get Spotify access token:', error);
+      console.error('Error getting Spotify access token:', error);
       throw error;
     }
   }
@@ -55,324 +57,181 @@ class SpotifyService {
         return await operation();
       } catch (error) {
         lastError = error;
-        if (error.response && error.response.status === 401) {
-          // Token expired, get a new one
-          await this.getAccessToken();
-          continue;
+        if (error.response?.status === 429) {
+          const retryAfter = parseInt(error.response.headers['retry-after'] || '5');
+          await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
+        } else if (i < maxRetries - 1) {
+          await new Promise(resolve => setTimeout(resolve, Math.pow(2, i) * 1000));
         }
-        throw error;
       }
     }
     throw lastError;
   }
 
-  async getPlaylist(playlistId) {
+  async makeSpotifyRequest(endpoint, method = 'GET', data = null) {
     const accessToken = await this.getAccessToken();
-    return this.addToQueue(async () => {
-      try {
-        const response = await axios.get(
-          `${this.baseUrl}/playlists/${playlistId}`,
-          {
-            headers: {
-              'Authorization': `Bearer ${accessToken}`
-            }
-          }
-        );
-        return response.data;
-      } catch (error) {
-        console.error('Error getting playlist:', error);
-        throw error;
-      }
-    });
-  }
-
-  async getTracksByLabel(label) {
-    try {
-      // Use the LABEL_URLS from the constants
-      const playlistUrls = {
-        'Build It Records': '37i9dQZF1DXcBWIGoYBM5M', // Top 50 Global
-        'Build It Tech': '37i9dQZF1DX1lVhptIYRda',    // Beast Mode
-        'Build It Deep': '37i9dQZF1DX4dyzvuaRJ0n'     // mint
+    
+    return this.executeWithRetry(async () => {
+      const config = {
+        method,
+        url: `${this.baseUrl}${endpoint}`,
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        data: data
       };
 
-      const playlistUrl = playlistUrls[label];
-      if (!playlistUrl) {
-        throw new Error(`Invalid label: ${label}`);
-      }
-
-      // Extract playlist ID from URL
-      const playlistId = playlistUrl;
-      if (!playlistId) {
-        throw new Error(`Invalid playlist URL for label: ${label}`);
-      }
-
-      // Get the playlist tracks
-      const playlist = await this.getPlaylist(playlistId);
-      if (!playlist || !playlist.tracks || !playlist.tracks.items) {
-        throw new Error('Failed to get playlist tracks');
-      }
-
-      // Convert tracks to the expected format
-      const tracks = await Promise.all(playlist.tracks.items.map(async (item) => {
-        const track = item.track;
-        if (!track) return null;
-
-        // Get the artist details for each track
-        const artists = track.artists.map(artist => ({
-          id: artist.id,
-          name: artist.name,
-          spotifyUrl: artist.external_urls?.spotify || '',
-          images: artist.images || []
-        }));
-
-        return {
-          id: track.id,
-          name: track.name,
-          artists,
-          album: {
-            id: track.album.id,
-            name: track.album.name,
-            images: track.album.images || [],
-            releaseDate: track.album.release_date,
-            spotifyUrl: track.album.external_urls?.spotify || ''
-          },
-          duration: track.duration_ms,
-          spotifyUrl: track.external_urls?.spotify || '',
-          previewUrl: track.preview_url,
-          popularity: track.popularity || 0,
-          label
-        };
-      }));
-
-      // Filter out null values and return
-      return tracks.filter(track => track !== null);
-    } catch (error) {
-      console.error(`Error getting tracks for label ${label}:`, error);
-      throw error;
-    }
-  }
-
-  async importLabelTracks(label, batchSize = 50) {
-    try {
-      console.log(`[Spotify Service] Starting batch import for label: ${label}`);
-      const tracks = await this.searchTracks(`label:"${label}"`, batchSize);
-      
-      const enrichedTracks = [];
-      for (let i = 0; i < tracks.length; i += 5) {
-        const batch = tracks.slice(i, i + 5);
-        const batchResults = await Promise.all(
-          batch.map(track => this.enrichTrackData(track))
-        );
-        enrichedTracks.push(...batchResults);
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-
-      await this.redisService.setTracksForLabel(label, enrichedTracks);
-      return enrichedTracks;
-    } catch (error) {
-      console.error('[Spotify Service] Error in batch import:', error.message);
-      throw error;
-    }
-  }
-
-  async enrichTrackData(track) {
-    const [trackDetails, artistDetails, albumDetails] = await Promise.all([
-      this.getTrackDetails(track.id),
-      Promise.all(track.artists.map(artist => this.getArtistDetails(artist.id))),
-      this.getAlbumDetails(track.album.id)
-    ]);
-
-    return {
-      id: trackDetails.id,
-      name: trackDetails.name,
-      popularity: trackDetails.popularity,
-      duration_ms: trackDetails.duration_ms,
-      preview_url: trackDetails.preview_url,
-      external_urls: trackDetails.external_urls,
-      artists: artistDetails.map(artist => ({
-        id: artist.id,
-        name: artist.name,
-        images: artist.images,
-        genres: artist.genres,
-        followers: artist.followers,
-        popularity: artist.popularity
-      })),
-      album: {
-        id: albumDetails.id,
-        name: albumDetails.name,
-        images: albumDetails.images,
-        release_date: albumDetails.releaseDate,
-        total_tracks: albumDetails.totalTracks,
-        label: albumDetails.label
-      }
-    };
-  }
-
-  async searchTracks(query, limit = 50) {
-    return this.addToQueue(async () => {
-      const accessToken = await this.getAccessToken();
-      const response = await axios.get(`${this.baseUrl}/search`, {
-        params: { q: query, type: 'track', limit },
-        headers: { 'Authorization': `Bearer ${accessToken}` }
-      });
-      return response.data.tracks.items;
-    });
-  }
-
-  async getArtistDetails(artistId) {
-    return this.executeWithRetry(async () => {
-      const accessToken = await this.getAccessToken();
-      const response = await axios.get(`https://api.spotify.com/v1/artists/${artistId}`, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`
-        }
-      });
+      const response = await axios(config);
       return response.data;
     });
   }
 
-  async getAlbumDetails(albumId) {
-    return this.executeWithRetry(async () => {
-      const accessToken = await this.getAccessToken();
-      const response = await axios.get(`https://api.spotify.com/v1/albums/${albumId}`, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`
-        }
-      });
+  async getArtistsForLabel(labelSlug) {
+    try {
+      const playlistKey = LABEL_PLAYLIST_MAP[labelSlug];
+      if (!playlistKey) {
+        throw new Error(`Invalid label slug: ${labelSlug}`);
+      }
 
-      const album = response.data;
-      return {
-        id: album.id,
-        name: album.name,
-        artists: album.artists,
-        releaseDate: album.release_date,
-        totalTracks: album.total_tracks,
-        images: album.images,
-        label: album.label,
-        copyrights: album.copyrights
-      };
-    });
-  }
+      // Get the label's playlist ID from environment variables
+      const playlistId = process.env[`SPOTIFY_${playlistKey}_PLAYLIST_ID`];
+      if (!playlistId) {
+        throw new Error(`No playlist ID found for label: ${labelSlug} (${playlistKey})`);
+      }
 
-  async getAlbumTracks(albumId) {
-    return this.executeWithRetry(async () => {
-      const accessToken = await this.getAccessToken();
-      const response = await axios.get(`https://api.spotify.com/v1/albums/${albumId}/tracks`, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`
-        }
-      });
+      console.log(`Fetching artists for playlist: ${playlistId}`);
 
-      // Get full track details for each track
-      const trackPromises = response.data.items.map(track => 
-        this.getTrackDetails(track.id)
-      );
-      const tracks = await Promise.all(trackPromises);
-      return tracks.filter(track => track !== null);
-    });
-  }
+      // Get playlist tracks
+      const data = await this.makeSpotifyRequest(`/playlists/${playlistId}/tracks`);
+      
+      // Extract unique artists
+      const artistsMap = new Map();
+      for (const item of data.items) {
+        const track = item.track;
+        if (!track) continue;
 
-  async getTrackDetails(trackId) {
-    return this.executeWithRetry(async () => {
-      const accessToken = await this.getAccessToken();
-      const response = await axios.get(`https://api.spotify.com/v1/tracks/${trackId}`, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`
-        }
-      });
-
-      const track = response.data;
-      return {
-        id: track.id,
-        name: track.name,
-        artists: track.artists.map(artist => ({
-          id: artist.id,
-          name: artist.name,
-          spotifyUrl: artist.external_urls.spotify
-        })),
-        album: {
-          id: track.album.id,
-          name: track.album.name,
-          releaseDate: track.album.release_date,
-          totalTracks: track.album.total_tracks,
-          images: track.album.images
-        },
-        spotifyUrl: track.external_urls.spotify
-      };
-    });
-  }
-
-  async getArtistAlbums(artistId) {
-    const accessToken = await this.getAccessToken();
-    return this.addToQueue(async () => {
-      try {
-        const response = await axios.get(
-          `${this.baseUrl}/artists/${artistId}/albums`,
-          {
-            params: {
-              include_groups: 'album,single',
-              limit: 5,  // Only get the 5 most recent albums
-              market: 'US'
-            },
-            headers: {
-              'Authorization': `Bearer ${accessToken}`
-            }
+        for (const artist of track.artists) {
+          if (!artistsMap.has(artist.id)) {
+            // Get detailed artist info
+            const artistData = await this.makeSpotifyRequest(`/artists/${artist.id}`);
+            artistsMap.set(artist.id, {
+              id: artist.id,
+              name: artist.name,
+              imageUrl: artistData.images[0]?.url,
+              spotifyUrl: artist.external_urls.spotify,
+              genres: artistData.genres,
+              popularity: artistData.popularity
+            });
           }
-        );
+        }
+      }
 
-        return response.data.items.map(album => ({
-          id: album.id,
-          name: album.name,
-          artists: album.artists.map(artist => ({
+      return Array.from(artistsMap.values());
+    } catch (error) {
+      console.error('Error getting artists for label:', error);
+      throw error;
+    }
+  }
+
+  async getTracksForLabel(labelSlug) {
+    try {
+      const playlistKey = LABEL_PLAYLIST_MAP[labelSlug];
+      if (!playlistKey) {
+        throw new Error(`Invalid label slug: ${labelSlug}`);
+      }
+
+      const playlistId = process.env[`SPOTIFY_${playlistKey}_PLAYLIST_ID`];
+      if (!playlistId) {
+        throw new Error(`No playlist ID found for label: ${labelSlug} (${playlistKey})`);
+      }
+
+      console.log(`Fetching tracks for playlist: ${playlistId}`);
+
+      const data = await this.makeSpotifyRequest(`/playlists/${playlistId}/tracks`);
+      
+      return data.items
+        .filter(item => item.track)
+        .map(item => ({
+          id: item.track.id,
+          title: item.track.name,
+          releaseDate: item.track.album.release_date,
+          albumArtUrl: item.track.album.images[0]?.url,
+          spotifyUrl: item.track.external_urls.spotify,
+          artists: item.track.artists.map(artist => ({
             id: artist.id,
             name: artist.name,
-            spotifyUrl: artist.external_urls?.spotify || ''
+            spotifyUrl: artist.external_urls.spotify
           })),
-          releaseDate: album.release_date,
-          totalTracks: album.total_tracks,
-          images: album.images || [],
-          spotifyUrl: album.external_urls?.spotify || '',
-          albumType: album.album_type,
-          cached_at: Date.now()
+          popularity: item.track.popularity
         }));
-      } catch (error) {
-        console.error('Error getting artist albums:', error);
-        throw error;
-      }
-    });
-  }
-
-  async addToQueue(operation) {
-    return new Promise((resolve, reject) => {
-      const task = async () => {
-        try {
-          if (this.requestCount >= this.MAX_REQUESTS_PER_WINDOW) {
-            const waitTime = this.WINDOW_SIZE - (Date.now() - this.rateLimitWindow);
-            await new Promise(resolve => setTimeout(resolve, waitTime));
-          }
-          
-          this.requestCount++;
-          const result = await operation();
-          resolve(result);
-        } catch (error) {
-          reject(error);
-        }
-      };
-
-      this.requestQueue.push(task);
-      this.processQueue();
-    });
-  }
-
-  async processQueue() {
-    if (this.isProcessingQueue || this.requestQueue.length === 0) return;
-
-    this.isProcessingQueue = true;
-    while (this.requestQueue.length > 0) {
-      const task = this.requestQueue.shift();
-      await task();
+    } catch (error) {
+      console.error('Error getting tracks for label:', error);
+      throw error;
     }
-    this.isProcessingQueue = false;
+  }
+
+  async storeArtistsAndTracks(labelSlug) {
+    try {
+      console.log(`Starting sync for label: ${labelSlug}`);
+
+      // Get or create label
+      const [label] = await Label.findOrCreate({
+        where: { slug: labelSlug },
+        defaults: { 
+          name: labelSlug.split('-')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ')
+        }
+      });
+
+      // Get and store artists
+      console.log('Fetching artists...');
+      const artists = await this.getArtistsForLabel(labelSlug);
+      console.log(`Found ${artists.length} artists`);
+
+      for (const artistData of artists) {
+        await Artist.upsert({
+          spotifyId: artistData.id,
+          name: artistData.name,
+          imageUrl: artistData.imageUrl,
+          spotifyUrl: artistData.spotifyUrl,
+          labelId: label.id
+        });
+      }
+
+      // Get and store tracks
+      console.log('Fetching tracks...');
+      const tracks = await this.getTracksForLabel(labelSlug);
+      console.log(`Found ${tracks.length} tracks`);
+
+      for (const trackData of tracks) {
+        const artist = await Artist.findOne({
+          where: { spotifyId: trackData.artists[0].id }
+        });
+
+        if (artist) {
+          await Release.upsert({
+            spotifyId: trackData.id,
+            title: trackData.title,
+            releaseDate: trackData.releaseDate,
+            albumArtUrl: trackData.albumArtUrl,
+            spotifyUrl: trackData.spotifyUrl,
+            artistId: artist.id,
+            labelId: label.id,
+            popularity: trackData.popularity
+          });
+        }
+      }
+
+      return { 
+        success: true,
+        message: `Successfully synced ${tracks.length} tracks from ${artists.length} artists for ${label.name}`
+      };
+    } catch (error) {
+      console.error('Error storing artists and tracks:', error);
+      throw error;
+    }
   }
 }
 

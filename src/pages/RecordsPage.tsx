@@ -1,120 +1,118 @@
-import React, { useState, useEffect } from 'react';
-import { Box, Typography, Grid, Card, CardContent, CardMedia, Link, styled } from '@mui/material';
-import { FaSpotify, FaSoundcloud } from 'react-icons/fa';
-import { SiBeatport } from 'react-icons/si';
-import PageLayout from '../components/PageLayout';
-import { Track } from '../types/track';
-import { getTracksByLabel } from '../utils/trackUtils';
+import React, { useEffect, useState } from 'react';
+import { Box, Grid, Card, CardMedia, CardContent, Typography, Link as MuiLink, IconButton, CircularProgress } from '@mui/material';
+import { Link } from 'react-router-dom';
+import { styled } from '@mui/material/styles';
+import { OpenInNew } from '@mui/icons-material';
 import { RECORD_LABELS } from '../constants/labels';
-import { getArtistsByLabel } from '../utils/artistUtils';
-import { Artist } from '../data/mockData';
-import TrackList from '../components/TrackList';
+import { databaseService } from '../services/DatabaseService';
+import { Artist } from '../types/Artist';
+import PageLayout from '../components/PageLayout';
 
 const IconLink = styled(Link)({
   color: '#FFFFFF',
-  marginRight: '16px',
+  marginRight: '10px',
   '&:hover': {
-    color: '#02FF95',
-  },
-});
-
-const ArtistCard = styled(Card)({
-  backgroundColor: 'rgba(255, 255, 255, 0.05)',
-  transition: 'transform 0.2s',
-  height: '100%',
-  display: 'flex',
-  flexDirection: 'column',
-  '&:hover': {
-    transform: 'scale(1.02)',
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    color: '#1DB954',
   },
 });
 
 const RecordsPage = () => {
-  const [tracks, setTracks] = useState<Track[]>([]);
   const [artists, setArtists] = useState<Artist[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const recordsTracks = getTracksByLabel(RECORD_LABELS.RECORDS);
-    const recordsArtists = getArtistsByLabel(RECORD_LABELS.RECORDS);
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        // Fetch artists
+        const recordsArtists = await databaseService.getArtistsForLabel(RECORD_LABELS['Build It Records']);
+        if (recordsArtists.length === 0) {
+          setError('No artists found');
+          return;
+        }
+        setArtists(recordsArtists);
+      } catch (err) {
+        console.error('Error fetching data:', err);
+        setError('Failed to load data');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    console.log('Tracks:', recordsTracks); // Debug log
-    console.log('Artists:', recordsArtists); // Debug log
-
-    setTracks(recordsTracks);
-    setArtists(recordsArtists);
+    fetchData();
   }, []);
+
+  if (loading) {
+    return (
+      <PageLayout label="records">
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
+          <CircularProgress />
+        </Box>
+      </PageLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <PageLayout label="records">
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
+          <Typography color="error">{error}</Typography>
+        </Box>
+      </PageLayout>
+    );
+  }
 
   return (
     <PageLayout label="records">
-      <Box sx={{
-        width: '100%',
-        // Removed global padding. We'll apply padding to specific elements
-      }}>
-          {/* Add padding left and top to Typography heading */}
-        <Typography variant="h4" component="h1" gutterBottom sx={{
-          color: '#FFFFFF',
-          mb: 4,
-          pl: 3, // Add padding left to only heading
-          pt: 2 // Add padding top to heading
-        }}>
-          Records Releases
+      <Box sx={{ flexGrow: 1, p: 3 }}>
+        <Typography variant="h4" gutterBottom>
+          Build It Records Artists
         </Typography>
-
-          {/* Move padding to the container box */}
-        <Box mb={6} sx={{ pl: 3 }}>
-          <Typography variant="h5" gutterBottom sx={{ color: '#FFFFFF', mb: 3 }}>
-            Latest Releases
-          </Typography>
-          <TrackList tracks={tracks} />
-        </Box>
-
-        {/* Move padding to the container box, including bottom padding */}
-        <Box sx={{ pl: 3, pb: 3 }}>
-          <Typography variant="h5" gutterBottom sx={{ color: '#FFFFFF', mb: 4 }}>
-            Artists
-          </Typography>
-          <Grid container spacing={3}>
-            {artists.map((artist, index) => (
-              <Grid item xs={12} sm={6} md={4} lg={3} key={index}>
-                <ArtistCard>
+        
+        <Grid container spacing={4}>
+          {artists.map((artist) => (
+            <Grid item xs={12} sm={6} md={4} key={artist.id}>
+              <Card>
+                <Box sx={{ position: 'relative' }}>
                   <CardMedia
                     component="img"
                     height="200"
-                    image={artist.imageUrl || 'https://via.placeholder.com/300x300.png?text=' + encodeURIComponent(artist.name)}
+                    image={artist.imageUrl}
                     alt={artist.name}
-                    sx={{
-                      objectFit: 'cover',
-                      transition: 'transform 0.2s ease-in-out',
-                      '&:hover': {
-                        transform: 'scale(1.05)'
-                      }
-                    }}
                   />
                   <CardContent>
-                    <Typography variant="h6" gutterBottom sx={{ color: '#FFFFFF' }}>
+                    <Typography variant="h6" component="div">
                       {artist.name}
                     </Typography>
-                    <Typography variant="body2" sx={{ color: '#AAAAAA', mb: 2 }}>
-                      {artist.bio}
+                    <Typography variant="body2" color="text.secondary" sx={{
+                      height: '3em',
+                      overflow: 'hidden',
+                      mb: 2
+                    }}>
+                      {artist.bio || `Artist on ${RECORD_LABELS['Build It Records']}`}
                     </Typography>
-                    <Box sx={{ display: 'flex', gap: 2 }}>
-                      <IconLink href={artist.spotifyUrl} target="_blank" rel="noopener noreferrer">
-                        <FaSpotify size={24} />
-                      </IconLink>
-                      <IconLink href={artist.beatportUrl} target="_blank" rel="noopener noreferrer">
-                        <SiBeatport size={24} />
-                      </IconLink>
-                      <IconLink href={artist.soundcloudUrl} target="_blank" rel="noopener noreferrer">
-                        <FaSoundcloud size={24} />
-                      </IconLink>
+                    <Box sx={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}>
+                      <Box>
+                        {artist.spotifyUrl && (
+                          <MuiLink href={artist.spotifyUrl} target="_blank" rel="noopener noreferrer">
+                            <IconButton size="small">
+                              <OpenInNew />
+                            </IconButton>
+                          </MuiLink>
+                        )}
+                      </Box>
                     </Box>
                   </CardContent>
-                </ArtistCard>
-              </Grid>
-            ))}
-          </Grid>
-        </Box>
+                </Box>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
       </Box>
     </PageLayout>
   );

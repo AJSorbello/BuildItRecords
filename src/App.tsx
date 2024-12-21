@@ -47,31 +47,31 @@ const router = createBrowserRouter(
       {/* Records Routes */}
       <Route path="/records" element={<Layout />}>
         <Route index element={<RecordsHome />} />
-        <Route path="releases" element={<ReleasesPage label="RECORDS" />} />
+        <Route path="releases" element={<ReleasesPage label="records" />} />
         <Route path="artists" element={<ArtistsPage />} />
         <Route path="artists/:artistName" element={<ArtistDetailPage />} />
-        <Route path="playlists" element={<PlaylistsPage label="RECORDS" />} />
-        <Route path="submit" element={<SubmitPage label="RECORDS" />} />
+        <Route path="playlists" element={<PlaylistsPage label="records" />} />
+        <Route path="submit" element={<SubmitPage label="records" />} />
       </Route>
 
       {/* Tech Routes */}
       <Route path="/tech" element={<Layout />}>
         <Route index element={<TechHome />} />
-        <Route path="releases" element={<ReleasesPage label="TECH" />} />
+        <Route path="releases" element={<ReleasesPage label="tech" />} />
         <Route path="artists" element={<ArtistsPage />} />
         <Route path="artists/:artistName" element={<ArtistDetailPage />} />
-        <Route path="playlists" element={<PlaylistsPage label="TECH" />} />
-        <Route path="submit" element={<SubmitPage label="TECH" />} />
+        <Route path="playlists" element={<PlaylistsPage label="tech" />} />
+        <Route path="submit" element={<SubmitPage label="tech" />} />
       </Route>
 
       {/* Deep Routes */}
       <Route path="/deep" element={<Layout />}>
         <Route index element={<DeepHome />} />
-        <Route path="releases" element={<ReleasesPage label="DEEP" />} />
+        <Route path="releases" element={<ReleasesPage label="deep" />} />
         <Route path="artists" element={<ArtistsPage />} />
         <Route path="artists/:artistName" element={<ArtistDetailPage />} />
-        <Route path="playlists" element={<PlaylistsPage label="DEEP" />} />
-        <Route path="submit" element={<SubmitPage label="DEEP" />} />
+        <Route path="playlists" element={<PlaylistsPage label="deep" />} />
+        <Route path="submit" element={<SubmitPage label="deep" />} />
       </Route>
 
       {/* Admin Routes */}

@@ -19,3 +19,12 @@ export const getSpotifyAlbumArt = (spotifyUrl: string): string => {
   // In a real implementation, this would parse the Spotify URL and fetch the album art
   return `https://via.placeholder.com/300x300.png?text=${encodeURIComponent('Album Art')}`;
 };
+
+export const processTracksEfficiently = (tracks: Track[]): Track[] => {
+  // Sort tracks by release date (newest first)
+  return [...tracks].sort((a, b) => {
+    const dateA = new Date(a.releaseDate);
+    const dateB = new Date(b.releaseDate);
+    return dateB.getTime() - dateA.getTime();
+  });
+};

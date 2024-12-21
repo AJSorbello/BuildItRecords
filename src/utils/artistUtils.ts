@@ -1,13 +1,11 @@
-import { Artist } from '../data/mockData';
-import { RECORD_LABELS, RecordLabel } from '../constants/labels';
+import { Artist } from '../types/Artist';
+import { RecordLabel } from '../constants/labels';
+import { databaseService } from '../services/DatabaseService';
 
-export const getArtistsByLabel = (label: RecordLabel): Artist[] => {
+export const getArtistsByLabel = async (label: RecordLabel): Promise<Artist[]> => {
   try {
-    const storedArtists = localStorage.getItem('artists');
-    if (!storedArtists) return [];
-    
-    const artists: Artist[] = JSON.parse(storedArtists);
-    return artists.filter(artist => artist.recordLabel === label);
+    const artists = await databaseService.getArtistsForLabel(label);
+    return artists;
   } catch (err) {
     console.error('Error loading artists:', err);
     return [];
