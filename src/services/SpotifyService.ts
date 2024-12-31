@@ -1,156 +1,101 @@
 import { SpotifyApi } from '@spotify/web-api-ts-sdk';
 import { Track } from '../types/track';
 import { Artist } from '../types/artist';
-import { RECORD_LABELS } from '../constants/labels';
-import { convertSpotifyArtistToArtist, convertSpotifyTrackToTrack } from '../utils/spotifyUtils';
-
-type RecordLabel = typeof RECORD_LABELS[keyof typeof RECORD_LABELS];
+import { Album } from '../types/release';
+import { createArtistFromSpotify, createTrackFromSpotify } from '../utils/spotifyUtils';
 
 class SpotifyService {
-  private spotifyApi: SpotifyApi | null = null; // Fixed property name and initialization
-  private static instance: SpotifyService;
+  private api: SpotifyApi;
+  private clientId: string;
+  private redirectUri: string;
 
-  private constructor() {}
+  constructor() {
+    this.clientId = process.env.REACT_APP_SPOTIFY_CLIENT_ID || '';
+    this.redirectUri = process.env.REACT_APP_SPOTIFY_REDIRECT_URI || '';
+    this.api = SpotifyApi.withUserAuthorization(
+      this.clientId,
+      this.redirectUri,
+      ['user-read-private', 'user-read-email', 'playlist-read-private']
+    );
+  }
 
-  private async initializeSDK() {
+  async init() {
     try {
-      const clientId = process.env.REACT_APP_SPOTIFY_CLIENT_ID;
-      const clientSecret = process.env.REACT_APP_SPOTIFY_CLIENT_SECRET;
-
-      if (!clientId || !clientSecret) {
-        throw new Error('Spotify credentials are not configured');
-      }
-
-      this.spotifyApi = SpotifyApi.withClientCredentials(clientId, clientSecret); // Fixed property name
-      console.log('Spotify SDK initialized successfully');
+      await this.api.authenticate();
+      return true;
     } catch (error) {
-      console.error('Failed to initialize Spotify SDK:', error);
-      this.spotifyApi = null; // Ensure null on failure
+      console.error('Failed to initialize Spotify API:', error);
+      return false;
     }
   }
 
-  private async ensureSDK(): Promise<SpotifyApi> {
-    if (!this.spotifyApi) {
-      await this.initializeSDK();
-      if (!this.spotifyApi) {
-        throw new Error('Failed to initialize Spotify SDK');
-      }
-    }
-    return this.spotifyApi;
-  }
-
-  public static getInstance(): SpotifyService {
-    if (!SpotifyService.instance) {
-      SpotifyService.instance = new SpotifyService();
-    }
-    return SpotifyService.instance;
-  }
-
-  public async getTracksByLabel(label: RecordLabel): Promise<Track[]> {
+  async authenticate() {
     try {
-      const sdk = await this.ensureSDK();
-      const response = await sdk.search(`label:${label}`, ['track']);
-      return response.tracks.items.map(track => convertSpotifyTrackToTrack(track, label));
+      await this.api.authenticate();
+      return true;
     } catch (error) {
-      console.error('Error fetching label releases:', error);
-      return [];
+      console.error('Authentication failed:', error);
+      return false;
     }
   }
 
-  public async getArtistsByLabel(label: RecordLabel): Promise<Artist[]> {
-    try {
-      const sdk = await this.ensureSDK();
-      const tracks = await this.getTracksByLabel(label);
-      const artistIds = new Set(tracks.flatMap(track => track.artists.map(artist => artist.id)));
-
-      const artists = await Promise.all(
-        Array.from(artistIds).filter(id => id).map(async id => {
-          const artist = await sdk.artists.get(id);
-          return convertSpotifyArtistToArtist(artist, label);
-        })
-      );
-
-      return artists;
-    } catch (error) {
-      console.error('Error fetching artists:', error);
-      return [];
-    }
+  isAuthenticated() {
+    return this.api.getAccessToken() !== null;
   }
 
-  public async getArtist(id: string): Promise<Artist | null> {
+  async getLoginUrl() {
+    const scopes = ['user-read-private', 'user-read-email', 'playlist-read-private'];
+    const state = Math.random().toString(36).substring(7);
+    
+    const params = new URLSearchParams({
+      client_id: this.clientId,
+      response_type: 'code',
+      redirect_uri: this.redirectUri,
+      state,
+      scope: scopes.join(' ')
+    });
+
+    return `https://accounts.spotify.com/authorize?${params.toString()}`;
+  }
+
+  async getArtist(id: string): Promise<Artist | null> {
     try {
-      const sdk = await this.ensureSDK();
-      const artist = await sdk.artists.get(id);
-      return convertSpotifyArtistToArtist(artist, RECORD_LABELS.RECORDS);
+      const artist = await this.api.artists.get(id);
+      return createArtistFromSpotify(artist);
     } catch (error) {
       console.error('Error fetching artist:', error);
       return null;
     }
   }
 
-  public async searchArtists(name: string): Promise<Artist[]> {
+  async getTrack(id: string): Promise<Track | null> {
     try {
-      const sdk = await this.ensureSDK();
-      const response = await sdk.search(name, ['artist']);
-      return response.artists.items.map(artist =>
-        convertSpotifyArtistToArtist(artist, RECORD_LABELS.RECORDS)
-      );
+      const track = await this.api.tracks.get(id);
+      return createTrackFromSpotify(track);
     } catch (error) {
-      console.error('Error searching artists:', error);
-      return [];
+      console.error('Error fetching track:', error);
+      return null;
     }
   }
 
-  public async getArtistTracks(artistId: string): Promise<Track[]> {
+  async getPlaylist(id: string) {
     try {
-      const sdk = await this.ensureSDK();
-      const response = await sdk.artists.topTracks(artistId, 'US');
-      return response.tracks.map(track => convertSpotifyTrackToTrack(track, RECORD_LABELS.RECORDS));
+      return await this.api.playlists.getPlaylist(id);
     } catch (error) {
-      console.error('Error fetching artist tracks:', error);
-      return [];
+      console.error('Error fetching playlist:', error);
+      return null;
     }
   }
 
-  public async searchTracks(query: string): Promise<Track[]> {
+  async searchTracks(query: string): Promise<Track[]> {
     try {
-      const sdk = await this.ensureSDK();
-      const response = await sdk.search(query, ['track']);
-      return response.tracks.items.map(track =>
-        convertSpotifyTrackToTrack(track, RECORD_LABELS.RECORDS)
-      );
+      const results = await this.api.search(query, ['track']);
+      return results.tracks.items.map(track => createTrackFromSpotify(track));
     } catch (error) {
       console.error('Error searching tracks:', error);
       return [];
     }
   }
-
-  public async getTrack(id: string): Promise<Track | null> {
-    try {
-      const sdk = await this.ensureSDK();
-      const track = await sdk.tracks.get(id);
-      return convertSpotifyTrackToTrack(track, RECORD_LABELS.RECORDS);
-    } catch (error) {
-      console.error('Error fetching track details:', error);
-      return null;
-    }
-  }
-
-  public async getArtistDetailsByName(artistName: string) {
-    try {
-      const sdk = await this.ensureSDK(); // Fixed ensureSDK usage
-      const searchResults = await sdk.search(artistName, ['artist']);
-      if (searchResults.artists.items.length > 0) {
-        const artist = searchResults.artists.items[0];
-        const fullArtistDetails = await sdk.artists.get(artist.id);
-        return fullArtistDetails;
-      }
-      return null;
-    } catch (error) {
-      console.error('Error fetching artist details:', error);
-      throw error;
-    }
-  }
 }
 
-export const spotifyService = SpotifyService.getInstance();
+export const spotifyService = new SpotifyService();

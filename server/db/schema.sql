@@ -30,66 +30,70 @@ ON CONFLICT (slug) DO NOTHING;
 CREATE TABLE artists (
     id VARCHAR(255) PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
-    "spotifyUrl" VARCHAR(255),
     images JSONB,
     genres TEXT[],
-    "followersCount" INTEGER DEFAULT 0,
-    "primaryLabel" VARCHAR(255),
-    bio TEXT,
+    external_urls JSONB,
+    followers INTEGER DEFAULT 0,
+    popularity INTEGER DEFAULT 0,
+    "labelId" INTEGER REFERENCES labels(id),
     "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY ("primaryLabel") REFERENCES labels(name)
+    "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Create indexes for artist lookups
 CREATE INDEX idx_artists_name ON artists(name);
-CREATE INDEX idx_artists_spotify_url ON artists("spotifyUrl");
-CREATE INDEX idx_artists_primary_label ON artists("primaryLabel");
+CREATE INDEX idx_artists_label_id ON artists("labelId");
+CREATE INDEX idx_artists_popularity ON artists(popularity DESC);
 
--- Create releases table
-CREATE TABLE releases (
+-- Create albums table (formerly releases)
+CREATE TABLE albums (
     id VARCHAR(255) PRIMARY KEY,
-    title VARCHAR(255) NOT NULL,
-    "artistId" VARCHAR(255),
-    "labelId" INTEGER,
-    "albumArtUrl" VARCHAR(255),
-    "releaseDate" DATE,
-    "spotifyId" VARCHAR(255),
-    "spotifyUrl" VARCHAR(255),
-    "beatportUrl" VARCHAR(255),
-    "soundcloudUrl" VARCHAR(255),
+    name VARCHAR(255) NOT NULL,
+    "artistId" VARCHAR(255) REFERENCES artists(id) ON DELETE CASCADE,
+    "labelId" INTEGER REFERENCES labels(id) ON DELETE CASCADE,
+    images JSONB,
+    release_date DATE,
+    total_tracks INTEGER DEFAULT 0,
+    external_urls JSONB,
     popularity INTEGER DEFAULT 0,
     "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY ("artistId") REFERENCES artists(id) ON DELETE CASCADE,
-    FOREIGN KEY ("labelId") REFERENCES labels(id) ON DELETE CASCADE
+    "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create indexes for release lookups
-CREATE INDEX idx_releases_title ON releases(title);
-CREATE INDEX idx_releases_artist_id ON releases("artistId");
-CREATE INDEX idx_releases_label_id ON releases("labelId");
-CREATE INDEX idx_releases_release_date ON releases("releaseDate" DESC);
-CREATE INDEX idx_releases_spotify_id ON releases("spotifyId");
-CREATE INDEX idx_releases_popularity ON releases(popularity DESC);
+-- Create indexes for album lookups
+CREATE INDEX idx_albums_name ON albums(name);
+CREATE INDEX idx_albums_artist_id ON albums("artistId");
+CREATE INDEX idx_albums_label_id ON albums("labelId");
+CREATE INDEX idx_albums_release_date ON albums(release_date DESC);
+CREATE INDEX idx_albums_popularity ON albums(popularity DESC);
+
+-- Create tracks table
+CREATE TABLE tracks (
+    id VARCHAR(255) PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    "albumId" VARCHAR(255) REFERENCES albums(id) ON DELETE CASCADE,
+    "artistId" VARCHAR(255) REFERENCES artists(id) ON DELETE CASCADE,
+    duration_ms INTEGER,
+    preview_url VARCHAR(255),
+    external_urls JSONB,
+    uri VARCHAR(255),
+    "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create indexes for track lookups
+CREATE INDEX idx_tracks_name ON tracks(name);
+CREATE INDEX idx_tracks_album_id ON tracks("albumId");
+CREATE INDEX idx_tracks_artist_id ON tracks("artistId");
 
 -- Create artist_labels junction table
 CREATE TABLE artist_labels (
-    "artistId" VARCHAR(255),
-    "labelId" INTEGER,
-    PRIMARY KEY ("artistId", "labelId"),
-    FOREIGN KEY ("artistId") REFERENCES artists(id) ON DELETE CASCADE,
-    FOREIGN KEY ("labelId") REFERENCES labels(id) ON DELETE CASCADE
+    "artistId" VARCHAR(255) REFERENCES artists(id) ON DELETE CASCADE,
+    "labelId" INTEGER REFERENCES labels(id) ON DELETE CASCADE,
+    PRIMARY KEY ("artistId", "labelId")
 );
 
 -- Create index for artist_labels lookups
 CREATE INDEX idx_artist_labels_label_id ON artist_labels("labelId");
-
--- Create partial indexes for frequently accessed conditions
-CREATE INDEX idx_releases_recent ON releases("releaseDate" DESC) 
-WHERE "releaseDate" >= NOW() - INTERVAL '6 months';
-
-CREATE INDEX idx_releases_popular ON releases(popularity DESC) 
-WHERE popularity >= 70;
 
 COMMIT;

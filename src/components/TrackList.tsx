@@ -33,15 +33,13 @@ const TrackList: React.FC<TrackListProps> = ({ tracks }) => {
             transform: 'scale(1.02)'
           }
         }}>
-          {track.albumCover && (
-            <CardMedia
-              component="img"
-              height="200"
-              image={track.albumCover}
-              alt={track.title}
-              sx={{ objectFit: 'cover' }}
-            />
-          )}
+          <CardMedia
+            component="img"
+            height="200"
+            image={track.artworkUrl || '/placeholder-album.jpg'}
+            alt={track.title}
+            sx={{ objectFit: 'cover' }}
+          />
           
           <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
             <Typography variant="h6" component="div" gutterBottom noWrap>
@@ -49,7 +47,7 @@ const TrackList: React.FC<TrackListProps> = ({ tracks }) => {
             </Typography>
             
             <Typography variant="body2" color="text.secondary" gutterBottom>
-              {track.artist.name}
+              {track.artists[0]?.name || 'Unknown Artist'}
             </Typography>
             
             <Typography variant="caption" color="text.secondary">
@@ -58,10 +56,10 @@ const TrackList: React.FC<TrackListProps> = ({ tracks }) => {
             
             {/* Actions */}
             <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mt: 'auto', pt: 1 }}>
-              {track.spotifyUrl && (
+              {track.external_urls.spotify && (
                 <IconButton
                   size="small"
-                  onClick={() => window.open(track.spotifyUrl, '_blank')}
+                  onClick={() => window.open(track.external_urls.spotify, '_blank')}
                   sx={{ color: 'primary.main' }}
                 >
                   <OpenInNewIcon />

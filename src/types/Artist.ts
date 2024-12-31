@@ -1,80 +1,90 @@
+import type { Artist as SpotifyApiArtist } from '@spotify/web-api-ts-sdk';
 import { RecordLabel } from '../constants/labels';
-import { Track } from './track';
-import { Release } from './release';
+import { Album } from './release';
 
-export interface ArtistFormData {
+export interface Artist {
+  id: string;
   name: string;
-  spotifyUrl?: string;
-  imageUrl?: string;
-  label: RecordLabel;
+  genres: string[];
+  images: {
+    url: string;
+    height: number;
+    width: number;
+  }[];
+  followers: {
+    total: number;
+  };
+  external_urls: {
+    spotify: string;
+  };
+  uri: string;
+  popularity: number;
+  artworkUrl?: string;
   bio?: string;
+  label?: string;
+}
+
+export interface ArtistResponse {
+  artists: {
+    items: Artist[];
+    total: number;
+    limit: number;
+    offset: number;
+  };
 }
 
 export interface SimpleArtist {
   id: string;
   name: string;
-  spotifyUrl: string;
-  recordLabel: RecordLabel;
-  imageUrl?: string;
-}
-
-export interface SpotifyImage {
-  url: string;
-  width: number | null;
-  height: number | null;
-}
-
-export interface Artist extends SimpleArtist {
-  bio?: string;
-  images?: SpotifyImage[];
-  beatportUrl?: string;
-  soundcloudUrl?: string;
-  bandcampUrl?: string;
-  socialLinks?: {
-    spotify?: string;
-    beatport?: string;
-    soundcloud?: string;
-    bandcamp?: string;
+  external_urls: {
+    spotify: string;
   };
 }
 
 export interface SpotifyArtistData {
   id: string;
   name: string;
-  images: SpotifyImage[];
-  genres: string[];
+  images?: {
+    url: string;
+    height: number;
+    width: number;
+  }[];
+  genres?: string[];
   external_urls: {
     spotify: string;
   };
+  followers: {
+    total: number;
+  };
+  popularity?: number;
 }
 
-export function convertSpotifyArtistToArtist(spotifyArtist: SpotifyArtistData, recordLabel: RecordLabel): SimpleArtist {
-  return {
-    id: spotifyArtist.id,
-    name: spotifyArtist.name,
-    spotifyUrl: spotifyArtist.external_urls.spotify,
-    recordLabel,
-    imageUrl: spotifyArtist.images[0]?.url
-  };
+export function getArtistImage(artist: Artist): string {
+  return artist.artworkUrl || artist.images[0].url;
+}
+
+export function getArtistGenres(artist: Artist): string {
+  return artist.genres.join(', ');
+}
+
+export function getArtistFollowers(artist: Artist): number {
+  return artist.followers.total;
 }
 
 export const createArtist = (data: Partial<Artist>): Artist => {
   return {
     id: data.id || '',
     name: data.name || '',
-    spotifyUrl: data.spotifyUrl || '',
-    recordLabel: data.recordLabel || RecordLabel.RECORDS,
-    imageUrl: data.imageUrl,
+    genres: data.genres || [],
+    images: data.images || [],
+    followers: data.followers || { total: 0 },
+    external_urls: {
+      spotify: data.external_urls?.spotify || '',
+    },
+    uri: data.uri || '',
+    popularity: data.popularity || 0,
+    artworkUrl: data.artworkUrl,
     bio: data.bio,
-    images: data.images,
-    beatportUrl: data.beatportUrl,
-    soundcloudUrl: data.soundcloudUrl,
-    bandcampUrl: data.bandcampUrl,
-    socialLinks: {
-      spotify: data.spotifyUrl,
-      beatport: data.beatportUrl,
-      soundcloud: data.soundcloudUrl,
-      bandcamp: data.bandcampUrl,
-    }
+    label: data.label,
   };
 };

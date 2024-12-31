@@ -1,7 +1,12 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
-  Box,
+  Container,
   Typography,
+  TextField,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
   Table,
   TableBody,
   TableCell,
@@ -9,18 +14,16 @@ import {
   TableHead,
   TableRow,
   Button,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  TextField,
   CircularProgress,
   Paper,
-  Grid
+  Grid,
+  Link,
+  SelectChangeEvent
 } from '@mui/material';
-import { RecordLabel, RECORD_LABELS, LABEL_DISPLAY_NAMES } from '../constants/labels';
-import { Track } from '../types/track';
-import type { Artist, SimpleArtist } from '../types/artist';
+import { RecordLabel, LABEL_DISPLAY_NAMES } from '../constants/labels';
+import type { Track } from '../types/track';
+import type { Album, Release } from '../types/release';
+import type { Artist } from '../types/artist';
 import { databaseService } from '../services/DatabaseService';
 
 interface FetchState {
@@ -28,50 +31,46 @@ interface FetchState {
   error: string | null;
 }
 
-const initialTrack: Track = {
-  id: '',
-  title: '',
-  artist: {
-    id: '',
-    name: '',
-    spotifyUrl: '',
-    recordLabel: RecordLabel.RECORDS
-  },
-  recordLabel: RecordLabel.RECORDS,
-  artwork: '',
-  spotifyUrl: '',
-  beatportUrl: '',
-  releaseDate: new Date().toISOString(),
-  albumCover: ''
-};
-
 const initialFetchState: FetchState = {
   loading: false,
-  error: null
+  error: null,
 };
 
-const transformTracks = (tracks: Track[]): Track[] => {
-  return tracks.map(track => ({
-    ...track,
-    id: track.id || '',
-    title: track.title || '',
-    artist: {
-      id: track.artist.id || '',
-      name: track.artist.name || 'Unknown Artist',
-      spotifyUrl: track.artist.spotifyUrl || '',
-      recordLabel: track.recordLabel
-    },
-    recordLabel: track.recordLabel || RecordLabel.RECORDS,
-    artwork: track.artwork || '',
-    spotifyUrl: track.spotifyUrl || '',
-    beatportUrl: track.beatportUrl || '',
-    releaseDate: track.releaseDate || new Date().toISOString(),
-    albumCover: track.albumCover || ''
-  }));
-};
+const convertReleaseToTrack = (release: Release): Track => {
+  const defaultArtist: Artist = {
+    id: '',
+    name: release.artist,
+    genres: [],
+    images: [],
+    followers: { total: 0 },
+    external_urls: { spotify: '' },
+    uri: '',
+    popularity: 0
+  };
 
-const getArtistString = (artist: SimpleArtist): string => {
-  return artist.name || 'Unknown Artist';
+  return {
+    id: release.id,
+    title: release.name,
+    name: release.name,
+    artists: [{ 
+      id: '', 
+      name: release.artist,
+      external_urls: {
+        spotify: release.external_urls.spotify
+      }
+    }],
+    album: release,
+    duration_ms: 0,
+    external_urls: release.external_urls,
+    preview_url: null,
+    uri: release.uri,
+    popularity: 0,
+    featured: false,
+    artworkUrl: release.images[0]?.url,
+    releaseDate: release.release_date,
+    label: release.album_type === 'album' ? RecordLabel.RECORDS : RecordLabel.TECH,
+    spotifyUrl: release.external_urls.spotify
+  };
 };
 
 export const AdminDashboard: React.FC = () => {
@@ -80,126 +79,140 @@ export const AdminDashboard: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [fetchState, setFetchState] = useState<FetchState>(initialFetchState);
 
-  useEffect(() => {
-    fetchTracks();
-  }, [selectedRecordLabel]);
-
-  const fetchTracks = async () => {
+  const fetchTracks = useCallback(async () => {
     try {
       setFetchState({ loading: true, error: null });
-      const allTracks = await databaseService.getTracks(
-        selectedRecordLabel === 'All' ? RecordLabel.RECORDS : selectedRecordLabel
-      );
-      const processedTracks = transformTracks(allTracks);
-      setTracks(processedTracks);
+      let fetchedTracks: Track[];
+      
+      if (selectedRecordLabel === 'All') {
+        const allTracks = await databaseService.getTracksFromApi();
+        fetchedTracks = allTracks;
+      } else {
+        const releases = await databaseService.getReleasesByLabel(selectedRecordLabel);
+        fetchedTracks = releases.map(convertReleaseToTrack);
+      }
+      
+      setTracks(fetchedTracks);
       setFetchState({ loading: false, error: null });
-    } catch (err) {
-      setFetchState({ loading: false, error: err instanceof Error ? err.message : 'Failed to load tracks' });
+    } catch (error) {
+      console.error('Error fetching tracks:', error);
+      setFetchState({ 
+        loading: false, 
+        error: error instanceof Error ? error.message : 'Failed to fetch tracks' 
+      });
     }
-  };
+  }, [selectedRecordLabel]);
 
-  const handleLabelChange = (event: any) => {
-    setSelectedRecordLabel(event.target.value);
+  useEffect(() => {
+    fetchTracks();
+  }, [fetchTracks]);
+
+  const handleLabelChange = (event: SelectChangeEvent<RecordLabel | 'All'>) => {
+    setSelectedRecordLabel(event.target.value as RecordLabel | 'All');
   };
 
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(event.target.value);
   };
 
-  const filterTracks = (tracks: Track[]): Track[] => {
+  const filteredTracks = useMemo(() => {
     const searchLower = searchQuery.toLowerCase();
-    const selectedLabel = selectedRecordLabel as RecordLabel;
-
-    return tracks.filter(track => {
-      const matchesSearch = !searchQuery || (
-        track.title.toLowerCase().includes(searchLower) ||
-        track.artist.name.toLowerCase().includes(searchLower)
-      );
-
-      const matchesLabel = !selectedLabel || track.recordLabel === selectedLabel;
+    return tracks.filter((track) => {
+      const matchesSearch = !searchQuery || 
+        track.title.toLowerCase().includes(searchLower) || 
+        track.artists.some((artist) => artist.name.toLowerCase().includes(searchLower));
+      
+      const matchesLabel = selectedRecordLabel === 'All' || track.label === selectedRecordLabel;
 
       return matchesSearch && matchesLabel;
     });
-  };
-
-  const filteredTracks = useMemo(() => {
-    return filterTracks(tracks);
   }, [tracks, searchQuery, selectedRecordLabel]);
 
-  if (fetchState.loading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
-
-  if (fetchState.error) {
-    return (
-      <Box sx={{ p: 3 }}>
-        <Typography color="error">Error: {fetchState.error}</Typography>
-      </Box>
-    );
-  }
-
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4" gutterBottom>
-        Track Management
-      </Typography>
+    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid item xs={12}>
+          <Typography variant="h4" gutterBottom>
+            Admin Dashboard
+          </Typography>
+        </Grid>
+        <Grid item xs={12} md={6}>
+          <FormControl fullWidth>
+            <InputLabel>Record Label</InputLabel>
+            <Select<RecordLabel | 'All'>
+              value={selectedRecordLabel}
+              label="Record Label"
+              onChange={handleLabelChange}
+            >
+              <MenuItem value="All">All Labels</MenuItem>
+              {Object.entries(LABEL_DISPLAY_NAMES).map(([key, name]) => (
+                <MenuItem key={key} value={key as RecordLabel}>
+                  {name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Grid>
+        <Grid item xs={12} md={6}>
+          <TextField
+            fullWidth
+            label="Search tracks"
+            value={searchQuery}
+            onChange={handleSearchChange}
+            placeholder="Search by title or artist..."
+          />
+        </Grid>
+      </Grid>
 
-      <Box sx={{ mb: 3, display: 'flex', gap: 2 }}>
-        <FormControl sx={{ m: 1, minWidth: 200 }}>
-          <InputLabel>Label</InputLabel>
-          <Select
-            value={selectedRecordLabel}
-            onChange={handleLabelChange}
-            label="Label"
-          >
-            <MenuItem value="All">All Labels</MenuItem>
-            <MenuItem value={RecordLabel.RECORDS}>{LABEL_DISPLAY_NAMES[RecordLabel.RECORDS]}</MenuItem>
-            <MenuItem value={RecordLabel.TECH}>{LABEL_DISPLAY_NAMES[RecordLabel.TECH]}</MenuItem>
-            <MenuItem value={RecordLabel.DEEP}>{LABEL_DISPLAY_NAMES[RecordLabel.DEEP]}</MenuItem>
-          </Select>
-        </FormControl>
+      {fetchState.error && (
+        <Typography color="error" sx={{ mb: 2 }}>
+          Error: {fetchState.error}
+        </Typography>
+      )}
 
-        <TextField
-          label="Search Tracks"
-          variant="outlined"
-          value={searchQuery}
-          onChange={handleSearchChange}
-          sx={{ m: 1, minWidth: 300 }}
-        />
-      </Box>
-
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Title</TableCell>
-              <TableCell>Artist</TableCell>
-              <TableCell>Release Date</TableCell>
-              <TableCell>Label</TableCell>
-              <TableCell>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredTracks.map((track) => (
-              <TableRow key={track.id}>
-                <TableCell>{track.title}</TableCell>
-                <TableCell>{track.artist.name}</TableCell>
-                <TableCell>{new Date(track.releaseDate).toLocaleDateString()}</TableCell>
-                <TableCell>{LABEL_DISPLAY_NAMES[track.recordLabel]}</TableCell>
-                <TableCell>
-                  <Button color="primary" onClick={() => {}}>Edit</Button>
-                  <Button color="error" onClick={() => {}}>Delete</Button>
-                </TableCell>
+      {fetchState.loading ? (
+        <CircularProgress />
+      ) : (
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Title</TableCell>
+                <TableCell>Artist</TableCell>
+                <TableCell>Label</TableCell>
+                <TableCell>Actions</TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-    </Box>
+            </TableHead>
+            <TableBody>
+              {filteredTracks.map((track) => (
+                <TableRow key={track.id}>
+                  <TableCell>{track.title}</TableCell>
+                  <TableCell>
+                    {track.artists.map((artist) => artist.name).join(', ') || 'Unknown Artist'}
+                  </TableCell>
+                  <TableCell>
+                    {track.label ? LABEL_DISPLAY_NAMES[track.label as RecordLabel] : 'Unknown'}
+                  </TableCell>
+                  <TableCell>
+                    {track.spotifyUrl && (
+                      <Button
+                        component={Link}
+                        href={track.spotifyUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        size="small"
+                      >
+                        Open in Spotify
+                      </Button>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
+    </Container>
   );
 };
 

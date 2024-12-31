@@ -1,148 +1,124 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Box, Typography, Container, Grid, Card, CardMedia, CardContent, IconButton } from '@mui/material';
+import {
+  Container,
+  Typography,
+  Box,
+  Grid,
+  CircularProgress,
+  Card,
+  CardMedia,
+  CardContent,
+} from '@mui/material';
+import { spotifyService } from '../services/SpotifyService';
 import { Artist } from '../types/artist';
 import { Track } from '../types/track';
-import { spotifyService } from '../services/SpotifyService';
-import { databaseService } from '../services/DatabaseService';
-import { LoadingSpinner } from '../components';
-import { ErrorMessage } from '../components';
-import { convertSpotifyArtistToArtist } from '../utils/spotifyUtils';
-import { RECORD_LABELS } from '../constants/labels';
-import { useTheme } from '../contexts/ThemeContext';
-import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-import PauseIcon from '@mui/icons-material/Pause';
+import PlaylistTrackList from '../components/PlaylistTrackList';
 
-interface ArtistDetailPageProps {
-  artistId?: string;
-}
-
-const ArtistDetailPage: React.FC<ArtistDetailPageProps> = () => {
-  const { artistName } = useParams<{ artistName: string }>();
+const ArtistDetailPage: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
   const [artist, setArtist] = useState<Artist | null>(null);
   const [tracks, setTracks] = useState<Track[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [playingTrackId, setPlayingTrackId] = useState<string | null>(null);
-  const { colors } = useTheme();
 
   useEffect(() => {
-    const fetchArtistDetails = async () => {
+    const fetchArtistData = async () => {
+      if (!id) return;
+
       try {
-        if (!artistName) {
-          setError('Artist name is required');
-          return;
+        setLoading(true);
+        const artistData = await spotifyService.getArtist(id);
+        if (!artistData) {
+          throw new Error('Artist not found');
         }
+        setArtist(artistData);
 
-        const spotifyArtist = await spotifyService.getArtistDetailsByName(artistName);
-        if (!spotifyArtist) {
-          setError('Artist not found');
-          return;
-        }
-
-        const convertedArtist = convertSpotifyArtistToArtist(spotifyArtist, RECORD_LABELS['Build It Records']);
-        setArtist(convertedArtist);
-
-        const artistTracks = await spotifyService.getArtistTracks(spotifyArtist.id);
-        setTracks(artistTracks);
+        // Fetch artist's top tracks
+        const results = await spotifyService.searchTracks(`artist:${artistData.name}`);
+        setTracks(results);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'An error occurred');
+        console.error('Error fetching artist:', err);
+        setError('Failed to load artist data');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchArtistDetails();
-  }, [artistName]);
-
-  const handlePlayTrack = (track: Track) => {
-    if (playingTrackId === track.id) {
-      setPlayingTrackId(null);
-    } else {
-      setPlayingTrackId(track.id);
-    }
-  };
+    fetchArtistData();
+  }, [id]);
 
   if (loading) {
-    return <LoadingSpinner />;
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
+        <CircularProgress />
+      </Box>
+    );
   }
 
-  if (error) {
-    return <ErrorMessage message={error} />;
-  }
-
-  if (!artist) {
-    return <ErrorMessage message="Artist not found" />;
+  if (error || !artist) {
+    return (
+      <Container>
+        <Typography color="error" align="center">
+          {error || 'Artist not found'}
+        </Typography>
+      </Container>
+    );
   }
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Box sx={{ mb: 4 }}>
-        <Grid container spacing={4}>
-          <Grid item xs={12} md={4}>
-            <Card sx={{ backgroundColor: colors.card, borderRadius: 2 }}>
-              <CardMedia
-                component="img"
-                height="300"
-                image={artist.imageUrl || artist.images?.[0]?.url || 'https://via.placeholder.com/300x300?text=No+Image'}
-                alt={artist.name}
-                sx={{ objectFit: 'cover' }}
-              />
-            </Card>
-          </Grid>
-          <Grid item xs={12} md={8}>
-            <Typography variant="h3" component="h1" sx={{ mb: 2, color: colors.text }}>
-              {artist.name}
-            </Typography>
-            {artist.genres && artist.genres.length > 0 && (
-              <Typography variant="h6" sx={{ mb: 2, color: colors.textSecondary }}>
-                {artist.genres.join(', ')}
+      <Grid container spacing={4}>
+        <Grid item xs={12} md={4}>
+          <Card>
+            <CardMedia
+              component="img"
+              image={artist.artworkUrl || artist.images[0]?.url || 'https://via.placeholder.com/300'}
+              alt={artist.name}
+              sx={{ height: 300, objectFit: 'cover' }}
+            />
+            <CardContent>
+              <Typography variant="h4" gutterBottom>
+                {artist.name}
               </Typography>
-            )}
-            {artist.bio && (
-              <Typography variant="body1" sx={{ mb: 3, color: colors.text }}>
-                {artist.bio}
+              {artist.genres.length > 0 && (
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="subtitle1" color="text.secondary">
+                    Genres
+                  </Typography>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                    {artist.genres.map((genre) => (
+                      <Typography
+                        key={genre}
+                        variant="body2"
+                        sx={{
+                          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                          padding: '4px 8px',
+                          borderRadius: '4px',
+                        }}
+                      >
+                        {genre}
+                      </Typography>
+                    ))}
+                  </Box>
+                </Box>
+              )}
+              <Typography variant="body1" sx={{ mb: 2 }}>
+                {artist.bio || `Artist on ${artist.label}`}
               </Typography>
-            )}
-            {artist.followers && (
-              <Typography variant="body2" sx={{ color: colors.textSecondary }}>
-                {artist.followers.toLocaleString()} followers
+              <Typography variant="subtitle2" color="text.secondary">
+                {artist.followers.total.toLocaleString()} followers
               </Typography>
-            )}
-          </Grid>
+            </CardContent>
+          </Card>
         </Grid>
-      </Box>
 
-      <Typography variant="h4" sx={{ mb: 3, color: colors.text }}>
-        Top Tracks
-      </Typography>
-      <Grid container spacing={3}>
-        {tracks.map((track) => (
-          <Grid item xs={12} sm={6} md={4} key={track.id}>
-            <Card sx={{ backgroundColor: colors.card, borderRadius: 2 }}>
-              <CardMedia
-                component="img"
-                height="200"
-                image={track.albumCover || track.imageUrl || track.album?.images[0]?.url}
-                alt={track.name}
-                sx={{ objectFit: 'cover' }}
-              />
-              <CardContent>
-                <Typography variant="h6" component="div" sx={{ color: colors.text }}>
-                  {track.name}
-                </Typography>
-                {track.preview_url && (
-                  <IconButton 
-                    onClick={() => handlePlayTrack(track)}
-                    sx={{ color: colors.text }}
-                  >
-                    {playingTrackId === track.id ? <PauseIcon /> : <PlayArrowIcon />}
-                  </IconButton>
-                )}
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
+        <Grid item xs={12} md={8}>
+          <Typography variant="h5" gutterBottom>
+            Top Tracks
+          </Typography>
+          <PlaylistTrackList tracks={tracks} />
+        </Grid>
       </Grid>
     </Container>
   );

@@ -1,108 +1,83 @@
 import React from 'react';
 import {
-  Box,
-  Typography,
-  Link,
-  Button,
   Card,
-  CardMedia,
   CardContent,
-  Stack,
+  CardMedia,
+  Typography,
+  Box,
+  IconButton,
+  Link,
 } from '@mui/material';
-import MusicNoteIcon from '@mui/icons-material/MusicNote';
-import AlbumIcon from '@mui/icons-material/Album';
-import CloudQueueIcon from '@mui/icons-material/CloudQueue';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import { useTheme } from '../contexts/ThemeContext';
-import { Release } from '../types/release';
+import { Track } from '../types/track';
 
 interface FeaturedReleaseProps {
-  release: Release;
+  track: Track;
 }
 
-const FeaturedRelease: React.FC<FeaturedReleaseProps> = ({ release }) => {
+const FeaturedRelease: React.FC<FeaturedReleaseProps> = ({ track }) => {
   const { colors } = useTheme();
 
-  const openLink = (url: string | undefined) => {
-    if (url) {
-      window.open(url, '_blank', 'noopener,noreferrer');
-    }
-  };
-
   return (
-    <Card sx={{ 
-      backgroundColor: colors.card,
-      borderRadius: 2,
-      overflow: 'hidden',
-      position: 'relative'
-    }}>
+    <Card
+      sx={{
+        display: 'flex',
+        backgroundColor: colors.card,
+        borderRadius: 2,
+        overflow: 'hidden',
+        position: 'relative',
+      }}
+    >
       <CardMedia
         component="img"
-        image={release.imageUrl || release.artwork || release.artworkUrl}
-        alt={`${release.title} by ${release.artist.name}`}
         sx={{
-          height: 400,
-          objectFit: 'cover'
+          width: 300,
+          objectFit: 'cover',
         }}
+        image={track.artworkUrl || '/default-album-art.png'}
+        alt={track.title}
       />
-      
-      <CardContent sx={{ position: 'relative', zIndex: 1 }}>
-        <Typography variant="h4" component="h1" sx={{ mb: 2, color: colors.text }}>
-          {release.title}
-        </Typography>
-        
-        <Typography variant="h5" sx={{ mb: 2, color: colors.textSecondary }}>
-          {release.artist.name}
-        </Typography>
-
-        {release.genre && (
-          <Typography variant="body1" sx={{ mb: 2, color: colors.textSecondary }}>
-            {release.genre}
+      <Box sx={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
+        <CardContent sx={{ flex: '1 0 auto', p: 4, position: 'relative', zIndex: 1 }}>
+          <Typography variant="h4" component="div" gutterBottom sx={{ color: colors.text }}>
+            {track.title}
           </Typography>
+          <Typography variant="h6" color="textSecondary" gutterBottom sx={{ color: colors.textSecondary }}>
+            {track.artists.map(artist => artist.name).join(', ')}
+          </Typography>
+          {track.album && (
+            <Typography variant="subtitle1" color="text.secondary" gutterBottom sx={{ color: colors.textSecondary }}>
+              Album: {track.album.name}
+            </Typography>
+          )}
+          {track.releaseDate && (
+            <Typography variant="body2" color="text.secondary" sx={{ color: colors.textSecondary }}>
+              Released: {new Date(track.releaseDate).toLocaleDateString()}
+            </Typography>
+          )}
+          {track.label && (
+            <Typography variant="body2" color="text.secondary" sx={{ color: colors.textSecondary }}>
+              Label: {track.label}
+            </Typography>
+          )}
+        </CardContent>
+        {track.spotifyUrl && (
+          <Box sx={{ p: 2, display: 'flex', alignItems: 'center', pl: 1, pb: 1 }}>
+            <Link
+              href={track.spotifyUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+            >
+              <IconButton size="small">
+                <OpenInNewIcon />
+              </IconButton>
+              Open in Spotify
+            </Link>
+          </Box>
         )}
-
-        <Typography variant="body2" sx={{ mb: 3, color: colors.textSecondary }}>
-          {new Date(release.releaseDate).toLocaleDateString(undefined, {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-          })}
-        </Typography>
-
-        <Stack direction="row" spacing={2}>
-          {release.stores?.spotify && (
-            <Button
-              variant="contained"
-              startIcon={<MusicNoteIcon />}
-              onClick={() => openLink(release.stores?.spotify)}
-              sx={{ backgroundColor: colors.primary }}
-            >
-              Spotify
-            </Button>
-          )}
-          
-          {release.stores?.beatport && (
-            <Button
-              variant="contained"
-              startIcon={<AlbumIcon />}
-              onClick={() => openLink(release.stores?.beatport)}
-              sx={{ backgroundColor: colors.primary }}
-            >
-              Beatport
-            </Button>
-          )}
-          
-          {release.stores?.soundcloud && (
-            <Button
-              variant="contained"
-              startIcon={<CloudQueueIcon />}
-              onClick={() => openLink(release.stores?.soundcloud)}
-              sx={{ backgroundColor: colors.primary }}
-            >
-              SoundCloud
-            </Button>
-          )}
-        </Stack>
-      </CardContent>
+      </Box>
     </Card>
   );
 };

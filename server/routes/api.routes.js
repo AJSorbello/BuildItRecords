@@ -15,21 +15,25 @@ const LABEL_SLUGS = {
 
 // Normalize label path to handle different formats
 function normalizeLabelPath(path) {
+  if (!path) return null;
+
+  const labelMap = {
+    'Build It Records': 'buildit-records',
+    'Build It Tech': 'buildit-tech',
+    'Build It Deep': 'buildit-deep',
+    'Records': 'buildit-records',
+    'Tech': 'buildit-tech',
+    'Deep': 'buildit-deep',
+    'buildit-records': 'buildit-records',
+    'buildit-tech': 'buildit-tech',
+    'buildit-deep': 'buildit-deep'
+  };
+
   const normalized = path.toLowerCase()
     .replace(/build ?it ?/g, '')
-    .replace(/-/g, '');
+    .replace(/\s+/g, '-');
   
-  // Map common variations to standard paths
-  const pathMap = {
-    'records': 'records',
-    'tech': 'tech',
-    'deep': 'deep',
-    'builditrecords': 'records',
-    'buildittech': 'tech',
-    'builditdeep': 'deep'
-  };
-  
-  return pathMap[normalized] || normalized;
+  return labelMap[path] || labelMap[normalized] || normalized;
 }
 
 // Debug route to list all labels
@@ -39,6 +43,16 @@ router.get('/labels', async (req, res) => {
     res.json(labels);
   } catch (error) {
     console.error('Error fetching labels:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.post('/labels', async (req, res) => {
+  try {
+    const label = await Label.create(req.body);
+    res.status(201).json(label);
+  } catch (error) {
+    console.error('Error creating label:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -156,43 +170,111 @@ router.get('/releases', async (req, res) => {
   }
 });
 
-// Get all tracks
-router.get('/tracks', async (req, res) => {
+// Get all releases (formerly tracks)
+router.get('/releases', async (req, res) => {
   try {
+    const { label } = req.query;
+    const normalizedLabel = label ? normalizeLabelPath(label) : null;
+    
+    const whereClause = {};
+    if (normalizedLabel) {
+      const labelRecord = await Label.findOne({
+        where: {
+          slug: normalizedLabel
+        }
+      });
+      
+      if (!labelRecord) {
+        return res.status(404).json({ error: `Label not found: ${label}` });
+      }
+      
+      whereClause.labelId = labelRecord.id;
+    }
+
     const releases = await Release.findAll({
+      where: whereClause,
       include: [{
         model: Artist,
         attributes: ['id', 'name', 'spotifyUrl', 'images']
+      }, {
+        model: Label,
+        attributes: ['id', 'name', 'slug']
       }],
       order: [['releaseDate', 'DESC']]
     });
 
-    // Transform the data to match the frontend types
     const transformedReleases = releases.map(release => ({
       id: release.id,
       title: release.title,
       artist: {
-        name: release.artist.name,
-        spotifyUrl: release.artist.spotifyUrl,
-        imageUrl: release.artist.images
+        id: release.Artist.id,
+        name: release.Artist.name,
+        spotifyUrl: release.Artist.spotifyUrl,
+        imageUrl: release.Artist.images?.[0] || null
       },
-      imageUrl: release.images || release.artworkUrl || release.artwork,
+      label: {
+        id: release.Label.id,
+        name: release.Label.name,
+        slug: release.Label.slug
+      },
+      imageUrl: release.albumArtUrl,
       releaseDate: release.releaseDate,
-      genre: release.genre,
-      labelName: release.labelName,
-      label: release.labelName,
-      stores: {
-        spotify: release.spotifyUrl,
-        beatport: release.beatportUrl,
-        soundcloud: release.soundcloudUrl
-      },
-      spotifyUrl: release.spotifyUrl
+      spotifyUrl: release.spotifyUrl,
+      beatportUrl: release.beatportUrl,
+      soundcloudUrl: release.soundcloudUrl,
+      popularity: release.popularity
     }));
 
     res.json(transformedReleases);
   } catch (error) {
-    console.error('Error fetching all tracks:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Error fetching releases:', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
+// Get a single release by ID
+router.get('/releases/:id', async (req, res) => {
+  try {
+    const release = await Release.findByPk(req.params.id, {
+      include: [{
+        model: Artist,
+        attributes: ['id', 'name', 'spotifyUrl', 'images']
+      }, {
+        model: Label,
+        attributes: ['id', 'name', 'slug']
+      }]
+    });
+
+    if (!release) {
+      return res.status(404).json({ error: 'Release not found' });
+    }
+
+    const transformedRelease = {
+      id: release.id,
+      title: release.title,
+      artist: {
+        id: release.Artist.id,
+        name: release.Artist.name,
+        spotifyUrl: release.Artist.spotifyUrl,
+        imageUrl: release.Artist.images?.[0] || null
+      },
+      label: {
+        id: release.Label.id,
+        name: release.Label.name,
+        slug: release.Label.slug
+      },
+      imageUrl: release.albumArtUrl,
+      releaseDate: release.releaseDate,
+      spotifyUrl: release.spotifyUrl,
+      beatportUrl: release.beatportUrl,
+      soundcloudUrl: release.soundcloudUrl,
+      popularity: release.popularity
+    };
+
+    res.json(transformedRelease);
+  } catch (error) {
+    console.error('Error fetching release:', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
   }
 });
 
@@ -528,6 +610,239 @@ router.get('/artists', async (req, res) => {
   } catch (error) {
     console.error('Error fetching artists:', error);
     res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
+// Artists
+router.get('/artists', async (req, res) => {
+  try {
+    const { search, label } = req.query;
+    let whereClause = {};
+    
+    if (search) {
+      whereClause.name = { [Op.iLike]: `%${search}%` };
+    }
+    
+    if (label) {
+      whereClause.labelId = label;
+    }
+    
+    const artists = await Artist.findAll({
+      where: whereClause,
+      include: [
+        { model: Label },
+        { model: Release }
+      ]
+    });
+    
+    res.json(artists);
+  } catch (error) {
+    console.error('Error fetching artists:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.get('/artists/:id', async (req, res) => {
+  try {
+    const artist = await Artist.findByPk(req.params.id, {
+      include: [
+        { model: Label },
+        { model: Release }
+      ]
+    });
+    
+    if (!artist) {
+      return res.status(404).json({ error: 'Artist not found' });
+    }
+    
+    res.json(artist);
+  } catch (error) {
+    console.error('Error fetching artist:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.post('/artists', async (req, res) => {
+  try {
+    const artist = await Artist.create(req.body);
+    res.status(201).json(artist);
+  } catch (error) {
+    console.error('Error creating artist:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Releases
+router.get('/releases', async (req, res) => {
+  try {
+    const { artistId, labelId } = req.query;
+    let whereClause = {};
+    
+    if (artistId) {
+      whereClause.artistId = artistId;
+    }
+    
+    if (labelId) {
+      whereClause.labelId = labelId;
+    }
+    
+    const releases = await Release.findAll({
+      where: whereClause,
+      include: [
+        { model: Artist },
+        { model: Label }
+      ]
+    });
+    
+    res.json(releases);
+  } catch (error) {
+    console.error('Error fetching releases:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.get('/releases/:id', async (req, res) => {
+  try {
+    const release = await Release.findByPk(req.params.id, {
+      include: [
+        { model: Artist },
+        { model: Label }
+      ]
+    });
+    
+    if (!release) {
+      return res.status(404).json({ error: 'Release not found' });
+    }
+    
+    res.json(release);
+  } catch (error) {
+    console.error('Error fetching release:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.post('/releases', async (req, res) => {
+  try {
+    const release = await Release.create(req.body);
+    res.status(201).json(release);
+  } catch (error) {
+    console.error('Error creating release:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Search endpoints
+router.get('/search/artists', async (req, res) => {
+  try {
+    const { q } = req.query;
+    const artists = await Artist.findAll({
+      where: {
+        name: { [Op.iLike]: `%${q}%` }
+      },
+      include: [
+        { model: Label },
+        { model: Release }
+      ]
+    });
+    res.json(artists);
+  } catch (error) {
+    console.error('Error searching artists:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.get('/search/releases', async (req, res) => {
+  try {
+    const { q } = req.query;
+    const releases = await Release.findAll({
+      where: {
+        title: { [Op.iLike]: `%${q}%` }
+      },
+      include: [
+        { model: Artist },
+        { model: Label }
+      ]
+    });
+    res.json(releases);
+  } catch (error) {
+    console.error('Error searching releases:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get artists with their releases
+router.get('/artists/with-releases', async (req, res) => {
+  try {
+    const { artistIds } = req.query;
+    
+    if (!artistIds) {
+      return res.status(400).json({ error: 'artistIds query parameter is required' });
+    }
+    
+    const ids = artistIds.split(',');
+    const spotifyService = new SpotifyService();
+    const artists = await spotifyService.getArtistsWithReleases(ids);
+    
+    res.json(artists);
+  } catch (error) {
+    console.error('Error fetching artists with releases:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get artists by label with their releases
+router.get('/labels/:labelId/artists', async (req, res) => {
+  try {
+    const { labelId } = req.params;
+    const label = await Label.findByPk(labelId);
+    
+    if (!label) {
+      return res.status(404).json({ error: 'Label not found' });
+    }
+    
+    // Get artists for this label
+    const artists = await Artist.findAll({
+      where: { recordLabel: labelId },
+      include: [{ model: Release }]
+    });
+    
+    // If we don't have releases for these artists, fetch them from Spotify
+    const artistsNeedingReleases = artists.filter(artist => !artist.releases?.length);
+    if (artistsNeedingReleases.length > 0) {
+      const spotifyService = new SpotifyService();
+      const artistIds = artistsNeedingReleases.map(artist => artist.id);
+      const spotifyArtists = await spotifyService.getArtistsWithReleases(artistIds);
+      
+      // Update our database with the new releases
+      await sequelize.transaction(async (transaction) => {
+        for (const spotifyArtist of spotifyArtists) {
+          for (const release of spotifyArtist.releases) {
+            await Release.findOrCreate({
+              where: { id: release.id },
+              defaults: {
+                ...release,
+                artistId: spotifyArtist.id,
+                recordLabel: labelId
+              },
+              transaction
+            });
+          }
+        }
+      });
+      
+      // Fetch the updated artists with their releases
+      const updatedArtists = await Artist.findAll({
+        where: { recordLabel: labelId },
+        include: [{ model: Release }]
+      });
+      
+      res.json(updatedArtists);
+    } else {
+      res.json(artists);
+    }
+  } catch (error) {
+    console.error('Error fetching artists for label:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 

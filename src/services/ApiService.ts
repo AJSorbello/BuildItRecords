@@ -41,6 +41,72 @@ class ApiService {
     }
   }
 
+  // Labels
+  public async getLabels(): Promise<RecordLabel[]> {
+    return this.request<RecordLabel[]>('labels');
+  }
+
+  // Artists
+  public async getArtists(params: { label?: string; search?: string } = {}): Promise<Artist[]> {
+    const queryParams = new URLSearchParams();
+    if (params.label) queryParams.set('label', params.label);
+    if (params.search) queryParams.set('search', params.search);
+    
+    const queryString = queryParams.toString();
+    return this.request<Artist[]>(`artists${queryString ? `?${queryString}` : ''}`);
+  }
+
+  public async getArtistById(id: string): Promise<Artist> {
+    return this.request<Artist>(`artists/${id}`);
+  }
+
+  // Releases
+  public async getReleases(params: { artistId?: string; labelId?: string } = {}): Promise<Release[]> {
+    const queryParams = new URLSearchParams();
+    if (params.artistId) queryParams.set('artistId', params.artistId);
+    if (params.labelId) queryParams.set('labelId', params.labelId);
+    
+    const queryString = queryParams.toString();
+    return this.request<Release[]>(`releases${queryString ? `?${queryString}` : ''}`);
+  }
+
+  public async getReleaseById(id: string): Promise<Release> {
+    return this.request<Release>(`releases/${id}`);
+  }
+
+  public async getReleasesByArtistId(artistId: string): Promise<Release[]> {
+    return this.getReleases({ artistId });
+  }
+
+  public async getReleasesByLabelId(labelId: string): Promise<Release[]> {
+    return this.getReleases({ labelId });
+  }
+
+  public async getReleasesByLabel(label: RecordLabel): Promise<Release[]> {
+    const queryParams = new URLSearchParams();
+    queryParams.set('label', this.getLabelPath(label));
+    return this.request<Release[]>(`releases?${queryParams.toString()}`);
+  }
+
+  // Search
+  public async searchArtists(query: string): Promise<Artist[]> {
+    return this.request<Artist[]>(`search/artists?q=${encodeURIComponent(query)}`);
+  }
+
+  public async searchReleases(query: string): Promise<Release[]> {
+    return this.request<Release[]>(`search/releases?q=${encodeURIComponent(query)}`);
+  }
+
+  // Tracks
+  public async getTracks(): Promise<Track[]> {
+    return this.request<Track[]>('tracks');
+  }
+
+  public async getTracksByLabel(label: RecordLabel): Promise<Track[]> {
+    const labelPath = this.getLabelPath(label);
+    return this.request<Track[]>(`${labelPath}/tracks`);
+  }
+
   private getLabelPath(label: RecordLabel | string): string {
     // Map full label names to their API path segments
     const labelMap: { [key: string]: string } = {
@@ -72,53 +138,6 @@ class ApiService {
     };
     
     return normalizedMap[normalized] || normalized;
-  }
-
-  // Tracks
-  public async getTracks(): Promise<Track[]> {
-    return this.request<Track[]>('tracks');
-  }
-
-  public async getTracksByLabel(label: RecordLabel): Promise<Track[]> {
-    const labelPath = this.getLabelPath(label);
-    return this.request<Track[]>(`${labelPath}/tracks`);
-  }
-
-  // Releases
-  public async getReleases(): Promise<Release[]> {
-    return this.request<Release[]>('releases');
-  }
-
-  public async getReleasesByLabel(label: RecordLabel): Promise<Release[]> {
-    const labelPath = this.getLabelPath(label);
-    return this.request<Release[]>(`${labelPath}/releases`);
-  }
-
-  // Artists
-  public async getArtists(): Promise<Artist[]> {
-    return this.request<Artist[]>('artists');
-  }
-
-  public async getArtistsByLabel(label: RecordLabel): Promise<Artist[]> {
-    const labelPath = this.getLabelPath(label);
-    return this.request<Artist[]>(`${labelPath}/artists`);
-  }
-
-  public async getArtistById(artistId: string): Promise<Artist> {
-    return this.request<Artist>(`artists/${artistId}`);
-  }
-
-  // Search
-  public async searchTracks(query: string): Promise<Track[]> {
-    return this.request<Track[]>(`search/tracks?q=${encodeURIComponent(query)}`);
-  }
-
-  public async searchArtists(query: string): Promise<Artist[]> {
-    return this.request<Artist[]>(`search/artists?q=${encodeURIComponent(query)}`);
-  }
-
-  public async searchReleases(query: string): Promise<Release[]> {
-    return this.request<Release[]>(`search/releases?q=${encodeURIComponent(query)}`);
   }
 }
 

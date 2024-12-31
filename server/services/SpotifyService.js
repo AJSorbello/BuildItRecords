@@ -188,13 +188,33 @@ class SpotifyService {
       const labelName = album.label.toLowerCase();
       let labelId;
       
-      if (labelName.includes('build it records')) {
-        labelId = 'build-it-records';
-      } else if (labelName.includes('build it tech')) {
-        labelId = 'build-it-tech';
-      } else if (labelName.includes('build it deep')) {
-        labelId = 'build-it-deep';
-      } else {
+      // Extended label mapping with more variations
+      const labelMappings = {
+        'build it records': 'build-it-records',
+        'builditrecords': 'build-it-records',
+        'build-it-records': 'build-it-records',
+        'build it tech': 'build-it-tech',
+        'buildittech': 'build-it-tech',
+        'build-it-tech': 'build-it-tech',
+        'build it deep': 'build-it-deep',
+        'builditdeep': 'build-it-deep',
+        'build-it-deep': 'build-it-deep'
+      };
+      
+      // Try to find a direct match first
+      labelId = labelMappings[labelName];
+      
+      // If no direct match, try to find a partial match
+      if (!labelId) {
+        for (const [key, value] of Object.entries(labelMappings)) {
+          if (labelName.includes(key.replace(/[-\s]/g, ''))) {
+            labelId = value;
+            break;
+          }
+        }
+      }
+      
+      if (!labelId) {
         throw new Error(`Unknown label: ${album.label}`);
       }
 
@@ -544,6 +564,60 @@ class SpotifyService {
     } catch (error) {
       await transaction.rollback();
       console.error(`Error syncing tracks for label ${labelId}:`, error);
+      throw error;
+    }
+  }
+
+  async getArtistsWithReleases(artistIds) {
+    try {
+      const accessToken = await this.getAccessToken();
+      const results = [];
+      
+      // Process artists in batches of 5 to avoid rate limiting
+      for (let i = 0; i < artistIds.length; i += 5) {
+        const batch = artistIds.slice(i, i + 5);
+        const batchPromises = batch.map(async (artistId) => {
+          try {
+            const artist = await this.getArtistById(artistId, accessToken);
+            const tracks = await this.getArtistTracks(artistId, accessToken);
+            
+            // Get album details for each track
+            const releases = await Promise.all(
+              tracks.map(async (track) => {
+                const album = await this.getAlbumDetails(track.album.id, accessToken);
+                return {
+                  ...track,
+                  album: {
+                    ...track.album,
+                    ...album,
+                    label: album.label
+                  }
+                };
+              })
+            );
+            
+            return {
+              ...artist,
+              releases
+            };
+          } catch (error) {
+            console.error(`Error processing artist ${artistId}:`, error);
+            return null;
+          }
+        });
+        
+        const batchResults = await Promise.all(batchPromises);
+        results.push(...batchResults.filter(Boolean));
+        
+        // Add a small delay between batches to avoid rate limiting
+        if (i + 5 < artistIds.length) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+      
+      return results;
+    } catch (error) {
+      console.error('Error fetching artists with releases:', error);
       throw error;
     }
   }

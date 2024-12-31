@@ -1,80 +1,37 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Box, 
-  Typography, 
-  Grid, 
-  Card, 
-  CardContent, 
-  CardMedia, 
-  IconButton, 
-  CircularProgress,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  List,
-  ListItem,
-  ListItemText
+import React from 'react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  IconButton,
+  Typography,
+  Box,
 } from '@mui/material';
-import { Delete as DeleteIcon, Edit as EditIcon } from '@mui/icons-material';
-import { Track, SpotifyApiTrack } from '../types/track';
-import { fetchTrackDetails } from '../utils/spotifyUtils';
+import EditIcon from '@mui/icons-material/Edit';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import { Track } from '../types/track';
 
 interface AdminTrackListProps {
   tracks: Track[];
-  onDeleteTrack?: (trackId: string) => void;
-  onEditTrack?: (track: Track) => void;
+  onTrackEdit: (track: Track) => void;
 }
 
-const AdminTrackList: React.FC<AdminTrackListProps> = ({ tracks, onDeleteTrack, onEditTrack }) => {
-  const [trackDetails, setTrackDetails] = useState<Record<string, Track>>({});
-  const [loading, setLoading] = useState<Record<string, boolean>>({});
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [trackToDelete, setTrackToDelete] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchAllTrackDetails = async () => {
-      for (const track of tracks) {
-        if (!trackDetails[track.id] && !loading[track.id]) {
-          setLoading(prev => ({ ...prev, [track.id]: true }));
-          try {
-            const details = await fetchTrackDetails(track.spotifyUrl);
-            setTrackDetails(prev => ({ ...prev, [track.id]: details }));
-          } catch (error) {
-            console.error(`Error fetching details for track ${track.id}:`, error);
-          } finally {
-            setLoading(prev => ({ ...prev, [track.id]: false }));
-          }
-        }
-      }
-    };
-
-    fetchAllTrackDetails();
-  }, [tracks]);
-
-  const handleDeleteClick = (trackId: string) => {
-    setTrackToDelete(trackId);
-    setDeleteDialogOpen(true);
+const AdminTrackList: React.FC<AdminTrackListProps> = ({
+  tracks,
+  onTrackEdit,
+}) => {
+  const formatDate = (dateString: string | undefined) => {
+    return dateString ? new Date(dateString).toLocaleDateString() : 'N/A';
   };
 
-  const handleConfirmDelete = () => {
-    if (trackToDelete) {
-      onDeleteTrack?.(trackToDelete);
-      setDeleteDialogOpen(false);
-      setTrackToDelete(null);
-    }
-  };
-
-  const handleCancelDelete = () => {
-    setDeleteDialogOpen(false);
-    setTrackToDelete(null);
-  };
-
-  if (!tracks || tracks.length === 0) {
+  if (!tracks.length) {
     return (
-      <Box sx={{ width: '100%', textAlign: 'center', py: 4 }}>
-        <Typography variant="body1" sx={{ color: '#AAAAAA' }}>
+      <Box sx={{ textAlign: 'center', py: 4 }}>
+        <Typography variant="body1" color="text.secondary">
           No tracks available
         </Typography>
       </Box>
@@ -82,78 +39,53 @@ const AdminTrackList: React.FC<AdminTrackListProps> = ({ tracks, onDeleteTrack, 
   }
 
   return (
-    <>
-      <List>
-        {tracks.map((track) => (
-          <ListItem
-            key={track.id}
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              borderBottom: '1px solid rgba(0, 0, 0, 0.12)',
-              '&:last-child': {
-                borderBottom: 'none',
-              },
-            }}
-          >
-            <Box
-              component="img"
-              src={track.albumCover || '/placeholder-album.jpg'}
-              alt={`${track.trackTitle} album cover`}
-              sx={{
-                width: 60,
-                height: 60,
-                objectFit: 'cover',
-                marginRight: 2,
-                borderRadius: 1
-              }}
-            />
-            <Box sx={{ flexGrow: 1 }}>
-              <Typography variant="subtitle1" component="div">
-                {track.trackTitle}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {track.artist}
-              </Typography>
-            </Box>
-            <Box>
-              {onEditTrack && (
+    <TableContainer component={Paper}>
+      <Table>
+        <TableHead>
+          <TableRow>
+            <TableCell>Title</TableCell>
+            <TableCell>Artist</TableCell>
+            <TableCell>Album</TableCell>
+            <TableCell>Release Date</TableCell>
+            <TableCell>Label</TableCell>
+            <TableCell align="right">Actions</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {tracks.map((track) => (
+            <TableRow key={track.id}>
+              <TableCell>{track.title}</TableCell>
+              <TableCell>
+                {track.artists.map((artist) => artist.name).join(', ')}
+              </TableCell>
+              <TableCell>{track.album?.name || 'N/A'}</TableCell>
+              <TableCell>{formatDate(track.releaseDate)}</TableCell>
+              <TableCell>{track.label || 'N/A'}</TableCell>
+              <TableCell align="right">
                 <IconButton
-                  onClick={() => onEditTrack(track)}
+                  onClick={() => onTrackEdit(track)}
                   size="small"
-                  sx={{ marginRight: 1 }}
+                  title="Edit track"
                 >
                   <EditIcon />
                 </IconButton>
-              )}
-              {onDeleteTrack && (
-                <IconButton
-                  onClick={() => handleDeleteClick(track.id)}
-                  size="small"
-                  color="error"
-                >
-                  <DeleteIcon />
-                </IconButton>
-              )}
-            </Box>
-          </ListItem>
-        ))}
-      </List>
-
-      <Dialog
-        open={deleteDialogOpen}
-        onClose={handleCancelDelete}
-      >
-        <DialogTitle>Confirm Delete</DialogTitle>
-        <DialogContent>
-          Are you sure you want to delete this track?
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCancelDelete}>Cancel</Button>
-          <Button onClick={handleConfirmDelete} color="error">Delete</Button>
-        </DialogActions>
-      </Dialog>
-    </>
+                {track.spotifyUrl && (
+                  <IconButton
+                    href={track.spotifyUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    size="small"
+                    title="Open in Spotify"
+                  >
+                    <OpenInNewIcon />
+                  </IconButton>
+                )}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
   );
 };
 

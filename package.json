@@ -2,7 +2,7 @@
   "name": "builditrecords",
   "version": "0.1.0",
   "private": true,
-  "proxy": "http://localhost:3001",
+  "proxy": "http://localhost:3000",
   "scripts": {
     "start": "PORT=3000 react-scripts start",
     "build": "react-scripts build",
@@ -13,21 +13,23 @@
     "db:init": "psql -U postgres -f server/db/schema.sql",
     "db:start": "pg_ctl -D /usr/local/var/postgres start",
     "db:stop": "pg_ctl -D /usr/local/var/postgres stop",
-    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "dev": "concurrently \"yarn server\" \"yarn client\"",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "type-check": "tsc",
-    "vercel-build": "npm run build",
-    "dev:all": "concurrently \"npm run server\" \"npm run start\""
+    "vercel-build": "yarn build",
+    "dev:all": "concurrently \"yarn server\" \"yarn start\""
   },
   "dependencies": {
     "@emotion/react": "^11.11.3",
     "@emotion/styled": "^11.11.0",
     "@mui/icons-material": "^5.15.3",
     "@mui/material": "^5.15.3",
+    "@mui/system": "^5.15.3",
     "@mui/x-date-pickers": "^6.18.6",
     "@sentry/react": "^7.91.0",
     "@sentry/tracing": "^7.91.0",
-    "@spotify/web-api-ts-sdk": "^1.2.0",
+    "@spotify/web-api-ts-sdk": "1.1.0",
+    "@testing-library/dom": "^9.3.4",
     "@testing-library/jest-dom": "^6.1.6",
     "@testing-library/react": "^14.1.2",
     "@testing-library/user-event": "^14.5.2",
@@ -39,8 +41,11 @@
     "date-fns": "^3.0.6",
     "dotenv": "^16.4.7",
     "framer-motion": "^10.17.9",
+    "knex": "^3.1.0",
     "papaparse": "^5.4.1",
     "pg": "^8.11.3",
+    "pg-promise": "^11.5.4",
+    "pg-query-stream": "^4.5.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-icons": "^5.3.0",
@@ -49,25 +54,33 @@
     "react-scripts": "5.0.1",
     "spotify-web-api-node": "^5.0.2",
     "ts-node": "^10.9.2",
-    "typescript": "^4.9.5",
+    "typescript": "4.9.5",
     "web-vitals": "^3.5.0",
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@types/babel__core": "^7.20.5",
     "@types/jest": "^29.5.11",
-    "@types/node": "^20.10.6",
-    "@types/react": "^18.2.46",
-    "@types/react-dom": "^18.2.18",
-    "@typescript-eslint/eslint-plugin": "^5.62.0",
-    "@typescript-eslint/parser": "^5.62.0",
+    "@types/node": "^20.11.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "@typescript-eslint/eslint-plugin": "^6.18.1",
+    "@typescript-eslint/parser": "^6.18.1",
     "crypto-browserify": "^3.12.1",
     "eslint": "^8.56.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.1.2",
     "eslint-plugin-react": "^7.33.2",
     "eslint-plugin-react-hooks": "^4.6.0",
-    "nodemon": "^3.1.9",
+    "nodemon": "^3.0.2",
     "path-browserify": "^1.0.1",
+    "postcss": "^8.4.49",
+    "prettier": "^3.1.1",
     "stream-browserify": "^3.0.0",
     "util": "^0.12.5"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   },
   "eslintConfig": {
     "extends": [
@@ -86,5 +99,6 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
-  }
+  },
+  "packageManager": "yarn@4.5.3"
 }

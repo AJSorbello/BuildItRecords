@@ -1,7 +1,7 @@
 export enum RecordLabel {
-  RECORDS = 'build-it-records',
-  TECH = 'build-it-tech',
-  DEEP = 'build-it-deep'
+  RECORDS = 'Build It Records',
+  TECH = 'Build It Tech',
+  DEEP = 'Build It Deep'
 }
 
 export type LabelId = 'records' | 'tech' | 'deep';

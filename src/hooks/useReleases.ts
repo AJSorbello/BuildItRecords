@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
-import { Release } from '../types/release';
+import { Album } from '../types/release';
 import { RecordLabel, labelIdToKey } from '../constants/labels';
-import { apiService } from '../services/ApiService';
+import { databaseService } from '../services/DatabaseService';
 
 export interface UseReleasesProps {
-  label: 'records' | 'tech' | 'deep';
+  label: keyof typeof labelIdToKey;
 }
 
 export const useReleases = ({ label }: UseReleasesProps) => {
-  const [releases, setReleases] = useState<Release[]>([]);
+  const [releases, setReleases] = useState<Album[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -18,13 +18,13 @@ export const useReleases = ({ label }: UseReleasesProps) => {
         setLoading(true);
         const labelEnum = labelIdToKey[label];
         if (!labelEnum) {
-          throw new Error('Invalid label');
+          throw new Error(`Invalid label: ${label}`);
         }
-        const fetchedReleases = await apiService.getReleasesByLabel(labelEnum);
+        const fetchedReleases = await databaseService.getReleasesByLabel(labelEnum);
         setReleases(fetchedReleases);
       } catch (err) {
-        console.error('Error fetching releases:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load releases');
+        console.error(`Error fetching releases for label ${label}:`, err);
+        setError(err instanceof Error ? err.message : `Failed to load releases for label ${label}`);
       } finally {
         setLoading(false);
       }

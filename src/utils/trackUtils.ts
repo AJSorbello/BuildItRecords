@@ -4,12 +4,12 @@ import { RECORD_LABELS } from '../constants/labels';
 
 export const getTracksByLabel = (label: typeof RECORD_LABELS[keyof typeof RECORD_LABELS]): Track[] => {
   const { tracks } = getData();
-  return tracks.filter(track => track.recordLabel === label);
+  return tracks.filter(track => track.label === label);
 };
 
 export const getFeaturedTrack = (label: typeof RECORD_LABELS[keyof typeof RECORD_LABELS]): Track | null => {
   const { tracks } = getData();
-  const labelTracks = tracks.filter(track => track.recordLabel === label);
+  const labelTracks = tracks.filter(track => track.label === label);
   // Find the track marked as featured, or return null if none found
   return labelTracks.find(track => track.featured) || null;
 };
@@ -23,8 +23,8 @@ export const getSpotifyAlbumArt = (spotifyUrl: string): string => {
 export const processTracksEfficiently = (tracks: Track[]): Track[] => {
   // Sort tracks by release date (newest first)
   return [...tracks].sort((a, b) => {
-    const dateA = new Date(a.releaseDate);
-    const dateB = new Date(b.releaseDate);
+    const dateA = a.releaseDate ? new Date(a.releaseDate) : new Date(0);
+    const dateB = b.releaseDate ? new Date(b.releaseDate) : new Date(0);
     return dateB.getTime() - dateA.getTime();
   });
 };
