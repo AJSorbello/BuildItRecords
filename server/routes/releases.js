@@ -4,41 +4,34 @@ const { Release, Artist, Label } = require('../models');
 const { sequelize } = require('../models');
 const { Op } = require('sequelize');
 
-// GET /api/releases/:labelSlug
-router.get('/:labelSlug', async (req, res) => {
+// GET /api/releases/:labelId
+router.get('/:labelId', async (req, res) => {
   try {
-    const { labelSlug } = req.params;
-    console.log('Fetching releases for label slug:', labelSlug);
-    
-    // Map the slugs to label names
-    const labelMap = {
-      'build-it-records': 'Build It Records',
-      'build-it-tech': 'Build It Tech',
-      'build-it-deep': 'Build It Deep'
-    };
-
-    const labelName = labelMap[labelSlug];
-    if (!labelName) {
-      console.log('Invalid label slug:', labelSlug);
-      return res.status(404).json({ success: false, message: 'Invalid label' });
-    }
+    const { labelId } = req.params;
+    console.log('Fetching releases for label ID:', labelId);
     
     const label = await Label.findOne({
       where: {
-        name: labelName
+        [Op.or]: [
+          { id: labelId },
+          { slug: labelId }
+        ]
       }
     });
 
     if (!label) {
-      console.log('Label not found:', labelName);
+      console.log('Label not found:', labelId);
       return res.status(404).json({ success: false, message: 'Label not found' });
     }
 
-    console.log('Found label:', label.name, 'with ID:', label.id);
+    console.log('Found label:', label.name);
     
     const releases = await Release.findAll({
       where: {
-        labelId: label.id
+        [Op.or]: [
+          { label_id: label.id },
+          { record_label: label.id }
+        ]
       },
       include: [
         {
@@ -56,27 +49,21 @@ router.get('/:labelSlug', async (req, res) => {
     const transformedReleases = releases.map(release => ({
       id: release.id,
       title: release.title,
-      artist: {
+      artist: release.artist ? {
+        id: release.artist.id,
         name: release.artist.name,
         spotifyUrl: release.artist.spotifyUrl
-      },
-      imageUrl: release.albumArtUrl || release.artworkUrl,
+      } : null,
+      artworkUrl: release.artworkUrl,
       releaseDate: release.releaseDate,
-      genre: release.genre,
       labelName: label.name,
-      label: label.name,
-      stores: {
-        spotify: release.spotifyUrl,
-        beatport: release.beatportUrl,
-        soundcloud: release.soundcloudUrl
-      },
       spotifyUrl: release.spotifyUrl
     }));
 
     res.json(transformedReleases);
   } catch (error) {
     console.error('Error fetching releases:', error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: 'Error fetching releases', error: error.message });
   }
 });
 
@@ -110,7 +97,10 @@ router.get('/featured', async (req, res) => {
     // Get the 6 most recent releases for this label
     const releases = await Release.findAll({
       where: {
-        recordLabel: labelId
+        [Op.or]: [
+          { label_id: labelId },
+          { record_label: labelId }
+        ]
       },
       include: [
         {
@@ -134,7 +124,7 @@ router.get('/featured', async (req, res) => {
         artist: release.artist,
         album: release.album,
         spotifyUrl: release.spotifyUrl,
-        recordLabel: release.recordLabel
+        recordLabel: release.labelId
       }))
     });
   } catch (error) {

@@ -3,29 +3,60 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const sequelize = require('./config/database');
-const { Label, Artist, Release } = require('./models');
+const { Label, Artist, Release, Track } = require('./models');
 const apiRoutes = require('./routes/api.routes');
 
 const app = express();
 const port = process.env.PORT || 3001;
 
-// Middleware
-app.use(cors());
-app.use(helmet());
-app.use(express.json());
+// Enable detailed logging
+const debugLog = (message, ...args) => {
+  console.log(`[${new Date().toISOString()}] ${message}`, ...args);
+};
 
-// Debug middleware to log all requests
-app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
-  next();
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
+
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  process.exit(1);
+});
+
+// CORS configuration
+app.use(cors({
+  origin: ['http://localhost:3000', 'http://localhost:3001'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+}));
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', message: 'Server is running' });
+});
+
+// Security middleware
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false
+}));
+
+// Body parsing middleware
+app.use(express.json());
 
 // Mount API routes
 app.use('/api', apiRoutes);
 
+// Debug middleware to log all requests
+app.use((req, res, next) => {
+  debugLog(`${req.method} ${req.originalUrl}`);
+  next();
+});
+
 // 404 handler
 app.use((req, res) => {
-  console.log('404 Not Found:', req.method, req.originalUrl);
+  debugLog('404 Not Found:', req.method, req.originalUrl);
   res.status(404).json({ 
     success: false, 
     message: 'Not Found',
@@ -45,14 +76,12 @@ app.use((err, req, res, next) => {
 // Test database connection and sync models
 const initDatabase = async () => {
   try {
+    debugLog('Testing database connection...');
     await sequelize.authenticate();
-    console.log('Database connection established successfully');
-
-    // Force sync to recreate tables with new structure
-    await sequelize.sync({ force: true });
-    console.log('Models synchronized with database');
+    debugLog('Database connection established successfully');
 
     // Create default labels if they don't exist
+    debugLog('Creating default labels...');
     await Promise.all([
       Label.findOrCreate({
         where: { id: 'buildit-records' },
@@ -82,29 +111,82 @@ const initDatabase = async () => {
         }
       })
     ]);
-    console.log('Default labels created');
+    debugLog('Default labels created successfully');
+
+    return true;
   } catch (error) {
     console.error('Database initialization error:', error);
+    return false;
+  }
+};
+
+let server;
+
+const startServer = async () => {
+  try {
+    debugLog('Initializing database...');
+    const dbInitialized = await initDatabase();
+    if (!dbInitialized) {
+      console.error('Failed to initialize database. Exiting...');
+      process.exit(1);
+    }
+
+    // Start server
+    server = app.listen(port, () => {
+      debugLog(`Server is running on port ${port}`);
+      debugLog('Available routes:');
+      app._router.stack
+        .filter(r => r.route)
+        .forEach(r => {
+          debugLog(`${Object.keys(r.route.methods).join(',')} ${r.route.path}`);
+        });
+    });
+
+    // Handle graceful shutdown
+    const shutdown = async () => {
+      console.log('[Server] Shutting down gracefully...');
+      
+      // Close server first
+      if (server) {
+        await new Promise((resolve) => {
+          server.close((err) => {
+            if (err) {
+              console.error('[Server] Error closing HTTP server:', err);
+            }
+            resolve();
+          });
+        });
+      }
+
+      // Close database connection
+      try {
+        await sequelize.close();
+        console.log('[Server] Database connection closed');
+      } catch (error) {
+        console.error('[Server] Error closing database connection:', error);
+      }
+
+      // Exit process
+      process.exit(0);
+    };
+
+    // Listen for shutdown signals
+    process.on('SIGTERM', shutdown);
+    process.on('SIGINT', shutdown);
+    process.on('uncaughtException', (error) => {
+      console.error('[Server] Uncaught exception:', error);
+      shutdown();
+    });
+    process.on('unhandledRejection', (error) => {
+      console.error('[Server] Unhandled rejection:', error);
+      shutdown();
+    });
+
+  } catch (error) {
+    console.error('[Server] Failed to start:', error);
     process.exit(1);
   }
 };
 
-const startServer = async () => {
-  await initDatabase();
-  app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
-    console.log('Available routes:');
-    app._router.stack.forEach(r => {
-      if (r.route && r.route.path) {
-        console.log(`${Object.keys(r.route.methods).join(',')} ${r.route.path}`);
-      }
-    });
-  });
-};
-
 // Start server
 startServer();
-
-process.on('uncaughtException', (error) => {
-  console.error('Uncaught Exception:', error);
-});

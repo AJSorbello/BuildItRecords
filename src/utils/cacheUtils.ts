@@ -1,6 +1,7 @@
 import { clearData } from './dataInitializer';
 import { spotifyService } from '../services/SpotifyService';
 import { RECORD_LABELS } from '../constants/labels';
+import { API_URL } from '../config';
 
 export const refreshCache = async () => {
   try {
@@ -8,8 +9,11 @@ export const refreshCache = async () => {
     clearData();
 
     // Call the server's cache warmup endpoint
-    const response = await fetch('/api/redis/warmup', {
+    const response = await fetch(`${API_URL}/redis/warmup`, {
       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      }
     });
 
     if (!response.ok) {

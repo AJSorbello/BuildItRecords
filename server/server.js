@@ -6,8 +6,8 @@ const helmet = require('helmet');
 const path = require('path');
 const { sequelize } = require('./models');
 const SpotifyService = require('./services/SpotifyService');
+const apiRoutes = require('./routes/api.routes');
 const { setupSpotifyRoutes } = require('./routes/spotify.routes');
-const { setupApiRoutes } = require('./routes/api.routes');
 const { setupAuthRoutes } = require('./routes/auth.routes');
 
 const app = express();
@@ -51,18 +51,38 @@ const initExpress = (spotifyService) => {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
-  // Setup routes
-  setupSpotifyRoutes(app);
-  setupApiRoutes(app);
+  // Serve static files from the React app
+  app.use(express.static(path.join(__dirname, '../build')));
+
+  // API routes
+  app.use('/api', apiRoutes);
+  setupSpotifyRoutes(app, spotifyService);
   setupAuthRoutes(app);
 
-  // Serve static files in production
-  if (config.env === 'production') {
-    app.use(express.static(path.join(__dirname, '../build')));
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(__dirname, '../build', 'index.html'));
+  // Health check endpoint
+  app.get('/health', (req, res) => {
+    res.json({ status: 'ok' });
+  });
+
+  // Root route
+  app.get('/', (req, res) => {
+    res.json({ 
+      status: 'ok',
+      message: 'Build It Records API Server',
+      version: '1.0.0',
+      endpoints: {
+        health: '/health',
+        api: '/api/*',
+        spotify: '/spotify/*',
+        auth: '/auth/*'
+      }
     });
-  }
+  });
+
+  // Handle React routing, return all requests to React app
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../build/index.html'));
+  });
 };
 
 // Start server
@@ -71,9 +91,11 @@ const startServer = async () => {
     const { spotifyService } = await initServices();
     initExpress(spotifyService);
 
-    const port = config.port;
+    const port = process.env.PORT || 3001;
     app.listen(port, () => {
-      console.log(`Server running on port ${port} in ${config.env} mode`);
+      console.log(`Server is running on port ${port}`);
+      console.log('Available routes:');
+      console.log('get /health');
     });
   } catch (error) {
     console.error('Failed to start server:', error);

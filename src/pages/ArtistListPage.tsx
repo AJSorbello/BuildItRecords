@@ -4,6 +4,7 @@ import { Box, Typography, Card, styled, Grid, CardContent, CardMedia } from '@mu
 import PageLayout from '../components/PageLayout';
 import { Release } from '../types/release';
 import { spotifyService } from '../services/SpotifyService';
+import config from '../config';
 
 interface Artist {
   name: string;
@@ -118,7 +119,7 @@ const ArtistListPage: React.FC = () => {
     const loadArtists = async () => {
       try {
         setLoading(true);
-        const releases = await fetch('/api/releases').then(res => res.json());
+        const releases = await fetch(`${config.API_URL}/releases`).then(res => res.json());
         console.log('Getting artists for label:', label);
         
         const allArtists = groupByArtists(releases);

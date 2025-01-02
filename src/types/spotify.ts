@@ -1,5 +1,11 @@
 import { Artist } from './artist';
 
+export interface ExternalIds {
+  isrc?: string;
+  ean?: string;
+  upc?: string;
+}
+
 export interface SpotifyTrack {
   id: string;
   name: string;
@@ -22,6 +28,7 @@ export interface SpotifyTrack {
     external_urls: {
       spotify: string;
     };
+    external_ids?: ExternalIds;
   };
   external_urls: {
     spotify: string;
@@ -51,7 +58,6 @@ export interface SpotifyAlbum {
   id: string;
   name: string;
   release_date: string;
-  label: string;
   images: Array<{
     url: string;
     height: number;
@@ -60,9 +66,10 @@ export interface SpotifyAlbum {
   external_urls: {
     spotify: string;
   };
-  tracks: {
-    items: SpotifyTrack[];
-  };
+  external_ids?: ExternalIds;
+  genres?: string[];
+  href?: string;
+  label?: string;
 }
 
 export interface SpotifyRelease {
@@ -74,4 +81,5 @@ export interface SpotifyRelease {
   spotifyUrl: string;
   previewUrl?: string;
   label?: string;
+  external_ids?: ExternalIds;
 }

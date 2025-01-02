@@ -3,6 +3,7 @@ import { Track } from '../types/track';
 import { Artist } from '../types/artist';
 import { Album } from '../types/release';
 import { createArtistFromSpotify, createTrackFromSpotify } from '../utils/spotifyUtils';
+import { API_URL } from '../config';
 
 class SpotifyService {
   private api: SpotifyApi;
@@ -84,6 +85,20 @@ class SpotifyService {
     } catch (error) {
       console.error('Error fetching playlist:', error);
       return null;
+    }
+  }
+
+  async getTracksByLabel(labelId: string): Promise<Track[]> {
+    try {
+      const response = await fetch(`${API_URL}/tracks/${labelId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch tracks');
+      }
+      const data = await response.json();
+      return data.tracks;
+    } catch (error) {
+      console.error('Error fetching tracks by label:', error);
+      return [];
     }
   }
 

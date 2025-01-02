@@ -1,218 +1,162 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import {
-  Container,
-  Typography,
-  TextField,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Button,
-  CircularProgress,
-  Paper,
-  Grid,
-  Link,
-  SelectChangeEvent
-} from '@mui/material';
-import { RecordLabel, LABEL_DISPLAY_NAMES } from '../constants/labels';
-import type { Track } from '../types/track';
-import type { Album, Release } from '../types/release';
-import type { Artist } from '../types/artist';
-import { databaseService } from '../services/DatabaseService';
+import React, { useState, useEffect } from 'react';
+import { Box, Button, ButtonGroup, Typography, CircularProgress, Grid, Paper } from '@mui/material';
+import { API_URL } from '../config';
+import TrackManager from './TrackManager';
 
-interface FetchState {
-  loading: boolean;
-  error: string | null;
+interface Release {
+  id: string;
+  name: string;
+  artist_id: string;
+  artist_name: string;
+  release_date: string;
+  spotify_url: string;
+  images: Array<{
+    url: string;
+    height: number;
+    width: number;
+  }>;
 }
 
-const initialFetchState: FetchState = {
-  loading: false,
-  error: null,
-};
-
-const convertReleaseToTrack = (release: Release): Track => {
-  const defaultArtist: Artist = {
-    id: '',
-    name: release.artist,
-    genres: [],
-    images: [],
-    followers: { total: 0 },
-    external_urls: { spotify: '' },
-    uri: '',
-    popularity: 0
-  };
-
-  return {
-    id: release.id,
-    title: release.name,
-    name: release.name,
-    artists: [{ 
-      id: '', 
-      name: release.artist,
-      external_urls: {
-        spotify: release.external_urls.spotify
-      }
-    }],
-    album: release,
-    duration_ms: 0,
-    external_urls: release.external_urls,
-    preview_url: null,
-    uri: release.uri,
-    popularity: 0,
-    featured: false,
-    artworkUrl: release.images[0]?.url,
-    releaseDate: release.release_date,
-    label: release.album_type === 'album' ? RecordLabel.RECORDS : RecordLabel.TECH,
-    spotifyUrl: release.external_urls.spotify
-  };
-};
-
-export const AdminDashboard: React.FC = () => {
-  const [tracks, setTracks] = useState<Track[]>([]);
-  const [selectedRecordLabel, setSelectedRecordLabel] = useState<RecordLabel | 'All'>('All');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [fetchState, setFetchState] = useState<FetchState>(initialFetchState);
-
-  const fetchTracks = useCallback(async () => {
-    try {
-      setFetchState({ loading: true, error: null });
-      let fetchedTracks: Track[];
-      
-      if (selectedRecordLabel === 'All') {
-        const allTracks = await databaseService.getTracksFromApi();
-        fetchedTracks = allTracks;
-      } else {
-        const releases = await databaseService.getReleasesByLabel(selectedRecordLabel);
-        fetchedTracks = releases.map(convertReleaseToTrack);
-      }
-      
-      setTracks(fetchedTracks);
-      setFetchState({ loading: false, error: null });
-    } catch (error) {
-      console.error('Error fetching tracks:', error);
-      setFetchState({ 
-        loading: false, 
-        error: error instanceof Error ? error.message : 'Failed to fetch tracks' 
-      });
-    }
-  }, [selectedRecordLabel]);
+const AdminDashboard: React.FC = () => {
+  const [selectedLabel, setSelectedLabel] = useState<string>('buildit-records');
+  const [releases, setReleases] = useState<Release[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchTracks();
-  }, [fetchTracks]);
+    if (selectedLabel) {
+      fetchReleases(selectedLabel);
+    }
+  }, [selectedLabel]);
 
-  const handleLabelChange = (event: SelectChangeEvent<RecordLabel | 'All'>) => {
-    setSelectedRecordLabel(event.target.value as RecordLabel | 'All');
+  const handleLabelSelect = (labelId: string) => {
+    setSelectedLabel(labelId);
+    setError(null);
   };
 
-  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(event.target.value);
-  };
+  const handleImport = async () => {
+    if (!selectedLabel) return;
+    setLoading(true);
+    setError(null);
 
-  const filteredTracks = useMemo(() => {
-    const searchLower = searchQuery.toLowerCase();
-    return tracks.filter((track) => {
-      const matchesSearch = !searchQuery || 
-        track.title.toLowerCase().includes(searchLower) || 
-        track.artists.some((artist) => artist.name.toLowerCase().includes(searchLower));
+    try {
+      console.log('Importing releases for label:', selectedLabel);
+      const response = await fetch(`${API_URL}/import-releases/${selectedLabel}`, {
+        method: 'GET',
+      });
+
+      console.log('Import response:', response.status);
       
-      const matchesLabel = selectedRecordLabel === 'All' || track.label === selectedRecordLabel;
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to import releases');
+      }
 
-      return matchesSearch && matchesLabel;
-    });
-  }, [tracks, searchQuery, selectedRecordLabel]);
+      console.log('Import successful:', data);
+      await fetchReleases(selectedLabel);
+    } catch (error) {
+      console.error('Import error:', error);
+      setError(error instanceof Error ? error.message : 'Failed to import releases');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchReleases = async (labelId: string) => {
+    try {
+      console.log('Fetching releases for label:', labelId);
+      const response = await fetch(`${API_URL}/releases/${labelId}`);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch releases');
+      }
+
+      console.log('Received releases:', data);
+      setReleases(data.data || []);
+    } catch (error) {
+      console.error('Error fetching releases:', error);
+      setError(error instanceof Error ? error.message : 'Failed to fetch releases');
+      setReleases([]);
+    }
+  };
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12}>
-          <Typography variant="h4" gutterBottom>
-            Admin Dashboard
-          </Typography>
-        </Grid>
+    <Box sx={{ 
+      p: 3,
+      minHeight: '100vh',
+      backgroundColor: '#121212',
+      color: '#fff'
+    }}>
+      <Typography variant="h4" gutterBottom>
+        Admin Dashboard
+      </Typography>
+
+      <Grid container spacing={3}>
         <Grid item xs={12} md={6}>
-          <FormControl fullWidth>
-            <InputLabel>Record Label</InputLabel>
-            <Select<RecordLabel | 'All'>
-              value={selectedRecordLabel}
-              label="Record Label"
-              onChange={handleLabelChange}
+          <Paper sx={{ p: 3, mb: 3, bgcolor: '#1e1e1e' }}>
+            <Typography variant="h6" gutterBottom>
+              Import Releases
+            </Typography>
+            
+            <ButtonGroup variant="contained" sx={{ mb: 2 }}>
+              <Button
+                onClick={() => handleLabelSelect('buildit-records')}
+                color={selectedLabel === 'buildit-records' ? 'primary' : 'inherit'}
+              >
+                Build It Records
+              </Button>
+              <Button
+                onClick={() => handleLabelSelect('buildit-tech')}
+                color={selectedLabel === 'buildit-tech' ? 'primary' : 'inherit'}
+              >
+                Build It Tech
+              </Button>
+              <Button
+                onClick={() => handleLabelSelect('buildit-deep')}
+                color={selectedLabel === 'buildit-deep' ? 'primary' : 'inherit'}
+              >
+                Build It Deep
+              </Button>
+            </ButtonGroup>
+
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleImport}
+              disabled={loading}
+              sx={{ mb: 2, display: 'block' }}
             >
-              <MenuItem value="All">All Labels</MenuItem>
-              {Object.entries(LABEL_DISPLAY_NAMES).map(([key, name]) => (
-                <MenuItem key={key} value={key as RecordLabel}>
-                  {name}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+              {loading ? (
+                <CircularProgress size={24} color="inherit" />
+              ) : (
+                'Import Releases'
+              )}
+            </Button>
+
+            {error && (
+              <Typography color="error" sx={{ mt: 2 }}>
+                {error}
+              </Typography>
+            )}
+
+            <Typography variant="body2" sx={{ mt: 2 }}>
+              Total Releases: {releases.length}
+            </Typography>
+          </Paper>
         </Grid>
+
         <Grid item xs={12} md={6}>
-          <TextField
-            fullWidth
-            label="Search tracks"
-            value={searchQuery}
-            onChange={handleSearchChange}
-            placeholder="Search by title or artist..."
-          />
+          <Paper sx={{ p: 3, bgcolor: '#1e1e1e' }}>
+            <Typography variant="h6" gutterBottom>
+              Track Management
+            </Typography>
+            <TrackManager selectedLabel={selectedLabel} />
+          </Paper>
         </Grid>
       </Grid>
-
-      {fetchState.error && (
-        <Typography color="error" sx={{ mb: 2 }}>
-          Error: {fetchState.error}
-        </Typography>
-      )}
-
-      {fetchState.loading ? (
-        <CircularProgress />
-      ) : (
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Title</TableCell>
-                <TableCell>Artist</TableCell>
-                <TableCell>Label</TableCell>
-                <TableCell>Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {filteredTracks.map((track) => (
-                <TableRow key={track.id}>
-                  <TableCell>{track.title}</TableCell>
-                  <TableCell>
-                    {track.artists.map((artist) => artist.name).join(', ') || 'Unknown Artist'}
-                  </TableCell>
-                  <TableCell>
-                    {track.label ? LABEL_DISPLAY_NAMES[track.label as RecordLabel] : 'Unknown'}
-                  </TableCell>
-                  <TableCell>
-                    {track.spotifyUrl && (
-                      <Button
-                        component={Link}
-                        href={track.spotifyUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        size="small"
-                      >
-                        Open in Spotify
-                      </Button>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      )}
-    </Container>
+    </Box>
   );
 };
 

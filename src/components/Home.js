@@ -11,6 +11,7 @@ import {
   Tabs,
   Tab,
 } from '@mui/material';
+import { API_URL } from '../config'; // assuming config file is in the parent directory
 
 const Home = () => {
   const [tracks, setTracks] = useState([]);
@@ -24,7 +25,7 @@ const Home = () => {
 
   const fetchTracks = async () => {
     try {
-      const response = await axios.get('/api/track-management/tracks');
+      const response = await axios.get(`${API_URL}/track-management/tracks`);
       setTracks(response.data.tracks || []);
       setLoading(false);
     } catch (err) {

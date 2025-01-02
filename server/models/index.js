@@ -1,53 +1,79 @@
-const { Sequelize } = require('sequelize');
-const config = require('../config/environment');
-
-const sequelize = new Sequelize({
-  dialect: 'postgres',
-  host: config.database.host,
-  port: config.database.port,
-  username: config.database.username,
-  password: config.database.password,
-  database: config.database.name,
-  logging: config.env === 'development' ? console.log : false,
-});
+const sequelize = require('../config/database');
 
 // Import models
 const Artist = require('./artist');
 const Release = require('./release');
 const Label = require('./label');
+const Track = require('./track');
 
 // Define associations
 // Label has many Artists
 Label.hasMany(Artist, {
-  foreignKey: 'recordLabel',
-  sourceKey: 'id'
+  foreignKey: 'label_id',
+  sourceKey: 'id',
+  as: 'artists'
 });
 Artist.belongsTo(Label, {
-  foreignKey: 'recordLabel',
-  targetKey: 'id'
+  foreignKey: 'label_id',
+  targetKey: 'id',
+  as: 'label'
 });
 
 // Label has many Releases
 Label.hasMany(Release, {
-  foreignKey: 'recordLabel',
-  sourceKey: 'id'
+  foreignKey: 'label_id',
+  sourceKey: 'id',
+  as: 'releases'
 });
 Release.belongsTo(Label, {
-  foreignKey: 'recordLabel',
-  targetKey: 'id'
+  foreignKey: 'label_id',
+  targetKey: 'id',
+  as: 'label'
 });
 
 // Artist has many Releases
 Artist.hasMany(Release, {
-  foreignKey: 'artistId'
+  foreignKey: 'artist_id',
+  sourceKey: 'id',
+  as: 'releases'
 });
 Release.belongsTo(Artist, {
-  foreignKey: 'artistId'
+  foreignKey: 'artist_id',
+  targetKey: 'id',
+  as: 'artist'
 });
 
+// Release has many Tracks
+Release.hasMany(Track, {
+  foreignKey: 'release_id',
+  sourceKey: 'id',
+  as: 'tracks'
+});
+Track.belongsTo(Release, {
+  foreignKey: 'release_id',
+  targetKey: 'id',
+  as: 'release'
+});
+
+// Track belongs to Artist
+Track.belongsTo(Artist, {
+  foreignKey: 'artist_id',
+  targetKey: 'id',
+  as: 'artist'
+});
+
+// Track belongs to Label
+Track.belongsTo(Label, {
+  foreignKey: 'label_id',
+  targetKey: 'id',
+  as: 'label'
+});
+
+// Export models and sequelize instance
 module.exports = {
   sequelize,
   Artist,
   Release,
-  Label
+  Label,
+  Track
 };

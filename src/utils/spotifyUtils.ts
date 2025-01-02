@@ -1,98 +1,152 @@
-import { Artist, SpotifyArtistData } from '../types/artist';
-import { Track, SpotifyTrack } from '../types/track';
-import { Album, Release, SpotifyAlbum } from '../types/release';
+import { Artist } from '../types/artist';
+import { Track } from '../types/track';
+import { Release, Album } from '../types/release';
 import { RecordLabel, RECORD_LABELS } from '../constants/labels';
+import { ClientCredentialsStrategy, SpotifyApi } from '@spotify/web-api-ts-sdk';
 
-export const createArtistFromSpotify = (
-  spotifyArtist: SpotifyArtistData,
-  label: RecordLabel = RecordLabel.RECORDS
-): Artist => {
-  return {
-    id: spotifyArtist.id,
-    name: spotifyArtist.name,
-    images: spotifyArtist.images || [],
-    genres: spotifyArtist.genres || [],
+// Initialize the Spotify API client
+const authStrategy = new ClientCredentialsStrategy(
+  process.env.REACT_APP_SPOTIFY_CLIENT_ID || '',
+  process.env.REACT_APP_SPOTIFY_CLIENT_SECRET || ''
+);
+
+export const spotifyApi = new SpotifyApi(authStrategy);
+
+// Define our interfaces
+export interface SpotifyTrack {
+  album: SpotifyAlbum;
+  popularity?: number;
+  external_ids?: { isrc: string };
+}
+
+export interface SpotifyAlbum {
+  id: string;
+  name: string;
+  artists: Array<{
+    id: string;
+    name: string;
+    uri: string;
     external_urls: {
-      spotify: spotifyArtist.external_urls.spotify
-    },
-    followers: spotifyArtist.followers,
-    popularity: spotifyArtist.popularity,
-    label,
-    bio: '',
-    artworkUrl: spotifyArtist.images?.[0]?.url || '',
-    spotifyUrl: spotifyArtist.external_urls.spotify
+      spotify: string;
+    };
+  }>;
+  images: Array<{
+    url: string;
+    height: number;
+    width: number;
+  }>;
+  release_date: string;
+  release_date_precision: 'day' | 'month' | 'year';
+  total_tracks: number;
+  external_urls: {
+    spotify: string;
   };
-};
+  external_ids: {
+    upc?: string;
+  };
+  genres: string[];
+  href: string;
+  label: string;
+  uri: string;
+  tracks?: {
+    items: SpotifyTrack[];
+  };
+  popularity?: number;
+  album_group?: string;
+  album_type: 'album' | 'single' | 'compilation';
+  available_markets?: string[];
+  copyrights?: Array<{
+    text: string;
+    type: string;
+  }>;
+}
 
-export const createTrackFromSpotify = (
-  spotifyTrack: SpotifyTrack,
-  label: RecordLabel = RecordLabel.RECORDS
-): Track => {
+export interface SpotifyArtist {
+  id: string;
+  name: string;
+  uri: string;
+  external_urls: {
+    spotify: string;
+  };
+  images: Array<{
+    url: string;
+    height: number;
+    width: number;
+  }>;
+  genres: string[];
+  followers: {
+    href: string | null;
+    total: number;
+  };
+  popularity: number;
+}
+
+export const transformSpotifyTrack = (spotifyTrack: SpotifyTrack): Track => {
   return {
     id: spotifyTrack.id,
-    title: spotifyTrack.name,
     name: spotifyTrack.name,
+    title: spotifyTrack.name,
     artists: spotifyTrack.artists.map(artist => ({
       id: artist.id,
       name: artist.name,
-      external_urls: {
-        spotify: artist.external_urls.spotify
-      }
+      uri: artist.uri
     })),
     duration_ms: spotifyTrack.duration_ms,
-    preview_url: spotifyTrack.preview_url || undefined,
-    external_urls: {
-      spotify: spotifyTrack.external_urls.spotify
-    },
+    preview_url: spotifyTrack.preview_url,
+    external_urls: spotifyTrack.external_urls,
+    external_ids: spotifyTrack.external_ids || { isrc: '' },
     uri: spotifyTrack.uri,
-    label,
+    album: transformSpotifyAlbum(spotifyTrack.album),
+    popularity: spotifyTrack.popularity || 0,
     releaseDate: spotifyTrack.album.release_date,
     artworkUrl: spotifyTrack.album.images[0]?.url || '',
-    featured: false,
-    popularity: spotifyTrack.popularity
+    spotifyUrl: spotifyTrack.external_urls.spotify
   };
 };
 
-export const createAlbumFromSpotify = (
-  spotifyAlbum: SpotifyAlbum,
-  label: RecordLabel = RecordLabel.RECORDS
-): Album => {
+export const transformSpotifyArtist = (spotifyArtist: SpotifyArtist): Artist => {
+  return {
+    id: spotifyArtist.id,
+    name: spotifyArtist.name,
+    uri: spotifyArtist.uri,
+    images: spotifyArtist.images,
+    genres: spotifyArtist.genres,
+    followers: spotifyArtist.followers,
+    popularity: spotifyArtist.popularity,
+    external_urls: spotifyArtist.external_urls
+  };
+};
+
+export const transformSpotifyAlbum = (spotifyAlbum: SpotifyAlbum): Album => {
   return {
     id: spotifyAlbum.id,
-    title: spotifyAlbum.name,
     name: spotifyAlbum.name,
-    artists: spotifyAlbum.artists.map(artist => ({
-      id: artist.id,
-      name: artist.name,
-      external_urls: {
-        spotify: artist.external_urls.spotify
-      }
-    })),
-    releaseDate: spotifyAlbum.release_date,
-    total_tracks: spotifyAlbum.total_tracks,
-    tracks: spotifyAlbum.tracks?.items.map(track => createTrackFromSpotify({
-      ...track,
-      album: spotifyAlbum,
-      popularity: 0,
-      external_ids: {}
-    }, label)),
-    external_urls: {
-      spotify: spotifyAlbum.external_urls.spotify
-    },
-    label,
-    popularity: spotifyAlbum.popularity,
-    artworkUrl: spotifyAlbum.images[0]?.url || '',
+    artists: spotifyAlbum.artists,
     images: spotifyAlbum.images,
-    spotifyUrl: spotifyAlbum.external_urls.spotify
+    release_date: spotifyAlbum.release_date,
+    release_date_precision: spotifyAlbum.release_date_precision,
+    total_tracks: spotifyAlbum.total_tracks,
+    external_urls: spotifyAlbum.external_urls,
+    uri: spotifyAlbum.uri,
+    type: 'album',
+    album_type: spotifyAlbum.album_type
   };
 };
 
-export const createReleaseFromSpotify = (
-  spotifyAlbum: SpotifyAlbum,
-  label: RecordLabel = RecordLabel.RECORDS
-): Release => {
-  return {
-    ...createAlbumFromSpotify(spotifyAlbum, label),
-    artist: spotifyAlbum.artists[0]?.name || ''
-  };
+export const getTracksByLabel = async (label: string): Promise<Track[]> => {
+  try {
+    const searchResults = await spotifyApi.search(
+      `label:${label}`,
+      ['track']
+    );
+
+    const tracks = searchResults.tracks.items
+      .filter(track => track.album?.label?.toLowerCase() === label.toLowerCase())
+      .map(track => transformSpotifyTrack(track as unknown as SpotifyTrack));
+
+    return tracks;
+  } catch (error) {
+    console.error(`Error fetching tracks for label ${label}:`, error);
+    return [];
+  }
 };

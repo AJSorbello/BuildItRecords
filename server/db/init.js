@@ -1,17 +1,18 @@
 const { Pool } = require('pg');
 const fs = require('fs').promises;
 const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../../.env') });
+
+const pool = new Pool({
+  user: process.env.POSTGRES_USER,
+  host: process.env.POSTGRES_HOST,
+  database: process.env.POSTGRES_DB,
+  password: process.env.POSTGRES_PASSWORD,
+  port: parseInt(process.env.POSTGRES_PORT || '5432'),
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+});
 
 const initializeDatabase = async () => {
-  const pool = new Pool({
-    user: process.env.POSTGRES_USER,
-    host: process.env.POSTGRES_HOST,
-    database: process.env.POSTGRES_DB,
-    password: process.env.POSTGRES_PASSWORD,
-    port: parseInt(process.env.POSTGRES_PORT || '5432'),
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-  });
-
   try {
     // Read and execute schema.sql
     const schemaPath = path.join(__dirname, 'schema.sql');
@@ -36,8 +37,6 @@ const initializeDatabase = async () => {
   } catch (error) {
     console.error('Error initializing database:', error);
     process.exit(1);
-  } finally {
-    await pool.end();
   }
 };
 
@@ -46,4 +45,4 @@ if (require.main === module) {
   initializeDatabase();
 }
 
-module.exports = initializeDatabase;
+module.exports = { pool, initializeDatabase };

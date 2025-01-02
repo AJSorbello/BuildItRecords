@@ -1,47 +1,46 @@
 const path = require('path');
 const dotenv = require('dotenv');
 
-// Determine which environment to use
-const NODE_ENV = process.env.NODE_ENV || 'development';
-
 // Load environment variables
-const envPath = path.resolve(process.cwd(), `.env.${NODE_ENV}`);
-dotenv.config({ path: envPath });
-
-// Fallback to .env if environment-specific file doesn't exist
-dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+dotenv.config();
 
 const config = {
-  env: NODE_ENV,
+  env: process.env.NODE_ENV || 'development',
   port: process.env.PORT || 3001,
   database: {
     host: process.env.DB_HOST || 'localhost',
     port: parseInt(process.env.DB_PORT) || 5432,
     username: process.env.DB_USER || 'postgres',
     password: process.env.DB_PASSWORD || '',
-    name: process.env.DB_NAME || 'buildit_records',
+    name: process.env.DB_NAME || 'builditrecords',
     dialect: 'postgres'
   },
   spotify: {
     clientId: process.env.SPOTIFY_CLIENT_ID,
     clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
     redirectUri: process.env.SPOTIFY_REDIRECT_URI,
+    playlists: {
+      'buildit-records': process.env.SPOTIFY_BUILDIT_RECORDS_PLAYLIST_ID,
+      'buildit-tech': process.env.SPOTIFY_BUILDIT_TECH_PLAYLIST_ID,
+      'buildit-deep': process.env.SPOTIFY_BUILDIT_DEEP_PLAYLIST_ID
+    }
   },
   admin: {
-    username: process.env.ADMIN_USERNAME,
-    passwordHash: process.env.ADMIN_PASSWORD_HASH,
+    username: process.env.ADMIN_USERNAME || 'admin',
+    passwordHash: process.env.ADMIN_PASSWORD_HASH
   },
   jwt: {
-    secret: process.env.JWT_SECRET || 'development-secret',
-  },
+    secret: process.env.JWT_SECRET || 'development-secret'
+  }
 };
 
 // Validate required configuration
 const validateConfig = (config) => {
   const requiredFields = {
     'database.host': config.database.host,
-    'database.port': config.database.port,
     'database.name': config.database.name,
+    'spotify.clientId': config.spotify.clientId,
+    'spotify.clientSecret': config.spotify.clientSecret
   };
 
   const missing = Object.entries(requiredFields)

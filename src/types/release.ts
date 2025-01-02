@@ -1,4 +1,6 @@
 import { Artist } from './artist';
+import { Track } from './track';
+import { RecordLabel } from '../constants/labels';
 
 export interface Album {
   id: string;
@@ -41,8 +43,42 @@ export interface AlbumSearchParams {
   include_groups?: ('album' | 'single' | 'compilation')[];
 }
 
-export interface Release extends Album {
-  artist: string;
+export interface Release {
+  id: string;
+  title: string;
+  artist: Artist;
+  artists: {
+    id: string;
+    name: string;
+    uri: string;
+  }[];
+  releaseDate: string;
+  images: {
+    url: string;
+    height: number;
+    width: number;
+  }[];
+  external_urls: {
+    spotify: string;
+  };
+  total_tracks: number;
+  uri: string;
+  tracks: Track[];
+  recordLabel: string;
+  label: RecordLabel;
+  popularity: number;
+  artworkUrl: string;
+  spotifyUrl: string;
+  beatportUrl?: string;
+  soundcloudUrl?: string;
+  artwork?: string;
+  genre?: string;
+  labelName?: string;
+  stores?: {
+    spotify: string;
+    beatport?: string;
+    soundcloud?: string;
+  };
 }
 
 export interface ReleaseFormData {
@@ -98,21 +134,38 @@ export const createAlbum = (data: Partial<Album>): Album => {
     name: data.name || '',
     artists: data.artists || [],
     images: data.images || [],
-    release_date: data.release_date || new Date().toISOString(),
+    release_date: data.release_date || '',
     release_date_precision: data.release_date_precision || 'day',
     total_tracks: data.total_tracks || 0,
-    external_urls: {
-      spotify: data.external_urls?.spotify || ''
-    },
+    external_urls: data.external_urls || { spotify: '' },
     uri: data.uri || '',
-    type: data.type || 'album',
-    album_type: data.album_type || 'album'
+    type: 'album',
+    album_type: data.album_type || 'album',
   };
 };
 
 export const createRelease = (data: Partial<Release>): Release => {
   return {
-    ...createAlbum(data),
-    artist: data.artist || data.artists?.[0]?.name || ''
+    id: data.id || '',
+    title: data.title || '',
+    artist: data.artist || { id: '', name: '', uri: '' },
+    artists: data.artists || [],
+    releaseDate: data.releaseDate || '',
+    images: data.images || [],
+    external_urls: data.external_urls || { spotify: '' },
+    total_tracks: data.total_tracks || 0,
+    uri: data.uri || '',
+    tracks: data.tracks || [],
+    recordLabel: data.recordLabel || '',
+    label: data.label || 'buildit-records',
+    popularity: data.popularity || 0,
+    artworkUrl: data.artworkUrl || '',
+    spotifyUrl: data.spotifyUrl || '',
+    beatportUrl: data.beatportUrl,
+    soundcloudUrl: data.soundcloudUrl,
+    artwork: data.artwork,
+    genre: data.genre,
+    labelName: data.labelName,
+    stores: data.stores || { spotify: '' },
   };
 };

@@ -4,71 +4,66 @@ import {
   CardContent,
   CardMedia,
   Typography,
-  IconButton,
-  Box,
   Link,
+  Box,
 } from '@mui/material';
-import OpenInNewIcon from '@mui/icons-material/OpenInNew';
-import { Track } from '../types/track';
+import { OpenInNew as OpenInNewIcon } from '@mui/icons-material';
 
 interface ReleaseCardProps {
-  track: Track;
-  onClick?: () => void;
+  id: string;
+  name: string;
+  artist: string;
+  imageUrl?: string;
+  releaseDate: Date;
+  spotifyUrl?: string;
 }
 
-const ReleaseCard: React.FC<ReleaseCardProps> = ({ track, onClick }) => {
+const ReleaseCard: React.FC<ReleaseCardProps> = ({
+  name,
+  artist,
+  imageUrl,
+  releaseDate,
+  spotifyUrl,
+}) => {
+  const formattedDate = new Date(releaseDate).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+
   return (
-    <Card
-      onClick={onClick}
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
-        cursor: onClick ? 'pointer' : 'default',
-        transition: 'transform 0.2s',
-        '&:hover': {
-          transform: onClick ? 'scale(1.02)' : 'none',
-        },
-      }}
-    >
-      <CardMedia
-        component="img"
-        height="200"
-        image={track.artworkUrl || '/default-album-art.png'}
-        alt={track.title}
-        sx={{ objectFit: 'cover' }}
-      />
-      <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-        <Typography variant="h6" component="div" gutterBottom noWrap>
-          {track.title}
+    <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      {imageUrl && (
+        <CardMedia
+          component="img"
+          image={imageUrl}
+          alt={`${name} by ${artist}`}
+          sx={{ aspectRatio: '1/1', objectFit: 'cover' }}
+        />
+      )}
+      <CardContent sx={{ flexGrow: 1 }}>
+        <Typography variant="h6" component="h2" gutterBottom noWrap>
+          {name}
         </Typography>
-        <Typography variant="body2" color="text.secondary" gutterBottom>
-          {track.artists.map(artist => artist.name).join(', ')}
+        <Typography variant="subtitle1" color="text.secondary" gutterBottom>
+          {artist}
         </Typography>
-        {track.releaseDate && (
-          <Typography variant="caption" color="text.secondary">
-            {new Date(track.releaseDate).toLocaleDateString()}
-          </Typography>
-        )}
-        {track.label && (
-          <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
-            {track.label}
-          </Typography>
-        )}
-        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mt: 'auto', pt: 1 }}>
-          {track.spotifyUrl && (
+        <Typography variant="body2" color="text.secondary">
+          Released: {formattedDate}
+        </Typography>
+        {spotifyUrl && (
+          <Box sx={{ mt: 2 }}>
             <Link
-              href={track.spotifyUrl}
+              href={spotifyUrl}
               target="_blank"
               rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
+              sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
             >
-              <IconButton size="small" sx={{ color: 'primary.main' }}>
-                <OpenInNewIcon />
-              </IconButton>
+              Listen on Spotify
+              <OpenInNewIcon sx={{ fontSize: 16 }} />
             </Link>
-          )}
-        </Box>
+          </Box>
+        )}
       </CardContent>
     </Card>
   );

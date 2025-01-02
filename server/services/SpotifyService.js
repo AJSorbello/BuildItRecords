@@ -1,6 +1,6 @@
 const axios = require('axios');
 const querystring = require('querystring');
-const { Label, Artist, Release } = require('../models');
+const { Label, Artist, Release, Track } = require('../models');
 const sequelize = require('../config/database');
 const labelArtists = require('../data/labelArtists');
 
@@ -16,10 +16,24 @@ class SpotifyService {
     this.clientId = clientId;
     this.clientSecret = clientSecret;
     this.baseUrl = 'https://api.spotify.com/v1';
+    this.accessToken = null;
+  }
+
+  async initialize() {
+    try {
+      console.log('Initializing SpotifyService...');
+      this.accessToken = await this.getAccessToken();
+      console.log('SpotifyService initialized with access token');
+      return true;
+    } catch (error) {
+      console.error('Failed to initialize SpotifyService:', error.response?.data || error.message);
+      throw new Error('Failed to initialize Spotify service: ' + (error.response?.data?.error || error.message));
+    }
   }
 
   async getAccessToken() {
     try {
+      console.log('Getting Spotify access token...');
       const auth = Buffer.from(`${this.clientId}:${this.clientSecret}`).toString('base64');
       const data = querystring.stringify({ grant_type: 'client_credentials' });
 
@@ -30,15 +44,18 @@ class SpotifyService {
         }
       });
 
+      console.log('Successfully obtained Spotify access token');
       return response.data.access_token;
     } catch (error) {
-      console.error('Error getting Spotify access token:', error);
-      throw error;
+      console.error('Error getting Spotify access token:', error.response?.data || error.message);
+      throw new Error('Failed to get Spotify access token: ' + (error.response?.data?.error || error.message));
     }
   }
 
   async getArtistById(artistId, accessToken) {
     try {
+      console.log(`Getting Spotify artist with ID: ${artistId}`);
+      
       const response = await axios.get(`${this.baseUrl}/artists/${artistId}`, {
         headers: {
           'Authorization': `Bearer ${accessToken}`
@@ -46,6 +63,7 @@ class SpotifyService {
       });
 
       const artist = response.data;
+      console.log(`Successfully retrieved artist: ${artist.name}`);
       return {
         id: artist.id,
         name: artist.name,
@@ -56,13 +74,23 @@ class SpotifyService {
         popularity: artist.popularity
       };
     } catch (error) {
-      console.error(`Error getting artist ${artistId}:`, error);
-      throw error;
+      // Check if it's an authentication error
+      if (error.response?.status === 401) {
+        console.log('Access token expired, refreshing...');
+        const newAccessToken = await this.getAccessToken();
+        // Retry the request once with new token
+        return this.getArtistById(artistId, newAccessToken);
+      }
+      
+      console.error(`Error getting artist ${artistId}:`, error.response?.data || error.message);
+      throw new Error('Failed to get Spotify artist: ' + (error.response?.data?.error?.message || error.message));
     }
   }
 
   async getArtistTracks(artistId, accessToken) {
     try {
+      console.log(`Getting Spotify tracks for artist with ID: ${artistId}`);
+      
       const response = await axios.get(`${this.baseUrl}/artists/${artistId}/top-tracks`, {
         headers: {
           'Authorization': `Bearer ${accessToken}`
@@ -72,7 +100,7 @@ class SpotifyService {
         }
       });
 
-      return response.data.tracks.map(track => ({
+      const tracks = response.data.tracks.map(track => ({
         id: track.id,
         name: track.name,
         trackTitle: track.name,
@@ -91,44 +119,78 @@ class SpotifyService {
         duration_ms: track.duration_ms,
         popularity: track.popularity
       }));
+      console.log(`Successfully retrieved ${tracks.length} tracks for artist ${artistId}`);
+      return tracks;
     } catch (error) {
-      console.error(`Error getting tracks for artist ${artistId}:`, error);
-      throw error;
+      // Check if it's an authentication error
+      if (error.response?.status === 401) {
+        console.log('Access token expired, refreshing...');
+        const newAccessToken = await this.getAccessToken();
+        // Retry the request once with new token
+        return this.getArtistTracks(artistId, newAccessToken);
+      }
+      
+      console.error(`Error getting tracks for artist ${artistId}:`, error.response?.data || error.message);
+      throw new Error('Failed to get Spotify tracks: ' + (error.response?.data?.error?.message || error.message));
     }
   }
 
   async getTrackDetails(trackId, accessToken) {
     try {
+      console.log(`Getting Spotify track with ID: ${trackId}`);
+      
       const response = await axios.get(`${this.baseUrl}/tracks/${trackId}`, {
         headers: {
           'Authorization': `Bearer ${accessToken}`
         }
       });
 
+      console.log(`Successfully retrieved track: ${response.data.name}`);
       return response.data;
     } catch (error) {
-      console.error(`Error getting track ${trackId}:`, error);
-      throw error;
+      // Check if it's an authentication error
+      if (error.response?.status === 401) {
+        console.log('Access token expired, refreshing...');
+        const newAccessToken = await this.getAccessToken();
+        // Retry the request once with new token
+        return this.getTrackDetails(trackId, newAccessToken);
+      }
+      
+      console.error(`Error getting track ${trackId}:`, error.response?.data || error.message);
+      throw new Error('Failed to get Spotify track: ' + (error.response?.data?.error?.message || error.message));
     }
   }
 
   async getAlbumDetails(albumId, accessToken) {
     try {
+      console.log(`Getting Spotify album with ID: ${albumId}`);
+      
       const response = await axios.get(`${this.baseUrl}/albums/${albumId}`, {
         headers: {
           'Authorization': `Bearer ${accessToken}`
         }
       });
 
+      console.log(`Successfully retrieved album: ${response.data.name}`);
       return response.data;
     } catch (error) {
-      console.error(`Error getting album ${albumId}:`, error);
-      throw error;
+      // Check if it's an authentication error
+      if (error.response?.status === 401) {
+        console.log('Access token expired, refreshing...');
+        const newAccessToken = await this.getAccessToken();
+        // Retry the request once with new token
+        return this.getAlbumDetails(albumId, newAccessToken);
+      }
+      
+      console.error(`Error getting album ${albumId}:`, error.response?.data || error.message);
+      throw new Error('Failed to get Spotify album: ' + (error.response?.data?.error?.message || error.message));
     }
   }
 
   async discoverArtistsFromTrack(trackId) {
     try {
+      console.log(`Discovering artists from track with ID: ${trackId}`);
+      
       const accessToken = await this.getAccessToken();
       const track = await this.getTrackDetails(trackId, accessToken);
       const album = await this.getAlbumDetails(track.album.id, accessToken);
@@ -158,7 +220,7 @@ class SpotifyService {
           const artist = await this.getArtistById(artistId, accessToken);
           artists.push(artist);
         } catch (error) {
-          console.error(`Error getting artist ${artistId}:`, error);
+          console.error(`Error getting artist ${artistId}:`, error.response?.data || error.message);
           continue;
         }
       }
@@ -169,8 +231,8 @@ class SpotifyService {
         artists
       };
     } catch (error) {
-      console.error(`Error discovering artists from track ${trackId}:`, error);
-      throw error;
+      console.error(`Error discovering artists from track ${trackId}:`, error.response?.data || error.message);
+      throw new Error('Failed to discover artists from track: ' + (error.response?.data?.error?.message || error.message));
     }
   }
 
@@ -178,6 +240,8 @@ class SpotifyService {
     const transaction = await sequelize.transaction();
 
     try {
+      console.log(`Syncing label from track with ID: ${trackId}`);
+      
       const { track, album, artists } = await this.discoverArtistsFromTrack(trackId);
       const results = {
         artists: [],
@@ -188,17 +252,23 @@ class SpotifyService {
       const labelName = album.label.toLowerCase();
       let labelId;
       
-      // Extended label mapping with more variations
+      // Label mappings with correct names
       const labelMappings = {
-        'build it records': 'build-it-records',
-        'builditrecords': 'build-it-records',
-        'build-it-records': 'build-it-records',
-        'build it tech': 'build-it-tech',
-        'buildittech': 'build-it-tech',
-        'build-it-tech': 'build-it-tech',
-        'build it deep': 'build-it-deep',
-        'builditdeep': 'build-it-deep',
-        'build-it-deep': 'build-it-deep'
+        'build it records': 'buildit-records',
+        'builditrecords': 'buildit-records',
+        'build-it-records': 'buildit-records',
+        'build it tech': 'buildit-tech',
+        'buildittech': 'buildit-tech',
+        'build-it-tech': 'buildit-tech',
+        'build it deep': 'buildit-deep',
+        'builditdeep': 'buildit-deep',
+        'build-it-deep': 'buildit-deep'
+      };
+
+      const labelDisplayNames = {
+        'buildit-records': 'Build It Records',
+        'buildit-tech': 'Build It Tech',
+        'buildit-deep': 'Build It Deep'
       };
       
       // Try to find a direct match first
@@ -218,12 +288,13 @@ class SpotifyService {
         throw new Error(`Unknown label: ${album.label}`);
       }
 
-      // Find or create label
+      // Find or create label with correct display name
       const [label] = await Label.findOrCreate({
         where: { id: labelId },
         defaults: {
-          displayName: album.label,
-          description: `Releases from ${album.label}`
+          name: labelDisplayNames[labelId],
+          display_name: labelDisplayNames[labelId],
+          slug: labelId
         },
         transaction
       });
@@ -235,49 +306,60 @@ class SpotifyService {
           transaction
         });
 
-        if (artist) {
-          await artist.update({
-            ...artistData,
-            recordLabel: label.id
-          }, { transaction });
-          results.artists.push({ artist, created: false });
-        } else {
+        if (!artist) {
           artist = await Artist.create({
-            ...artistData,
-            recordLabel: label.id
+            id: artistData.id,
+            name: artistData.name,
+            spotify_url: artistData.external_urls.spotify,
+            images: artistData.images,
+            label_id: label.id
           }, { transaction });
-          results.artists.push({ artist, created: true });
+          results.artists.push(artist);
         }
 
-        // Get and save their tracks
-        const tracks = await this.getArtistTracks(artist.id, await this.getAccessToken());
-        for (const trackData of tracks) {
-          let release = await Release.findOne({
-            where: { id: trackData.id },
-            transaction
-          });
+        // Create or update the album/release
+        const [release] = await Release.findOrCreate({
+          where: { id: album.id },
+          defaults: {
+            title: album.name,
+            artist_id: artist.id,
+            label_id: label.id,
+            release_date: album.release_date,
+            images: album.images,
+            spotify_url: album.external_urls.spotify,
+            external_urls: album.external_urls,
+            external_ids: album.external_ids,
+            popularity: album.popularity,
+            total_tracks: album.total_tracks
+          },
+          transaction
+        });
 
-          const releaseData = {
-            ...trackData,
-            recordLabel: label.id,
-            artistId: artist.id
-          };
+        // Create or update the track
+        const [trackRecord] = await Track.findOrCreate({
+          where: { id: track.id },
+          defaults: {
+            title: track.name,
+            duration_ms: track.duration_ms,
+            preview_url: track.preview_url,
+            spotify_url: track.external_urls.spotify,
+            external_urls: track.external_urls,
+            uri: track.uri,
+            release_id: release.id,
+            artist_id: artist.id,
+            label_id: label.id
+          },
+          transaction
+        });
 
-          if (release) {
-            await release.update(releaseData, { transaction });
-            results.tracks.push({ track: release, created: false });
-          } else {
-            release = await Release.create(releaseData, { transaction });
-            results.tracks.push({ track: release, created: true });
-          }
-        }
+        results.tracks.push(trackRecord);
       }
 
       await transaction.commit();
       return results;
     } catch (error) {
       await transaction.rollback();
-      console.error(`Error syncing from track ${trackId}:`, error);
+      console.error(`Error syncing label from track ${trackId}:`, error);
       throw error;
     }
   }
@@ -286,6 +368,8 @@ class SpotifyService {
     const transaction = await sequelize.transaction();
 
     try {
+      console.log(`Syncing artists for label with ID: ${labelId}`);
+      
       const results = {
         artists: [],
         tracks: []
@@ -338,45 +422,48 @@ class SpotifyService {
             results.artists.push({ artist, created: true });
           }
 
-          // Get and save tracks
-          const tracksData = await this.getArtistTracks(artist.id, accessToken);
-          for (const trackData of tracksData) {
-            let track = await Release.findOne({
+          // Get and save their tracks
+          const tracks = await this.getArtistTracks(artist.id, accessToken);
+          for (const trackData of tracks) {
+            let release = await Release.findOne({
               where: { id: trackData.id },
               transaction
             });
 
-            const trackToSave = {
+            const releaseData = {
               ...trackData,
               recordLabel: label.id,
               artistId: artist.id
             };
 
-            if (track) {
-              await track.update(trackToSave, { transaction });
-              results.tracks.push({ track, created: false });
+            if (release) {
+              await release.update(releaseData, { transaction });
+              results.tracks.push({ track: release, created: false });
             } else {
-              track = await Release.create(trackToSave, { transaction });
-              results.tracks.push({ track, created: true });
+              release = await Release.create(releaseData, { transaction });
+              results.tracks.push({ track: release, created: true });
             }
           }
         } catch (error) {
-          console.error(`Error processing artist ${artistId}:`, error);
+          console.error(`Error processing artist ${artistId}:`, error.response?.data || error.message);
           continue;
         }
       }
 
       await transaction.commit();
+      console.log(`Successfully synced artists for label ${labelId}`);
       return results;
     } catch (error) {
       await transaction.rollback();
-      console.error(`Error syncing artists for label ${labelId}:`, error);
-      throw error;
+      console.error(`Error syncing artists for label ${labelId}:`, error.response?.data || error.message);
+      throw new Error('Failed to sync artists for label: ' + (error.response?.data?.error?.message || error.message));
     }
   }
 
   async searchTracksByLabel(labelName, accessToken) {
     try {
+      console.log(`Searching tracks for label: ${labelName}`);
+      
       const tracks = [];
       let offset = 0;
       const limit = 50;
@@ -423,10 +510,11 @@ class SpotifyService {
         await new Promise(resolve => setTimeout(resolve, 100));
       }
 
+      console.log(`Found ${tracks.length} tracks for label ${labelName}`);
       return tracks;
     } catch (error) {
-      console.error(`Error searching tracks for label ${labelName}:`, error);
-      throw error;
+      console.error(`Error searching tracks for label ${labelName}:`, error.response?.data || error.message);
+      throw new Error('Failed to search tracks for label: ' + (error.response?.data?.error?.message || error.message));
     }
   }
 
@@ -434,6 +522,8 @@ class SpotifyService {
     const transaction = await sequelize.transaction();
 
     try {
+      console.log(`Syncing all tracks for label with ID: ${labelId}`);
+      
       // Find the label
       const label = await Label.findOne({ 
         where: { id: labelId },
@@ -534,7 +624,9 @@ class SpotifyService {
               name: trackData.album.name,
               images: trackData.album.images,
               release_date: trackData.album.release_date,
-              external_urls: trackData.album.external_urls
+              external_urls: {
+                spotify: trackData.album.external_urls.spotify
+              }
             },
             spotifyUrl: trackData.external_urls.spotify,
             previewUrl: trackData.preview_url,
@@ -551,7 +643,7 @@ class SpotifyService {
             console.log(`Created new track: ${track.name}`);
           }
         } catch (error) {
-          console.error(`Error processing track ${trackData.id}:`, error);
+          console.error(`Error processing track ${trackData.id}:`, error.response?.data || error.message);
           continue;
         }
 
@@ -560,16 +652,19 @@ class SpotifyService {
       }
 
       await transaction.commit();
+      console.log(`Successfully synced all tracks for label ${labelId}`);
       return results;
     } catch (error) {
       await transaction.rollback();
-      console.error(`Error syncing tracks for label ${labelId}:`, error);
-      throw error;
+      console.error(`Error syncing tracks for label ${labelId}:`, error.response?.data || error.message);
+      throw new Error('Failed to sync tracks for label: ' + (error.response?.data?.error?.message || error.message));
     }
   }
 
   async getArtistsWithReleases(artistIds) {
     try {
+      console.log(`Getting artists with releases for IDs: ${artistIds.join(', ')}`);
+      
       const accessToken = await this.getAccessToken();
       const results = [];
       
@@ -601,7 +696,7 @@ class SpotifyService {
               releases
             };
           } catch (error) {
-            console.error(`Error processing artist ${artistId}:`, error);
+            console.error(`Error processing artist ${artistId}:`, error.response?.data || error.message);
             return null;
           }
         });
@@ -615,10 +710,259 @@ class SpotifyService {
         }
       }
       
+      console.log(`Successfully retrieved artists with releases for IDs: ${artistIds.join(', ')}`);
       return results;
     } catch (error) {
-      console.error('Error fetching artists with releases:', error);
-      throw error;
+      console.error('Error fetching artists with releases:', error.response?.data || error.message);
+      throw new Error('Failed to fetch artists with releases: ' + (error.response?.data?.error?.message || error.message));
+    }
+  }
+
+  async getTracksByLabel(labelId) {
+    try {
+      console.log(`Getting tracks for label with ID: ${labelId}`);
+      
+      const label = await Label.findByPk(labelId);
+      if (!label) {
+        throw new Error('Label not found');
+      }
+
+      const releases = await Release.findAll({
+        where: {
+          recordLabel: labelId
+        },
+        include: [{
+          model: Artist,
+          attributes: ['id', 'name', 'spotifyUrl', 'images']
+        }],
+        order: [['createdAt', 'DESC']]
+      });
+
+      console.log(`Successfully retrieved ${releases.length} tracks for label ${labelId}`);
+      return releases;
+    } catch (error) {
+      console.error('Error getting tracks by label:', error.response?.data || error.message);
+      throw new Error('Failed to get tracks by label: ' + (error.response?.data?.error?.message || error.message));
+    }
+  }
+
+  async getTracksByLabel(labelId) {
+    try {
+      console.log(`Getting tracks for label with ID: ${labelId}`);
+      
+      const label = await Label.findByPk(labelId);
+      if (!label) {
+        throw new Error('Label not found');
+      }
+
+      const releases = await Release.findAll({
+        where: {
+          recordLabel: labelId
+        },
+        include: [{
+          model: Track,
+          include: [{
+            model: Artist,
+            attributes: ['id', 'name', 'spotifyUrl', 'images']
+          }]
+        }]
+      });
+
+      let tracks = [];
+      for (const release of releases) {
+        if (release.Tracks) {
+          tracks = tracks.concat(release.Tracks);
+        }
+      }
+
+      console.log(`Successfully retrieved ${tracks.length} tracks for label ${labelId}`);
+      return tracks;
+    } catch (error) {
+      console.error('Error getting tracks by label:', error.response?.data || error.message);
+      throw new Error('Failed to get tracks by label: ' + (error.response?.data?.error?.message || error.message));
+    }
+  }
+
+  async createTrackFromSpotify(trackData, releaseId, artistId, labelId) {
+    try {
+      console.log(`Creating track from Spotify data: ${trackData.name}`);
+      
+      const [track, created] = await Track.findOrCreate({
+        where: {
+          uri: trackData.uri
+        },
+        defaults: {
+          name: trackData.name,
+          duration_ms: trackData.duration_ms,
+          preview_url: trackData.preview_url,
+          spotifyUrl: trackData.external_urls?.spotify,
+          uri: trackData.uri,
+          releaseId: releaseId,
+          artistId: artistId,
+          recordLabel: labelId
+        }
+      });
+
+      console.log(`Successfully created track: ${track.name}`);
+      return track;
+    } catch (error) {
+      console.error('Error creating track:', error.response?.data || error.message);
+      throw new Error('Failed to create track: ' + (error.response?.data?.error?.message || error.message));
+    }
+  }
+
+  async importReleasesByArtist(labelId, artistId) {
+    try {
+      console.log(`Importing releases for artist with ID: ${artistId}`);
+      
+      const accessToken = await this.getAccessToken();
+      const artist = await this.getArtistById(artistId, accessToken);
+      const albums = await this.getArtistAlbums(artistId, accessToken);
+      
+      console.log(`Found ${albums.length} albums for artist ${artist.name}`);
+
+      const transaction = await sequelize.transaction();
+
+      try {
+        // Create or update artist
+        const [artistRecord] = await Artist.upsert({
+          id: artist.id,
+          name: artist.name,
+          images: artist.images,
+          spotifyUrl: artist.external_urls?.spotify,
+          recordLabel: labelId
+        }, { transaction });
+
+        console.log('Artist record created/updated:', artistRecord.name);
+
+        // Process each album
+        for (const album of albums) {
+          console.log(`Processing album: ${album.name}`);
+          
+          const [release] = await Release.upsert({
+            id: album.id,
+            title: album.name,
+            releaseDate: album.release_date,
+            images: album.images,
+            artworkUrl: album.images?.[0]?.url,
+            spotifyUrl: album.external_urls?.spotify,
+            external_urls: album.external_urls,
+            external_ids: album.external_ids,
+            popularity: album.popularity,
+            total_tracks: album.total_tracks,
+            artistId: artistRecord.id,
+            recordLabel: labelId
+          }, { transaction });
+
+          console.log('Release record created/updated:', release.title);
+
+          // Get tracks for this album
+          const tracks = await this.getAlbumTracks(album.id, accessToken);
+          
+          // Process each track
+          for (const track of tracks) {
+            await Track.upsert({
+              id: track.id,
+              name: track.name,
+              duration_ms: track.duration_ms,
+              preview_url: track.preview_url,
+              external_urls: track.external_urls,
+              external_ids: track.external_ids,
+              popularity: track.popularity,
+              spotifyUrl: track.external_urls?.spotify,
+              uri: track.uri,
+              releaseId: release.id,
+              artistId: artistRecord.id,
+              recordLabel: labelId
+            }, { transaction });
+          }
+        }
+
+        await transaction.commit();
+        console.log(`Successfully imported releases for artist ${artist.name}`);
+        
+        return {
+          success: true,
+          artist: artistRecord,
+          albumCount: albums.length
+        };
+      } catch (error) {
+        await transaction.rollback();
+        console.error('Error importing releases:', error.response?.data || error.message);
+        throw new Error('Failed to import releases: ' + (error.response?.data?.error?.message || error.message));
+      }
+    } catch (error) {
+      console.error('Error importing releases:', error.response?.data || error.message);
+      throw new Error('Failed to import releases: ' + (error.response?.data?.error?.message || error.message));
+    }
+  }
+
+  async searchAlbums(query, limit = 50) {
+    try {
+      console.log(`Searching Spotify albums with query: "${query}", limit: ${limit}`);
+      
+      if (!this.accessToken) {
+        console.log('No access token found, initializing SpotifyService...');
+        await this.initialize();
+      }
+
+      const response = await axios.get(`${this.baseUrl}/search`, {
+        headers: {
+          'Authorization': `Bearer ${this.accessToken}`
+        },
+        params: {
+          q: query,
+          type: 'album',
+          limit: limit,
+          market: 'US'
+        }
+      });
+
+      const albums = response.data.albums.items;
+      console.log(`Found ${albums.length} albums matching query "${query}"`);
+      return albums;
+    } catch (error) {
+      // Check if it's an authentication error
+      if (error.response?.status === 401) {
+        console.log('Access token expired, refreshing...');
+        await this.initialize();
+        // Retry the search once with new token
+        return this.searchAlbums(query, limit);
+      }
+      
+      console.error('Error searching albums:', error.response?.data || error.message);
+      throw new Error('Failed to search Spotify albums: ' + (error.response?.data?.error?.message || error.message));
+    }
+  }
+
+  async getArtist(artistId) {
+    try {
+      console.log(`Getting Spotify artist with ID: ${artistId}`);
+      
+      if (!this.accessToken) {
+        console.log('No access token found, initializing SpotifyService...');
+        await this.initialize();
+      }
+
+      const response = await axios.get(`${this.baseUrl}/artists/${artistId}`, {
+        headers: {
+          'Authorization': `Bearer ${this.accessToken}`
+        }
+      });
+
+      console.log(`Successfully retrieved artist: ${response.data.name}`);
+      return response.data;
+    } catch (error) {
+      // Check if it's an authentication error
+      if (error.response?.status === 401) {
+        console.log('Access token expired, refreshing...');
+        await this.initialize();
+        // Retry the request once with new token
+        return this.getArtist(artistId);
+      }
+      
+      console.error(`Error getting artist ${artistId}:`, error.response?.data || error.message);
+      throw new Error('Failed to get Spotify artist: ' + (error.response?.data?.error?.message || error.message));
     }
   }
 }

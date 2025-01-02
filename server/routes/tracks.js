@@ -5,6 +5,8 @@ const { body, query, param } = require('express-validator');
 const rateLimit = require('express-rate-limit');
 const { validateRequest, isValidSpotifyId } = require('../utils/validation');
 const { cacheMiddleware, clearCache } = require('../utils/cache');
+const { Track, Artist, Release, Label } = require('../models');
+const { Op } = require('sequelize');
 
 // Rate limiting configuration
 const limiter = rateLimit({
@@ -307,6 +309,80 @@ router.get('/recommendations', [
             error: 'Failed to get recommendations',
             message: error.response?.data?.error?.message || error.message
         });
+    }
+});
+
+// Get tracks by label ID or slug
+router.get('/:labelId', async (req, res) => {
+    try {
+        const { labelId } = req.params;
+        console.log('Fetching tracks for label:', labelId);
+
+        // Find the label
+        const label = await Label.findOne({
+            where: {
+                [Op.or]: [
+                    { id: labelId },
+                    { slug: labelId }
+                ]
+            }
+        });
+
+        if (!label) {
+            console.log('Label not found:', labelId);
+            return res.status(404).json({ success: false, message: 'Label not found' });
+        }
+
+        console.log('Found label:', label.name);
+
+        // Get all tracks for this label
+        const tracks = await Track.findAll({
+            where: {
+                recordLabel: label.id
+            },
+            include: [
+                {
+                    model: Artist,
+                    attributes: ['id', 'name', 'spotifyUrl']
+                },
+                {
+                    model: Release,
+                    attributes: ['id', 'title', 'releaseDate', 'artworkUrl', 'spotifyUrl']
+                }
+            ],
+            order: [['createdAt', 'DESC']]
+        });
+
+        console.log(`Found ${tracks.length} tracks for label ${label.name}`);
+
+        // Transform the data to match the frontend interface
+        const transformedTracks = tracks.map(track => ({
+            id: track.id,
+            title: track.title || track.name, // Use title if available, fallback to name
+            artistId: track.artistId,
+            artist: track.Artist ? {
+                id: track.Artist.id,
+                name: track.Artist.name,
+                spotifyUrl: track.Artist.spotifyUrl
+            } : null,
+            releaseId: track.releaseId,
+            release: track.Release ? {
+                id: track.Release.id,
+                title: track.Release.title,
+                releaseDate: track.Release.releaseDate,
+                artworkUrl: track.Release.artworkUrl,
+                spotifyUrl: track.Release.spotifyUrl
+            } : null,
+            duration_ms: track.duration_ms,
+            preview_url: track.preview_url,
+            spotifyUrl: track.spotifyUrl,
+            uri: track.uri
+        }));
+
+        res.json(transformedTracks);
+    } catch (error) {
+        console.error('Error fetching tracks:', error);
+        res.status(500).json({ success: false, message: 'Error fetching tracks', error: error.message });
     }
 });
 

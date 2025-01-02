@@ -13,8 +13,8 @@ Artist.init({
     type: DataTypes.STRING,
     allowNull: false
   },
-  bio: {
-    type: DataTypes.TEXT,
+  spotify_url: {
+    type: DataTypes.STRING,
     allowNull: true
   },
   images: {
@@ -22,35 +22,34 @@ Artist.init({
     allowNull: true,
     defaultValue: []
   },
-  recordLabel: {
+  label_id: {
     type: DataTypes.STRING,
-    allowNull: false,
     references: {
       model: 'labels',
       key: 'id'
-    }
-  },
-  spotifyUrl: {
-    type: DataTypes.STRING,
+    },
+    onUpdate: 'CASCADE',
+    onDelete: 'SET NULL',
     allowNull: true
   },
-  beatportUrl: {
-    type: DataTypes.STRING,
-    allowNull: true
+  created_at: {
+    type: DataTypes.DATE,
+    allowNull: false,
+    defaultValue: DataTypes.NOW
   },
-  soundcloudUrl: {
-    type: DataTypes.STRING,
-    allowNull: true
-  },
-  bandcampUrl: {
-    type: DataTypes.STRING,
-    allowNull: true
+  updated_at: {
+    type: DataTypes.DATE,
+    allowNull: false,
+    defaultValue: DataTypes.NOW
   }
 }, {
   sequelize,
-  modelName: 'Artist',
+  modelName: 'artist',
   tableName: 'artists',
-  timestamps: true
+  underscored: true,
+  timestamps: true,
+  createdAt: 'created_at',
+  updatedAt: 'updated_at'
 });
 
 module.exports = Artist;

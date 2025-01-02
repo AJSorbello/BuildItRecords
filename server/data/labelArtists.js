@@ -1,12 +1,12 @@
 // Map of label IDs to their artist Spotify IDs
 module.exports = {
-  'build-it-records': [
+  'buildit-records': [
     // Add Spotify artist IDs for Build It Records artists
   ],
-  'build-it-tech': [
+  'buildit-tech': [
     // Add Spotify artist IDs for Build It Tech artists
   ],
-  'build-it-deep': [
+  'buildit-deep': [
     // Add Spotify artist IDs for Build It Deep artists
   ]
 };

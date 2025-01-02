@@ -18,6 +18,7 @@ import RemoveIcon from '@mui/icons-material/Remove';
 import AddIcon from '@mui/icons-material/Add';
 import { useNavigate } from 'react-router-dom';
 import { RecordLabel, labelIdToKey } from '../constants/labels';
+import config from '../config'; // Assuming config file is in the same directory
 
 interface Track {
   title: string;
@@ -161,7 +162,7 @@ const SubmitPage: React.FC<SubmitPageProps> = ({ label }) => {
         return;
       }
 
-      const response = await fetch('/api/submit-demo', {
+      const response = await fetch(`${config.API_URL}/submit-demo`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

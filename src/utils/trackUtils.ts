@@ -1,30 +1,91 @@
 import { Track } from '../types/track';
-import { getData } from './dataInitializer';
-import { RECORD_LABELS } from '../constants/labels';
+import { getTracksByLabel } from './spotifyUtils';
+import { RecordLabel, RECORD_LABELS } from '../constants/labels';
 
-export const getTracksByLabel = (label: typeof RECORD_LABELS[keyof typeof RECORD_LABELS]): Track[] => {
-  const { tracks } = getData();
-  return tracks.filter(track => track.label === label);
+// Cache for tracks
+const trackCache = new Map<string, Track[]>();
+
+// Get tracks for a specific label
+export const getTracksForLabel = async (label: string): Promise<Track[]> => {
+  // Check cache first
+  if (trackCache.has(label)) {
+    return trackCache.get(label) || [];
+  }
+
+  try {
+    const tracks = await getTracksByLabel(label);
+    trackCache.set(label, tracks);
+    return tracks;
+  } catch (error) {
+    console.error(`Error fetching tracks for label ${label}:`, error);
+    return [];
+  }
 };
 
-export const getFeaturedTrack = (label: typeof RECORD_LABELS[keyof typeof RECORD_LABELS]): Track | null => {
-  const { tracks } = getData();
-  const labelTracks = tracks.filter(track => track.label === label);
-  // Find the track marked as featured, or return null if none found
-  return labelTracks.find(track => track.featured) || null;
+// Refresh the track cache
+export const refreshTrackCache = async (): Promise<void> => {
+  try {
+    // Clear existing cache
+    trackCache.clear();
+
+    // Fetch tracks for all labels
+    await Promise.all(
+      Object.values(RECORD_LABELS).map(async (label) => {
+        const tracks = await getTracksByLabel(label);
+        trackCache.set(label, tracks);
+      })
+    );
+
+    console.log('Track cache refreshed successfully');
+  } catch (error) {
+    console.error('Error refreshing track cache:', error);
+    throw error;
+  }
 };
 
-export const getSpotifyAlbumArt = (spotifyUrl: string): string => {
-  // For now, return a placeholder image
-  // In a real implementation, this would parse the Spotify URL and fetch the album art
-  return `https://via.placeholder.com/300x300.png?text=${encodeURIComponent('Album Art')}`;
+// Get all tracks from cache
+export const getAllTracks = (): Track[] => {
+  return Array.from(trackCache.values()).flat();
 };
 
-export const processTracksEfficiently = (tracks: Track[]): Track[] => {
-  // Sort tracks by release date (newest first)
-  return [...tracks].sort((a, b) => {
-    const dateA = a.releaseDate ? new Date(a.releaseDate) : new Date(0);
-    const dateB = b.releaseDate ? new Date(b.releaseDate) : new Date(0);
-    return dateB.getTime() - dateA.getTime();
+// Search tracks by name
+export const searchTracks = (query: string): Track[] => {
+  const allTracks = getAllTracks();
+  const searchTerms = query.toLowerCase().split(' ');
+  
+  return allTracks.filter(track => {
+    const trackText = `${track.name} ${track.artists.map(a => a.name).join(' ')}`.toLowerCase();
+    return searchTerms.every(term => trackText.includes(term));
   });
+};
+
+// Get track by ID
+export const getTrackById = (id: string): Track | undefined => {
+  const allTracks = getAllTracks();
+  return allTracks.find(track => track.id === id);
+};
+
+// Get tracks by artist
+export const getTracksByArtist = (artistId: string): Track[] => {
+  const allTracks = getAllTracks();
+  return allTracks.filter(track => 
+    track.artists.some(artist => artist.id === artistId)
+  );
+};
+
+// Get tracks by album
+export const getTracksByAlbum = (albumId: string): Track[] => {
+  const allTracks = getAllTracks();
+  return allTracks.filter(track => track.album.id === albumId);
+};
+
+// Initialize the track cache
+export const initializeTrackCache = async (): Promise<void> => {
+  try {
+    await refreshTrackCache();
+    console.log('Track cache initialized successfully');
+  } catch (error) {
+    console.error('Error initializing track cache:', error);
+    throw error;
+  }
 };

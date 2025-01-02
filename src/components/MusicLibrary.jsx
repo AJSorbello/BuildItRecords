@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import styled from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
 import LoadingAnimation from './LoadingAnimation';
+import config from '../config'; // assuming config file is in the parent directory
 
 const Container = styled.div`
   max-width: 1200px;
@@ -249,7 +250,7 @@ const MusicLibrary = () => {
     setError(null);
 
     try {
-      const response = await fetch('/api/process/url', {
+      const response = await fetch(`${config.API_URL}/process/url`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

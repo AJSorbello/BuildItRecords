@@ -5,20 +5,21 @@ import { Album } from './release';
 export interface Artist {
   id: string;
   name: string;
-  genres: string[];
-  images: {
+  uri: string;
+  images?: {
     url: string;
     height: number;
     width: number;
   }[];
-  followers: {
+  spotifyUrl?: string;
+  genres?: string[];
+  followers?: {
     total: number;
   };
   external_urls: {
     spotify: string;
   };
-  uri: string;
-  popularity: number;
+  popularity?: number;
   artworkUrl?: string;
   bio?: string;
   label?: string;
@@ -60,28 +61,29 @@ export interface SpotifyArtistData {
 }
 
 export function getArtistImage(artist: Artist): string {
-  return artist.artworkUrl || artist.images[0].url;
+  return artist.artworkUrl || artist.images?.[0]?.url || '';
 }
 
 export function getArtistGenres(artist: Artist): string {
-  return artist.genres.join(', ');
+  return artist.genres?.join(', ') || '';
 }
 
 export function getArtistFollowers(artist: Artist): number {
-  return artist.followers.total;
+  return artist.followers?.total || 0;
 }
 
 export const createArtist = (data: Partial<Artist>): Artist => {
   return {
     id: data.id || '',
     name: data.name || '',
-    genres: data.genres || [],
+    uri: data.uri || '',
     images: data.images || [],
+    spotifyUrl: data.spotifyUrl,
+    genres: data.genres || [],
     followers: data.followers || { total: 0 },
     external_urls: {
       spotify: data.external_urls?.spotify || '',
     },
-    uri: data.uri || '',
     popularity: data.popularity || 0,
     artworkUrl: data.artworkUrl,
     bio: data.bio,

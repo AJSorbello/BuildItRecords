@@ -75,7 +75,7 @@ const router = createBrowserRouter(
       </Route>
 
       {/* Admin Routes */}
-      <Route path="/admin">
+      <Route path="/admin" element={<Layout />}>
         <Route path="login" element={<AdminLogin />} />
         <Route 
           path="dashboard" 

@@ -10,6 +10,7 @@ import {
   Tabs,
   Tab,
 } from '@mui/material';
+import { API_URL } from '../config'; // assuming config file is in the parent directory
 
 interface Track {
   id: string;
@@ -32,7 +33,8 @@ const Home: React.FC = () => {
 
   const fetchTracks = async () => {
     try {
-      const response = await axios.get<{ tracks: Track[] }>('/api/track-management/tracks');
+      setLoading(true);
+      const response = await axios.get<{ tracks: Track[] }>(`${API_URL}/track-management/tracks`);
       setTracks(response.data.tracks || []);
       setLoading(false);
     } catch (err) {

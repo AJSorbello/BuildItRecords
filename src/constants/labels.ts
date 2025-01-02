@@ -1,7 +1,7 @@
 export enum RecordLabel {
-  RECORDS = 'Build It Records',
-  TECH = 'Build It Tech',
-  DEEP = 'Build It Deep'
+  RECORDS = 'buildit-records',
+  TECH = 'buildit-tech',
+  DEEP = 'buildit-deep'
 }
 
 export type LabelId = 'records' | 'tech' | 'deep';
@@ -15,11 +15,26 @@ export const LABEL_DISPLAY_NAMES = {
 } as const;
 
 // Map from display names to enum values
-export const RECORD_LABELS: Record<string, RecordLabel> = {
-  'Build It Records': RecordLabel.RECORDS,
-  'Build It Tech': RecordLabel.TECH,
-  'Build It Deep': RecordLabel.DEEP
-} as const;
+export const RECORD_LABELS = {
+  [RecordLabel.RECORDS]: {
+    id: RecordLabel.RECORDS,
+    name: 'Build It Records',
+    displayName: 'Build It Records',
+    playlistId: process.env.REACT_APP_SPOTIFY_RECORDS_PLAYLIST_ID
+  },
+  [RecordLabel.TECH]: {
+    id: RecordLabel.TECH,
+    name: 'Build It Tech',
+    displayName: 'Build It Tech',
+    playlistId: process.env.REACT_APP_SPOTIFY_TECH_PLAYLIST_ID
+  },
+  [RecordLabel.DEEP]: {
+    id: RecordLabel.DEEP,
+    name: 'Build It Deep',
+    displayName: 'Build It Deep',
+    playlistId: process.env.REACT_APP_SPOTIFY_DEEP_PLAYLIST_ID
+  }
+};
 
 export const labelIdToKey: { [key in LabelId]: RecordLabel } = {
   'records': RecordLabel.RECORDS,
