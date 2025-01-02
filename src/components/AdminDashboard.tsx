@@ -1,19 +1,27 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Button, ButtonGroup, Typography, CircularProgress, Grid, Paper } from '@mui/material';
+import { Box, Button, ButtonGroup, Typography, CircularProgress, Grid, Paper, img } from '@mui/material';
 import { API_URL } from '../config';
 import TrackManager from './TrackManager';
 
 interface Release {
   id: string;
-  name: string;
-  artist_id: string;
-  artist_name: string;
-  release_date: string;
-  spotify_url: string;
-  images: Array<{
-    url: string;
-    height: number;
-    width: number;
+  title: string;
+  artist: string;
+  artistId: string;
+  artistImage: string;
+  releaseDate: string;
+  coverImage: string;
+  spotifyUrl: string;
+  tracks: Array<{
+    id: string;
+    title: string;
+    remixer: {
+      id: string;
+      name: string;
+      image: string;
+    } | null;
+    duration: number;
+    spotifyUrl: string;
   }>;
 }
 
@@ -74,7 +82,7 @@ const AdminDashboard: React.FC = () => {
       }
 
       console.log('Received releases:', data);
-      setReleases(data.data || []);
+      setReleases(data.releases || []);
     } catch (error) {
       console.error('Error fetching releases:', error);
       setError(error instanceof Error ? error.message : 'Failed to fetch releases');
@@ -123,37 +131,64 @@ const AdminDashboard: React.FC = () => {
 
             <Button
               variant="contained"
-              color="primary"
+              color="secondary"
               onClick={handleImport}
               disabled={loading}
-              sx={{ mb: 2, display: 'block' }}
+              sx={{ mb: 2 }}
             >
-              {loading ? (
-                <CircularProgress size={24} color="inherit" />
-              ) : (
-                'Import Releases'
-              )}
+              {loading ? <CircularProgress size={24} /> : 'Import Releases'}
             </Button>
 
             {error && (
-              <Typography color="error" sx={{ mt: 2 }}>
+              <Typography color="error" sx={{ mb: 2 }}>
                 {error}
               </Typography>
             )}
 
-            <Typography variant="body2" sx={{ mt: 2 }}>
+            <Typography variant="subtitle1" gutterBottom>
               Total Releases: {releases.length}
             </Typography>
+
+            {releases.map((release) => (
+              <Paper key={release.id} sx={{ p: 2, mb: 2, bgcolor: '#1e1e1e' }}>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={3}>
+                    {release.coverImage && (
+                      <img
+                        src={release.coverImage}
+                        alt={release.title}
+                        style={{ width: '100%', height: 'auto', borderRadius: '4px' }}
+                      />
+                    )}
+                  </Grid>
+                  <Grid item xs={12} sm={9}>
+                    <Typography variant="h6">{release.title}</Typography>
+                    <Typography variant="subtitle1">
+                      Artist: {release.artist}
+                    </Typography>
+                    <Typography variant="body2">
+                      Release Date: {new Date(release.releaseDate).toLocaleDateString()}
+                    </Typography>
+                    <Typography variant="body2">
+                      Tracks: {release.tracks.length}
+                    </Typography>
+                    <Box sx={{ mt: 2 }}>
+                      {release.tracks.map((track) => (
+                        <Typography key={track.id} variant="body2" sx={{ mb: 1 }}>
+                          • {track.title}
+                          {track.remixer && ` (${track.remixer.name} Remix)`}
+                        </Typography>
+                      ))}
+                    </Box>
+                  </Grid>
+                </Grid>
+              </Paper>
+            ))}
           </Paper>
         </Grid>
 
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 3, bgcolor: '#1e1e1e' }}>
-            <Typography variant="h6" gutterBottom>
-              Track Management
-            </Typography>
-            <TrackManager selectedLabel={selectedLabel} />
-          </Paper>
+        <Grid item xs={12}>
+          <TrackManager />
         </Grid>
       </Grid>
     </Box>
