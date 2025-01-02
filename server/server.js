@@ -4,7 +4,8 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const path = require('path');
-const { sequelize } = require('./models');
+const Sequelize = require('sequelize');
+const initializeModels = require('./models');
 const SpotifyService = require('./services/SpotifyService');
 const apiRoutes = require('./routes/api.routes');
 const { setupSpotifyRoutes } = require('./routes/spotify.routes');
@@ -16,13 +17,25 @@ const app = express();
 const initServices = async () => {
   try {
     // Initialize database connection
+    const sequelize = new Sequelize({
+      host: config.database.host,
+      port: config.database.port,
+      username: config.database.username,
+      password: config.database.password,
+      database: config.database.name,
+      dialect: config.database.dialect
+    });
+
     await sequelize.authenticate();
     console.log('Database connection established successfully');
 
+    // Initialize models
+    const db = initializeModels(sequelize);
+    
     const spotifyService = new SpotifyService();
     console.log('Spotify service initialized successfully');
 
-    return { spotifyService };
+    return { spotifyService, db, sequelize };
   } catch (error) {
     console.error('Failed to initialize services:', error);
     throw error;
@@ -30,7 +43,7 @@ const initServices = async () => {
 };
 
 // Initialize Express routes and middleware
-const initExpress = (spotifyService) => {
+const initExpress = (spotifyService, db, sequelize) => {
   // Security middleware
   app.use(helmet({
     contentSecurityPolicy: false,
@@ -88,8 +101,8 @@ const initExpress = (spotifyService) => {
 // Start server
 const startServer = async () => {
   try {
-    const { spotifyService } = await initServices();
-    initExpress(spotifyService);
+    const { spotifyService, db, sequelize } = await initServices();
+    initExpress(spotifyService, db, sequelize);
 
     const port = process.env.PORT || 3001;
     app.listen(port, () => {

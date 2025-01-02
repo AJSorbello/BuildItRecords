@@ -2,7 +2,7 @@ import { SpotifyApi } from '@spotify/web-api-ts-sdk';
 import { Track } from '../types/track';
 import { Artist } from '../types/artist';
 import { Album } from '../types/release';
-import { createArtistFromSpotify, createTrackFromSpotify } from '../utils/spotifyUtils';
+import { transformSpotifyTrack, transformSpotifyArtist, transformSpotifyAlbum } from '../utils/spotifyUtils';
 import { API_URL } from '../config';
 
 class SpotifyService {
@@ -62,7 +62,7 @@ class SpotifyService {
   async getArtist(id: string): Promise<Artist | null> {
     try {
       const artist = await this.api.artists.get(id);
-      return createArtistFromSpotify(artist);
+      return transformSpotifyArtist(artist);
     } catch (error) {
       console.error('Error fetching artist:', error);
       return null;
@@ -72,7 +72,7 @@ class SpotifyService {
   async getTrack(id: string): Promise<Track | null> {
     try {
       const track = await this.api.tracks.get(id);
-      return createTrackFromSpotify(track);
+      return transformSpotifyTrack(track);
     } catch (error) {
       console.error('Error fetching track:', error);
       return null;
@@ -105,7 +105,7 @@ class SpotifyService {
   async searchTracks(query: string): Promise<Track[]> {
     try {
       const results = await this.api.search(query, ['track']);
-      return results.tracks.items.map(track => createTrackFromSpotify(track));
+      return results.tracks.items.map(track => transformSpotifyTrack(track));
     } catch (error) {
       console.error('Error searching tracks:', error);
       return [];

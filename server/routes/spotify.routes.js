@@ -1,3 +1,5 @@
+const express = require('express');
+const router = express.Router();
 const axios = require('axios');
 const config = require('../config/environment');
 const SpotifyService = require('../services/SpotifyService');
@@ -40,7 +42,7 @@ async function getArtistDetails(artistId, accessToken) {
   }
 }
 
-const setupSpotifyRoutes = (app) => {
+const setupSpotifyRoutes = (app, spotifyService) => {
   // Helper function to get access token
   async function getAccessToken() {
     console.log('[Spotify] Getting access token...');
@@ -71,6 +73,25 @@ const setupSpotifyRoutes = (app) => {
       throw error;
     }
   }
+
+  // Spotify auth endpoint
+  app.get('/auth/spotify', (req, res) => {
+    const scopes = ['user-read-private', 'user-read-email', 'playlist-modify-public'];
+    const authorizeURL = spotifyService.createAuthorizeURL(scopes);
+    res.json({ url: authorizeURL });
+  });
+
+  // Spotify callback endpoint
+  app.get('/callback', async (req, res) => {
+    const { code } = req.query;
+    try {
+      const data = await spotifyService.handleCallback(code);
+      res.redirect('http://localhost:3000/admin');
+    } catch (error) {
+      console.error('Authentication failed:', error);
+      res.status(500).json({ error: 'Authentication failed' });
+    }
+  });
 
   // Search tracks
   app.get('/api/spotify/search', async (req, res) => {
@@ -170,6 +191,17 @@ const setupSpotifyRoutes = (app) => {
     }
   });
 
+  // Get track info from Spotify
+  app.get('/api/spotify/track/:query', async (req, res) => {
+    try {
+      const result = await spotifyService.searchTrack(req.params.query);
+      res.json(result);
+    } catch (error) {
+      console.error('Failed to fetch track info:', error);
+      res.status(500).json({ error: 'Failed to fetch track info' });
+    }
+  });
+
   app.get('/api/spotify/track/:trackId', async (req, res) => {
     console.log('Received request for track:', req.params.trackId);
     
@@ -210,6 +242,8 @@ const setupSpotifyRoutes = (app) => {
       });
     }
   });
+
+  return router;
 };
 
 module.exports = { setupSpotifyRoutes };
