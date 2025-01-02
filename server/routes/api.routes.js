@@ -116,34 +116,26 @@ router.get('/import-releases/:labelId', async (req, res) => {
   try {
     const { labelId } = req.params;
 
-    // Validate label
     if (!VALID_LABELS.includes(labelId)) {
       return res.status(400).json({ error: 'Invalid label ID' });
     }
 
-    const results = [];
-
-    // Initialize Spotify service
     const spotifyService = new SpotifyService();
     await spotifyService.initialize();
 
-    console.log(`Searching for all releases under label: ${labelId}`);
+    console.log(`Searching for releases under label: ${labelId}`);
     const releases = await spotifyService.searchReleasesByLabel(labelId);
     console.log(`Found ${releases.length} releases for label ${labelId}`);
 
-    // Process each release
+    const results = [];
     for (const releaseData of releases) {
       try {
-        console.log(`Processing release: ${releaseData.name}`);
-
-        // Get main artist data
         const artistData = await spotifyService.getArtist(releaseData.artists[0].id);
         if (!artistData) {
-          console.error(`Artist not found for release: ${releaseData.name}`);
+          console.log(`Artist not found for release: ${releaseData.name}`);
           continue;
         }
 
-        // Find or create main artist
         const [artist] = await Artist.findOrCreate({
           where: { spotify_id: artistData.id },
           defaults: {
@@ -155,7 +147,6 @@ router.get('/import-releases/:labelId', async (req, res) => {
           }
         });
 
-        // Create or update release
         const [release] = await Release.findOrCreate({
           where: { spotify_id: releaseData.id },
           defaults: {
@@ -173,74 +164,10 @@ router.get('/import-releases/:labelId', async (req, res) => {
           }
         });
 
-        // Get all tracks from the release
-        console.log(`Fetching tracks for release: ${releaseData.name}`);
-        const tracks = await spotifyService.getAlbumTracks(releaseData.id);
-        console.log(`Found ${tracks.length} tracks in release ${releaseData.name}`);
-
-        // Process each track
-        for (const trackData of tracks) {
-          try {
-            // Handle remixer if present
-            let remixerArtist = null;
-            const remixMatch = trackData.name.match(/[-–]\s*([^-–]+)\s*(?:Remix|Mix|Rework|Edit|Flip)/i);
-            
-            if (remixMatch) {
-              const remixerName = remixMatch[1].trim();
-              console.log(`Found remix by ${remixerName} in track ${trackData.name}`);
-              
-              // Try to find remixer in track artists
-              const remixerSpotifyArtist = trackData.artists.find(artist => {
-                const artistNameLower = artist.name.toLowerCase();
-                const remixerNameLower = remixerName.toLowerCase();
-                return artistNameLower.includes(remixerNameLower) || remixerNameLower.includes(artistNameLower);
-              });
-
-              if (remixerSpotifyArtist) {
-                console.log(`Found remixer artist: ${remixerSpotifyArtist.name}`);
-                const remixerData = await spotifyService.getArtist(remixerSpotifyArtist.id);
-                
-                // Create or update remixer
-                [remixerArtist] = await Artist.findOrCreate({
-                  where: { spotify_id: remixerData.id },
-                  defaults: {
-                    name: remixerData.name,
-                    spotify_id: remixerData.id,
-                    spotify_url: remixerData.external_urls.spotify,
-                    image_url: remixerData.images?.[0]?.url,
-                    label_id: labelId
-                  }
-                });
-              }
-            }
-
-            // Create track
-            await Track.findOrCreate({
-              where: { spotify_id: trackData.id },
-              defaults: {
-                title: trackData.name,
-                spotify_id: trackData.id,
-                artist_id: artist.id,
-                remixer_id: remixerArtist?.id || null,
-                release_id: release.id,
-                duration_ms: trackData.duration_ms,
-                preview_url: trackData.preview_url,
-                spotify_url: trackData.external_urls.spotify,
-                external_urls: trackData.external_urls,
-                uri: trackData.uri
-              }
-            });
-          } catch (error) {
-            console.error(`Error processing track ${trackData.name}:`, error);
-          }
-        }
-
-        // Add release to results
         results.push({
           id: release.id,
           title: release.title,
-          artist: artist.name,
-          tracks: tracks.length
+          artist: artist.name
         });
       } catch (error) {
         console.error(`Error processing release ${releaseData.name}:`, error);
@@ -248,8 +175,15 @@ router.get('/import-releases/:labelId', async (req, res) => {
     }
 
     console.log(`Import completed for label ${labelId}. Found ${results.length} releases.`);
+    
+    // Get total count after import
+    const totalReleases = await Release.count({
+      where: { label_id: labelId }
+    });
+
     res.json({
       label: labelId,
+      totalReleases,
       releases: results
     });
   } catch (error) {
@@ -292,29 +226,15 @@ router.get('/releases/:labelId', async (req, res) => {
       order: [['release_date', 'DESC']]
     });
 
+    // Get total count
+    const totalReleases = await Release.count({
+      where: { label_id: labelId }
+    });
+
     res.json({
       label: labelId,
-      releases: releases.map(release => ({
-        id: release.id,
-        title: release.title,
-        artist: release.artist.name,
-        artistId: release.artist.id,
-        artistImage: release.artist.image_url,
-        releaseDate: release.release_date,
-        coverImage: release.cover_image_url,
-        spotifyUrl: release.spotify_url,
-        tracks: release.tracks.map(track => ({
-          id: track.id,
-          title: track.title,
-          remixer: track.remixer ? {
-            id: track.remixer.id,
-            name: track.remixer.name,
-            image: track.remixer.image_url
-          } : null,
-          duration: track.duration_ms,
-          spotifyUrl: track.spotify_url
-        }))
-      }))
+      totalReleases,
+      releases
     });
   } catch (error) {
     console.error('Error fetching releases:', error);

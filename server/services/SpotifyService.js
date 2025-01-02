@@ -41,6 +41,7 @@ class SpotifyService {
       redirectUri: process.env.SPOTIFY_REDIRECT_URI
     });
     this.tokenExpirationTime = null;
+    this.labelCache = new Map();
   }
 
   async initialize() {
@@ -815,7 +816,7 @@ class SpotifyService {
           uri: trackData.uri,
           releaseId: releaseId,
           artistId: artistId,
-          recordLabel: labelId
+          labelId: labelId
         }
       });
 
@@ -1183,8 +1184,10 @@ class SpotifyService {
         console.log(`Found ${releases.length} releases in this batch`);
         allReleases = allReleases.concat(releases);
         
-        if (response.body.albums.next) {
+        if (releases.length === limit) {
           offset += limit;
+          // Add a small delay between requests to avoid rate limiting
+          await new Promise(resolve => setTimeout(resolve, 100));
         } else {
           hasMore = false;
         }
@@ -1195,6 +1198,125 @@ class SpotifyService {
     } catch (error) {
       console.error(`Error searching releases for label ${labelName}:`, error);
       throw error;
+    }
+  }
+
+  async fetchAllPages(initialUrl) {
+    let items = [];
+    let url = initialUrl;
+
+    while (url) {
+      try {
+        if (this.isTokenExpired()) {
+          await this.getAccessToken();
+        }
+
+        const response = await axios.get(url, {
+          headers: {
+            'Authorization': `Bearer ${this.accessToken}`
+          }
+        });
+
+        const data = response.data;
+        items = items.concat(data.items || []);
+        url = data.next; // Spotify provides next URL for pagination
+
+        if (url) {
+          // Add a small delay between requests to avoid rate limiting
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      } catch (error) {
+        if (error.response?.status === 429) {
+          // Handle rate limiting
+          const retryAfter = error.response.headers['retry-after'] || 1;
+          await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
+          continue;
+        }
+        console.error('Error fetching page:', error);
+        throw error;
+      }
+    }
+
+    return items;
+  }
+
+  async getReleasesByLabel(labelId) {
+    await this.initialize();
+    const query = `label:"${labelId}"`;
+    const url = `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=album&limit=50`;
+    
+    let allReleases = [];
+    let nextUrl = url;
+    let retryCount = 0;
+    const MAX_RETRIES = 3;
+
+    while (nextUrl && retryCount < MAX_RETRIES) {
+      try {
+        const response = await axios.get(nextUrl, {
+          headers: {
+            'Authorization': `Bearer ${this.accessToken}`
+          }
+        });
+
+        const { items, next } = response.data.albums;
+        allReleases = allReleases.concat(items);
+        nextUrl = next;
+
+        if (nextUrl) {
+          // Add a small delay between requests to avoid rate limiting
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      } catch (error) {
+        console.error('Error fetching releases:', error.message);
+        
+        if (error.response?.status === 429) {
+          // Handle rate limiting
+          const retryAfter = parseInt(error.response.headers['retry-after'] || '1');
+          await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
+          retryCount++;
+          continue;
+        }
+
+        if (error.response?.status === 401) {
+          // Token expired, get a new one and retry
+          await this.getAccessToken();
+          retryCount++;
+          continue;
+        }
+
+        throw error;
+      }
+    }
+
+    console.log(`Total releases fetched for ${labelId}: ${allReleases.length}`);
+    return allReleases;
+  }
+
+  async getRelease(releaseId) {
+    await this.initialize();
+    try {
+      const response = await axios.get(`https://api.spotify.com/v1/albums/${releaseId}`, {
+        headers: {
+          'Authorization': `Bearer ${this.accessToken}`
+        }
+      });
+      return response.data;
+    } catch (error) {
+      if (error.response?.status === 429) {
+        // Handle rate limiting
+        const retryAfter = parseInt(error.response.headers['retry-after'] || '1');
+        await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
+        return this.getRelease(releaseId);
+      }
+
+      if (error.response?.status === 401) {
+        // Token expired, get a new one and retry
+        await this.getAccessToken();
+        return this.getRelease(releaseId);
+      }
+
+      console.error('Error fetching release:', error);
+      return null;
     }
   }
 }

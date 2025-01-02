@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Button, ButtonGroup, Typography, CircularProgress, Grid, Paper } from '@mui/material';
+import { Box, Button, ButtonGroup, Typography, CircularProgress, Paper } from '@mui/material';
 import { API_URL } from '../config';
 import TrackManager from './TrackManager';
 
@@ -25,11 +25,18 @@ interface Release {
   }>;
 }
 
+interface ReleasesResponse {
+  label: string;
+  totalReleases: number;
+  releases: Release[];
+}
+
 const AdminDashboard: React.FC = () => {
   const [selectedLabel, setSelectedLabel] = useState<string>('buildit-records');
   const [releases, setReleases] = useState<Release[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [totalReleases, setTotalReleases] = useState(0);
 
   useEffect(() => {
     if (selectedLabel) {
@@ -70,13 +77,14 @@ const AdminDashboard: React.FC = () => {
   const fetchReleases = async (labelId: string) => {
     try {
       const response = await fetch(`${API_URL}/releases/${labelId}`);
-      const data = await response.json();
+      const data: ReleasesResponse = await response.json();
       
       if (!response.ok) {
         throw new Error(data.error || 'Failed to fetch releases');
       }
 
-      setReleases(data.releases || []);
+      setReleases(data.releases);
+      setTotalReleases(data.totalReleases);
     } catch (error) {
       console.error('Error fetching releases:', error);
       setError(error instanceof Error ? error.message : 'Failed to fetch releases');
@@ -132,7 +140,7 @@ const AdminDashboard: React.FC = () => {
           </Button>
           
           <Typography variant="subtitle1">
-            Total Releases: {releases.length}
+            Total Releases: {totalReleases}
           </Typography>
         </Box>
 
