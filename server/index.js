@@ -1,145 +1,71 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const helmet = require('helmet');
-const sequelize = require('./config/database');
-const { Label, Artist, Release, Track } = require('./models');
+const { initializeDatabase } = require('./config/database');
 const apiRoutes = require('./routes/api.routes');
+
+// Global error handlers
+process.on('uncaughtException', (err) => {
+  console.error('[Server] Uncaught Exception:', err);
+  console.error(err.stack);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[Server] Unhandled Rejection at:', promise);
+  console.error('[Server] Reason:', reason);
+});
 
 const app = express();
 const port = process.env.PORT || 3001;
 
-// Enable detailed logging
-const debugLog = (message, ...args) => {
-  console.log(`[${new Date().toISOString()}] ${message}`, ...args);
-};
-
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-});
-
-process.on('uncaughtException', (error) => {
-  console.error('Uncaught Exception:', error);
-  process.exit(1);
-});
-
-// CORS configuration
+// Middleware
 app.use(cors({
   origin: ['http://localhost:3000', 'http://localhost:3001'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', message: 'Server is running' });
-});
-
-// Security middleware
-app.use(helmet({
-  contentSecurityPolicy: false,
-  crossOriginEmbedderPolicy: false
-}));
-
-// Body parsing middleware
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Mount API routes
-app.use('/api', apiRoutes);
-
-// Debug middleware to log all requests
+// Debug middleware
 app.use((req, res, next) => {
-  debugLog(`${req.method} ${req.originalUrl}`);
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
   next();
 });
 
-// 404 handler
-app.use((req, res) => {
-  debugLog('404 Not Found:', req.method, req.originalUrl);
-  res.status(404).json({ 
-    success: false, 
-    message: 'Not Found',
-    path: req.originalUrl
+// Routes
+app.use('/api', apiRoutes);
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'ok',
+    timestamp: new Date().toISOString()
   });
 });
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error('Error:', err);
-  res.status(500).json({
-    success: false,
-    message: err.message || 'An unexpected error occurred'
+  console.error('[Server] Error:', err);
+  console.error(err.stack);
+  res.status(500).json({ 
+    error: 'Internal server error',
+    message: err.message
   });
 });
 
-// Test database connection and sync models
-const initDatabase = async () => {
-  try {
-    debugLog('Testing database connection...');
-    await sequelize.authenticate();
-    debugLog('Database connection established successfully');
-
-    // Create default labels if they don't exist
-    debugLog('Creating default labels...');
-    await Promise.all([
-      Label.findOrCreate({
-        where: { id: 'buildit-records' },
-        defaults: { 
-          id: 'buildit-records',
-          name: 'records',
-          displayName: 'Build It Records',
-          slug: 'buildit-records'
-        }
-      }),
-      Label.findOrCreate({
-        where: { id: 'buildit-tech' },
-        defaults: { 
-          id: 'buildit-tech',
-          name: 'tech',
-          displayName: 'Build It Tech',
-          slug: 'buildit-tech'
-        }
-      }),
-      Label.findOrCreate({
-        where: { id: 'buildit-deep' },
-        defaults: { 
-          id: 'buildit-deep',
-          name: 'deep',
-          displayName: 'Build It Deep',
-          slug: 'buildit-deep'
-        }
-      })
-    ]);
-    debugLog('Default labels created successfully');
-
-    return true;
-  } catch (error) {
-    console.error('Database initialization error:', error);
-    return false;
-  }
-};
-
-let server;
-
+// Start server
 const startServer = async () => {
   try {
-    debugLog('Initializing database...');
-    const dbInitialized = await initDatabase();
-    if (!dbInitialized) {
-      console.error('Failed to initialize database. Exiting...');
-      process.exit(1);
-    }
+    console.log('[Database] Testing connection...');
+    const db = await initializeDatabase();
+    console.log('[Database] Connection established successfully');
 
-    // Start server
-    server = app.listen(port, () => {
-      debugLog(`Server is running on port ${port}`);
-      debugLog('Available routes:');
-      app._router.stack
-        .filter(r => r.route)
-        .forEach(r => {
-          debugLog(`${Object.keys(r.route.methods).join(',')} ${r.route.path}`);
-        });
+    const server = app.listen(port, () => {
+      console.log(`[${new Date().toISOString()}] Server is running on port ${port}`);
+      console.log(`[${new Date().toISOString()}] Health check endpoint: http://localhost:${port}/health`);
     });
 
     // Handle graceful shutdown
@@ -147,40 +73,26 @@ const startServer = async () => {
       console.log('[Server] Shutting down gracefully...');
       
       // Close server first
-      if (server) {
-        await new Promise((resolve) => {
-          server.close((err) => {
-            if (err) {
-              console.error('[Server] Error closing HTTP server:', err);
-            }
-            resolve();
-          });
+      await new Promise((resolve) => {
+        server.close((err) => {
+          if (err) {
+            console.error('[Server] Error closing HTTP server:', err);
+          }
+          resolve();
         });
-      }
+      });
 
       // Close database connection
-      try {
-        await sequelize.close();
-        console.log('[Server] Database connection closed');
-      } catch (error) {
-        console.error('[Server] Error closing database connection:', error);
+      if (db) {
+        await db.close();
       }
 
-      // Exit process
       process.exit(0);
     };
 
-    // Listen for shutdown signals
+    // Handle shutdown signals
     process.on('SIGTERM', shutdown);
     process.on('SIGINT', shutdown);
-    process.on('uncaughtException', (error) => {
-      console.error('[Server] Uncaught exception:', error);
-      shutdown();
-    });
-    process.on('unhandledRejection', (error) => {
-      console.error('[Server] Unhandled rejection:', error);
-      shutdown();
-    });
 
   } catch (error) {
     console.error('[Server] Failed to start:', error);
@@ -188,5 +100,4 @@ const startServer = async () => {
   }
 };
 
-// Start server
 startServer();

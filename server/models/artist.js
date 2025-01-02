@@ -1,55 +1,63 @@
 const { Model, DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 
-class Artist extends Model {}
-
-Artist.init({
-  id: {
-    type: DataTypes.STRING,
-    primaryKey: true,
-    allowNull: false
-  },
-  name: {
-    type: DataTypes.STRING,
-    allowNull: false
-  },
-  spotify_url: {
-    type: DataTypes.STRING,
-    allowNull: true
-  },
-  images: {
-    type: DataTypes.JSON,
-    allowNull: true,
-    defaultValue: []
-  },
-  label_id: {
-    type: DataTypes.STRING,
-    references: {
-      model: 'labels',
-      key: 'id'
-    },
-    onUpdate: 'CASCADE',
-    onDelete: 'SET NULL',
-    allowNull: true
-  },
-  created_at: {
-    type: DataTypes.DATE,
-    allowNull: false,
-    defaultValue: DataTypes.NOW
-  },
-  updated_at: {
-    type: DataTypes.DATE,
-    allowNull: false,
-    defaultValue: DataTypes.NOW
+module.exports = (sequelize) => {
+  class Artist extends Model {
+    static associate(models) {
+      Artist.belongsTo(models.Label, {
+        foreignKey: 'label_id',
+        as: 'label'
+      });
+      Artist.hasMany(models.Release, {
+        foreignKey: 'artist_id',
+        as: 'releases'
+      });
+      Artist.hasMany(models.Track, {
+        foreignKey: 'artist_id',
+        as: 'tracks'
+      });
+    }
   }
-}, {
-  sequelize,
-  modelName: 'artist',
-  tableName: 'artists',
-  underscored: true,
-  timestamps: true,
-  createdAt: 'created_at',
-  updatedAt: 'updated_at'
-});
 
-module.exports = Artist;
+  Artist.init({
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+      allowNull: false
+    },
+    spotify_id: {
+      type: DataTypes.STRING,
+      unique: true,
+      allowNull: false
+    },
+    name: {
+      type: DataTypes.STRING,
+      allowNull: false
+    },
+    label_id: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      references: {
+        model: 'labels',
+        key: 'id'
+      }
+    },
+    spotify_url: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    image_url: {
+      type: DataTypes.STRING,
+      allowNull: true
+    }
+  }, {
+    sequelize,
+    modelName: 'Artist',
+    tableName: 'artists',
+    underscored: true,
+    timestamps: true
+  });
+
+  return Artist;
+};

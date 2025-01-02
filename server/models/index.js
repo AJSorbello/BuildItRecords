@@ -1,79 +1,42 @@
-const sequelize = require('../config/database');
+'use strict';
 
-// Import models
-const Artist = require('./artist');
-const Release = require('./release');
-const Label = require('./label');
-const Track = require('./track');
+const fs = require('fs');
+const path = require('path');
+const Sequelize = require('sequelize');
+const process = require('process');
+const basename = path.basename(__filename);
 
-// Define associations
-// Label has many Artists
-Label.hasMany(Artist, {
-  foreignKey: 'label_id',
-  sourceKey: 'id',
-  as: 'artists'
-});
-Artist.belongsTo(Label, {
-  foreignKey: 'label_id',
-  targetKey: 'id',
-  as: 'label'
-});
+function initializeModels(sequelize) {
+  const db = {};
 
-// Label has many Releases
-Label.hasMany(Release, {
-  foreignKey: 'label_id',
-  sourceKey: 'id',
-  as: 'releases'
-});
-Release.belongsTo(Label, {
-  foreignKey: 'label_id',
-  targetKey: 'id',
-  as: 'label'
-});
+  // Import models
+  const modelFiles = fs.readdirSync(__dirname)
+    .filter(file => {
+      return (
+        file.indexOf('.') !== 0 &&
+        file !== basename &&
+        file.slice(-3) === '.js' &&
+        file.indexOf('.test.js') === -1
+      );
+    });
 
-// Artist has many Releases
-Artist.hasMany(Release, {
-  foreignKey: 'artist_id',
-  sourceKey: 'id',
-  as: 'releases'
-});
-Release.belongsTo(Artist, {
-  foreignKey: 'artist_id',
-  targetKey: 'id',
-  as: 'artist'
-});
+  // Initialize models
+  for (const file of modelFiles) {
+    const model = require(path.join(__dirname, file))(sequelize);
+    db[model.name] = model;
+  }
 
-// Release has many Tracks
-Release.hasMany(Track, {
-  foreignKey: 'release_id',
-  sourceKey: 'id',
-  as: 'tracks'
-});
-Track.belongsTo(Release, {
-  foreignKey: 'release_id',
-  targetKey: 'id',
-  as: 'release'
-});
+  // Set up associations
+  Object.keys(db).forEach(modelName => {
+    if (db[modelName].associate) {
+      db[modelName].associate(db);
+    }
+  });
 
-// Track belongs to Artist
-Track.belongsTo(Artist, {
-  foreignKey: 'artist_id',
-  targetKey: 'id',
-  as: 'artist'
-});
+  db.sequelize = sequelize;
+  db.Sequelize = Sequelize;
 
-// Track belongs to Label
-Track.belongsTo(Label, {
-  foreignKey: 'label_id',
-  targetKey: 'id',
-  as: 'label'
-});
+  return db;
+}
 
-// Export models and sequelize instance
-module.exports = {
-  sequelize,
-  Artist,
-  Release,
-  Label,
-  Track
-};
+module.exports = initializeModels;

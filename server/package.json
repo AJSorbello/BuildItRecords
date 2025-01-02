@@ -6,12 +6,13 @@
   "license": "MIT",
   "scripts": {
     "start": "node index.js",
-    "dev": "nodemon index.js",
+    "dev": "nodemon --verbose index.js",
     "db:migrate": "sequelize-cli db:migrate",
     "db:migrate:undo": "sequelize-cli db:migrate:undo",
     "db:migrate:undo:all": "sequelize-cli db:migrate:undo:all"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.47.10",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",

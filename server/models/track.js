@@ -1,84 +1,91 @@
 const { Model, DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 
-class Track extends Model {}
-
-Track.init({
-  id: {
-    type: DataTypes.STRING,
-    primaryKey: true,
-    allowNull: false
-  },
-  title: {
-    type: DataTypes.STRING,
-    allowNull: false
-  },
-  artist_id: {
-    type: DataTypes.STRING,
-    references: {
-      model: 'artists',
-      key: 'id'
-    },
-    onUpdate: 'CASCADE',
-    onDelete: 'CASCADE'
-  },
-  release_id: {
-    type: DataTypes.STRING,
-    references: {
-      model: 'releases',
-      key: 'id'
-    },
-    onUpdate: 'CASCADE',
-    onDelete: 'CASCADE'
-  },
-  label_id: {
-    type: DataTypes.STRING,
-    references: {
-      model: 'labels',
-      key: 'id'
-    },
-    onUpdate: 'CASCADE',
-    onDelete: 'SET NULL',
-    allowNull: true
-  },
-  duration_ms: {
-    type: DataTypes.INTEGER,
-    allowNull: true
-  },
-  preview_url: {
-    type: DataTypes.STRING,
-    allowNull: true
-  },
-  spotify_url: {
-    type: DataTypes.STRING,
-    allowNull: true
-  },
-  external_urls: {
-    type: DataTypes.JSON,
-    defaultValue: {}
-  },
-  uri: {
-    type: DataTypes.STRING,
-    allowNull: true
-  },
-  created_at: {
-    type: DataTypes.DATE,
-    allowNull: false,
-    defaultValue: DataTypes.NOW
-  },
-  updated_at: {
-    type: DataTypes.DATE,
-    allowNull: false,
-    defaultValue: DataTypes.NOW
+module.exports = (sequelize) => {
+  class Track extends Model {
+    static associate(models) {
+      Track.belongsTo(models.Artist, {
+        foreignKey: 'artist_id',
+        as: 'artist'
+      });
+      Track.belongsTo(models.Artist, {
+        foreignKey: 'remixer_id',
+        as: 'remixer'
+      });
+      Track.belongsTo(models.Release, {
+        foreignKey: 'release_id',
+        as: 'release'
+      });
+    }
   }
-}, {
-  sequelize,
-  modelName: 'track',
-  tableName: 'tracks',
-  underscored: true,
-  timestamps: true,
-  createdAt: 'created_at',
-  updatedAt: 'updated_at'
-});
 
-module.exports = Track;
+  Track.init({
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+      allowNull: false
+    },
+    spotify_id: {
+      type: DataTypes.STRING,
+      unique: true,
+      allowNull: false
+    },
+    title: {
+      type: DataTypes.STRING,
+      allowNull: false
+    },
+    artist_id: {
+      type: DataTypes.UUID,
+      allowNull: false,
+      references: {
+        model: 'artists',
+        key: 'id'
+      }
+    },
+    remixer_id: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: {
+        model: 'artists',
+        key: 'id'
+      }
+    },
+    release_id: {
+      type: DataTypes.UUID,
+      allowNull: false,
+      references: {
+        model: 'releases',
+        key: 'id'
+      }
+    },
+    duration_ms: {
+      type: DataTypes.INTEGER,
+      allowNull: true
+    },
+    preview_url: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    spotify_url: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    external_urls: {
+      type: DataTypes.JSONB,
+      defaultValue: {}
+    },
+    uri: {
+      type: DataTypes.STRING,
+      allowNull: true
+    }
+  }, {
+    sequelize,
+    modelName: 'Track',
+    tableName: 'tracks',
+    underscored: true,
+    timestamps: true
+  });
+
+  return Track;
+};
