@@ -1,31 +1,30 @@
-import { Artist } from './artist';
-import { Track } from './track';
-import { RecordLabel } from '../constants/labels';
+import type { Artist } from './artist';
+import type { Track } from './track';
+import type { RecordLabel } from './label';
+import type { SpotifyImage } from './spotify';
 
 export interface Album {
   id: string;
   name: string;
-  artists: {
-    id: string;
-    name: string;
-    uri: string;
-    external_urls: { spotify: string };
-    spotifyUrl: string;
-  }[];
-  images: {
-    url: string;
-    height: number | null;
-    width: number | null;
-  }[];
+  type: 'album' | 'single' | 'compilation';
+  artists: Artist[];
   release_date: string;
-  release_date_precision: 'day' | 'month' | 'year';
+  release_date_precision: 'year' | 'month' | 'day';
   total_tracks: number;
+  uri: string;
   external_urls: {
     spotify: string;
   };
-  uri: string;
-  type: string;
+  images: SpotifyImage[];
   spotifyUrl: string;
+  tracks?: Track[];
+}
+
+export interface Release extends Album {
+  label?: RecordLabel;
+  featured?: boolean;
+  description?: string;
+  artwork?: string;
 }
 
 export interface AlbumResponse {
@@ -43,28 +42,6 @@ export interface AlbumSearchParams {
   limit?: number;
   offset?: number;
   include_groups?: ('album' | 'single' | 'compilation')[];
-}
-
-export interface Release {
-  id: string;
-  title: string;
-  artist: Artist;
-  artists: Artist[];
-  artworkUrl?: string;
-  releaseDate: string;
-  label?: RecordLabel;
-  spotifyUrl: string;
-  tracks: Track[];
-  featured?: boolean;
-  images?: {
-    url: string;
-    height: number | null;
-    width: number | null;
-  }[];
-  external_urls?: {
-    spotify: string;
-  };
-  uri?: string;
 }
 
 export interface ReleaseFormData {
@@ -108,50 +85,37 @@ export interface SpotifyAlbum {
   };
 }
 
-export const getArtistName = (artist: string | { id: string; name: string; uri: string }): string => {
+export function getArtistName(artist: string | { id: string; name: string; uri: string }): string {
   return typeof artist === 'string' ? artist : artist.name;
-};
+}
 
-export const getArtistId = (artist: string | { id: string; name: string; uri: string }): string | undefined => {
+export function getArtistId(artist: string | { id: string; name: string; uri: string }): string | undefined {
   return typeof artist === 'string' ? undefined : artist.id;
-};
+}
 
-export const createAlbum = (data: Partial<Album>): Album => {
+export function createAlbum(data: Partial<Album>): Album {
   return {
     id: data.id || '',
     name: data.name || '',
+    type: data.type || 'album',
     artists: data.artists || [],
-    images: data.images || [],
-    release_date: data.release_date || '',
+    release_date: data.release_date || new Date().toISOString().split('T')[0],
     release_date_precision: data.release_date_precision || 'day',
     total_tracks: data.total_tracks || 0,
-    external_urls: data.external_urls || { spotify: '' },
     uri: data.uri || '',
-    type: data.type || 'album',
-    spotifyUrl: data.spotifyUrl || ''
-  };
-};
-
-export const createRelease = (data: Partial<Release>): Release => {
-  return {
-    id: data.id || '',
-    title: data.title || '',
-    artist: data.artist || { 
-      id: '', 
-      name: '', 
-      uri: '',
-      external_urls: { spotify: '' },
-      spotifyUrl: ''
-    },
-    artists: data.artists || [],
-    artworkUrl: data.artworkUrl,
-    releaseDate: data.releaseDate || '',
-    label: data.label,
-    spotifyUrl: data.spotifyUrl || '',
-    tracks: data.tracks || [],
-    featured: data.featured,
-    images: data.images || [],
     external_urls: data.external_urls || { spotify: '' },
-    uri: data.uri || ''
+    images: data.images || [],
+    spotifyUrl: data.spotifyUrl || '',
+    tracks: data.tracks || []
   };
-};
+}
+
+export function createRelease(data: Partial<Release>): Release {
+  return {
+    ...createAlbum(data),
+    label: data.label,
+    featured: data.featured || false,
+    description: data.description || '',
+    artwork: data.artwork || ''
+  };
+}

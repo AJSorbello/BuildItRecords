@@ -1,8 +1,8 @@
+import { type SpotifyApiTrack } from '../types/track';
 import { Track } from '../types/track';
 import { Artist } from '../types/artist';
 import { Album } from '../types/release';
 import { 
-  type Track as SpotifyTrack, 
   type Artist as SpotifyArtist,
   type SimplifiedArtist, 
   type SimplifiedAlbum,
@@ -10,17 +10,19 @@ import {
 } from '@spotify/web-api-ts-sdk';
 
 // Convert a Spotify track to our Track type
-export const transformSpotifyTrack = (spotifyTrack: SpotifyTrack): Track => {
+export const transformSpotifyTrack = (spotifyTrack: SpotifyApiTrack): Track => {
   return {
     id: spotifyTrack.id,
     name: spotifyTrack.name,
     title: spotifyTrack.name,
+    type: 'track',
     artists: spotifyTrack.artists.map(artist => ({
       id: artist.id,
       name: artist.name,
       uri: artist.uri,
       external_urls: artist.external_urls,
-      spotifyUrl: artist.external_urls.spotify
+      spotifyUrl: artist.external_urls.spotify,
+      type: 'artist'
     })),
     duration_ms: spotifyTrack.duration_ms,
     preview_url: spotifyTrack.preview_url,
@@ -45,6 +47,7 @@ export const transformSpotifyArtist = (spotifyArtist: SpotifyArtist | Simplified
     uri: spotifyArtist.uri,
     external_urls: spotifyArtist.external_urls,
     spotifyUrl: spotifyArtist.external_urls.spotify,
+    type: 'artist',
     images: 'images' in spotifyArtist ? spotifyArtist.images : [],
     genres: 'genres' in spotifyArtist ? spotifyArtist.genres : [],
     popularity: 'popularity' in spotifyArtist ? spotifyArtist.popularity : undefined
@@ -61,7 +64,8 @@ export const transformSpotifyAlbum = (spotifyAlbum: SpotifyAlbum | SimplifiedAlb
       name: artist.name,
       uri: artist.uri,
       external_urls: artist.external_urls,
-      spotifyUrl: artist.external_urls.spotify
+      spotifyUrl: artist.external_urls.spotify,
+      type: 'artist'
     })),
     release_date: spotifyAlbum.release_date,
     release_date_precision: spotifyAlbum.release_date_precision,
@@ -69,7 +73,7 @@ export const transformSpotifyAlbum = (spotifyAlbum: SpotifyAlbum | SimplifiedAlb
     uri: spotifyAlbum.uri,
     external_urls: spotifyAlbum.external_urls,
     images: spotifyAlbum.images,
-    type: spotifyAlbum.type,
+    type: spotifyAlbum.album_type === 'single' ? 'single' : 'album',
     spotifyUrl: spotifyAlbum.external_urls.spotify
   };
 };

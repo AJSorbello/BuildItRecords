@@ -1,29 +1,28 @@
 const { Model, DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 
-module.exports = (sequelize, DataTypes) => {
+module.exports = (sequelize) => {
   class Artist extends Model {
     static associate(models) {
-      // associations can be defined here
       Artist.belongsTo(models.Label, {
-        foreignKey: 'labelId',
+        foreignKey: 'label_id',
         as: 'label'
       });
 
       Artist.hasMany(models.Release, {
-        foreignKey: 'primaryArtistId',
-        as: 'primaryReleases'
-      });
-
-      Artist.belongsToMany(models.Release, {
-        through: 'ReleaseArtists',
-        foreignKey: 'artistId',
-        otherKey: 'releaseId',
+        foreignKey: 'primary_artist_id',
         as: 'releases'
       });
 
+      Artist.belongsToMany(models.Release, {
+        through: 'release_artists',
+        foreignKey: 'artist_id',
+        otherKey: 'release_id',
+        as: 'collaborations'
+      });
+
       Artist.hasMany(models.Track, {
-        foreignKey: 'remixerId',
+        foreignKey: 'remixer_id',
         as: 'remixes'
       });
     }
@@ -45,18 +44,16 @@ module.exports = (sequelize, DataTypes) => {
         notEmpty: true
       }
     },
-    spotifyUrl: {
+    spotify_url: {
       type: DataTypes.STRING,
       allowNull: true,
-      field: 'spotify_url',
       validate: {
         isUrl: true
       }
     },
-    spotifyUri: {
+    spotify_uri: {
       type: DataTypes.STRING,
       allowNull: true,
-      field: 'spotify_uri',
       validate: {
         isSpotifyUri(value) {
           if (value && !value.startsWith('spotify:artist:')) {
@@ -65,27 +62,27 @@ module.exports = (sequelize, DataTypes) => {
         }
       }
     },
-    imageUrl: {
+    image_url: {
       type: DataTypes.STRING,
       allowNull: true,
-      field: 'image_url',
       validate: {
         isUrl: true
       }
     },
-    labelId: {
+    label_id: {
       type: DataTypes.STRING,
       allowNull: true,
-      field: 'label_id',
       references: {
-        model: 'Labels',
+        model: 'labels',
         key: 'id'
-      }
+      },
+      onDelete: 'SET NULL',
+      onUpdate: 'CASCADE'
     }
   }, {
     sequelize,
     modelName: 'Artist',
-    tableName: 'Artists',
+    tableName: 'artists',
     underscored: true,
     timestamps: true,
     indexes: [

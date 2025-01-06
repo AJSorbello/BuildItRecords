@@ -6,24 +6,24 @@ module.exports = (sequelize) => {
     static associate(models) {
       // associations can be defined here
       Release.belongsTo(models.Label, {
-        foreignKey: 'labelId',
+        foreignKey: 'label_id',
         as: 'label'
       });
 
       Release.belongsTo(models.Artist, {
-        foreignKey: 'primaryArtistId',
+        foreignKey: 'primary_artist_id',
         as: 'primaryArtist'
       });
 
       Release.belongsToMany(models.Artist, {
-        through: 'ReleaseArtists',
-        foreignKey: 'releaseId',
-        otherKey: 'artistId',
+        through: 'release_artists',
+        foreignKey: 'release_id',
+        otherKey: 'artist_id',
         as: 'artists'
       });
 
       Release.hasMany(models.Track, {
-        foreignKey: 'releaseId',
+        foreignKey: 'release_id',
         as: 'tracks'
       });
     }
@@ -45,31 +45,21 @@ module.exports = (sequelize) => {
         notEmpty: true
       }
     },
-    releaseDate: {
-      type: DataTypes.DATEONLY,
-      allowNull: false,
-      field: 'release_date'
+    release_date: {
+      type: DataTypes.DATE,
+      allowNull: false
     },
-    type: {
-      type: DataTypes.ENUM('album', 'single', 'ep'),
-      allowNull: false,
-      defaultValue: 'single',
-      validate: {
-        isIn: [['album', 'single', 'ep']]
-      }
+    cover_image: {
+      type: DataTypes.STRING
     },
-    spotifyUrl: {
+    spotify_url: {
       type: DataTypes.STRING,
-      allowNull: true,
-      field: 'spotify_url',
       validate: {
         isUrl: true
       }
     },
-    spotifyUri: {
+    spotify_uri: {
       type: DataTypes.STRING,
-      allowNull: true,
-      field: 'spotify_uri',
       validate: {
         isSpotifyUri(value) {
           if (value && !value.startsWith('spotify:album:')) {
@@ -78,30 +68,35 @@ module.exports = (sequelize) => {
         }
       }
     },
-    imageUrl: {
+    label_id: {
       type: DataTypes.STRING,
-      allowNull: true,
-      field: 'image_url',
+      allowNull: false,
+      references: {
+        model: 'labels',
+        key: 'id'
+      }
+    },
+    primary_artist_id: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      references: {
+        model: 'artists',
+        key: 'id'
+      }
+    },
+    total_tracks: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0
+    },
+    record_label: {
+      type: DataTypes.STRING,
       validate: {
-        isUrl: true
-      }
-    },
-    labelId: {
-      type: DataTypes.STRING,
-      allowNull: false,
-      field: 'label_id',
-      references: {
-        model: 'Labels',
-        key: 'id'
-      }
-    },
-    primaryArtistId: {
-      type: DataTypes.STRING,
-      allowNull: false,
-      field: 'primary_artist_id',
-      references: {
-        model: 'Artists',
-        key: 'id'
+        isLabelFormat(value) {
+          if (value && !value.match(/^label:"[^"]+?"$/)) {
+            throw new Error('Record label must be in format: label:"Label Name"');
+          }
+        }
       }
     },
     status: {
@@ -115,7 +110,7 @@ module.exports = (sequelize) => {
   }, {
     sequelize,
     modelName: 'Release',
-    tableName: 'Releases',
+    tableName: 'releases',
     underscored: true,
     timestamps: true,
     indexes: [
@@ -134,8 +129,8 @@ module.exports = (sequelize) => {
     ],
     hooks: {
       beforeValidate: (release) => {
-        if (release.releaseDate && release.releaseDate instanceof Date) {
-          release.releaseDate = release.releaseDate.toISOString().split('T')[0];
+        if (release.release_date && release.release_date instanceof Date) {
+          release.release_date = release.release_date.toISOString().split('T')[0];
         }
       }
     }

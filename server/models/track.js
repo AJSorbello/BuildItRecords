@@ -3,15 +3,14 @@ const { Model, DataTypes } = require('sequelize');
 module.exports = (sequelize) => {
   class Track extends Model {
     static associate(models) {
-      // associations can be defined here
       Track.belongsTo(models.Release, {
         foreignKey: 'release_id',
         as: 'release'
       });
 
-      Track.belongsTo(models.Label, {
-        foreignKey: 'label_id',
-        as: 'label'
+      Track.belongsTo(models.Artist, {
+        foreignKey: 'remixer_id',
+        as: 'remixer'
       });
 
       Track.belongsToMany(models.Artist, {
@@ -32,7 +31,7 @@ module.exports = (sequelize) => {
         notEmpty: true
       }
     },
-    name: {
+    title: {
       type: DataTypes.STRING,
       allowNull: false,
       validate: {
@@ -72,20 +71,35 @@ module.exports = (sequelize) => {
       type: DataTypes.STRING,
       allowNull: true
     },
+    spotify_uri: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
     release_id: {
       type: DataTypes.STRING,
-      allowNull: true,
+      allowNull: false,
       references: {
         model: 'releases',
         key: 'id'
       }
     },
-    label_id: {
+    remixer_id: {
+      type: DataTypes.STRING,
+      references: {
+        model: 'artists',
+        key: 'id'
+      }
+    },
+    record_label: {
       type: DataTypes.STRING,
       allowNull: true,
-      references: {
-        model: 'labels',
-        key: 'id'
+      field: 'record_label',
+      validate: {
+        isLabelFormat(value) {
+          if (value && !value.match(/^label:"[^"]+?"$/)) {
+            throw new Error('Record label must be in format: label:"Label Name"');
+          }
+        }
       }
     },
     created_at: {

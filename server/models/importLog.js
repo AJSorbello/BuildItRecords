@@ -1,43 +1,56 @@
 'use strict';
 
+const { Model } = require('sequelize');
+
 module.exports = (sequelize, DataTypes) => {
-  const ImportLog = sequelize.define('ImportLog', {
-    type: {
+  class ImportLog extends Model {
+    static associate(models) {
+      ImportLog.belongsTo(models.Label, {
+        foreignKey: 'label_id',
+        as: 'label'
+      });
+    }
+  }
+
+  ImportLog.init({
+    label_id: {
       type: DataTypes.STRING,
       allowNull: false,
-      validate: {
-        isIn: [['artist', 'release', 'track']]
+      references: {
+        model: 'labels',
+        key: 'id'
       }
-    },
-    spotifyId: {
-      type: DataTypes.STRING,
-      allowNull: false
     },
     status: {
       type: DataTypes.STRING,
       allowNull: false,
       validate: {
-        isIn: [['success', 'error']]
+        isIn: [['started', 'completed', 'failed']]
       }
     },
-    error: {
+    message: {
       type: DataTypes.TEXT,
       allowNull: true
     },
-    importedAt: {
+    completed_at: {
       type: DataTypes.DATE,
-      allowNull: false
+      allowNull: true
     }
   }, {
+    sequelize,
+    modelName: 'ImportLog',
+    tableName: 'import_logs',
+    underscored: true,
+    timestamps: true,
     indexes: [
       {
-        fields: ['type', 'spotifyId']
+        fields: ['label_id']
       },
       {
         fields: ['status']
       },
       {
-        fields: ['importedAt']
+        fields: ['completed_at']
       }
     ]
   });

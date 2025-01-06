@@ -1,81 +1,86 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   List,
   ListItem,
-  ListItemAvatar,
   ListItemText,
+  ListItemAvatar,
   Avatar,
   IconButton,
   Typography,
   Box,
+  CircularProgress
 } from '@mui/material';
-import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import { PlayArrow as PlayIcon } from '@mui/icons-material';
 import { Track } from '../types/track';
+import { formatDuration } from '../utils/trackUtils';
+import { useSpotifyPlaylists } from '../hooks/useSpotifyPlaylists';
 
 interface PlaylistTrackListProps {
   playlistId: string;
-  tracks: Track[];
+  tracks?: Track[];
 }
 
-const PlaylistTrackList: React.FC<PlaylistTrackListProps> = ({ tracks = [] }) => {
-  const handlePlayClick = (track: Track) => {
-    if (track.spotifyUrl) {
-      window.open(track.spotifyUrl, '_blank');
-    }
-  };
+export const PlaylistTrackList: React.FC<PlaylistTrackListProps> = ({ playlistId, tracks: initialTracks }) => {
+  const { tracks: fetchedTracks, loading, error } = useSpotifyPlaylists(playlistId);
+  const [displayTracks, setDisplayTracks] = useState<Track[]>([]);
 
-  if (!tracks.length) {
+  useEffect(() => {
+    if (initialTracks) {
+      setDisplayTracks(initialTracks);
+    } else if (fetchedTracks) {
+      setDisplayTracks(fetchedTracks);
+    }
+  }, [initialTracks, fetchedTracks]);
+
+  if (loading) {
     return (
-      <Typography variant="body1" color="text.secondary" align="center">
-        No tracks available
+      <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Typography color="error" sx={{ p: 2 }}>
+        Error loading tracks: {error}
+      </Typography>
+    );
+  }
+
+  if (!displayTracks.length) {
+    return (
+      <Typography sx={{ p: 2 }}>
+        No tracks found in this playlist.
       </Typography>
     );
   }
 
   return (
-    <List>
-      {tracks.map((track) => (
+    <List sx={{ width: '100%', bgcolor: 'background.paper' }}>
+      {displayTracks.map((track) => (
         <ListItem
           key={track.id}
-          sx={{
-            bgcolor: 'background.paper',
-            borderRadius: 1,
-            mb: 1,
-            '&:hover': {
-              bgcolor: 'action.hover',
-            },
-          }}
+          alignItems="center"
           secondaryAction={
-            <Box>
-              {track.spotifyUrl && (
-                <IconButton
-                  edge="end"
-                  aria-label="open in spotify"
-                  onClick={() => window.open(track.spotifyUrl, '_blank')}
-                >
-                  <OpenInNewIcon />
-                </IconButton>
-              )}
-              <IconButton
-                edge="end"
-                aria-label="play"
-                onClick={() => handlePlayClick(track)}
-              >
-                <PlayArrowIcon />
-              </IconButton>
-            </Box>
+            <IconButton
+              edge="end"
+              aria-label="play"
+              onClick={() => window.open(track.external_urls.spotify, '_blank')}
+            >
+              <PlayIcon />
+            </IconButton>
           }
         >
           <ListItemAvatar>
             <Avatar
-              alt={track.title}
-              src={track.artworkUrl || '/default-album-art.png'}
-              variant="rounded"
+              alt={track.name}
+              src={track.album.images?.[0]?.url || '/placeholder-album.png'}
+              variant="square"
             />
           </ListItemAvatar>
           <ListItemText
-            primary={track.title}
+            primary={track.name}
             secondary={
               <React.Fragment>
                 <Typography
@@ -85,15 +90,8 @@ const PlaylistTrackList: React.FC<PlaylistTrackListProps> = ({ tracks = [] }) =>
                 >
                   {track.artists.map(artist => artist.name).join(', ')}
                 </Typography>
-                {track.album && (
-                  <Typography
-                    component="span"
-                    variant="body2"
-                    color="text.secondary"
-                  >
-                    {' • '}{track.album.name}
-                  </Typography>
-                )}
+                {' — '}
+                {formatDuration(track.duration_ms)}
               </React.Fragment>
             }
           />
@@ -102,5 +100,3 @@ const PlaylistTrackList: React.FC<PlaylistTrackListProps> = ({ tracks = [] }) =>
     </List>
   );
 };
-
-export default PlaylistTrackList;

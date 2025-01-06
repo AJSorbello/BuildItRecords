@@ -8,16 +8,12 @@ import {
   Typography,
   Paper,
 } from '@mui/material';
+import { API_URL } from '../../config';
 
 interface LoginCredentials {
   username: string;
   password: string;
 }
-
-const ADMIN_CREDENTIALS = {
-  username: process.env.REACT_APP_ADMIN_USERNAME || 'admin',
-  password: process.env.REACT_APP_ADMIN_PASSWORD || 'admin123'
-};
 
 const AdminLogin: React.FC = () => {
   const navigate = useNavigate();
@@ -41,23 +37,29 @@ const AdminLogin: React.FC = () => {
     setError('');
 
     try {
-      // Simple client-side authentication
-      if (
-        credentials.username === ADMIN_CREDENTIALS.username && 
-        credentials.password === ADMIN_CREDENTIALS.password
-      ) {
-        // Store authentication state
-        localStorage.setItem('isAdmin', 'true');
-        localStorage.setItem('adminUsername', credentials.username);
-        
-        // Navigate to dashboard
-        navigate('/admin/dashboard');
-      } else {
-        setError('Invalid username or password');
+      const response = await fetch(`${API_URL}/api/admin/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(credentials),
+        credentials: 'include'
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Invalid credentials');
       }
+
+      // Store the JWT token
+      localStorage.setItem('adminToken', data.token);
+      
+      // Navigate to dashboard
+      navigate('/admin/dashboard');
     } catch (error) {
       console.error('Login error:', error);
-      setError('An error occurred during login');
+      setError(error instanceof Error ? error.message : 'An error occurred during login');
     }
   };
 
@@ -125,9 +127,9 @@ const AdminLogin: React.FC = () => {
                 '& .MuiInputLabel-root': {
                   color: '#999',
                 },
-                '& .MuiInputBase-input': {
+                '& .MuiOutlinedInput-input': {
                   color: '#fff',
-                }
+                },
               }}
             />
             <TextField
@@ -154,34 +156,21 @@ const AdminLogin: React.FC = () => {
                 '& .MuiInputLabel-root': {
                   color: '#999',
                 },
-                '& .MuiInputBase-input': {
+                '& .MuiOutlinedInput-input': {
                   color: '#fff',
-                }
+                },
               }}
             />
-            
             {error && (
-              <Typography 
-                color="error" 
-                variant="body2" 
-                sx={{ mt: 2, textAlign: 'center' }}
-              >
+              <Typography color="error" sx={{ mt: 2 }}>
                 {error}
               </Typography>
             )}
-
             <Button
               type="submit"
               fullWidth
               variant="contained"
-              sx={{ 
-                mt: 3, 
-                mb: 2,
-                backgroundColor: '#1976d2',
-                '&:hover': {
-                  backgroundColor: '#1565c0',
-                }
-              }}
+              sx={{ mt: 3, mb: 2 }}
             >
               Sign In
             </Button>

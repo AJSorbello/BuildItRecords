@@ -2,13 +2,27 @@ const express = require('express');
 const router = express.Router();
 const { ImportLog, Label } = require('../models');
 const SpotifyService = require('../services/spotifyService');
-const spotifyConfig = require('../config/spotify');
-const logger = require('../config/logger');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 const { Op } = require('sequelize');
+
+// Debug: Log environment variables
+console.log('Environment variables loaded:', {
+  ADMIN_USERNAME: process.env.ADMIN_USERNAME,
+  ADMIN_PASSWORD_HASH: process.env.ADMIN_PASSWORD_HASH,
+  JWT_SECRET: process.env.JWT_SECRET
+});
 
 // In-memory admin credentials (replace with database in production)
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
 const ADMIN_PASSWORD_HASH = process.env.ADMIN_PASSWORD_HASH; // Store the hashed password in .env
+
+// Create SpotifyService instance
+const spotifyService = new SpotifyService({
+  clientId: process.env.SPOTIFY_CLIENT_ID,
+  clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
+  redirectUri: process.env.SPOTIFY_REDIRECT_URI
+});
 
 // Middleware to verify JWT token
 const verifyToken = (req, res, next) => {
@@ -30,22 +44,35 @@ const verifyToken = (req, res, next) => {
 // Admin login
 router.post('/login', async (req, res) => {
   const { username, password } = req.body;
+  console.log('Login attempt:', { 
+    receivedUsername: username,
+    expectedUsername: ADMIN_USERNAME,
+    receivedPassword: password,
+    hasPasswordHash: !!ADMIN_PASSWORD_HASH
+  });
 
   try {
     // Verify username
     if (username !== ADMIN_USERNAME) {
+      console.log('Username mismatch');
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
     // Verify password
+    if (!ADMIN_PASSWORD_HASH) {
+      console.error('No password hash configured');
+      return res.status(500).json({ message: 'Server configuration error' });
+    }
+
     const isValidPassword = await bcrypt.compare(password, ADMIN_PASSWORD_HASH);
     if (!isValidPassword) {
+      console.log('Password mismatch');
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
     // Generate JWT token
     const token = jwt.sign(
-      { username, role: 'admin' },
+      { username: ADMIN_USERNAME },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
@@ -53,7 +80,7 @@ router.post('/login', async (req, res) => {
     res.json({ token });
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error during login' });
   }
 });
 
@@ -181,70 +208,80 @@ router.get('/labels', async (req, res) => {
 });
 
 // Import releases from Spotify
-router.get('/import-releases/:labelId', async (req, res) => {
+router.get('/import-releases/:labelId', verifyToken, async (req, res) => {
   try {
     const { labelId } = req.params;
+    console.log('Starting import for label:', labelId);
     
     // Find the label
     const label = await Label.findOne({
       where: {
         [Op.or]: [
           { id: labelId },
-          { slug: labelId }
+          { slug: { [Op.iLike]: labelId } }
         ]
       }
     });
 
     if (!label) {
-      return res.status(404).json({ 
-        success: false, 
-        error: 'Label not found' 
+      console.log('Label not found:', labelId);
+      return res.status(404).json({
+        success: false,
+        error: 'Label not found',
+        message: `No label found with ID or slug: ${labelId}`
       });
     }
 
-    // Initialize Spotify service
-    const spotifyService = new SpotifyService({
-      clientId: process.env.SPOTIFY_CLIENT_ID,
-      clientSecret: process.env.SPOTIFY_CLIENT_SECRET
-    });
+    console.log('Found label:', label.name);
 
-    // Log the import attempt
+    // Initialize Spotify service if needed
+    if (!spotifyService.isInitialized()) {
+      console.log('Initializing Spotify service...');
+      await spotifyService.initialize();
+    }
+
+    // Create import log
     const importLog = await ImportLog.create({
       label_id: label.id,
       status: 'started',
+      type: 'spotify',
       message: `Starting import for ${label.name}`
     });
 
     try {
-      // Import releases from Spotify
-      const result = await spotifyService.importReleases(label);
-      
-      // Update import log with success
+      // Import releases using predefined IDs
+      console.log('Starting release import...');
+      const releases = await spotifyService.importReleases(label);
+      console.log(`Imported ${releases.length} releases`);
+
+      // Update import log
       await importLog.update({
         status: 'completed',
-        message: `Successfully imported ${result.length} releases for ${label.name}`,
-        completed_at: new Date()
+        message: `Successfully imported ${releases.length} releases`
       });
 
       res.json({
         success: true,
-        message: `Successfully imported ${result.length} releases`,
-        releases: result
+        message: `Successfully imported ${releases.length} releases`,
+        data: releases
       });
     } catch (error) {
+      console.error('Import error:', error);
+      
       // Update import log with error
       await importLog.update({
         status: 'failed',
-        message: `Import failed: ${error.message}`,
-        completed_at: new Date()
+        message: `Import failed: ${error.message}`
       });
+
       throw error;
     }
   } catch (error) {
     console.error('Import error:', error);
     res.status(500).json({
       success: false,
-      error: error.message || 'Failed to import releases'
+      error: 'Import failed',
+      message: error.message
     });
   }
 });

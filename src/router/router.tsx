@@ -14,14 +14,14 @@ import PlaylistsPage from '../pages/PlaylistsPage';
 import SubmitPage from '../pages/SubmitPage';
 import NotFoundPage from '../pages/NotFoundPage';
 import LegalPage from '../pages/LegalPage';
-import AdminLogin from '../components/admin/AdminLogin';
+import AdminLogin from '../pages/AdminLogin';
 import AdminDashboard from '../pages/admin/AdminDashboard';
 import ArtistDetailPage from '../pages/ArtistDetailPage';
 
 // Protected Route component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const isAdmin = localStorage.getItem('isAdmin') === 'true';
-  if (!isAdmin) {
+  const token = localStorage.getItem('adminToken');
+  if (!token) {
     return <Navigate to="/admin/login" replace />;
   }
   return <>{children}</>;

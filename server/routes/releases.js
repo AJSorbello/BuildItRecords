@@ -30,7 +30,7 @@ const handleError = (res, error) => {
 router.get('/:labelId', async (req, res) => {
   try {
     const { labelId } = req.params;
-    const { page = 1, limit = 10, sort = 'releaseDate', order = 'DESC' } = req.query;
+    const { page = 1, limit = 10, sort = 'release_date', order = 'DESC' } = req.query;
     
     console.log('Fetching releases for label ID:', labelId);
     
@@ -38,7 +38,7 @@ router.get('/:labelId', async (req, res) => {
       where: {
         [Op.or]: [
           { id: labelId },
-          { slug: labelId }
+          { slug: { [Op.iLike]: labelId } }
         ]
       }
     });
@@ -61,6 +61,10 @@ router.get('/:labelId', async (req, res) => {
         label_id: label.id
       },
       include: [
+        {
+          model: Artist,
+          as: 'primaryArtist'
+        },
         {
           model: Artist,
           as: 'artists',

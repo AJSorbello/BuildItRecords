@@ -9,8 +9,6 @@ import {
 import { ThemeProvider, CssBaseline, Box } from '@mui/material';
 import { Layout } from './components/Layout';
 import { darkTheme } from './theme/theme';
-import { ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
-import theme from './theme/theme';
 import './styles/global.css';
 
 // Import pages
@@ -29,104 +27,87 @@ import ArtistDetailPage from './pages/ArtistDetailPage';
 
 // Protected Route component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const isAdmin = localStorage.getItem('isAdmin') === 'true';
-  if (!isAdmin) {
+  const token = localStorage.getItem('adminToken');
+  if (!token) {
     return <Navigate to="/admin/login" replace />;
   }
   return <>{children}</>;
 };
 
-import { initializeData } from './utils/dataInitializer';
-
 const router = createBrowserRouter(
   createRoutesFromElements(
     <>
-      {/* Default redirect */}
-      <Route path="/" element={<Navigate to="/records" replace />} />
-      
-      {/* Records Routes */}
-      <Route path="/records" element={<Layout />}>
-        <Route index element={<RecordsHome />} />
-        <Route path="releases" element={<ReleasesPage label="records" />} />
-        <Route path="artists" element={<ArtistsPage />} />
-        <Route path="artists/:artistName" element={<ArtistDetailPage />} />
-        <Route path="playlists" element={<PlaylistPage label="records" />} />
-        <Route path="submit" element={<SubmitPage label="records" />} />
-      </Route>
-
-      {/* Tech Routes */}
-      <Route path="/tech" element={<Layout />}>
-        <Route index element={<TechHome />} />
-        <Route path="releases" element={<ReleasesPage label="tech" />} />
-        <Route path="artists" element={<ArtistsPage />} />
-        <Route path="artists/:artistName" element={<ArtistDetailPage />} />
-        <Route path="playlists" element={<PlaylistPage label="tech" />} />
-        <Route path="submit" element={<SubmitPage label="tech" />} />
-      </Route>
-
-      {/* Deep Routes */}
-      <Route path="/deep" element={<Layout />}>
-        <Route index element={<DeepHome />} />
-        <Route path="releases" element={<ReleasesPage label="deep" />} />
-        <Route path="artists" element={<ArtistsPage />} />
-        <Route path="artists/:artistName" element={<ArtistDetailPage />} />
-        <Route path="playlists" element={<PlaylistPage label="deep" />} />
-        <Route path="submit" element={<SubmitPage label="deep" />} />
-      </Route>
-
       {/* Admin Routes */}
       <Route path="/admin">
         <Route path="login" element={<AdminLogin />} />
-        <Route 
-          path="dashboard" 
+        <Route
+          path="dashboard"
           element={
             <ProtectedRoute>
               <AdminDashboard />
             </ProtectedRoute>
-          } 
+          }
         />
+        <Route index element={
+          localStorage.getItem('adminToken') ? 
+            <Navigate to="/admin/dashboard" replace /> : 
+            <Navigate to="/admin/login" replace />
+        } />
       </Route>
 
-      {/* Legal Route */}
-      <Route path="/legal" element={<Layout />}>
-        <Route index element={<LegalPage />} />
+      {/* Main Routes */}
+      <Route path="/" element={<Layout />}>
+        {/* Default redirect */}
+        <Route index element={<Navigate to="/records" replace />} />
+        
+        {/* Records Routes */}
+        <Route path="records">
+          <Route index element={<RecordsHome />} />
+          <Route path="releases" element={<ReleasesPage label="records" />} />
+          <Route path="artists" element={<ArtistsPage />} />
+          <Route path="artists/:id" element={<ArtistDetailPage />} />
+          <Route path="playlists" element={<PlaylistPage label="records" />} />
+          <Route path="submit" element={<SubmitPage label="records" />} />
+          <Route path="legal" element={<LegalPage />} />
+        </Route>
+
+        {/* Tech Routes */}
+        <Route path="tech">
+          <Route index element={<TechHome />} />
+          <Route path="releases" element={<ReleasesPage label="tech" />} />
+          <Route path="artists" element={<ArtistsPage />} />
+          <Route path="artists/:id" element={<ArtistDetailPage />} />
+          <Route path="playlists" element={<PlaylistPage label="tech" />} />
+          <Route path="submit" element={<SubmitPage label="tech" />} />
+          <Route path="legal" element={<LegalPage />} />
+        </Route>
+
+        {/* Deep Routes */}
+        <Route path="deep">
+          <Route index element={<DeepHome />} />
+          <Route path="releases" element={<ReleasesPage label="deep" />} />
+          <Route path="artists" element={<ArtistsPage />} />
+          <Route path="artists/:id" element={<ArtistDetailPage />} />
+          <Route path="playlists" element={<PlaylistPage label="deep" />} />
+          <Route path="submit" element={<SubmitPage label="deep" />} />
+          <Route path="legal" element={<LegalPage />} />
+        </Route>
       </Route>
 
       {/* 404 Route */}
       <Route path="*" element={<NotFoundPage />} />
     </>
-  ),
-  {
-    future: {
-      v7_relativeSplatPath: true
-    }
-  }
+  )
 );
 
 const App: React.FC = () => {
-  React.useEffect(() => {
-    initializeData();
-  }, []);
-
   return (
-    <MuiThemeProvider theme={theme}>
-      <ThemeProvider theme={darkTheme}>
-        <CssBaseline />
-        <Box sx={{ 
-          minHeight: '100vh',
-          backgroundColor: '#121212',
-          '& #root': {
-            // Remove aria-hidden from root when using dialogs
-            '&[aria-hidden="true"]': {
-              '& button': { display: 'none' },
-              '& [tabindex]': { display: 'none' }
-            }
-          }
-        }}>
-          <RouterProvider router={router} />
-        </Box>
-      </ThemeProvider>
-    </MuiThemeProvider>
+    <ThemeProvider theme={darkTheme}>
+      <CssBaseline />
+      <Box sx={{ display: 'flex' }}>
+        <RouterProvider router={router} />
+      </Box>
+    </ThemeProvider>
   );
 };
 

@@ -7,13 +7,15 @@ const ArtistModel = require('./artist');
 const LabelModel = require('./label');
 const ReleaseModel = require('./release');
 const TrackModel = require('./track');
+const ImportLogModel = require('./ImportLog');
 
 // Initialize models with sequelize instance
 const models = {
   Artist: ArtistModel(sequelize, DataTypes),
   Label: LabelModel(sequelize, DataTypes),
   Release: ReleaseModel(sequelize, DataTypes),
-  Track: TrackModel(sequelize, DataTypes)
+  Track: TrackModel(sequelize, DataTypes),
+  ImportLog: ImportLogModel(sequelize, DataTypes)
 };
 
 // Define associations

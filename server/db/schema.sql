@@ -1,5 +1,6 @@
 BEGIN;
 
+DROP TABLE IF EXISTS import_logs CASCADE;
 DROP TABLE IF EXISTS track_artists CASCADE;
 DROP TABLE IF EXISTS tracks CASCADE;
 DROP TABLE IF EXISTS release_artists CASCADE;
@@ -13,6 +14,7 @@ CREATE TABLE labels (
   name VARCHAR(255) NOT NULL,
   display_name VARCHAR(255) NOT NULL,
   slug VARCHAR(255) UNIQUE NOT NULL,
+  playlist_id VARCHAR(255),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -25,6 +27,21 @@ VALUES
   ('buildit-records', 'Build It Records', 'Build It Records', 'buildit-records'),
   ('buildit-tech', 'Build It Tech', 'Build It Tech', 'buildit-tech'),
   ('buildit-deep', 'Build It Deep', 'Build It Deep', 'buildit-deep');
+
+-- Create import_logs table
+CREATE TABLE import_logs (
+  id SERIAL PRIMARY KEY,
+  label_id VARCHAR(255) REFERENCES labels(id),
+  status VARCHAR(50) NOT NULL,
+  message TEXT,
+  completed_at TIMESTAMP WITH TIME ZONE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_import_logs_label_id ON import_logs(label_id);
+CREATE INDEX idx_import_logs_status ON import_logs(status);
+CREATE INDEX idx_import_logs_completed_at ON import_logs(completed_at);
 
 -- Create artists table
 CREATE TABLE artists (
@@ -50,6 +67,7 @@ CREATE TABLE releases (
   artwork_url VARCHAR(255),
   spotify_url VARCHAR(255),
   label_id VARCHAR(255) REFERENCES labels(id),
+  primary_artist_id VARCHAR(255) REFERENCES artists(id),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );

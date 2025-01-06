@@ -17,6 +17,11 @@ module.exports = (sequelize) => {
         foreignKey: 'label_id',
         as: 'tracks'
       });
+
+      Label.hasMany(models.ImportLog, {
+        foreignKey: 'label_id',
+        as: 'importLogs'
+      });
     }
   }
 
@@ -48,20 +53,8 @@ module.exports = (sequelize) => {
       allowNull: false,
       unique: true,
       validate: {
-        notEmpty: true,
-        isLowercase: true,
-        is: /^[a-z0-9-]+$/
+        notEmpty: true
       }
-    },
-    created_at: {
-      type: DataTypes.DATE,
-      allowNull: false,
-      defaultValue: DataTypes.NOW
-    },
-    updated_at: {
-      type: DataTypes.DATE,
-      allowNull: false,
-      defaultValue: DataTypes.NOW
     }
   }, {
     sequelize,

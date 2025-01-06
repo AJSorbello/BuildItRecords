@@ -20,6 +20,15 @@ export interface ImportResponse {
   stats: ImportStats[];
 }
 
+export interface LoginCredentials {
+  username: string;
+  password: string;
+}
+
+export interface LoginResponse {
+  token: string;
+}
+
 export const getImportLogs = async (
   token: string,
   params: {
@@ -74,6 +83,22 @@ export const getImportDetails = async (
 
   if (!response.ok) {
     throw new Error('Failed to fetch import details');
+  }
+
+  return response.json();
+};
+
+export const login = async (credentials: LoginCredentials): Promise<LoginResponse> => {
+  const response = await fetch(`${API_URL}/admin/login`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(credentials),
+  });
+
+  if (!response.ok) {
+    throw new Error('Invalid credentials');
   }
 
   return response.json();

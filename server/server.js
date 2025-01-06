@@ -1,41 +1,42 @@
+// Load environment variables first
 require('dotenv').config();
+
+// Debug: Log environment loading
+console.log('Server starting with environment:', process.env.NODE_ENV);
+console.log('Admin credentials loaded:', {
+  hasUsername: !!process.env.ADMIN_USERNAME,
+  hasPasswordHash: !!process.env.ADMIN_PASSWORD_HASH,
+  hasJwtSecret: !!process.env.JWT_SECRET,
+  actualHash: process.env.ADMIN_PASSWORD_HASH
+});
+
 const config = require('./config/environment');
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const path = require('path');
-const Sequelize = require('sequelize');
-const initializeModels = require('./models');
+const db = require('./models');
 const SpotifyService = require('./services/spotifyService');
 const apiRoutes = require('./routes/api.routes');
-const { setupSpotifyRoutes } = require('./routes/spotify.routes');
-const { setupAuthRoutes } = require('./routes/auth.routes');
+const adminRoutes = require('./routes/admin');
 
 const app = express();
 
 // Initialize services
 const initServices = async () => {
   try {
-    // Initialize database connection
-    const sequelize = new Sequelize({
-      host: config.database.host,
-      port: config.database.port,
-      username: config.database.username,
-      password: config.database.password,
-      database: config.database.name,
-      dialect: config.database.dialect
-    });
-
-    await sequelize.authenticate();
+    await db.sequelize.authenticate();
     console.log('Database connection established successfully');
-
-    // Initialize models
-    const db = initializeModels(sequelize);
     
-    const spotifyService = new SpotifyService();
+    const spotifyService = new SpotifyService({
+      clientId: process.env.SPOTIFY_CLIENT_ID,
+      clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
+      redirectUri: process.env.SPOTIFY_REDIRECT_URI || 'http://localhost:3001/callback'
+    });
+    await spotifyService.initialize();
     console.log('Spotify service initialized successfully');
 
-    return { spotifyService, db, sequelize };
+    return { spotifyService, db, sequelize: db.sequelize };
   } catch (error) {
     console.error('Failed to initialize services:', error);
     throw error;
@@ -50,82 +51,51 @@ const initExpress = (spotifyService, db, sequelize) => {
     crossOriginEmbedderPolicy: false
   }));
 
-  // CORS middleware
+  // CORS configuration
   app.use(cors({
-    origin: 'http://localhost:3000',
+    origin: process.env.NODE_ENV === 'production' 
+      ? process.env.FRONTEND_URL 
+      : ['http://localhost:3000', 'http://localhost:3001'],
+    credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true
+    allowedHeaders: ['Content-Type', 'Authorization']
   }));
 
   // Body parsing middleware
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
-  // Mount API routes
+  // API routes
   app.use('/api', apiRoutes);
+
+  // Serve static files in production
+  if (process.env.NODE_ENV === 'production') {
+    app.use(express.static(path.join(__dirname, '../build')));
+    app.get('*', (req, res) => {
+      res.sendFile(path.join(__dirname, '../build/index.html'));
+    });
+  }
 
   // Error handling middleware
   app.use((err, req, res, next) => {
-    console.error('Error:', err);
+    console.error(err.stack);
     res.status(500).json({
-      error: {
-        message: process.env.NODE_ENV === 'production' 
-          ? 'Internal Server Error' 
-          : err.message,
-        stack: process.env.NODE_ENV === 'production' ? undefined : err.stack
-      }
+      error: 'Internal Server Error',
+      message: process.env.NODE_ENV === 'development' ? err.message : undefined
     });
   });
 
-  // 404 handler
-  app.use((req, res) => {
-    res.status(404).json({ error: 'Not Found' });
-  });
-
-  // Serve static files from the React app
-  app.use(express.static(path.join(__dirname, '../build')));
-
-  // Health check endpoint
-  app.get('/health', (req, res) => {
-    res.json({ status: 'ok' });
-  });
-
-  setupSpotifyRoutes(app, spotifyService);
-  setupAuthRoutes(app);
-
-  // Root route
-  app.get('/', (req, res) => {
-    res.json({ 
-      status: 'ok',
-      message: 'Build It Records API Server',
-      version: '1.0.0',
-      endpoints: {
-        health: '/health',
-        api: '/api/*',
-        spotify: '/spotify/*',
-        auth: '/auth/*'
-      }
-    });
-  });
-
-  // Handle React routing, return all requests to React app
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../build/index.html'));
-  });
+  return app;
 };
 
-// Start server
 const startServer = async () => {
   try {
     const { spotifyService, db, sequelize } = await initServices();
-    initExpress(spotifyService, db, sequelize);
+    const app = initExpress(spotifyService, db, sequelize);
 
     const port = process.env.PORT || 3001;
     app.listen(port, () => {
       console.log(`Server is running on port ${port}`);
-      console.log('Available routes:');
-      console.log('get /health');
     });
   } catch (error) {
     console.error('Failed to start server:', error);

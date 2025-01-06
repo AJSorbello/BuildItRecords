@@ -115,7 +115,6 @@ export interface RecordLabel {
   id: string;
   name: string;
   displayName: string;
-  playlistId?: string;
 }
 
 // API Response Types

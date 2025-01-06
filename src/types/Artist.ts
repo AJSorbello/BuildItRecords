@@ -1,30 +1,34 @@
 import type { Artist as SpotifyApiArtist } from '@spotify/web-api-ts-sdk';
-import { RecordLabel } from '../constants/labels';
-import { Album } from './release';
+import type { Track } from './track';
+import type { Album } from './release';
+import type { RecordLabel } from './labels';
+import type { SpotifyImage } from './spotify';
+
+export type { SpotifyApiArtist as SpotifyArtist };
 
 export interface Artist {
   id: string;
   name: string;
   uri: string;
-  images?: {
-    url: string;
-    height: number | null;
-    width: number | null;
-  }[];
-  spotifyUrl: string;
-  genres?: string[];
-  followers?: {
-    total: number;
-  };
+  type: 'artist';
   external_urls: {
     spotify: string;
   };
+  spotifyUrl: string;
+  images?: SpotifyImage[];
+  genres?: string[];
   popularity?: number;
-  artworkUrl?: string;
-  bio?: string;
-  label?: RecordLabel;
+  followers?: {
+    href: string | null;
+    total: number;
+  };
+  // Optional related data
+  topTracks?: Track[];
   albums?: Album[];
-  topTracks?: Album[];
+  releases?: Album[];
+  relatedArtists?: Artist[];
+  // Build It Records specific fields
+  label?: RecordLabel;
 }
 
 export interface ArtistResponse {
@@ -34,6 +38,13 @@ export interface ArtistResponse {
     limit: number;
     offset: number;
   };
+}
+
+export interface ArtistSearchParams {
+  labelId?: string;
+  query?: string;
+  limit?: number;
+  offset?: number;
 }
 
 export interface SimpleArtist {
@@ -66,32 +77,33 @@ export interface SpotifyArtistData {
 }
 
 export function getArtistImage(artist: Artist): string {
-  return artist.images?.[0]?.url || artist.artworkUrl || '/placeholder-artist.png';
+  return artist.images?.[0]?.url || '';
 }
 
 export function getArtistGenres(artist: Artist): string {
-  return artist.genres?.join(', ') || 'No genres available';
+  return artist.genres?.join(', ') || '';
 }
 
 export function getArtistFollowers(artist: Artist): number {
   return artist.followers?.total || 0;
 }
 
-export const createArtist = (data: Partial<Artist>): Artist => {
+export function createArtist(data: Partial<Artist>): Artist {
   return {
     id: data.id || '',
     name: data.name || '',
     uri: data.uri || '',
+    type: 'artist',
     external_urls: data.external_urls || { spotify: '' },
     spotifyUrl: data.spotifyUrl || '',
     images: data.images || [],
     genres: data.genres || [],
-    followers: data.followers || { total: 0 },
-    popularity: data.popularity,
-    artworkUrl: data.artworkUrl,
-    bio: data.bio,
-    label: data.label,
+    popularity: data.popularity || 0,
+    followers: data.followers || { href: null, total: 0 },
+    topTracks: data.topTracks || [],
     albums: data.albums || [],
-    topTracks: data.topTracks || []
+    releases: data.releases || [],
+    relatedArtists: data.relatedArtists || [],
+    label: data.label
   };
-};
+}

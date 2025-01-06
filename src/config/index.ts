@@ -1,4 +1,6 @@
-export const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
+import { API_CONFIG } from './env';
+
+export const API_URL = API_CONFIG.BASE_URL;
 
 export interface Label {
   id: string;

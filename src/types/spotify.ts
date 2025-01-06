@@ -1,85 +1,50 @@
-import { Artist } from './artist';
+import type { 
+  Track as SpotifyApiTrack,
+  Artist as SpotifyApiArtist,
+  Album as SpotifyApiAlbum,
+  Image as SpotifyImage
+} from '@spotify/web-api-ts-sdk';
 
-export interface ExternalIds {
-  isrc?: string;
-  ean?: string;
-  upc?: string;
+export type {
+  SpotifyApiTrack,
+  SpotifyApiArtist,
+  SpotifyApiAlbum,
+  SpotifyImage
+};
+
+// Base Types
+export interface ExternalUrls {
+  spotify: string;
 }
 
-export interface SpotifyTrack {
-  id: string;
-  name: string;
-  artists: Array<{
-    id: string;
-    name: string;
-    external_urls: {
-      spotify: string;
-    };
-  }>;
-  album: {
-    id: string;
-    name: string;
-    release_date: string;
-    images: Array<{
-      url: string;
-      height: number;
-      width: number;
-    }>;
-    external_urls: {
-      spotify: string;
-    };
-    external_ids?: ExternalIds;
-  };
-  external_urls: {
-    spotify: string;
-  };
+// Spotify API Types
+export interface SpotifyArtist extends SpotifyApiArtist {
+  external_urls: ExternalUrls;
+  images?: SpotifyImage[];
+  type: 'artist';
+}
+
+export interface SpotifyTrack extends SpotifyApiTrack {
+  external_urls: ExternalUrls;
+  type: 'track';
+  artists: SpotifyArtist[];
+  album?: SpotifyAlbum;
   preview_url: string | null;
-  duration_ms: number;
 }
 
-export interface SpotifyArtist {
-  id: string;
-  name: string;
-  genres: string[];
-  followers: {
-    total: number;
-  };
-  images: Array<{
-    url: string;
-    height: number;
-    width: number;
-  }>;
-  external_urls: {
-    spotify: string;
-  };
-}
-
-export interface SpotifyAlbum {
+export interface SpotifyAlbum extends SpotifyApiAlbum {
   id: string;
   name: string;
   release_date: string;
-  images: Array<{
-    url: string;
-    height: number;
-    width: number;
-  }>;
-  external_urls: {
-    spotify: string;
+  release_date_precision: string;
+  images: SpotifyImage[];
+  external_urls: ExternalUrls;
+  uri: string;
+  type: 'album';
+  artists: SpotifyArtist[];
+  total_tracks: number;
+  tracks?: {
+    items: SpotifyTrack[];
+    total: number;
   };
-  external_ids?: ExternalIds;
-  genres?: string[];
-  href?: string;
-  label?: string;
-}
-
-export interface SpotifyRelease {
-  id: string;
-  title: string;
-  artist: Artist;
-  releaseDate: string;
-  albumCover: string;
-  spotifyUrl: string;
-  previewUrl?: string;
-  label?: string;
-  external_ids?: ExternalIds;
 }

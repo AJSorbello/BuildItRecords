@@ -1,87 +1,59 @@
-import { RecordLabel } from '../types';
-import { SPOTIFY_CONFIG } from '../utils/env';
+import { SPOTIFY_CONFIG } from '../config';
+import type { RecordLabel } from '../types/labels';
 
 // Core labels that are always available
-const CORE_LABELS: { [key: string]: RecordLabel } = {
-  TECH: {
-    id: 'tech',
-    name: 'Tech',
-    displayName: 'Tech House',
-    playlistId: SPOTIFY_CONFIG.TECH_PLAYLIST_ID
-  },
-  DEEP: {
-    id: 'deep',
-    name: 'Deep',
-    displayName: 'Deep House',
-    playlistId: SPOTIFY_CONFIG.DEEP_PLAYLIST_ID
-  },
-  RECORDS: {
+export const RECORD_LABELS: { [key: string]: RecordLabel } = {
+  'buildit-records': {
     id: 'buildit-records',
     name: 'Records',
     displayName: 'Build It Records',
-    playlistId: SPOTIFY_CONFIG.RECORDS_PLAYLIST_ID
+  },
+  'buildit-tech': {
+    id: 'buildit-tech',
+    name: 'Tech',
+    displayName: 'Build It Tech',
+  },
+  'buildit-deep': {
+    id: 'buildit-deep',
+    name: 'Deep',
+    displayName: 'Build It Deep',
   }
 };
 
-// Optional labels that are conditionally added
-const OPTIONAL_LABELS: { [key: string]: RecordLabel } = {
-  ...(SPOTIFY_CONFIG.PROGRESSIVE_PLAYLIST_ID ? {
-    PROGRESSIVE: {
-      id: 'progressive',
-      name: 'Progressive',
-      displayName: 'Progressive House',
-      playlistId: SPOTIFY_CONFIG.PROGRESSIVE_PLAYLIST_ID
-    }
-  } : {})
-};
-
-export const RECORD_LABELS = {
-  ...CORE_LABELS,
-  ...OPTIONAL_LABELS
-} as const;
-
-export const getLabelById = (id: string): RecordLabel | undefined => {
-  return Object.values(RECORD_LABELS).find(label => label.id === id);
-};
-
-export const getLabelByName = (name: string): RecordLabel | undefined => {
-  return Object.values(RECORD_LABELS).find(
-    label => label.name.toLowerCase() === name.toLowerCase()
-  );
-};
-
-export const getAllLabels = (): RecordLabel[] => {
-  return Object.values(RECORD_LABELS);
-};
-
-// URLs for each label's playlist
-export const LABEL_URLS: { [key: string]: string } = {
-  ...Object.entries(RECORD_LABELS).reduce((acc, [key, label]) => ({
-    ...acc,
-    [label.id]: `https://open.spotify.com/playlist/${label.playlistId}`
-  }), {})
-};
-
-// Colors for each label
-export const LABEL_COLORS: { [key: string]: string } = {
-  tech: '#00BCD4',
-  deep: '#9C27B0',
-  progressive: '#FF4081',
-  records: '#FF4081'
-};
-
-// Descriptions for each label
-export const LABEL_DESCRIPTIONS: { [key: string]: string } = {
-  tech: 'Build It Tech - Dedicated to cutting-edge techno & tech house',
-  deep: 'Build It Deep - Deep house and melodic techno imprint',
-  progressive: 'Build It Progressive - Progressive house and melodic techno',
-  records: 'Build It Records - Main label focusing on house music'
-};
-
-// Display names for each label
+// Label display names
 export const LABEL_DISPLAY_NAMES: { [key: string]: string } = {
-  tech: 'Build It Tech',
-  deep: 'Build It Deep',
-  progressive: 'Build It Progressive',
-  records: 'Build It Records'
+  'buildit-records': 'Build It Records',
+  'buildit-tech': 'Build It Tech',
+  'buildit-deep': 'Build It Deep'
 };
+
+// Label descriptions
+export const LABEL_DESCRIPTIONS: { [key: string]: string } = {
+  'buildit-records': 'The main label for Build It Records, featuring a diverse range of electronic music.',
+  'buildit-tech': 'Our techno-focused sublabel, delivering cutting-edge underground sounds.',
+  'buildit-deep': 'Deep and melodic electronic music from emerging and established artists.'
+};
+
+// Label colors
+export const LABEL_COLORS: { [key: string]: string } = {
+  'buildit-records': '#FF4081',
+  'buildit-tech': '#00BCD4',
+  'buildit-deep': '#7C4DFF'
+};
+
+// Helper functions
+export const getAllLabels = (): RecordLabel[] => Object.values(RECORD_LABELS);
+
+export const getLabelById = (id: string): RecordLabel | undefined => 
+  RECORD_LABELS[id];
+
+export const getLabelByName = (name: string): RecordLabel | undefined =>
+  Object.values(RECORD_LABELS).find(label => label.name.toLowerCase() === name.toLowerCase());
+
+export const labelIdToKey = (id: string): string | undefined => {
+  const label = getLabelById(id);
+  return label ? label.name.toUpperCase() : undefined;
+};
+
+// Re-export the RecordLabel type
+export type { RecordLabel } from '../types/labels';

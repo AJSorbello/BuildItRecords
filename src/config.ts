@@ -5,19 +5,16 @@ export const RECORD_LABELS = {
     id: 'buildit-records', 
     name: 'Build It Records', 
     displayName: 'Build It Records',
-    playlistId: process.env.REACT_APP_SPOTIFY_RECORDS_PLAYLIST_ID
   },
   'buildit-tech': { 
     id: 'buildit-tech', 
     name: 'Build It Tech', 
     displayName: 'Build It Tech',
-    playlistId: process.env.REACT_APP_SPOTIFY_TECH_PLAYLIST_ID
   },
   'buildit-deep': { 
     id: 'buildit-deep', 
     name: 'Build It Deep', 
     displayName: 'Build It Deep',
-    playlistId: process.env.REACT_APP_SPOTIFY_DEEP_PLAYLIST_ID
   }
 } as const;
 

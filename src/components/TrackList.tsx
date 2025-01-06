@@ -1,76 +1,108 @@
 import React from 'react';
-import { Box, Typography, IconButton, Card, CardMedia, CardContent } from '@mui/material';
-import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import {
+  List,
+  ListItem,
+  ListItemText,
+  ListItemAvatar,
+  ListItemSecondaryAction,
+  Avatar,
+  IconButton,
+  Typography,
+  Box,
+  CircularProgress,
+  Paper,
+} from '@mui/material';
+import { PlayArrow as PlayIcon } from '@mui/icons-material';
 import { Track } from '../types/track';
+import { formatDuration } from '../utils/trackUtils';
 
 interface TrackListProps {
   tracks: Track[];
+  loading?: boolean;
+  error?: string | null;
+  onTrackClick?: (track: Track) => void;
 }
 
-const TrackList: React.FC<TrackListProps> = ({ tracks }) => {
+export const TrackList: React.FC<TrackListProps> = ({
+  tracks,
+  loading,
+  error,
+  onTrackClick,
+}) => {
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" p={4}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box p={4}>
+        <Typography color="error">{error}</Typography>
+      </Box>
+    );
+  }
+
   if (!tracks.length) {
     return (
-      <Box sx={{ textAlign: 'center', py: 4 }}>
-        <Typography variant="body1" sx={{ color: '#AAAAAA' }}>
-          No tracks available
-        </Typography>
+      <Box p={4}>
+        <Typography color="text.secondary">No tracks found</Typography>
       </Box>
     );
   }
 
   return (
-    <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}>
-      {tracks.map((track) => (
-        <Card key={track.id} sx={{ 
-          display: 'flex',
-          flexDirection: 'column',
-          height: '100%',
-          bgcolor: 'background.paper',
-          borderRadius: 2,
-          overflow: 'hidden',
-          transition: 'transform 0.2s',
-          '&:hover': {
-            transform: 'scale(1.02)'
-          }
-        }}>
-          <CardMedia
-            component="img"
-            height="200"
-            image={track.artworkUrl || '/placeholder-album.jpg'}
-            alt={track.title}
-            sx={{ objectFit: 'cover' }}
-          />
-          
-          <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-            <Typography variant="h6" component="div" gutterBottom noWrap>
-              {track.title}
-            </Typography>
-            
-            <Typography variant="body2" color="text.secondary" gutterBottom>
-              {track.artists[0]?.name || 'Unknown Artist'}
-            </Typography>
-            
-            <Typography variant="caption" color="text.secondary">
-              {new Date(track.releaseDate || '').toLocaleDateString()}
-            </Typography>
-            
-            {/* Actions */}
-            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mt: 'auto', pt: 1 }}>
-              {track.external_urls.spotify && (
-                <IconButton
-                  size="small"
-                  onClick={() => window.open(track.external_urls.spotify, '_blank')}
-                  sx={{ color: 'primary.main' }}
-                >
-                  <OpenInNewIcon />
-                </IconButton>
-              )}
-            </Box>
-          </CardContent>
-        </Card>
-      ))}
-    </Box>
+    <Paper elevation={1}>
+      <List sx={{ width: '100%', bgcolor: 'background.paper' }}>
+        {tracks.map((track, index) => (
+          <ListItem
+            key={track.id}
+            button
+            onClick={() => onTrackClick?.(track)}
+            divider={index !== tracks.length - 1}
+          >
+            <ListItemAvatar>
+              <Avatar
+                variant="square"
+                src={track.album?.images?.[0]?.url}
+                alt={track.name}
+              />
+            </ListItemAvatar>
+            <ListItemText
+              primary={track.name}
+              secondary={
+                <React.Fragment>
+                  <Typography
+                    component="span"
+                    variant="body2"
+                    color="text.primary"
+                  >
+                    {track.artists.map(artist => artist.name).join(', ')}
+                  </Typography>
+                  {' — '}
+                  {track.album?.name}
+                  {' • '}
+                  {formatDuration(track.duration_ms)}
+                </React.Fragment>
+              }
+            />
+            <ListItemSecondaryAction>
+              <IconButton
+                edge="end"
+                aria-label="play"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  window.open(track.external_urls.spotify, '_blank');
+                }}
+              >
+                <PlayIcon />
+              </IconButton>
+            </ListItemSecondaryAction>
+          </ListItem>
+        ))}
+      </List>
+    </Paper>
   );
 };
-
-export default TrackList;

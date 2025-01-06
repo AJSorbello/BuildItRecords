@@ -1,5 +1,6 @@
 const SpotifyWebApi = require('spotify-web-api-node');
-const { Artist, Release, Track } = require('../models');
+const { Artist, Release, Track, sequelize } = require('../models');
+const { Op } = require('sequelize');
 
 class SpotifyService {
   constructor(config) {
@@ -8,123 +9,178 @@ class SpotifyService {
       clientSecret: config.clientSecret,
       redirectUri: config.redirectUri
     });
+    this._initialized = false;
+  }
+
+  isInitialized() {
+    return this._initialized;
   }
 
   async initialize() {
     try {
       const data = await this.spotifyApi.clientCredentialsGrant();
       this.spotifyApi.setAccessToken(data.body['access_token']);
+      this._initialized = true;
+      console.log('Spotify API initialized successfully');
     } catch (error) {
       console.error('Failed to initialize Spotify API:', error);
       throw error;
     }
   }
 
-  async fetchArtist(artistId) {
-    const response = await this.spotifyApi.getArtist(artistId);
-    return response.body;
-  }
-
-  async fetchAlbum(albumId) {
-    const response = await this.spotifyApi.getAlbum(albumId);
-    return response.body;
-  }
-
-  async fetchPlaylistTracks(playlistId) {
-    const response = await this.spotifyApi.getPlaylistTracks(playlistId);
-    return response.body.items;
-  }
-
-  async fetchArtistReleases(artistId) {
-    const response = await this.spotifyApi.getArtistAlbums(artistId, { limit: 50 });
-    return response.body.items;
-  }
-
-  async saveArtist(spotifyData, labelId) {
+  async searchAlbumsByLabel(labelName) {
     try {
-      const [artist] = await Artist.findOrCreate({
-        where: { id: spotifyData.id },
-        defaults: {
-          name: spotifyData.name,
-          label_id: labelId,
-          spotify_url: spotifyData.external_urls.spotify,
-          image_url: spotifyData.images?.[0]?.url || null
-        }
-      });
-      return artist;
+      const labelQuery = `label:"${labelName}"`;
+      console.log('Searching Spotify with query:', labelQuery);
+      
+      // Search for albums with the exact label query
+      const searchResults = await this.spotifyApi.searchAlbums(labelQuery);
+      console.log('Search results:', searchResults.body.albums.items.length, 'albums found');
+      
+      // Filter to ensure exact label match
+      const filteredResults = searchResults.body.albums.items.filter(album => 
+        album.label && album.label.toLowerCase() === labelName.toLowerCase()
+      );
+      
+      console.log('Filtered results:', filteredResults.length, 'albums match exactly');
+      return filteredResults;
     } catch (error) {
-      console.error('Error saving artist:', error);
+      console.error('Error searching albums by label:', error);
       throw error;
     }
   }
 
-  async saveRelease(spotifyData, artistId, labelId) {
+  async importReleases(label) {
     try {
-      const [release] = await Release.findOrCreate({
-        where: { id: spotifyData.id },
-        defaults: {
-          title: spotifyData.name,
-          primary_artist_id: artistId,
-          label_id: labelId,
-          release_date: new Date(spotifyData.release_date),
-          type: spotifyData.album_type,
-          status: 'published',
-          spotify_url: spotifyData.external_urls.spotify,
-          image_url: spotifyData.images?.[0]?.url || null
-        }
-      });
-      return release;
-    } catch (error) {
-      console.error('Error saving release:', error);
-      throw error;
-    }
-  }
+      console.log(`Importing releases for label: ${label.name}`);
+      const importedReleases = [];
 
-  async saveTrack(trackData, releaseId, labelId) {
-    try {
-      const [track] = await Track.findOrCreate({
-        where: { id: trackData.id },
-        defaults: {
-          name: trackData.name,
-          duration: trackData.duration_ms,
-          track_number: trackData.track_number,
-          disc_number: trackData.disc_number,
-          isrc: trackData.external_ids?.isrc,
-          preview_url: trackData.preview_url,
-          spotify_url: trackData.external_urls.spotify,
-          release_id: releaseId,
-          label_id: labelId
-        }
-      });
-      return track;
-    } catch (error) {
-      console.error('Error saving track:', error);
-      throw error;
-    }
-  }
+      // Search for albums by label name
+      const albums = await this.searchAlbumsByLabel(label.name);
+      console.log(`Found ${albums.length} albums for ${label.name}`);
 
-  async importArtistData(artistId, labelId) {
-    try {
-      // Fetch and save artist
-      const artistData = await this.fetchArtist(artistId);
-      const artist = await this.saveArtist(artistData, labelId);
+      for (const albumData of albums) {
+        try {
+          // Get full album details
+          const fullAlbum = await this.spotifyApi.getAlbum(albumData.id);
+          const releaseData = fullAlbum.body;
 
-      // Fetch and save releases
-      const releases = await this.fetchArtistReleases(artistId);
-      for (const releaseData of releases) {
-        const release = await this.saveRelease(releaseData, artist.id, labelId);
+          console.log('Processing release:', {
+            name: releaseData.name,
+            id: releaseData.id,
+            type: releaseData.album_type,
+            total_tracks: releaseData.total_tracks,
+            artists: releaseData.artists.map(a => a.name),
+            label: releaseData.label
+          });
 
-        // Fetch and save tracks
-        const albumData = await this.fetchAlbum(releaseData.id);
-        for (const trackData of albumData.tracks.items) {
-          await this.saveTrack(trackData, release.id, labelId);
+          // Get all artists involved in the release
+          const allArtists = new Set();
+          releaseData.artists.forEach(artist => allArtists.add(artist));
+
+          // Save all artists
+          const savedArtists = new Map();
+          for (const artistData of allArtists) {
+            const artist = await this.saveArtist(artistData, label.id);
+            if (artist) {
+              savedArtists.set(artistData.id, artist);
+              console.log('Saved artist:', artist.name);
+            }
+          }
+
+          // Get the primary artist
+          const primaryArtist = savedArtists.get(releaseData.artists[0].id);
+          if (!primaryArtist) {
+            console.log(`Skipping release ${releaseData.name} - could not save primary artist`);
+            continue;
+          }
+
+          // Parse release date
+          let releaseDate = releaseData.release_date;
+          if (!releaseDate && releaseData.release_date_precision === 'year') {
+            releaseDate = `${releaseData.release_date}-01-01`;
+          } else if (!releaseDate && releaseData.release_date_precision === 'month') {
+            releaseDate = `${releaseData.release_date}-01`;
+          }
+
+          // Create the release
+          const [releaseRecord] = await Release.findOrCreate({
+            where: { id: releaseData.id },
+            defaults: {
+              id: releaseData.id,
+              title: releaseData.name,
+              release_date: releaseDate,
+              spotify_url: releaseData.external_urls.spotify,
+              cover_image: releaseData.images?.[0]?.url,
+              label_id: label.id,
+              primary_artist_id: primaryArtist.id,
+              total_tracks: releaseData.total_tracks,
+              record_label: releaseData.label
+            }
+          });
+
+          console.log('Saved release:', releaseRecord.title);
+
+          // Associate all release artists
+          const releaseArtistIds = releaseData.artists
+            .map(artist => savedArtists.get(artist.id)?.id)
+            .filter(id => id != null);
+
+          await releaseRecord.setArtists(releaseArtistIds);
+          importedReleases.push(releaseRecord);
+
+          // Process tracks
+          if (releaseData.tracks && releaseData.tracks.items) {
+            for (const track of releaseData.tracks.items) {
+              const [trackRecord] = await Track.findOrCreate({
+                where: { id: track.id },
+                defaults: {
+                  id: track.id,
+                  title: track.name,
+                  duration: track.duration_ms,
+                  preview_url: track.preview_url,
+                  spotify_url: track.external_urls.spotify,
+                  release_id: releaseRecord.id,
+                  label_id: label.id,
+                  track_number: track.track_number,
+                  disc_number: track.disc_number
+                }
+              });
+
+              // Associate track with release artists
+              await trackRecord.setArtists(releaseArtistIds);
+              console.log('Saved track:', trackRecord.title);
+            }
+          }
+
+        } catch (error) {
+          console.error(`Error processing album ${albumData.id}:`, error);
+          continue;
         }
       }
 
+      return importedReleases;
+    } catch (error) {
+      console.error('Error importing releases:', error);
+      throw error;
+    }
+  }
+
+  async saveArtist(artistData, labelId) {
+    try {
+      const [artist] = await Artist.findOrCreate({
+        where: { id: artistData.id },
+        defaults: {
+          id: artistData.id,
+          name: artistData.name,
+          spotify_url: artistData.external_urls?.spotify,
+          label_id: labelId
+        }
+      });
       return artist;
     } catch (error) {
-      console.error('Error importing artist data:', error);
-      throw error;
+      console.error(`Error saving artist ${artistData.name}:`, error);
+      return null;
     }
   }
 }

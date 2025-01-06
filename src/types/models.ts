@@ -1,10 +1,13 @@
 import type { Image as SpotifyImage } from '@spotify/web-api-ts-sdk';
+import type { Artist } from './artist';
+import type { Track } from './track';
+import type { Album, Release } from './release';
+import type { RecordLabel } from './label';
 
 export interface RecordLabel {
   id: string;
   name: string;
   displayName: string;
-  playlistId?: string;
 }
 
 export interface Artist {
@@ -50,6 +53,7 @@ export interface Release {
     spotify: string;
   };
   uri: string;
+  type?: 'album' | 'single';
 }
 
 export interface Track {
@@ -74,6 +78,64 @@ export interface Track {
   artworkUrl?: string;
   images?: SpotifyImage[];
   recordLabel?: string;
+  featured?: boolean;
+}
+
+export interface User {
+  id: string;
+  username: string;
+  email: string;
+  role: 'admin' | 'user';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ArtistModel extends Artist {
+  createdAt: string;
+  updatedAt: string;
+  labelId?: string;
+}
+
+export interface TrackModel extends Track {
+  createdAt: string;
+  updatedAt: string;
+  labelId?: string;
+  artistIds: string[];
+  albumId?: string;
+}
+
+export interface AlbumModel extends Album {
+  createdAt: string;
+  updatedAt: string;
+  labelId?: string;
+  artistIds: string[];
+  trackIds: string[];
+}
+
+export interface ReleaseModel extends Release {
+  createdAt: string;
+  updatedAt: string;
+  labelId?: string;
+  artistIds: string[];
+  trackIds: string[];
+}
+
+export interface LabelModel extends RecordLabel {
+  createdAt: string;
+  updatedAt: string;
+  artistIds: string[];
+  trackIds: string[];
+  releaseIds: string[];
+}
+
+export interface TokenModel {
+  id: string;
+  userId: string;
+  token: string;
+  type: 'refresh' | 'access';
+  expiresAt: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // Type guards

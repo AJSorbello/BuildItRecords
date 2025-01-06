@@ -1,101 +1,73 @@
+// Load environment variables first
 require('dotenv').config();
+
+// Debug: Log environment loading
+console.log('Server starting with environment:', process.env.NODE_ENV);
+console.log('Admin credentials loaded:', {
+  hasUsername: !!process.env.ADMIN_USERNAME,
+  hasPasswordHash: !!process.env.ADMIN_PASSWORD_HASH,
+  hasJwtSecret: !!process.env.JWT_SECRET
+});
+
 const express = require('express');
 const cors = require('cors');
-const { initializeDatabase } = require('./config/database');
+const helmet = require('helmet');
+const { Sequelize } = require('sequelize');
 const apiRoutes = require('./routes/api.routes');
 
-// Global error handlers
-process.on('uncaughtException', (err) => {
-  console.error('[Server] Uncaught Exception:', err);
-  console.error(err.stack);
-  process.exit(1);
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('[Server] Unhandled Rejection at:', promise);
-  console.error('[Server] Reason:', reason);
-});
-
 const app = express();
-const port = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3001;
 
 // Middleware
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false
+}));
+
+// Configure CORS
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:3001'],
+  origin: 'http://localhost:3000',
+  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// Debug middleware
-app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-  next();
-});
 
 // Routes
 app.use('/api', apiRoutes);
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'ok',
-    timestamp: new Date().toISOString()
-  });
-});
-
-// Error handling middleware
+// Error handling
 app.use((err, req, res, next) => {
-  console.error('[Server] Error:', err);
   console.error(err.stack);
-  res.status(500).json({ 
-    error: 'Internal server error',
-    message: err.message
-  });
+  res.status(500).json({ message: 'Something went wrong!' });
 });
 
 // Start server
 const startServer = async () => {
   try {
-    console.log('[Database] Testing connection...');
-    const db = await initializeDatabase();
-    console.log('[Database] Connection established successfully');
-
-    const server = app.listen(port, () => {
-      console.log(`[${new Date().toISOString()}] Server is running on port ${port}`);
-      console.log(`[${new Date().toISOString()}] Health check endpoint: http://localhost:${port}/health`);
-    });
-
-    // Handle graceful shutdown
-    const shutdown = async () => {
-      console.log('[Server] Shutting down gracefully...');
-      
-      // Close server first
-      await new Promise((resolve) => {
-        server.close((err) => {
-          if (err) {
-            console.error('[Server] Error closing HTTP server:', err);
-          }
-          resolve();
-        });
-      });
-
-      // Close database connection
-      if (db) {
-        await db.close();
+    // Create Sequelize instance
+    const sequelize = new Sequelize(
+      process.env.DB_NAME || 'builditrecords',
+      process.env.DB_USERNAME || 'postgres',
+      process.env.DB_PASSWORD || 'postgres',
+      {
+        host: process.env.DB_HOST || 'localhost',
+        dialect: 'postgres',
+        logging: false
       }
+    );
 
-      process.exit(0);
-    };
+    // Test database connection
+    await sequelize.authenticate();
+    console.log('Database connection established successfully');
 
-    // Handle shutdown signals
-    process.on('SIGTERM', shutdown);
-    process.on('SIGINT', shutdown);
-
+    // Start the server
+    app.listen(PORT, () => {
+      console.log(`Server is running on port ${PORT}`);
+    });
   } catch (error) {
-    console.error('[Server] Failed to start:', error);
+    console.error('Unable to start server:', error);
     process.exit(1);
   }
 };

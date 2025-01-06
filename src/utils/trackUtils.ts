@@ -5,149 +5,121 @@ import { spotifyService } from '../services/spotify';
 // Cache for tracks
 const trackCache = new Map<string, Track[]>();
 
-const log = (message: string, level: 'info' | 'error' = 'info') => {
-  if (process.env.NODE_ENV !== 'production') {
-    console[level](message);
-  }
-};
+function log(message: string, level: 'info' | 'error' = 'info') {
+  const timestamp = new Date().toISOString();
+  console[level](`[${timestamp}] ${message}`);
+}
 
 export const PLACEHOLDER_IMAGE = '/placeholder-track.png';
 
 export const isTrack = (obj: any): obj is Track => {
-  return (
-    obj &&
-    typeof obj.id === 'string' &&
-    typeof obj.name === 'string' &&
-    Array.isArray(obj.artists) &&
-    typeof obj.duration_ms === 'number' &&
-    typeof obj.uri === 'string'
-  );
+  return obj && typeof obj === 'object' && 
+    'id' in obj && 
+    'name' in obj && 
+    'artists' in obj && 
+    Array.isArray(obj.artists);
 };
 
 // Get tracks for a specific label
-export const getTracksForLabel = async (label: string): Promise<Track[]> => {
-  // Check cache first
-  if (trackCache.has(label)) {
-    return trackCache.get(label) || [];
-  }
-
+export const getTracksForLabel = async (labelId: string): Promise<Track[]> => {
   try {
-    const spotifyTracks = await spotifyService.getTracksByLabel(label);
+    // Check cache first
+    const cachedTracks = trackCache.get(labelId);
+    if (cachedTracks) {
+      return cachedTracks;
+    }
+
+    // Fetch from Spotify if not in cache
+    const spotifyTracks = await spotifyService.getTracksByLabel(labelId);
     const tracks = transformTracks(spotifyTracks);
-    trackCache.set(label, tracks);
+    trackCache.set(labelId, tracks);
     return tracks;
   } catch (error) {
-    log(`Error fetching tracks for label ${label}:`, 'error');
+    log(`Error getting tracks for label ${labelId}: ${error}`, 'error');
     return [];
   }
 };
 
-// Convert SpotifyTrack to Track
-export const convertToTrack = (spotifyTrack: SpotifyTrack): Track => ({
-  id: spotifyTrack.id,
-  name: spotifyTrack.name,
-  title: spotifyTrack.name,
-  type: 'track',
-  artists: spotifyTrack.artists.map(artist => ({
-    id: artist.id,
-    name: artist.name,
-    uri: artist.uri,
-    external_urls: { spotify: artist.external_urls.spotify },
-    spotifyUrl: artist.external_urls.spotify,
-    type: 'artist',
-  })),
-  duration_ms: spotifyTrack.duration_ms,
-  preview_url: spotifyTrack.preview_url,
-  external_urls: { spotify: spotifyTrack.external_urls.spotify },
-  external_ids: spotifyTrack.external_ids || {},
-  uri: spotifyTrack.uri,
-  album: spotifyTrack.album
-    ? {
-        ...spotifyTrack.album,
-        spotifyUrl: spotifyTrack.album.external_urls.spotify || '',
-      }
-    : {
-        id: '',
-        name: 'Unknown Album',
-        artists: [],
-        images: [],
-        release_date: '',
-        release_date_precision: 'day',
-        total_tracks: 0,
-        external_urls: { spotify: '' },
-        uri: '',
-        type: 'album',
-        spotifyUrl: '',
-      },
-  popularity: spotifyTrack.popularity || 0,
-  releaseDate: spotifyTrack.album?.release_date || '',
-  spotifyUrl: spotifyTrack.external_urls.spotify,
-  images: spotifyTrack.album?.images || [],
-  artworkUrl: spotifyTrack.album?.images?.[0]?.url,
-});
+export function formatDuration(ms: number): string {
+  const minutes = Math.floor(ms / 60000);
+  const seconds = ((ms % 60000) / 1000).toFixed(0);
+  return `${minutes}:${seconds.padStart(2, '0')}`;
+}
 
+export function transformSpotifyTrack(track: SpotifyTrack): Track {
+  return {
+    id: track.id,
+    name: track.name,
+    duration_ms: track.duration_ms,
+    preview_url: track.preview_url,
+    external_urls: track.external_urls,
+    uri: track.uri,
+    type: track.type,
+    artists: track.artists.map((artist: SpotifyArtist) => ({
+      id: artist.id,
+      name: artist.name,
+      uri: artist.uri,
+      type: 'artist',
+      external_urls: artist.external_urls,
+      spotifyUrl: artist.external_urls.spotify
+    })),
+    album: track.album ? {
+      id: track.album.id,
+      name: track.album.name,
+      release_date: track.album.release_date,
+      release_date_precision: track.album.release_date_precision,
+      total_tracks: track.album.total_tracks,
+      type: track.album.type,
+      uri: track.album.uri,
+      external_urls: track.album.external_urls,
+      images: track.album.images,
+      spotifyUrl: track.album.external_urls.spotify,
+      artists: track.album.artists.map((artist: SpotifyArtist) => ({
+        id: artist.id,
+        name: artist.name,
+        uri: artist.uri,
+        type: 'artist',
+        external_urls: artist.external_urls,
+        spotifyUrl: artist.external_urls.spotify
+      }))
+    } : undefined,
+    popularity: track.popularity,
+    external_ids: track.external_ids || {},
+    spotifyUrl: track.external_urls.spotify
+  };
+}
 
 // Transform SpotifyTrack[] to Track[]
 export const transformTracks = (spotifyTracks: SpotifyTrack[]): Track[] => {
-  return spotifyTracks.map(convertToTrack);
+  return spotifyTracks.map(transformSpotifyTrack);
 };
 
 // Get tracks by label
-export const getTracksByLabel = (tracks: Track[], label: RecordLabel): Track[] => {
-  return tracks.filter(track => track.label?.id === label.id);
-};
-
-// Transform artists
-export const transformArtists = (artists: SpotifyArtist[]): Artist[] => {
-  return artists.map(artist => ({
-    id: artist.id,
-    name: artist.name,
-    uri: artist.uri,
-    external_urls: { spotify: artist.external_urls.spotify },
-    spotifyUrl: artist.external_urls.spotify,
-    spotify_url: artist.external_urls.spotify,
-    type: 'artist'
-  }));
+export const getTracksByLabel = (tracks: Track[], labelId: string): Track[] => {
+  return tracks.filter(track => track.label?.id === labelId);
 };
 
 // Get track artwork URL
 export const getTrackImage = (track: Track): string => {
-  if (track.artworkUrl) {
-    return track.artworkUrl;
-  }
-  
   if (track.images && track.images.length > 0) {
     return track.images[0].url;
   }
-  
   if (track.album?.images && track.album.images.length > 0) {
     return track.album.images[0].url;
   }
-  
-  return PLACEHOLDER_IMAGE;
+  return track.artworkUrl || PLACEHOLDER_IMAGE;
 };
 
-// Get artist names as string
-export const getArtistNames = (track: Track): string => {
-  if (!track.artists || track.artists.length === 0) {
-    return 'Unknown Artist';
-  }
+export function getArtistNames(track: Track): string {
   return track.artists.map(artist => artist.name).join(', ');
-};
-
-// Format track duration
-export const formatDuration = (ms: number): string => {
-  const minutes = Math.floor(ms / 60000);
-  const seconds = ((ms % 60000) / 1000).toFixed(0);
-  return `${minutes}:${parseInt(seconds) < 10 ? '0' : ''}${seconds}`;
-};
+}
 
 // Sort tracks by date
-export const sortTracksByDate = (tracks: Track[]): Track[] => {
+export function sortTracksByDate(tracks: Track[]): Track[] {
   return [...tracks].sort((a, b) => {
-    const dateA = a.releaseDate ? new Date(a.releaseDate).getTime() : 0;
-    const dateB = b.releaseDate ? new Date(b.releaseDate).getTime() : 0;
-    return dateB - dateA;
+    const dateA = a.album?.release_date || '';
+    const dateB = b.album?.release_date || '';
+    return new Date(dateB).getTime() - new Date(dateA).getTime();
   });
 };
 
@@ -156,26 +128,56 @@ export const filterTracksByLabel = (tracks: Track[], labelId: string): Track[] =
   return tracks.filter(track => track.label?.id === labelId);
 };
 
+// Create a track from partial data
+export const createTrack = (data: Partial<Track>): Track => {
+  return {
+    id: data.id || '',
+    name: data.name || '',
+    duration_ms: data.duration_ms || 0,
+    preview_url: data.preview_url || null,
+    external_urls: data.external_urls || { spotify: '' },
+    uri: data.uri || '',
+    type: 'track',
+    artists: data.artists || [],
+    album: data.album,
+    popularity: data.popularity,
+    external_ids: data.external_ids || {},
+    spotifyUrl: data.spotifyUrl || '',
+    label: data.label,
+    recordLabel: data.recordLabel
+  } as Track;
+};
+
+// Utility function to validate date strings
+export const isValidDate = (dateString: string): boolean => {
+  const date = new Date(dateString);
+  return date instanceof Date && !isNaN(date.getTime());
+};
+
+// Get track date with validation
+export const getTrackDate = (track: Track): string | undefined => {
+  const date = track.releaseDate || track.album?.release_date;
+  return date && isValidDate(date) ? date : undefined;
+};
+
+// Sort tracks by popularity
+export const sortTracksByPopularity = (tracks: Track[]): Track[] => {
+  return [...tracks].sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+};
+
 // Refresh the track cache
 export const refreshTrackCache = async (): Promise<void> => {
   try {
-    // Clear existing cache
-    trackCache.clear();
-
-    // Fetch tracks for all labels
-    const labels = Object.values(RECORD_LABELS);
+    const labels = RECORD_LABELS;
     await Promise.all(
       labels.map(async (label) => {
         const spotifyTracks = await spotifyService.getTracksByLabel(label.id || label.name);
         const tracks = transformTracks(spotifyTracks);
-        trackCache.set(label, tracks);
+        trackCache.set(label.id || label.name, tracks);
       })
     );
-
-    log('Track cache refreshed successfully');
   } catch (error) {
-    log('Error refreshing track cache:', 'error');
-    throw error;
+    log(`Error refreshing track cache: ${error}`, 'error');
   }
 };
 
@@ -238,60 +240,4 @@ export const getTrackLabel = (track: Track) => {
   }
   
   return undefined;
-};
-
-export const createTrack = (data: Partial<Track>): Track => {
-  if (!data.id || !data.name) {
-    throw new Error('Track must have an id and name');
-  }
-
-  return {
-    id: data.id,
-    name: data.name,
-    title: data.title || data.name,
-    artists: data.artists || [],
-    duration_ms: data.duration_ms || 0,
-    preview_url: data.preview_url || null,
-    external_urls: data.external_urls || { spotify: '' },
-    external_ids: data.external_ids || {},
-    uri: data.uri || `spotify:track:${data.id}`,
-    album: data.album || {
-      id: '',
-      name: '',
-      artists: [],
-      images: [],
-      release_date: '',
-      release_date_precision: 'day',
-      total_tracks: 0,
-      external_urls: { spotify: '' },
-      uri: '',
-      type: 'album',
-      spotifyUrl: ''
-    },
-    popularity: data.popularity || 0,
-    releaseDate: data.releaseDate || new Date().toISOString(),
-    spotifyUrl: data.spotifyUrl || `https://open.spotify.com/track/${data.id}`,
-    images: data.images || [],
-    artworkUrl: data.artworkUrl || PLACEHOLDER_IMAGE,
-    label: data.label,
-    recordLabel: data.recordLabel,
-    featured: data.featured || false
-  };
-};
-
-// Utility function to validate date strings
-export const isValidDate = (dateString: string): boolean => {
-  const date = new Date(dateString);
-  return date instanceof Date && !isNaN(date.getTime());
-};
-
-// Get track date with validation
-export const getTrackDate = (track: Track): string | undefined => {
-  const date = track.releaseDate || track.album?.release_date;
-  return date && isValidDate(date) ? date : undefined;
-};
-
-// Sort tracks by popularity
-export const sortTracksByPopularity = (tracks: Track[]): Track[] => {
-  return [...tracks].sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
 };
