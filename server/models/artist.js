@@ -1,62 +1,101 @@
 const { Model, DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 
-module.exports = (sequelize) => {
+module.exports = (sequelize, DataTypes) => {
   class Artist extends Model {
     static associate(models) {
+      // associations can be defined here
       Artist.belongsTo(models.Label, {
-        foreignKey: 'label_id',
+        foreignKey: 'labelId',
         as: 'label'
       });
+
       Artist.hasMany(models.Release, {
-        foreignKey: 'artist_id',
+        foreignKey: 'primaryArtistId',
+        as: 'primaryReleases'
+      });
+
+      Artist.belongsToMany(models.Release, {
+        through: 'ReleaseArtists',
+        foreignKey: 'artistId',
+        otherKey: 'releaseId',
         as: 'releases'
       });
+
       Artist.hasMany(models.Track, {
-        foreignKey: 'artist_id',
-        as: 'tracks'
+        foreignKey: 'remixerId',
+        as: 'remixes'
       });
     }
   }
 
   Artist.init({
     id: {
-      type: DataTypes.UUID,
-      defaultValue: DataTypes.UUIDV4,
-      primaryKey: true,
-      allowNull: false
-    },
-    spotify_id: {
       type: DataTypes.STRING,
-      unique: true,
-      allowNull: false
+      primaryKey: true,
+      allowNull: false,
+      validate: {
+        notEmpty: true
+      }
     },
     name: {
       type: DataTypes.STRING,
-      allowNull: false
-    },
-    label_id: {
-      type: DataTypes.STRING,
       allowNull: false,
-      references: {
-        model: 'labels',
-        key: 'id'
+      validate: {
+        notEmpty: true
       }
     },
-    spotify_url: {
+    spotifyUrl: {
       type: DataTypes.STRING,
-      allowNull: true
+      allowNull: true,
+      field: 'spotify_url',
+      validate: {
+        isUrl: true
+      }
     },
-    image_url: {
+    spotifyUri: {
       type: DataTypes.STRING,
-      allowNull: true
+      allowNull: true,
+      field: 'spotify_uri',
+      validate: {
+        isSpotifyUri(value) {
+          if (value && !value.startsWith('spotify:artist:')) {
+            throw new Error('Invalid Spotify URI format');
+          }
+        }
+      }
+    },
+    imageUrl: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: 'image_url',
+      validate: {
+        isUrl: true
+      }
+    },
+    labelId: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: 'label_id',
+      references: {
+        model: 'Labels',
+        key: 'id'
+      }
     }
   }, {
     sequelize,
     modelName: 'Artist',
-    tableName: 'artists',
+    tableName: 'Artists',
     underscored: true,
-    timestamps: true
+    timestamps: true,
+    indexes: [
+      {
+        fields: ['label_id']
+      },
+      {
+        fields: ['name']
+      }
+    ]
   });
 
   return Artist;

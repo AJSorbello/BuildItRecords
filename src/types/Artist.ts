@@ -8,10 +8,10 @@ export interface Artist {
   uri: string;
   images?: {
     url: string;
-    height: number;
-    width: number;
+    height: number | null;
+    width: number | null;
   }[];
-  spotifyUrl?: string;
+  spotifyUrl: string;
   genres?: string[];
   followers?: {
     total: number;
@@ -22,7 +22,9 @@ export interface Artist {
   popularity?: number;
   artworkUrl?: string;
   bio?: string;
-  label?: string;
+  label?: RecordLabel;
+  albums?: Album[];
+  topTracks?: Album[];
 }
 
 export interface ArtistResponse {
@@ -37,9 +39,11 @@ export interface ArtistResponse {
 export interface SimpleArtist {
   id: string;
   name: string;
+  uri: string;
   external_urls: {
     spotify: string;
   };
+  spotifyUrl: string;
 }
 
 export interface SpotifyArtistData {
@@ -47,25 +51,26 @@ export interface SpotifyArtistData {
   name: string;
   images?: {
     url: string;
-    height: number;
-    width: number;
+    height: number | null;
+    width: number | null;
   }[];
   genres?: string[];
+  followers?: {
+    total: number;
+  };
   external_urls: {
     spotify: string;
   };
-  followers: {
-    total: number;
-  };
+  uri: string;
   popularity?: number;
 }
 
 export function getArtistImage(artist: Artist): string {
-  return artist.artworkUrl || artist.images?.[0]?.url || '';
+  return artist.images?.[0]?.url || artist.artworkUrl || '/placeholder-artist.png';
 }
 
 export function getArtistGenres(artist: Artist): string {
-  return artist.genres?.join(', ') || '';
+  return artist.genres?.join(', ') || 'No genres available';
 }
 
 export function getArtistFollowers(artist: Artist): number {
@@ -77,16 +82,16 @@ export const createArtist = (data: Partial<Artist>): Artist => {
     id: data.id || '',
     name: data.name || '',
     uri: data.uri || '',
+    external_urls: data.external_urls || { spotify: '' },
+    spotifyUrl: data.spotifyUrl || '',
     images: data.images || [],
-    spotifyUrl: data.spotifyUrl,
     genres: data.genres || [],
     followers: data.followers || { total: 0 },
-    external_urls: {
-      spotify: data.external_urls?.spotify || '',
-    },
-    popularity: data.popularity || 0,
+    popularity: data.popularity,
     artworkUrl: data.artworkUrl,
     bio: data.bio,
     label: data.label,
+    albums: data.albums || [],
+    topTracks: data.topTracks || []
   };
 };

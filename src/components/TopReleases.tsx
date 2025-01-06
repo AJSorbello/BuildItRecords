@@ -3,7 +3,7 @@ import { Box, Typography, Grid } from '@mui/material';
 import { Track } from '../types/track';
 import { RecordLabel } from '../constants/labels';
 import { spotifyService } from '../services/SpotifyService';
-import TrackCard from './TrackCard';
+import ReleaseCard from './ReleaseCard';
 
 interface TopReleasesProps {
   label: RecordLabel;
@@ -58,7 +58,7 @@ const TopReleases: React.FC<TopReleasesProps> = ({ label }) => {
       <Grid container spacing={3} justifyContent="center">
         {topReleases.map((track, index) => (
           <Grid item xs={12} sm={6} md={4} lg={3} key={track.id}>
-            <TrackCard
+            <ReleaseCard
               track={track}
               ranking={index + 1}
             />

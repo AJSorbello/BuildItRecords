@@ -1,42 +1,31 @@
-'use strict';
-
-const fs = require('fs');
+const { Sequelize, DataTypes } = require('sequelize');
 const path = require('path');
-const Sequelize = require('sequelize');
-const process = require('process');
-const basename = path.basename(__filename);
+const sequelize = require('../config/database');
 
-function initializeModels(sequelize) {
-  const db = {};
+// Import model definitions
+const ArtistModel = require('./artist');
+const LabelModel = require('./label');
+const ReleaseModel = require('./release');
+const TrackModel = require('./track');
 
-  // Import models
-  const modelFiles = fs.readdirSync(__dirname)
-    .filter(file => {
-      return (
-        file.indexOf('.') !== 0 &&
-        file !== basename &&
-        file.slice(-3) === '.js' &&
-        file.indexOf('.test.js') === -1
-      );
-    });
+// Initialize models with sequelize instance
+const models = {
+  Artist: ArtistModel(sequelize, DataTypes),
+  Label: LabelModel(sequelize, DataTypes),
+  Release: ReleaseModel(sequelize, DataTypes),
+  Track: TrackModel(sequelize, DataTypes)
+};
 
-  // Initialize models
-  for (const file of modelFiles) {
-    const model = require(path.join(__dirname, file))(sequelize);
-    db[model.name] = model;
+// Define associations
+Object.keys(models).forEach((modelName) => {
+  if (models[modelName].associate) {
+    models[modelName].associate(models);
   }
+});
 
-  // Set up associations
-  Object.keys(db).forEach(modelName => {
-    if (db[modelName].associate) {
-      db[modelName].associate(db);
-    }
-  });
-
-  db.sequelize = sequelize;
-  db.Sequelize = Sequelize;
-
-  return db;
-}
-
-module.exports = initializeModels;
+// Export models and Sequelize instance
+module.exports = {
+  sequelize,
+  Sequelize,
+  ...models
+};

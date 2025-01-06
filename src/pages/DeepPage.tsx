@@ -27,7 +27,7 @@ const DeepPage = () => {
       try {
         setLoading(true);
         // Fetch artists
-        const deepArtists = await databaseService.getArtistsForLabel(RECORD_LABELS['Build It Deep']);
+        const deepArtists = await databaseService.getArtistsForLabel(RECORD_LABELS['buildit-deep']);
         if (deepArtists.length === 0) {
           setError('No artists found');
           return;
@@ -94,7 +94,7 @@ const DeepPage = () => {
                       overflow: 'hidden',
                       mb: 2
                     }}>
-                      {artist.bio || `Artist on ${RECORD_LABELS['Build It Deep']}`}
+                      {artist.bio || `Artist on ${RECORD_LABELS['buildit-deep'].displayName}`}
                     </Typography>
                     <Box sx={{ 
                       display: 'flex', 

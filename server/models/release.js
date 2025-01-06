@@ -4,16 +4,26 @@ const sequelize = require('../config/database');
 module.exports = (sequelize) => {
   class Release extends Model {
     static associate(models) {
-      Release.belongsTo(models.Artist, {
-        foreignKey: 'artist_id',
-        as: 'artist'
-      });
+      // associations can be defined here
       Release.belongsTo(models.Label, {
-        foreignKey: 'label_id',
+        foreignKey: 'labelId',
         as: 'label'
       });
+
+      Release.belongsTo(models.Artist, {
+        foreignKey: 'primaryArtistId',
+        as: 'primaryArtist'
+      });
+
+      Release.belongsToMany(models.Artist, {
+        through: 'ReleaseArtists',
+        foreignKey: 'releaseId',
+        otherKey: 'artistId',
+        as: 'artists'
+      });
+
       Release.hasMany(models.Track, {
-        foreignKey: 'release_id',
+        foreignKey: 'releaseId',
         as: 'tracks'
       });
     }
@@ -21,70 +31,114 @@ module.exports = (sequelize) => {
 
   Release.init({
     id: {
-      type: DataTypes.UUID,
-      defaultValue: DataTypes.UUIDV4,
-      primaryKey: true,
-      allowNull: false
-    },
-    spotify_id: {
       type: DataTypes.STRING,
-      unique: true,
-      allowNull: false
+      primaryKey: true,
+      allowNull: false,
+      validate: {
+        notEmpty: true
+      }
     },
     title: {
       type: DataTypes.STRING,
-      allowNull: false
-    },
-    artist_id: {
-      type: DataTypes.UUID,
       allowNull: false,
-      references: {
-        model: 'artists',
-        key: 'id'
+      validate: {
+        notEmpty: true
       }
     },
-    label_id: {
-      type: DataTypes.STRING,
-      allowNull: false,
-      references: {
-        model: 'labels',
-        key: 'id'
-      }
-    },
-    release_date: {
+    releaseDate: {
       type: DataTypes.DATEONLY,
-      allowNull: true
+      allowNull: false,
+      field: 'release_date'
     },
-    cover_image_url: {
+    type: {
+      type: DataTypes.ENUM('album', 'single', 'ep'),
+      allowNull: false,
+      defaultValue: 'single',
+      validate: {
+        isIn: [['album', 'single', 'ep']]
+      }
+    },
+    spotifyUrl: {
       type: DataTypes.STRING,
-      allowNull: true
+      allowNull: true,
+      field: 'spotify_url',
+      validate: {
+        isUrl: true
+      }
     },
-    spotify_url: {
+    spotifyUri: {
       type: DataTypes.STRING,
-      allowNull: true
+      allowNull: true,
+      field: 'spotify_uri',
+      validate: {
+        isSpotifyUri(value) {
+          if (value && !value.startsWith('spotify:album:')) {
+            throw new Error('Invalid Spotify URI format');
+          }
+        }
+      }
     },
-    external_urls: {
-      type: DataTypes.JSONB,
-      defaultValue: {}
+    imageUrl: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: 'image_url',
+      validate: {
+        isUrl: true
+      }
     },
-    external_ids: {
-      type: DataTypes.JSONB,
-      defaultValue: {}
+    labelId: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      field: 'label_id',
+      references: {
+        model: 'Labels',
+        key: 'id'
+      }
     },
-    popularity: {
-      type: DataTypes.INTEGER,
-      allowNull: true
+    primaryArtistId: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      field: 'primary_artist_id',
+      references: {
+        model: 'Artists',
+        key: 'id'
+      }
     },
-    total_tracks: {
-      type: DataTypes.INTEGER,
-      allowNull: true
+    status: {
+      type: DataTypes.ENUM('draft', 'scheduled', 'published'),
+      allowNull: false,
+      defaultValue: 'draft',
+      validate: {
+        isIn: [['draft', 'scheduled', 'published']]
+      }
     }
   }, {
     sequelize,
     modelName: 'Release',
-    tableName: 'releases',
+    tableName: 'Releases',
     underscored: true,
-    timestamps: true
+    timestamps: true,
+    indexes: [
+      {
+        fields: ['label_id']
+      },
+      {
+        fields: ['primary_artist_id']
+      },
+      {
+        fields: ['release_date']
+      },
+      {
+        fields: ['status']
+      }
+    ],
+    hooks: {
+      beforeValidate: (release) => {
+        if (release.releaseDate && release.releaseDate instanceof Date) {
+          release.releaseDate = release.releaseDate.toISOString().split('T')[0];
+        }
+      }
+    }
   });
 
   return Release;

@@ -3,8 +3,11 @@ const { createProxyMiddleware } = require('http-proxy-middleware');
 module.exports = function(app) {
   // Add CORS and security headers
   app.use((req, res, next) => {
-    res.setHeader('Access-Control-Allow-Origin', 'http://localhost:3000');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
+    res.setHeader('Access-Control-Allow-Origin', process.env.NODE_ENV === 'production' 
+      ? 'https://builditrecords.com'
+      : 'http://localhost:3000'
+    );
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE');
     res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,content-type,Authorization');
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     
@@ -16,7 +19,7 @@ module.exports = function(app) {
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
       "font-src 'self' https://fonts.gstatic.com; " +
       "img-src 'self' data: https:; " +
-      "frame-src 'self'; " +
+      "frame-src 'self' https://accounts.spotify.com; " +
       "form-action 'self';"
     );
     next();

@@ -1,5 +1,4 @@
 const { Model, DataTypes } = require('sequelize');
-const sequelize = require('../config/database');
 
 module.exports = (sequelize) => {
   class Label extends Model {
@@ -8,9 +7,15 @@ module.exports = (sequelize) => {
         foreignKey: 'label_id',
         as: 'artists'
       });
+
       Label.hasMany(models.Release, {
         foreignKey: 'label_id',
         as: 'releases'
+      });
+
+      Label.hasMany(models.Track, {
+        foreignKey: 'label_id',
+        as: 'tracks'
       });
     }
   }
@@ -19,20 +24,34 @@ module.exports = (sequelize) => {
     id: {
       type: DataTypes.STRING,
       primaryKey: true,
-      allowNull: false
+      allowNull: false,
+      validate: {
+        notEmpty: true
+      }
     },
     name: {
       type: DataTypes.STRING,
-      allowNull: false
+      allowNull: false,
+      validate: {
+        notEmpty: true
+      }
     },
     display_name: {
       type: DataTypes.STRING,
-      allowNull: false
+      allowNull: false,
+      validate: {
+        notEmpty: true
+      }
     },
     slug: {
       type: DataTypes.STRING,
+      allowNull: false,
       unique: true,
-      allowNull: false
+      validate: {
+        notEmpty: true,
+        isLowercase: true,
+        is: /^[a-z0-9-]+$/
+      }
     },
     created_at: {
       type: DataTypes.DATE,
@@ -49,9 +68,7 @@ module.exports = (sequelize) => {
     modelName: 'Label',
     tableName: 'labels',
     underscored: true,
-    timestamps: true,
-    createdAt: 'created_at',
-    updatedAt: 'updated_at'
+    timestamps: true
   });
 
   return Label;

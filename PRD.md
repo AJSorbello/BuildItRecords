@@ -106,7 +106,43 @@ The application manages three distinct labels:
 - PUT /api/tracks/:id - Update track
 - DELETE /api/tracks/:id - Delete track
 
-### **4. Environment Variables**
+### **4. CORS Configuration**
+
+#### Development Environment
+```javascript
+{
+  origin: 'http://localhost:3000',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  credentials: true
+}
+```
+
+#### Production Environment
+```javascript
+{
+  origin: 'https://builditrecords.com',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  credentials: true
+}
+```
+
+#### Content Security Policy
+```javascript
+{
+  'default-src': "'self'",
+  'script-src': "'self' 'unsafe-inline'",
+  'connect-src': "'self' http://localhost:3000 http://localhost:3001 https://api.spotify.com https://accounts.spotify.com",
+  'style-src': "'self' 'unsafe-inline' https://fonts.googleapis.com",
+  'font-src': "'self' https://fonts.gstatic.com",
+  'img-src': "'self' data: https:",
+  'frame-src': "'self' https://accounts.spotify.com",
+  'form-action': "'self'"
+}
+```
+
+### **5. Environment Variables**
 ```env
 # Server Configuration
 PORT=3001
@@ -125,7 +161,7 @@ SPOTIFY_CLIENT_SECRET=your_client_secret
 SPOTIFY_REDIRECT_URI=http://localhost:3000/callback
 ```
 
-### **5. Frontend Routes**
+### **6. Frontend Routes**
 - / - Home page
 - /admin - Admin dashboard
 - /labels/:id - Label page
@@ -133,7 +169,7 @@ SPOTIFY_REDIRECT_URI=http://localhost:3000/callback
 - /releases/:id - Release page
 - /callback - Spotify OAuth callback
 
-### **6. Error Handling**
+### **7. Error Handling**
 All API endpoints should return appropriate HTTP status codes:
 - 200: Success
 - 201: Created
@@ -143,7 +179,7 @@ All API endpoints should return appropriate HTTP status codes:
 - 404: Not Found
 - 500: Internal Server Error
 
-### **7. Data Flow**
+### **8. Data Flow**
 1. Admin authenticates with Spotify
 2. Admin selects label to import data
 3. Backend searches Spotify for artists
@@ -151,7 +187,7 @@ All API endpoints should return appropriate HTTP status codes:
 5. Data is stored in PostgreSQL
 6. Frontend fetches and displays data from PostgreSQL
 
-### **8. Security Considerations**
+### **9. Security Considerations**
 - Use environment variables for sensitive data
 - Implement rate limiting
 - Validate all user input
@@ -159,13 +195,13 @@ All API endpoints should return appropriate HTTP status codes:
 - Implement proper error handling
 - Log security-related events
 
-### **9. Performance Requirements**
+### **10. Performance Requirements**
 - API response time < 500ms
 - Database queries optimized with proper indexes
 - Frontend initial load time < 2s
 - Caching implementation for frequently accessed data
 
-### **10. Testing Requirements**
+### **11. Testing Requirements**
 - Unit tests for all API endpoints
 - Integration tests for database operations
 - End-to-end tests for critical user flows

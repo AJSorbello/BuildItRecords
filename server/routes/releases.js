@@ -1,13 +1,37 @@
 const express = require('express');
 const router = express.Router();
-const { Release, Artist, Label } = require('../models');
+const { Release, Artist, Label, Track } = require('../models');
 const { sequelize } = require('../models');
 const { Op } = require('sequelize');
+
+// Error handler middleware
+const handleError = (res, error) => {
+  console.error('Releases API Error:', error);
+  
+  if (error.name === 'SequelizeValidationError') {
+    return res.status(400).json({
+      success: false,
+      error: 'Validation error',
+      details: error.errors.map(err => ({
+        field: err.path,
+        message: err.message
+      }))
+    });
+  }
+  
+  return res.status(500).json({
+    success: false,
+    error: 'Internal server error',
+    message: error.message
+  });
+};
 
 // GET /api/releases/:labelId
 router.get('/:labelId', async (req, res) => {
   try {
     const { labelId } = req.params;
+    const { page = 1, limit = 10, sort = 'releaseDate', order = 'DESC' } = req.query;
+    
     console.log('Fetching releases for label ID:', labelId);
     
     const label = await Label.findOne({
@@ -21,49 +45,186 @@ router.get('/:labelId', async (req, res) => {
 
     if (!label) {
       console.log('Label not found:', labelId);
-      return res.status(404).json({ success: false, message: 'Label not found' });
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Label not found',
+        message: `No label found with ID or slug: ${labelId}`,
+        releases: [],
+        totalReleases: 0
+      });
     }
 
-    console.log('Found label:', label.name);
+    const offset = (parseInt(page) - 1) * parseInt(limit);
     
-    const releases = await Release.findAll({
+    const { count, rows: releases } = await Release.findAndCountAll({
       where: {
-        [Op.or]: [
-          { label_id: label.id },
-          { record_label: label.id }
-        ]
+        label_id: label.id
       },
       include: [
         {
           model: Artist,
-          as: 'artist',
-          attributes: ['id', 'name', 'spotifyUrl']
+          as: 'artists',
+          through: { attributes: [] }
+        },
+        {
+          model: Track,
+          as: 'tracks'
         }
       ],
-      order: [['releaseDate', 'DESC']]
+      order: [[sort, order]],
+      limit: parseInt(limit),
+      offset: offset
     });
 
-    console.log(`Found ${releases.length} releases for label ${label.name}`);
-    
-    // Transform the releases to match the frontend expected format
-    const transformedReleases = releases.map(release => ({
-      id: release.id,
-      title: release.title,
-      artist: release.artist ? {
-        id: release.artist.id,
-        name: release.artist.name,
-        spotifyUrl: release.artist.spotifyUrl
-      } : null,
-      artworkUrl: release.artworkUrl,
-      releaseDate: release.releaseDate,
-      labelName: label.name,
-      spotifyUrl: release.spotifyUrl
-    }));
+    console.log(`Found ${count} releases for label ${label.name}`);
 
-    res.json(transformedReleases);
+    return res.json({
+      success: true,
+      releases,
+      totalReleases: count,
+      currentPage: parseInt(page),
+      totalPages: Math.ceil(count / parseInt(limit)),
+      hasMore: offset + releases.length < count
+    });
+
   } catch (error) {
-    console.error('Error fetching releases:', error);
-    res.status(500).json({ success: false, message: 'Error fetching releases', error: error.message });
+    console.error('Error in GET /releases/:labelId:', error);
+    return handleError(res, error);
+  }
+});
+
+// GET /api/releases/:labelId/:releaseId
+router.get('/:labelId/:releaseId', async (req, res) => {
+  try {
+    const { labelId, releaseId } = req.params;
+    
+    const release = await Release.findOne({
+      where: {
+        id: releaseId,
+        labelId
+      },
+      include: [
+        {
+          model: Artist,
+          as: 'primaryArtist',
+          attributes: ['id', 'name', 'spotifyUrl', 'imageUrl']
+        },
+        {
+          model: Artist,
+          as: 'artists',
+          through: { attributes: [] },
+          attributes: ['id', 'name', 'spotifyUrl', 'imageUrl']
+        },
+        {
+          model: Track,
+          as: 'tracks',
+          include: [
+            {
+              model: Artist,
+              as: 'remixer',
+              attributes: ['id', 'name', 'imageUrl']
+            }
+          ]
+        },
+        {
+          model: Label,
+          as: 'label',
+          attributes: ['id', 'name', 'displayName', 'slug']
+        }
+      ]
+    });
+
+    if (!release) {
+      return res.status(404).json({
+        success: false,
+        message: 'Release not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      release
+    });
+  } catch (error) {
+    handleError(res, error);
+  }
+});
+
+// POST /api/releases
+router.post('/', async (req, res) => {
+  const transaction = await sequelize.transaction();
+  
+  try {
+    const { release, artists, tracks } = req.body;
+    
+    // Create release
+    const newRelease = await Release.create(release, { transaction });
+    
+    // Create or find artists and associate with release
+    for (const artistData of artists) {
+      const [artist] = await Artist.findOrCreate({
+        where: { id: artistData.id },
+        defaults: artistData,
+        transaction
+      });
+      await newRelease.addArtist(artist, { transaction });
+    }
+    
+    // Create tracks
+    for (const trackData of tracks) {
+      const track = await Track.create({
+        ...trackData,
+        releaseId: newRelease.id
+      }, { transaction });
+      
+      if (trackData.remixer) {
+        const [remixer] = await Artist.findOrCreate({
+          where: { id: trackData.remixer.id },
+          defaults: trackData.remixer,
+          transaction
+        });
+        await track.setRemixer(remixer, { transaction });
+      }
+    }
+    
+    await transaction.commit();
+    
+    // Fetch the complete release with associations
+    const completeRelease = await Release.findByPk(newRelease.id, {
+      include: [
+        {
+          model: Artist,
+          as: 'primaryArtist',
+          attributes: ['id', 'name', 'spotifyUrl', 'imageUrl']
+        },
+        {
+          model: Artist,
+          as: 'artists',
+          through: { attributes: [] },
+          attributes: ['id', 'name', 'spotifyUrl', 'imageUrl']
+        },
+        {
+          model: Track,
+          as: 'tracks',
+          include: [
+            {
+              model: Artist,
+              as: 'remixer',
+              attributes: ['id', 'name', 'imageUrl']
+            }
+          ]
+        }
+      ]
+    });
+    
+    res.status(201).json({
+      success: true,
+      message: 'Release created successfully',
+      release: completeRelease
+    });
+  } catch (error) {
+    await transaction.rollback();
+    handleError(res, error);
   }
 });
 
@@ -105,8 +266,14 @@ router.get('/featured', async (req, res) => {
       include: [
         {
           model: Artist,
-          as: 'artist',
-          attributes: ['id', 'name', 'spotifyUrl', 'images']
+          as: 'primaryArtist',
+          attributes: ['id', 'name', 'spotify_url', 'images']
+        },
+        {
+          model: Artist,
+          as: 'artists',
+          through: { attributes: [] },
+          attributes: ['id', 'name', 'spotify_url', 'images']
         }
       ],
       order: [
@@ -121,19 +288,14 @@ router.get('/featured', async (req, res) => {
         id: release.id,
         name: release.name,
         trackTitle: release.trackTitle,
-        artist: release.artist,
+        artist: release.primaryArtist,
         album: release.album,
-        spotifyUrl: release.spotifyUrl,
+        spotifyUrl: release.spotify_url,
         recordLabel: release.labelId
       }))
     });
   } catch (error) {
-    console.error('Error fetching featured releases:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Error fetching featured releases',
-      error: error.message 
-    });
+    handleError(res, error);
   }
 });
 

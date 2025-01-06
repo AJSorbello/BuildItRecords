@@ -1,17 +1,17 @@
-import { SpotifyApi } from '@spotify/web-api-ts-sdk';
-
-const SPOTIFY_CLIENT_ID = process.env.REACT_APP_SPOTIFY_CLIENT_ID ?? '';
-const SPOTIFY_CLIENT_SECRET = process.env.REACT_APP_SPOTIFY_CLIENT_SECRET ?? '';
-const SPOTIFY_REDIRECT_URI = process.env.REACT_APP_SPOTIFY_REDIRECT_URI ?? '';
+import { SpotifyApi, type Track as SpotifyTrack } from '@spotify/web-api-ts-sdk';
+import { Track } from '../types/track';
+import { transformSpotifyTrack } from '../utils/spotifyUtils';
+import { RecordLabel, RECORD_LABELS } from '../constants/labels';
 
 class SpotifyService {
-  private spotifyApi: SpotifyApi;
   private static instance: SpotifyService;
+  private api: SpotifyApi;
 
   private constructor() {
-    this.spotifyApi = SpotifyApi.withClientCredentials(
-      SPOTIFY_CLIENT_ID,
-      SPOTIFY_CLIENT_SECRET
+    this.api = SpotifyApi.withClientCredentials(
+      process.env.REACT_APP_SPOTIFY_CLIENT_ID || '',
+      process.env.REACT_APP_SPOTIFY_CLIENT_SECRET || '',
+      []
     );
   }
 
@@ -22,25 +22,33 @@ class SpotifyService {
     return SpotifyService.instance;
   }
 
-  public async getTrackByISRC(isrc: string) {
+  async getTracksByLabel(label: RecordLabel): Promise<Track[]> {
     try {
-      const searchResults = await this.spotifyApi.search(`isrc:${isrc}`, ['track']);
-      const tracks = searchResults.tracks.items;
-      
-      if (tracks.length > 0) {
-        const track = tracks[0];
-        return {
-          title: track.name,
-          artist: track.artists[0].name,
-          imageUrl: track.album.images[0]?.url,
-          releaseDate: track.album.release_date,
-          spotifyUrl: track.external_urls.spotify,
-        };
+      const playlistId = RECORD_LABELS[label].playlistId;
+      if (!playlistId) {
+        throw new Error(`No playlist ID configured for label ${label}`);
       }
-      throw new Error('Track not found on Spotify');
+
+      const response = await this.api.playlists.getPlaylistItems(playlistId);
+      return response.items
+        .filter(item => item.track)
+        .map(item => transformSpotifyTrack(item.track as SpotifyTrack));
     } catch (error) {
-      console.error('Error searching track on Spotify:', error);
-      throw error;
+      console.error(`Error fetching tracks for label ${label}:`, error);
+      return [];
+    }
+  }
+
+  async searchTrackByISRC(isrc: string): Promise<Track | null> {
+    try {
+      const searchResults = await this.api.search(`isrc:${isrc}`, ['track']);
+      if (searchResults.tracks.items.length > 0) {
+        return transformSpotifyTrack(searchResults.tracks.items[0]);
+      }
+      return null;
+    } catch (error) {
+      console.error('Error searching track by ISRC:', error);
+      return null;
     }
   }
 }

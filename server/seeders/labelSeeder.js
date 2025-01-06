@@ -1,14 +1,10 @@
-const initModels = require('../models');
+const { Label } = require('../models');
 
-const seedLabels = async (sequelize) => {
+const seedLabels = async () => {
   try {
-    console.log('[Seeder] Creating labels...');
-    
-    // Initialize models
-    const models = initModels(sequelize);
-    const { Label } = models;
+    console.log('[Seeder] Seeding labels...');
 
-    await Label.bulkCreate([
+    const labels = [
       {
         id: 'buildit-records',
         name: 'Build It Records',
@@ -27,15 +23,17 @@ const seedLabels = async (sequelize) => {
         display_name: 'Build It Deep',
         slug: 'buildit-deep'
       }
-    ], {
+    ];
+
+    await Label.bulkCreate(labels, {
       ignoreDuplicates: true
     });
 
-    console.log('[Seeder] Labels created successfully');
+    console.log('[Seeder] Labels seeded successfully');
   } catch (error) {
-    console.error('[Seeder] Error creating labels:', error);
+    console.error('[Seeder] Error seeding labels:', error);
     throw error;
   }
 };
 
-module.exports = seedLabels;
+module.exports = { seedLabels };

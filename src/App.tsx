@@ -19,12 +19,12 @@ import TechHome from './pages/labels/TechHome';
 import DeepHome from './pages/labels/DeepHome';
 import ReleasesPage from './pages/ReleasesPage';
 import ArtistsPage from './pages/ArtistsPage';
-import PlaylistsPage from './pages/PlaylistsPage';
+import PlaylistPage from './pages/PlaylistsPage';
 import SubmitPage from './pages/SubmitPage';
 import NotFoundPage from './pages/NotFoundPage';
 import LegalPage from './pages/LegalPage';
-import AdminLogin from './components/AdminLogin';
-import AdminDashboard from './components/AdminDashboard';
+import AdminLogin from './components/admin/AdminLogin';
+import AdminDashboard from './pages/admin/AdminDashboard';
 import ArtistDetailPage from './pages/ArtistDetailPage';
 
 // Protected Route component
@@ -50,7 +50,7 @@ const router = createBrowserRouter(
         <Route path="releases" element={<ReleasesPage label="records" />} />
         <Route path="artists" element={<ArtistsPage />} />
         <Route path="artists/:artistName" element={<ArtistDetailPage />} />
-        <Route path="playlists" element={<PlaylistsPage label="records" />} />
+        <Route path="playlists" element={<PlaylistPage label="records" />} />
         <Route path="submit" element={<SubmitPage label="records" />} />
       </Route>
 
@@ -60,7 +60,7 @@ const router = createBrowserRouter(
         <Route path="releases" element={<ReleasesPage label="tech" />} />
         <Route path="artists" element={<ArtistsPage />} />
         <Route path="artists/:artistName" element={<ArtistDetailPage />} />
-        <Route path="playlists" element={<PlaylistsPage label="tech" />} />
+        <Route path="playlists" element={<PlaylistPage label="tech" />} />
         <Route path="submit" element={<SubmitPage label="tech" />} />
       </Route>
 
@@ -70,12 +70,12 @@ const router = createBrowserRouter(
         <Route path="releases" element={<ReleasesPage label="deep" />} />
         <Route path="artists" element={<ArtistsPage />} />
         <Route path="artists/:artistName" element={<ArtistDetailPage />} />
-        <Route path="playlists" element={<PlaylistsPage label="deep" />} />
+        <Route path="playlists" element={<PlaylistPage label="deep" />} />
         <Route path="submit" element={<SubmitPage label="deep" />} />
       </Route>
 
       {/* Admin Routes */}
-      <Route path="/admin" element={<Layout />}>
+      <Route path="/admin">
         <Route path="login" element={<AdminLogin />} />
         <Route 
           path="dashboard" 

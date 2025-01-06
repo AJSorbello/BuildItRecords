@@ -109,6 +109,32 @@ Required environment variables:
 - `PORT`: Server port (default: 3001)
 - `NODE_ENV`: Environment (development/production)
 
+## Spotify Integration
+
+### Configuration
+The application maintains a list of Spotify artist IDs for each label in `server/config/spotify.js`. This is necessary for:
+1. Displaying artists on each label's page
+2. Ensuring we can show the complete artist roster for each label
+3. Maintaining relationships between artists and their releases
+
+### Data Import
+The application imports two types of data from Spotify:
+1. **Artists**: Using the configured Spotify artist IDs for each label
+2. **Releases**: By searching for releases from each label name on Spotify
+
+To import data:
+```bash
+# Import artists and releases for Build It Tech
+node server/scripts/importReleases.js
+```
+
+### Finding Spotify Artist IDs
+To find an artist's Spotify ID:
+1. Open the artist's Spotify page
+2. Click "Share" and "Copy Spotify URI"
+3. The ID is the string after "spotify:artist:"
+4. Add this ID to the appropriate label's artist list in `server/config/spotify.js`
+
 ## API Documentation
 
 The backend provides RESTful APIs for:

@@ -1,8 +1,8 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from './Layout';
-import AdminLogin from './AdminLogin';
-import AdminDashboard from './AdminDashboard';
+import AdminLogin from './admin/AdminLogin';
+import AdminDashboard from '../pages/admin/AdminDashboard';
 import Home from './Home';
 import SpotifyCallback from './SpotifyCallback';
 import ArtistsPage from '../pages/ArtistsPage';

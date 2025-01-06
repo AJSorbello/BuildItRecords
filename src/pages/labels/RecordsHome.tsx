@@ -1,22 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Typography, Grid } from '@mui/material';
-import { RECORD_LABELS } from '../../constants/labels';
+import { RecordLabel } from '../../constants/labels';
 import { Track } from '../../types/track';
 import TrackList from '../../components/TrackList';
 import PageLayout from '../../components/PageLayout';
 import { useReleases } from '../../hooks/useReleases';
+import { Album } from '../../types/release';
 
-interface Release {
-  id: string;
+interface Release extends Album {
   title: string;
-  imageUrl?: string;
   releaseDate: string;
   artist: {
     name: string;
     imageUrl?: string;
     spotifyUrl?: string;
   };
-  spotifyUrl?: string;
+  artworkUrl?: string;
 }
 
 const RecordsHome = () => {
@@ -29,27 +28,27 @@ const RecordsHome = () => {
       if (!releases || releases.length === 0) return;
       
       // Sort releases by date (newest first)
-      const sortedReleases = [...releases].sort((a, b) => {
-        const dateA = new Date(a.releaseDate);
-        const dateB = new Date(b.releaseDate);
-        return dateB.getTime() - dateA.getTime();
-      });
-      console.log('Sorted releases:', sortedReleases);
-
-      // Get the latest release date
-      const latestDate = sortedReleases[0]?.releaseDate;
-      console.log('Latest release date:', latestDate);
-      
-      // Get all releases from the latest release date
-      const latestReleases = sortedReleases.filter(release => 
-        release.releaseDate === latestDate
+      const sortedReleases = [...releases].sort((a, b) => 
+        new Date(b.release_date).getTime() - new Date(a.release_date).getTime()
       );
-      console.log('Latest releases:', latestReleases);
 
-      // Set the main track and other versions
-      if (latestReleases.length > 0) {
-        setMainTrack(latestReleases[0]);
-        setOtherVersions(latestReleases.slice(1));
+      // Convert Album to Release type
+      const convertToRelease = (album: Album): Release => ({
+        ...album,
+        title: album.name,
+        releaseDate: album.release_date,
+        artworkUrl: album.images[0]?.url,
+        artist: {
+          name: album.artists[0]?.name || 'Unknown Artist',
+          imageUrl: album.images[0]?.url,
+          spotifyUrl: album.external_urls?.spotify
+        }
+      });
+
+      // Set main track and other versions
+      if (sortedReleases.length > 0) {
+        setMainTrack(convertToRelease(sortedReleases[0]));
+        setOtherVersions(sortedReleases.slice(1).map(convertToRelease));
       }
     };
 
@@ -88,7 +87,7 @@ const RecordsHome = () => {
               <Grid item xs={12} sm={6} md={4}>
                 <Box
                   component="img"
-                  src={mainTrack.imageUrl || '/placeholder.jpg'}
+                  src={mainTrack.artworkUrl || '/placeholder.jpg'}
                   alt={mainTrack.title}
                   sx={{
                     width: '100%',
@@ -120,7 +119,7 @@ const RecordsHome = () => {
                 <Grid item xs={12} sm={6} md={4} key={release.id}>
                   <Box
                     component="img"
-                    src={release.imageUrl || '/placeholder.jpg'}
+                    src={release.artworkUrl || '/placeholder.jpg'}
                     alt={release.title}
                     sx={{
                       width: '100%',

@@ -9,11 +9,13 @@ export interface Album {
     id: string;
     name: string;
     uri: string;
+    external_urls: { spotify: string };
+    spotifyUrl: string;
   }[];
   images: {
     url: string;
-    height: number;
-    width: number;
+    height: number | null;
+    width: number | null;
   }[];
   release_date: string;
   release_date_precision: 'day' | 'month' | 'year';
@@ -22,8 +24,8 @@ export interface Album {
     spotify: string;
   };
   uri: string;
-  type: 'album';
-  album_type: 'album' | 'single' | 'compilation';
+  type: string;
+  spotifyUrl: string;
 }
 
 export interface AlbumResponse {
@@ -47,38 +49,22 @@ export interface Release {
   id: string;
   title: string;
   artist: Artist;
-  artists: {
-    id: string;
-    name: string;
-    uri: string;
-  }[];
+  artists: Artist[];
+  artworkUrl?: string;
   releaseDate: string;
-  images: {
-    url: string;
-    height: number;
-    width: number;
-  }[];
-  external_urls: {
-    spotify: string;
-  };
-  total_tracks: number;
-  uri: string;
-  tracks: Track[];
-  recordLabel: string;
-  label: RecordLabel;
-  popularity: number;
-  artworkUrl: string;
+  label?: RecordLabel;
   spotifyUrl: string;
-  beatportUrl?: string;
-  soundcloudUrl?: string;
-  artwork?: string;
-  genre?: string;
-  labelName?: string;
-  stores?: {
+  tracks: Track[];
+  featured?: boolean;
+  images?: {
+    url: string;
+    height: number | null;
+    width: number | null;
+  }[];
+  external_urls?: {
     spotify: string;
-    beatport?: string;
-    soundcloud?: string;
   };
+  uri?: string;
 }
 
 export interface ReleaseFormData {
@@ -97,20 +83,22 @@ export interface SpotifyAlbum {
     id: string;
     name: string;
     uri: string;
+    external_urls: { spotify: string };
   }[];
   images: {
     url: string;
-    height: number;
-    width: number;
+    height: number | null;
+    width: number | null;
   }[];
   release_date: string;
   total_tracks: number;
   tracks?: {
-    items: any[];
+    items: Track[];
   };
   external_urls: {
     spotify: string;
   };
+  uri: string;
   popularity: number;
   album_group?: string;
   external_ids?: {
@@ -139,8 +127,8 @@ export const createAlbum = (data: Partial<Album>): Album => {
     total_tracks: data.total_tracks || 0,
     external_urls: data.external_urls || { spotify: '' },
     uri: data.uri || '',
-    type: 'album',
-    album_type: data.album_type || 'album',
+    type: data.type || 'album',
+    spotifyUrl: data.spotifyUrl || ''
   };
 };
 
@@ -148,24 +136,22 @@ export const createRelease = (data: Partial<Release>): Release => {
   return {
     id: data.id || '',
     title: data.title || '',
-    artist: data.artist || { id: '', name: '', uri: '' },
+    artist: data.artist || { 
+      id: '', 
+      name: '', 
+      uri: '',
+      external_urls: { spotify: '' },
+      spotifyUrl: ''
+    },
     artists: data.artists || [],
+    artworkUrl: data.artworkUrl,
     releaseDate: data.releaseDate || '',
+    label: data.label,
+    spotifyUrl: data.spotifyUrl || '',
+    tracks: data.tracks || [],
+    featured: data.featured,
     images: data.images || [],
     external_urls: data.external_urls || { spotify: '' },
-    total_tracks: data.total_tracks || 0,
-    uri: data.uri || '',
-    tracks: data.tracks || [],
-    recordLabel: data.recordLabel || '',
-    label: data.label || 'buildit-records',
-    popularity: data.popularity || 0,
-    artworkUrl: data.artworkUrl || '',
-    spotifyUrl: data.spotifyUrl || '',
-    beatportUrl: data.beatportUrl,
-    soundcloudUrl: data.soundcloudUrl,
-    artwork: data.artwork,
-    genre: data.genre,
-    labelName: data.labelName,
-    stores: data.stores || { spotify: '' },
+    uri: data.uri || ''
   };
 };

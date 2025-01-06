@@ -27,7 +27,7 @@ const TechPage = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const techArtists = await databaseService.getArtistsForLabel(RECORD_LABELS['Build It Tech']);
+        const techArtists = await databaseService.getArtistsForLabel(RECORD_LABELS['buildit-tech']);
         if (techArtists.length === 0) {
           setError('No artists found');
           return;

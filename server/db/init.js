@@ -1,48 +1,27 @@
-const { Pool } = require('pg');
-const fs = require('fs').promises;
+const fs = require('fs');
 const path = require('path');
-require('dotenv').config({ path: path.join(__dirname, '../../.env') });
+const { sequelize } = require('../models');
+const seedDatabase = require('./seeds');
 
-const pool = new Pool({
-  user: process.env.POSTGRES_USER,
-  host: process.env.POSTGRES_HOST,
-  database: process.env.POSTGRES_DB,
-  password: process.env.POSTGRES_PASSWORD,
-  port: parseInt(process.env.POSTGRES_PORT || '5432'),
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-});
-
-const initializeDatabase = async () => {
+async function initializeDatabase() {
   try {
     // Read and execute schema.sql
     const schemaPath = path.join(__dirname, 'schema.sql');
-    const schemaSql = await fs.readFile(schemaPath, 'utf8');
+    const schema = fs.readFileSync(schemaPath, 'utf8');
     
-    console.log('Creating database schema...');
-    await pool.query(schemaSql);
-    console.log('Database schema created successfully');
+    // Drop and recreate tables
+    await sequelize.query(schema);
+    console.log('[Database] Schema initialized successfully');
 
-    // Insert default data if needed
-    console.log('Inserting default data...');
-    await pool.query(`
-      INSERT INTO labels (name, slug) 
-      VALUES 
-        ('Build It Records', 'buildit-records'),
-        ('Build It Tech', 'buildit-tech'),
-        ('Build It Deep', 'buildit-deep')
-      ON CONFLICT (slug) DO NOTHING;
-    `);
-    console.log('Default data inserted successfully');
+    // Seed the database
+    await seedDatabase();
+    console.log('[Database] Initial data seeded successfully');
 
+    console.log('[Database] Connection established successfully');
   } catch (error) {
-    console.error('Error initializing database:', error);
-    process.exit(1);
+    console.error('[Database] Error initializing database:', error);
+    throw error;
   }
-};
-
-// Run the initialization if this script is run directly
-if (require.main === module) {
-  initializeDatabase();
 }
 
-module.exports = { pool, initializeDatabase };
+module.exports = initializeDatabase;

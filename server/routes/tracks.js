@@ -4,9 +4,9 @@ const axios = require('axios');
 const { body, query, param } = require('express-validator');
 const rateLimit = require('express-rate-limit');
 const { validateRequest, isValidSpotifyId } = require('../utils/validation');
-const { cacheMiddleware, clearCache } = require('../utils/cache');
-const { Track, Artist, Release, Label } = require('../models');
+const { Track, Artist, Release, Label, ImportLog } = require('../models');
 const { Op } = require('sequelize');
+const logger = require('../config/logger');
 
 // Rate limiting configuration
 const limiter = rateLimit({
@@ -16,13 +16,6 @@ const limiter = rateLimit({
 
 // Apply rate limiting to all routes
 router.use(limiter);
-
-// Cache durations
-const CACHE_DURATION = {
-    SHORT: 60 * 60, // 1 hour
-    MEDIUM: 24 * 60 * 60, // 1 day
-    LONG: 7 * 24 * 60 * 60 // 1 week
-};
 
 // Helper function to format track data
 const formatTrackData = (spotifyData) => ({
@@ -49,25 +42,20 @@ const formatTrackData = (spotifyData) => ({
 async function getSpotifyToken() {
     const clientId = process.env.REACT_APP_SPOTIFY_CLIENT_ID;
     const clientSecret = process.env.REACT_APP_SPOTIFY_CLIENT_SECRET;
-
-    if (!clientId || !clientSecret) {
-        throw new Error('Missing Spotify credentials');
-    }
-
-    const tokenResponse = await axios.post(
-        'https://accounts.spotify.com/api/token',
-        new URLSearchParams({
-            grant_type: 'client_credentials'
-        }).toString(),
-        {
+    
+    try {
+        const response = await axios.post('https://accounts.spotify.com/api/token', 
+            'grant_type=client_credentials', {
             headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'Authorization': `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`
+                'Authorization': 'Basic ' + Buffer.from(clientId + ':' + clientSecret).toString('base64'),
+                'Content-Type': 'application/x-www-form-urlencoded'
             }
-        }
-    );
-
-    return tokenResponse.data.access_token;
+        });
+        return response.data.access_token;
+    } catch (error) {
+        logger.error('Error getting Spotify token:', error);
+        throw error;
+    }
 }
 
 // Helper function to fetch track from Spotify
@@ -86,7 +74,7 @@ async function getTrackWithCache(trackId, redisService) {
         
         if (cachedTrack) {
             const cacheAge = Date.now() - cachedTrack.cached_at;
-            if (cacheAge < CACHE_DURATION.MEDIUM * 1000) {
+            if (cacheAge < 60 * 60 * 1000) {
                 return { track: cachedTrack, source: 'cache' };
             }
         }
@@ -109,64 +97,128 @@ async function getTrackWithCache(trackId, redisService) {
     }
 }
 
+// GET /tracks
+router.get('/', async (req, res) => {
+    try {
+        const { label, limit = 50, offset = 0 } = req.query;
+        
+        const where = {};
+        if (label) {
+            where.labelId = label;
+        }
+
+        const tracks = await Track.findAndCountAll({
+            where,
+            limit: parseInt(limit),
+            offset: parseInt(offset),
+            include: [
+                { 
+                    model: Artist,
+                    as: 'artists',
+                    through: { attributes: [] }
+                },
+                { 
+                    model: Release,
+                    as: 'release'
+                },
+                { 
+                    model: Label,
+                    as: 'label'
+                }
+            ],
+            order: [['createdAt', 'DESC']]
+        });
+
+        res.json({
+            tracks: tracks.rows,
+            total: tracks.count,
+            limit: parseInt(limit),
+            offset: parseInt(offset)
+        });
+    } catch (error) {
+        logger.error('Error fetching tracks:', error);
+        res.status(500).json({ error: 'Failed to fetch tracks', details: error.message });
+    }
+});
+
+// GET /tracks/:id
+router.get('/:id', async (req, res) => {
+    try {
+        const track = await Track.findByPk(req.params.id, {
+            include: [
+                { 
+                    model: Artist,
+                    as: 'artists',
+                    through: { attributes: [] }
+                },
+                { 
+                    model: Release,
+                    as: 'release'
+                },
+                { 
+                    model: Label,
+                    as: 'label'
+                }
+            ]
+        });
+
+        if (!track) {
+            return res.status(404).json({ error: 'Track not found' });
+        }
+
+        res.json(track);
+    } catch (error) {
+        logger.error('Error fetching track:', error);
+        res.status(500).json({ error: 'Failed to fetch track', details: error.message });
+    }
+});
+
 // Search tracks
 router.get('/search', [
     query('q').notEmpty().withMessage('Search query is required'),
     query('limit').optional().isInt({ min: 1, max: 50 }).toInt(),
     query('offset').optional().isInt({ min: 0 }).toInt(),
-    validateRequest,
-    cacheMiddleware
+    validateRequest
 ], async (req, res) => {
     try {
         const { q, limit = 20, offset = 0 } = req.query;
-        const redisService = req.app.get('redisService');
-        
-        // Try to get results from cache
-        const cacheKey = `search:${q}:${limit}:${offset}`;
-        const cachedResults = await redisService.getCacheByLabel(cacheKey);
-        
-        if (cachedResults) {
-            return res.set('X-Data-Source', 'cache').json(cachedResults);
-        }
 
-        // If not in cache, fetch from Spotify
-        const accessToken = await getSpotifyToken();
-        const searchResponse = await axios.get(
-            `https://api.spotify.com/v1/search`,
-            {
-                params: {
-                    q,
-                    type: 'track',
-                    limit,
-                    offset
+        const tracks = await Track.findAndCountAll({
+            where: {
+                [Op.or]: [
+                    { name: { [Op.iLike]: `%${q}%` } },
+                    { '$artists.name$': { [Op.iLike]: `%${q}%` } }
+                ]
+            },
+            include: [
+                { 
+                    model: Artist,
+                    as: 'artists',
+                    through: { attributes: [] }
                 },
-                headers: {
-                    'Authorization': `Bearer ${accessToken}`
+                { 
+                    model: Release,
+                    as: 'release'
+                },
+                { 
+                    model: Label,
+                    as: 'label'
                 }
-            }
-        );
-
-        const tracks = searchResponse.data.tracks.items.map(formatTrackData);
-        
-        // Cache the results
-        await redisService.setCacheWithLabel(cacheKey, tracks, 'search');
-        
-        // Cache individual tracks
-        await redisService.batchSetTracks(tracks);
-
-        res.set('X-Data-Source', 'spotify').json({
-            tracks,
-            total: searchResponse.data.tracks.total,
-            offset,
-            limit
+            ],
+            limit: parseInt(limit),
+            offset: parseInt(offset),
+            order: [['createdAt', 'DESC']]
         });
 
+        res.json({
+            tracks: tracks.rows,
+            total: tracks.count,
+            limit: parseInt(limit),
+            offset: parseInt(offset)
+        });
     } catch (error) {
-        console.error('Search error:', error);
-        res.status(error.response?.status || 500).json({
-            error: 'Failed to search tracks',
-            message: error.response?.data?.error?.message || error.message
-        });
+        logger.error('Error searching tracks:', error);
+        res.status(500).json({ error: 'Failed to search tracks', details: error.message });
     }
 });
 
@@ -174,8 +226,7 @@ router.get('/search', [
 router.get('/:trackId', [
     param('trackId').custom(isValidSpotifyId).withMessage('Invalid Spotify track ID'),
     query('fields').optional().isString(),
-    validateRequest,
-    cacheMiddleware
+    validateRequest
 ], async (req, res) => {
     try {
         const { trackId } = req.params;
@@ -263,8 +314,7 @@ router.post('/batch', [
 router.get('/recommendations', [
     query('seed_tracks').notEmpty().withMessage('At least one seed track is required'),
     query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
-    validateRequest,
-    cacheMiddleware
+    validateRequest
 ], async (req, res) => {
     try {
         const { seed_tracks, limit = 20 } = req.query;
@@ -383,6 +433,129 @@ router.get('/:labelId', async (req, res) => {
     } catch (error) {
         console.error('Error fetching tracks:', error);
         res.status(500).json({ success: false, message: 'Error fetching tracks', error: error.message });
+    }
+});
+
+// Update track details
+router.put('/:trackId', [
+    param('trackId').custom(isValidSpotifyId).withMessage('Invalid Spotify track ID'),
+    body('title').optional().isString(),
+    body('artistId').optional().custom(isValidSpotifyId),
+    body('releaseId').optional().custom(isValidSpotifyId),
+    validateRequest
+], async (req, res) => {
+    try {
+        const { trackId } = req.params;
+        const updates = req.body;
+
+        // Find the track
+        const track = await Track.findByPk(trackId);
+        if (!track) {
+            return res.status(404).json({ message: 'Track not found' });
+        }
+
+        // Update track details
+        await track.update(updates);
+
+        // Log the update
+        await ImportLog.create({
+            type: 'track',
+            spotifyId: trackId,
+            status: 'success',
+            importedAt: new Date()
+        });
+
+        // Clear cache
+        const redisService = req.app.get('redisService');
+        await redisService.deleteTrackJson(trackId);
+
+        // Get updated track with associations
+        const updatedTrack = await Track.findByPk(trackId, {
+            include: [
+                {
+                    model: Artist,
+                    attributes: ['id', 'name', 'spotifyUrl']
+                },
+                {
+                    model: Release,
+                    attributes: ['id', 'title', 'releaseDate', 'artworkUrl', 'spotifyUrl']
+                }
+            ]
+        });
+
+        res.json(updatedTrack);
+    } catch (error) {
+        logger.error('Error updating track:', error);
+        res.status(500).json({
+            error: 'Failed to update track',
+            message: error.message
+        });
+    }
+});
+
+// Delete track
+router.delete('/:trackId', [
+    param('trackId').custom(isValidSpotifyId).withMessage('Invalid Spotify track ID'),
+    validateRequest
+], async (req, res) => {
+    try {
+        const { trackId } = req.params;
+
+        // Find the track
+        const track = await Track.findByPk(trackId);
+        if (!track) {
+            return res.status(404).json({ message: 'Track not found' });
+        }
+
+        // Delete track
+        await track.destroy();
+
+        // Log the deletion
+        await ImportLog.create({
+            type: 'track',
+            spotifyId: trackId,
+            status: 'success',
+            importedAt: new Date()
+        });
+
+        // Clear cache
+        const redisService = req.app.get('redisService');
+        await redisService.deleteTrackJson(trackId);
+
+        res.json({ message: 'Track deleted successfully' });
+    } catch (error) {
+        logger.error('Error deleting track:', error);
+        res.status(500).json({
+            error: 'Failed to delete track',
+            message: error.message
+        });
+    }
+});
+
+// Get track import history
+router.get('/:trackId/imports', [
+    param('trackId').custom(isValidSpotifyId).withMessage('Invalid Spotify track ID'),
+    validateRequest
+], async (req, res) => {
+    try {
+        const { trackId } = req.params;
+
+        const imports = await ImportLog.findAll({
+            where: {
+                type: 'track',
+                spotifyId: trackId
+            },
+            order: [['importedAt', 'DESC']],
+            limit: 10
+        });
+
+        res.json(imports);
+    } catch (error) {
+        logger.error('Error fetching track import history:', error);
+        res.status(500).json({
+            error: 'Failed to fetch import history',
+            message: error.message
+        });
     }
 });
 

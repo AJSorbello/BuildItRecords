@@ -26,7 +26,7 @@ const RecordsPage = () => {
       try {
         setLoading(true);
         // Fetch artists
-        const recordsArtists = await databaseService.getArtistsForLabel(RECORD_LABELS['Build It Records']);
+        const recordsArtists = await databaseService.getArtistsForLabel(RECORD_LABELS['buildit-records']);
         if (recordsArtists.length === 0) {
           setError('No artists found');
           return;
@@ -90,7 +90,7 @@ const RecordsPage = () => {
                       overflow: 'hidden',
                       mb: 2
                     }}>
-                      {artist.bio || `Artist on ${RECORD_LABELS['Build It Records']}`}
+                      {artist.bio || `Artist on ${RECORD_LABELS['buildit-records'].displayName}`}
                     </Typography>
                     <Box sx={{ 
                       display: 'flex', 

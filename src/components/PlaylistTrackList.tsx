@@ -14,10 +14,11 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import { Track } from '../types/track';
 
 interface PlaylistTrackListProps {
+  playlistId: string;
   tracks: Track[];
 }
 
-const PlaylistTrackList: React.FC<PlaylistTrackListProps> = ({ tracks }) => {
+const PlaylistTrackList: React.FC<PlaylistTrackListProps> = ({ tracks = [] }) => {
   const handlePlayClick = (track: Track) => {
     if (track.spotifyUrl) {
       window.open(track.spotifyUrl, '_blank');

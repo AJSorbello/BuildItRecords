@@ -1,61 +1,87 @@
-export enum RecordLabel {
-  RECORDS = 'buildit-records',
-  TECH = 'buildit-tech',
-  DEEP = 'buildit-deep'
-}
+import { RecordLabel } from '../types';
+import { SPOTIFY_CONFIG } from '../utils/env';
 
-export type LabelId = 'records' | 'tech' | 'deep';
-export type LabelKey = keyof typeof RecordLabel;
-
-// Display names for each label
-export const LABEL_DISPLAY_NAMES = {
-  [RecordLabel.RECORDS]: 'Build It Records',
-  [RecordLabel.TECH]: 'Build It Tech',
-  [RecordLabel.DEEP]: 'Build It Deep'
-} as const;
-
-// Map from display names to enum values
-export const RECORD_LABELS = {
-  [RecordLabel.RECORDS]: {
-    id: RecordLabel.RECORDS,
-    name: 'Build It Records',
+// Core labels that are always available
+const CORE_LABELS: { [key: string]: RecordLabel } = {
+  TECH: {
+    id: 'tech',
+    name: 'Tech',
+    displayName: 'Tech House',
+    playlistId: SPOTIFY_CONFIG.TECH_PLAYLIST_ID
+  },
+  DEEP: {
+    id: 'deep',
+    name: 'Deep',
+    displayName: 'Deep House',
+    playlistId: SPOTIFY_CONFIG.DEEP_PLAYLIST_ID
+  },
+  RECORDS: {
+    id: 'buildit-records',
+    name: 'Records',
     displayName: 'Build It Records',
-    playlistId: process.env.REACT_APP_SPOTIFY_RECORDS_PLAYLIST_ID
-  },
-  [RecordLabel.TECH]: {
-    id: RecordLabel.TECH,
-    name: 'Build It Tech',
-    displayName: 'Build It Tech',
-    playlistId: process.env.REACT_APP_SPOTIFY_TECH_PLAYLIST_ID
-  },
-  [RecordLabel.DEEP]: {
-    id: RecordLabel.DEEP,
-    name: 'Build It Deep',
-    displayName: 'Build It Deep',
-    playlistId: process.env.REACT_APP_SPOTIFY_DEEP_PLAYLIST_ID
+    playlistId: SPOTIFY_CONFIG.RECORDS_PLAYLIST_ID
   }
 };
 
-export const labelIdToKey: { [key in LabelId]: RecordLabel } = {
-  'records': RecordLabel.RECORDS,
-  'tech': RecordLabel.TECH,
-  'deep': RecordLabel.DEEP
+// Optional labels that are conditionally added
+const OPTIONAL_LABELS: { [key: string]: RecordLabel } = {
+  ...(SPOTIFY_CONFIG.PROGRESSIVE_PLAYLIST_ID ? {
+    PROGRESSIVE: {
+      id: 'progressive',
+      name: 'Progressive',
+      displayName: 'Progressive House',
+      playlistId: SPOTIFY_CONFIG.PROGRESSIVE_PLAYLIST_ID
+    }
+  } : {})
+};
+
+export const RECORD_LABELS = {
+  ...CORE_LABELS,
+  ...OPTIONAL_LABELS
 } as const;
 
-export const LABEL_URLS = {
-  [RecordLabel.RECORDS]: 'https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M',
-  [RecordLabel.TECH]: 'https://open.spotify.com/playlist/37i9dQZF1DX6J5NfMJS675',
-  [RecordLabel.DEEP]: 'https://open.spotify.com/playlist/37i9dQZF1DX8tZsk68tuDw'
-} as const;
+export const getLabelById = (id: string): RecordLabel | undefined => {
+  return Object.values(RECORD_LABELS).find(label => label.id === id);
+};
 
-export const LABEL_COLORS = {
-  [RecordLabel.RECORDS]: '#FF4081',
-  [RecordLabel.TECH]: '#00BCD4',
-  [RecordLabel.DEEP]: '#9C27B0'
-} as const;
+export const getLabelByName = (name: string): RecordLabel | undefined => {
+  return Object.values(RECORD_LABELS).find(
+    label => label.name.toLowerCase() === name.toLowerCase()
+  );
+};
 
-export const LABEL_DESCRIPTIONS = {
-  [RecordLabel.RECORDS]: 'Build It Records - Main label focusing on house music',
-  [RecordLabel.TECH]: 'Build It Tech - Dedicated to cutting-edge techno & tech house',
-  [RecordLabel.DEEP]: 'Build It Deep - Deep house and melodic techno imprint'
-} as const;
+export const getAllLabels = (): RecordLabel[] => {
+  return Object.values(RECORD_LABELS);
+};
+
+// URLs for each label's playlist
+export const LABEL_URLS: { [key: string]: string } = {
+  ...Object.entries(RECORD_LABELS).reduce((acc, [key, label]) => ({
+    ...acc,
+    [label.id]: `https://open.spotify.com/playlist/${label.playlistId}`
+  }), {})
+};
+
+// Colors for each label
+export const LABEL_COLORS: { [key: string]: string } = {
+  tech: '#00BCD4',
+  deep: '#9C27B0',
+  progressive: '#FF4081',
+  records: '#FF4081'
+};
+
+// Descriptions for each label
+export const LABEL_DESCRIPTIONS: { [key: string]: string } = {
+  tech: 'Build It Tech - Dedicated to cutting-edge techno & tech house',
+  deep: 'Build It Deep - Deep house and melodic techno imprint',
+  progressive: 'Build It Progressive - Progressive house and melodic techno',
+  records: 'Build It Records - Main label focusing on house music'
+};
+
+// Display names for each label
+export const LABEL_DISPLAY_NAMES: { [key: string]: string } = {
+  tech: 'Build It Tech',
+  deep: 'Build It Deep',
+  progressive: 'Build It Progressive',
+  records: 'Build It Records'
+};

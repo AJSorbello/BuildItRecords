@@ -1,104 +1,109 @@
 BEGIN;
 
+DROP TABLE IF EXISTS track_artists CASCADE;
 DROP TABLE IF EXISTS tracks CASCADE;
-DROP TABLE IF EXISTS albums CASCADE;
-DROP TABLE IF EXISTS artist_labels CASCADE;
+DROP TABLE IF EXISTS release_artists CASCADE;
+DROP TABLE IF EXISTS releases CASCADE;
 DROP TABLE IF EXISTS artists CASCADE;
 DROP TABLE IF EXISTS labels CASCADE;
 
 -- Create labels table
 CREATE TABLE labels (
-    id VARCHAR(255) PRIMARY KEY,
-    name VARCHAR(255) NOT NULL UNIQUE,
-    "displayName" VARCHAR(255) NOT NULL,
-    slug VARCHAR(255) NOT NULL UNIQUE,
-    "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+  id VARCHAR(255) PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  display_name VARCHAR(255) NOT NULL,
+  slug VARCHAR(255) UNIQUE NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create index on slug for faster lookups
 CREATE INDEX idx_labels_slug ON labels(slug);
 
 -- Insert default labels
-INSERT INTO labels (id, name, "displayName", slug) 
+INSERT INTO labels (id, name, display_name, slug)
 VALUES 
-    ('buildit-records', 'records', 'Build It Records', 'buildit-records'),
-    ('buildit-tech', 'tech', 'Build It Tech', 'buildit-tech'),
-    ('buildit-deep', 'deep', 'Build It Deep', 'buildit-deep')
-ON CONFLICT (id) DO NOTHING;
+  ('buildit-records', 'Build It Records', 'Build It Records', 'buildit-records'),
+  ('buildit-tech', 'Build It Tech', 'Build It Tech', 'buildit-tech'),
+  ('buildit-deep', 'Build It Deep', 'Build It Deep', 'buildit-deep');
 
 -- Create artists table
 CREATE TABLE artists (
-    id VARCHAR(255) PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    images JSONB,
-    genres TEXT[],
-    external_urls JSONB,
-    followers INTEGER DEFAULT 0,
-    popularity INTEGER DEFAULT 0,
-    uri VARCHAR(255),
-    "labelId" VARCHAR(255) REFERENCES labels(id),
-    "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+  id VARCHAR(255) PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  bio TEXT,
+  image_url VARCHAR(255),
+  spotify_url VARCHAR(255),
+  label_id VARCHAR(255) REFERENCES labels(id),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create indexes for artist lookups
 CREATE INDEX idx_artists_name ON artists(name);
-CREATE INDEX idx_artists_label_id ON artists("labelId");
-CREATE INDEX idx_artists_popularity ON artists(popularity DESC);
+CREATE INDEX idx_artists_label_id ON artists(label_id);
+CREATE INDEX idx_artists_created_at ON artists(created_at);
 
--- Create albums table
-CREATE TABLE albums (
-    id VARCHAR(255) PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    "artistId" VARCHAR(255) REFERENCES artists(id) ON DELETE CASCADE,
-    "labelId" VARCHAR(255) REFERENCES labels(id) ON DELETE CASCADE,
-    images JSONB,
-    release_date DATE,
-    total_tracks INTEGER DEFAULT 0,
-    external_urls JSONB,
-    uri VARCHAR(255),
-    album_type VARCHAR(50),
-    popularity INTEGER DEFAULT 0,
-    "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+-- Create releases table
+CREATE TABLE releases (
+  id VARCHAR(255) PRIMARY KEY,
+  title VARCHAR(255) NOT NULL,
+  release_date DATE,
+  artwork_url VARCHAR(255),
+  spotify_url VARCHAR(255),
+  label_id VARCHAR(255) REFERENCES labels(id),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create indexes for album lookups
-CREATE INDEX idx_albums_name ON albums(name);
-CREATE INDEX idx_albums_artist_id ON albums("artistId");
-CREATE INDEX idx_albums_label_id ON albums("labelId");
-CREATE INDEX idx_albums_release_date ON albums(release_date DESC);
-CREATE INDEX idx_albums_popularity ON albums(popularity DESC);
+CREATE INDEX idx_releases_title ON releases(title);
+CREATE INDEX idx_releases_label_id ON releases(label_id);
+CREATE INDEX idx_releases_release_date ON releases(release_date);
+CREATE INDEX idx_releases_created_at ON releases(created_at);
 
 -- Create tracks table
 CREATE TABLE tracks (
-    id VARCHAR(255) PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    "albumId" VARCHAR(255) REFERENCES albums(id) ON DELETE CASCADE,
-    "artistId" VARCHAR(255) REFERENCES artists(id) ON DELETE CASCADE,
-    duration_ms INTEGER,
-    preview_url VARCHAR(255),
-    external_urls JSONB,
-    uri VARCHAR(255),
-    popularity INTEGER DEFAULT 0,
-    "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+  id VARCHAR(255) PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  duration INTEGER NOT NULL,
+  track_number INTEGER,
+  disc_number INTEGER,
+  isrc VARCHAR(255),
+  preview_url VARCHAR(255),
+  spotify_url VARCHAR(255),
+  release_id VARCHAR(255) REFERENCES releases(id),
+  label_id VARCHAR(255) REFERENCES labels(id),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create indexes for track lookups
 CREATE INDEX idx_tracks_name ON tracks(name);
-CREATE INDEX idx_tracks_album_id ON tracks("albumId");
-CREATE INDEX idx_tracks_artist_id ON tracks("artistId");
+CREATE INDEX idx_tracks_release_id ON tracks(release_id);
+CREATE INDEX idx_tracks_label_id ON tracks(label_id);
+CREATE INDEX idx_tracks_created_at ON tracks(created_at);
 
--- Create artist_labels junction table
-CREATE TABLE artist_labels (
-    "artistId" VARCHAR(255) REFERENCES artists(id) ON DELETE CASCADE,
-    "labelId" VARCHAR(255) REFERENCES labels(id) ON DELETE CASCADE,
-    PRIMARY KEY ("artistId", "labelId")
+-- Create track_artists join table
+CREATE TABLE track_artists (
+  track_id VARCHAR(255) REFERENCES tracks(id),
+  artist_id VARCHAR(255) REFERENCES artists(id),
+  role VARCHAR(50) DEFAULT 'primary',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (track_id, artist_id, role)
 );
 
--- Create index for artist_labels lookups
-CREATE INDEX idx_artist_labels_label_id ON artist_labels("labelId");
+CREATE INDEX idx_track_artists_track_id ON track_artists(track_id);
+CREATE INDEX idx_track_artists_artist_id ON track_artists(artist_id);
+
+-- Create release_artists join table
+CREATE TABLE release_artists (
+  release_id VARCHAR(255) REFERENCES releases(id),
+  artist_id VARCHAR(255) REFERENCES artists(id),
+  role VARCHAR(50) DEFAULT 'primary',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (release_id, artist_id, role)
+);
+
+CREATE INDEX idx_release_artists_release_id ON release_artists(release_id);
+CREATE INDEX idx_release_artists_artist_id ON release_artists(artist_id);
 
 COMMIT;

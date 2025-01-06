@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Typography } from '@mui/material';
-import { RECORD_LABELS } from '../../constants/labels';
+import { RecordLabel } from '../../constants/labels';
 import { getTracksForLabel } from '../../utils/trackUtils';
 import { Track } from '../../types/track';
 import TrackList from '../../components/TrackList';
@@ -11,12 +11,13 @@ const DeepHome = () => {
 
   useEffect(() => {
     const fetchTracks = async () => {
-      const tracks = await getTracksForLabel(RECORD_LABELS[RecordLabel.DEEP].id);
-      // Sort tracks by release date and get the latest one
-      const sortedTracks = tracks.sort((a, b) => 
-        new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime()
-      );
-      setLatestTrack(sortedTracks.slice(0, 1)); // Get only the first track
+      const tracks = await getTracksForLabel(RecordLabel.DEEP);
+      if (tracks.length) {
+        const sortedTracks = tracks.sort((a, b) => 
+          new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime()
+        );
+        setLatestTrack(sortedTracks.slice(0, 1)); // Get only the first track
+      }
     };
     
     fetchTracks();

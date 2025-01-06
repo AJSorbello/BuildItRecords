@@ -6,7 +6,7 @@ const helmet = require('helmet');
 const path = require('path');
 const Sequelize = require('sequelize');
 const initializeModels = require('./models');
-const SpotifyService = require('./services/SpotifyService');
+const SpotifyService = require('./services/spotifyService');
 const apiRoutes = require('./routes/api.routes');
 const { setupSpotifyRoutes } = require('./routes/spotify.routes');
 const { setupAuthRoutes } = require('./routes/auth.routes');
@@ -49,12 +49,10 @@ const initExpress = (spotifyService, db, sequelize) => {
     contentSecurityPolicy: false,
     crossOriginEmbedderPolicy: false
   }));
-  
-  // CORS configuration
+
+  // CORS middleware
   app.use(cors({
-    origin: config.env === 'production' 
-      ? ['https://your-production-domain.com'] 
-      : ['http://localhost:3000', 'http://localhost:3001'],
+    origin: 'http://localhost:3000',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true
@@ -64,18 +62,37 @@ const initExpress = (spotifyService, db, sequelize) => {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
+  // Mount API routes
+  app.use('/api', apiRoutes);
+
+  // Error handling middleware
+  app.use((err, req, res, next) => {
+    console.error('Error:', err);
+    res.status(500).json({
+      error: {
+        message: process.env.NODE_ENV === 'production' 
+          ? 'Internal Server Error' 
+          : err.message,
+        stack: process.env.NODE_ENV === 'production' ? undefined : err.stack
+      }
+    });
+  });
+
+  // 404 handler
+  app.use((req, res) => {
+    res.status(404).json({ error: 'Not Found' });
+  });
+
   // Serve static files from the React app
   app.use(express.static(path.join(__dirname, '../build')));
-
-  // API routes
-  app.use('/api', apiRoutes);
-  setupSpotifyRoutes(app, spotifyService);
-  setupAuthRoutes(app);
 
   // Health check endpoint
   app.get('/health', (req, res) => {
     res.json({ status: 'ok' });
   });
+
+  setupSpotifyRoutes(app, spotifyService);
+  setupAuthRoutes(app);
 
   // Root route
   app.get('/', (req, res) => {
