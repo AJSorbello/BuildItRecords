@@ -108,6 +108,36 @@ class DatabaseService {
     }
   }
 
+  public async getArtistsByLabel(label: RecordLabel): Promise<Artist[]> {
+    try {
+      // Get all tracks for the label
+      const response = await this.request<{ tracks: Track[], total: number }>(`/tracks?label=${this.getLabelPath(label)}`);
+      
+      // Extract unique artists from tracks
+      const artistsMap = new Map<string, Artist>();
+      
+      response.tracks?.forEach(track => {
+        track.artists?.forEach(artist => {
+          if (artist.id && !artistsMap.has(artist.id)) {
+            artistsMap.set(artist.id, {
+              id: artist.id,
+              name: artist.name,
+              profile_image: artist.profile_image,
+              spotify_url: artist.spotify_url,
+              bio: artist.bio,
+              genres: artist.genres
+            });
+          }
+        });
+      });
+      
+      return Array.from(artistsMap.values());
+    } catch (error) {
+      console.error('Error getting artists by label:', error);
+      return [];
+    }
+  }
+
   // Releases
   public async getReleases(params: { artistId?: string; labelId?: string } = {}): Promise<Release[]> {
     try {
@@ -242,10 +272,105 @@ class DatabaseService {
     return this.request<Track>(`/tracks/${id}`);
   }
 
-  public async getTracksByLabel(label: RecordLabel): Promise<Track[]> {
-    const queryParams = new URLSearchParams();
-    queryParams.set('label', this.getLabelPath(label));
-    return this.request<Track[]>(`/tracks?${queryParams.toString()}`);
+  public async getTracksByLabel(label: RecordLabel, sort: 'created_at' | 'popularity' = 'created_at'): Promise<Track[]> {
+    try {
+      const queryParams = new URLSearchParams();
+      queryParams.set('label', this.getLabelPath(label));
+      queryParams.set('sort', sort);
+      const response = await this.request<{ tracks: Track[], total: number, limit: number, offset: number }>(`/tracks?${queryParams.toString()}`);
+      console.log('DatabaseService: Raw track data:', JSON.stringify(response.tracks?.[0], null, 2));
+      
+      // Transform tracks to ensure they have the correct data
+      const transformedTracks = (response.tracks || []).map(track => {
+        // Try to get the release date from various possible sources
+        const releaseDate = track.release_date || 
+                          track.releaseDate || 
+                          track.album?.release_date ||
+                          track.created_at ||
+                          track.createdAt;
+                          
+        console.log('Track:', track.name);
+        console.log('Release date sources:', {
+          release_date: track.release_date,
+          releaseDate: track.releaseDate,
+          album_release_date: track.album?.release_date,
+          created_at: track.created_at,
+          createdAt: track.createdAt
+        });
+        
+        return {
+          ...track,
+          name: track.name || track.title || 'Untitled',
+          artists: track.artists?.map(artist => ({
+            ...artist,
+            name: artist.name || 'Unknown Artist'
+          })) || [],
+          duration_ms: track.duration_ms || track.duration || 0,
+          release_date: releaseDate || new Date().toISOString(), // Fallback to current date if no date found
+          artwork_url: track.artwork_url || track.album?.artwork_url || track.album?.images?.[0]?.url
+        };
+      });
+
+      console.log('DatabaseService: First transformed track:', JSON.stringify(transformedTracks[0], null, 2));
+      return transformedTracks;
+    } catch (error) {
+      console.error('Error getting tracks by label:', error);
+      return [];
+    }
+  }
+
+  public async getTracksByArtist(artistId: string): Promise<Track[]> {
+    try {
+      // Get tracks from all labels
+      const labels = ['buildit-records', 'buildit-tech', 'buildit-deep'];
+      const trackPromises = labels.map(label => 
+        this.request<{ tracks: Track[], total: number }>(`/tracks?label=${this.getLabelPath(label)}`).then(response => ({
+          ...response,
+          tracks: response.tracks?.map(track => ({
+            ...track,
+            label // Add label to each track
+          }))
+        }))
+      );
+
+      const responses = await Promise.all(trackPromises);
+      const allTracks = responses.flatMap(response => response.tracks || []);
+      
+      // Filter tracks by artist ID
+      const artistTracks = allTracks.filter(track => 
+        track.artists?.some(artist => artist.id === artistId)
+      );
+
+      // Transform tracks to ensure they have the correct data
+      const transformedTracks = artistTracks.map(track => {
+        // Get artwork URL from track, release, or album
+        const artworkUrl = track.artwork_url 
+          || track.release?.artwork_url
+          || track.album?.artwork_url 
+          || track.album?.images?.[0]?.url;
+
+        return {
+          ...track,
+          name: track.name || track.title || 'Untitled',
+          artists: track.artists?.map(artist => ({
+            ...artist,
+            name: artist.name || 'Unknown Artist'
+          })) || [],
+          duration_ms: track.duration_ms || track.duration || 0,
+          release_date: track.release_date || track.releaseDate || track.album?.release_date || track.created_at || new Date().toISOString(),
+          artwork_url: artworkUrl,
+          label: track.label
+        };
+      });
+
+      // Sort tracks by release date, newest first
+      return transformedTracks.sort((a, b) => 
+        new Date(b.release_date).getTime() - new Date(a.release_date).getTime()
+      );
+    } catch (error) {
+      console.error('Error getting tracks by artist:', error);
+      return [];
+    }
   }
 
   public async importTracks(tracks: Track[]): Promise<Track[]> {
