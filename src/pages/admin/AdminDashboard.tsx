@@ -30,10 +30,32 @@ const AdminDashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const token = localStorage.getItem('adminToken');
-    if (!token) {
-      navigate('/admin/login');
-    }
+    const verifyToken = async () => {
+      const token = localStorage.getItem('adminToken');
+      if (!token) {
+        navigate('/admin/login');
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_URL}/api/admin/verify`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Token verification failed');
+        }
+      } catch (err) {
+        console.error('Token verification error:', err);
+        localStorage.removeItem('adminToken');
+        navigate('/admin/login');
+      }
+    };
+
+    verifyToken();
   }, [navigate]);
 
   const handleLabelSelect = async (labelId: string) => {
@@ -73,6 +95,10 @@ const AdminDashboard: React.FC = () => {
 
     try {
       const token = localStorage.getItem('adminToken');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
       const response = await fetch(`${API_URL}/api/admin/import-releases/${labelId}`, {
         method: 'GET',
         headers: {
@@ -82,7 +108,8 @@ const AdminDashboard: React.FC = () => {
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to import releases: ${response.statusText}`);
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Failed to import releases: ${response.statusText}`);
       }
 
       // Refresh the releases list after import
@@ -90,68 +117,87 @@ const AdminDashboard: React.FC = () => {
     } catch (err) {
       console.error('Error importing releases:', err);
       setError(err instanceof Error ? err.message : 'Failed to import releases');
+      
+      // If token is invalid, redirect to login
+      if (err instanceof Error && err.message.includes('Invalid token')) {
+        localStorage.removeItem('adminToken');
+        navigate('/admin/login');
+      }
     } finally {
       setLoading(false);
     }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('adminToken');
+    navigate('/admin/login');
+  };
+
+  const fetchReleases = async () => {
+    await handleLabelSelect(selectedLabel);
+  };
+
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Paper elevation={3} sx={{ p: 3 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
         <Typography variant="h4" gutterBottom>
           Admin Dashboard
         </Typography>
+        <Button variant="outlined" color="primary" onClick={handleLogout}>
+          Logout
+        </Button>
+      </Box>
 
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="h6" gutterBottom>
-            Select Label
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 2 }}>
-            {Object.values(RECORD_LABELS).map((label) => (
-              <Button
-                key={label.id}
-                variant={selectedLabel === label.id ? 'contained' : 'outlined'}
-                onClick={() => handleLabelSelect(label.id)}
-              >
-                {label.displayName}
-              </Button>
-            ))}
-          </Box>
+      <Paper elevation={3} sx={{ p: 3 }}>
+        <Typography variant="h5" gutterBottom>
+          Label Management
+        </Typography>
+
+        <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+          {Object.values(RECORD_LABELS).map((label) => (
+            <Button
+              key={label.id}
+              variant={selectedLabel === label.id ? 'contained' : 'outlined'}
+              onClick={() => handleLabelSelect(label.id)}
+              disabled={loading}
+            >
+              {label.displayName}
+            </Button>
+          ))}
         </Box>
 
         {error && (
-          <Alert severity="error" sx={{ mb: 3 }}>
+          <Alert severity="error" sx={{ mb: 2 }}>
             {error}
           </Alert>
         )}
 
-        {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
-            <CircularProgress />
-          </Box>
-        ) : selectedLabel ? (
-          <>
-            <Box sx={{ mb: 3 }}>
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={() => handleImportReleases(selectedLabel)}
-              >
-                Import New Releases
-              </Button>
-            </Box>
+        {selectedLabel && (
+          <Box sx={{ mt: 2 }}>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={() => handleImportReleases(selectedLabel)}
+              disabled={loading}
+              sx={{ mb: 2 }}
+            >
+              {loading ? <CircularProgress size={24} /> : 'Import Releases'}
+            </Button>
 
-            <TrackManager
-              selectedLabel={selectedLabel}
-              releases={releases}
-              totalReleases={totalReleases}
-              onRefresh={() => handleLabelSelect(selectedLabel)}
-            />
-          </>
-        ) : (
-          <Typography variant="body1">
-            Please select a label to manage its releases
-          </Typography>
+            {releases.length > 0 && (
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="h6" gutterBottom>
+                  {totalReleases} Releases Found
+                </Typography>
+                <TrackManager 
+                  releases={releases}
+                  selectedLabel={selectedLabel}
+                  totalReleases={totalReleases}
+                  onRefresh={fetchReleases}
+                />
+              </Box>
+            )}
+          </Box>
         )}
       </Paper>
     </Container>

@@ -1,18 +1,13 @@
 const { Model, DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 
-module.exports = (sequelize) => {
+module.exports = (sequelize, DataTypes) => {
   class Release extends Model {
     static associate(models) {
       // associations can be defined here
       Release.belongsTo(models.Label, {
         foreignKey: 'label_id',
         as: 'label'
-      });
-
-      Release.belongsTo(models.Artist, {
-        foreignKey: 'primary_artist_id',
-        as: 'primaryArtist'
       });
 
       Release.belongsToMany(models.Artist, {
@@ -38,18 +33,22 @@ module.exports = (sequelize) => {
         notEmpty: true
       }
     },
-    title: {
+    name: {
       type: DataTypes.STRING,
       allowNull: false,
       validate: {
         notEmpty: true
       }
     },
+    title: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
     release_date: {
       type: DataTypes.DATE,
-      allowNull: false
+      allowNull: true
     },
-    cover_image: {
+    artwork_url: {
       type: DataTypes.STRING
     },
     spotify_url: {
@@ -76,28 +75,10 @@ module.exports = (sequelize) => {
         key: 'id'
       }
     },
-    primary_artist_id: {
-      type: DataTypes.STRING,
-      allowNull: false,
-      references: {
-        model: 'artists',
-        key: 'id'
-      }
-    },
     total_tracks: {
       type: DataTypes.INTEGER,
       allowNull: false,
       defaultValue: 0
-    },
-    record_label: {
-      type: DataTypes.STRING,
-      validate: {
-        isLabelFormat(value) {
-          if (value && !value.match(/^label:"[^"]+?"$/)) {
-            throw new Error('Record label must be in format: label:"Label Name"');
-          }
-        }
-      }
     },
     status: {
       type: DataTypes.ENUM('draft', 'scheduled', 'published'),
@@ -113,12 +94,11 @@ module.exports = (sequelize) => {
     tableName: 'releases',
     underscored: true,
     timestamps: true,
+    createdAt: 'created_at',
+    updatedAt: 'updated_at',
     indexes: [
       {
         fields: ['label_id']
-      },
-      {
-        fields: ['primary_artist_id']
       },
       {
         fields: ['release_date']

@@ -8,9 +8,9 @@ module.exports = (sequelize) => {
         as: 'release'
       });
 
-      Track.belongsTo(models.Artist, {
-        foreignKey: 'remixer_id',
-        as: 'remixer'
+      Track.belongsTo(models.Label, {
+        foreignKey: 'label_id',
+        as: 'label'
       });
 
       Track.belongsToMany(models.Artist, {
@@ -31,7 +31,7 @@ module.exports = (sequelize) => {
         notEmpty: true
       }
     },
-    title: {
+    name: {
       type: DataTypes.STRING,
       allowNull: false,
       validate: {
@@ -65,15 +65,28 @@ module.exports = (sequelize) => {
     },
     preview_url: {
       type: DataTypes.STRING,
-      allowNull: true
+      allowNull: true,
+      validate: {
+        isUrl: true
+      }
     },
     spotify_url: {
       type: DataTypes.STRING,
-      allowNull: true
+      allowNull: true,
+      validate: {
+        isUrl: true
+      }
     },
     spotify_uri: {
       type: DataTypes.STRING,
-      allowNull: true
+      allowNull: true,
+      validate: {
+        isSpotifyUri(value) {
+          if (value && !value.startsWith('spotify:track:')) {
+            throw new Error('Invalid Spotify URI format');
+          }
+        }
+      }
     },
     release_id: {
       type: DataTypes.STRING,
@@ -83,23 +96,20 @@ module.exports = (sequelize) => {
         key: 'id'
       }
     },
-    remixer_id: {
+    label_id: {
       type: DataTypes.STRING,
+      allowNull: false,
       references: {
-        model: 'artists',
+        model: 'labels',
         key: 'id'
       }
     },
-    record_label: {
+    remixer_id: {
       type: DataTypes.STRING,
       allowNull: true,
-      field: 'record_label',
-      validate: {
-        isLabelFormat(value) {
-          if (value && !value.match(/^label:"[^"]+?"$/)) {
-            throw new Error('Record label must be in format: label:"Label Name"');
-          }
-        }
+      references: {
+        model: 'artists',
+        key: 'id'
       }
     },
     created_at: {
@@ -116,8 +126,9 @@ module.exports = (sequelize) => {
     sequelize,
     modelName: 'Track',
     tableName: 'tracks',
-    underscored: true,
-    timestamps: true
+    timestamps: true,
+    createdAt: 'created_at',
+    updatedAt: 'updated_at'
   });
 
   return Track;

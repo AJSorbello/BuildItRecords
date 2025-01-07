@@ -9,7 +9,9 @@
     "dev": "nodemon --verbose index.js",
     "db:migrate": "sequelize-cli db:migrate",
     "db:migrate:undo": "sequelize-cli db:migrate:undo",
-    "db:migrate:undo:all": "sequelize-cli db:migrate:undo:all"
+    "db:migrate:undo:all": "sequelize-cli db:migrate:undo:all",
+    "db:seed:all": "sequelize-cli db:seed:all",
+    "db:seed:undo:all": "sequelize-cli db:seed:undo:all"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -22,6 +24,7 @@
     "jsonwebtoken": "^9.0.2",
     "pg": "^8.11.3",
     "sequelize": "^6.35.2",
+    "uuid": "^11.0.4",
     "winston": "^3.11.0"
   },
   "devDependencies": {

@@ -2,7 +2,7 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    try {
+    await queryInterface.sequelize.transaction(async (transaction) => {
       // Create labels table
       await queryInterface.createTable('labels', {
         id: {
@@ -31,7 +31,7 @@ module.exports = {
           type: Sequelize.DATE,
           allowNull: false
         }
-      });
+      }, { transaction });
 
       // Create artists table
       await queryInterface.createTable('artists', {
@@ -50,18 +50,6 @@ module.exports = {
         spotify_uri: {
           type: Sequelize.STRING
         },
-        image_url: {
-          type: Sequelize.STRING
-        },
-        label_id: {
-          type: Sequelize.STRING,
-          references: {
-            model: 'labels',
-            key: 'id'
-          },
-          onDelete: 'SET NULL',
-          onUpdate: 'CASCADE'
-        },
         created_at: {
           type: Sequelize.DATE,
           allowNull: false
@@ -70,7 +58,7 @@ module.exports = {
           type: Sequelize.DATE,
           allowNull: false
         }
-      });
+      }, { transaction });
 
       // Create releases table
       await queryInterface.createTable('releases', {
@@ -83,9 +71,17 @@ module.exports = {
           type: Sequelize.STRING,
           allowNull: false
         },
+        label_id: {
+          type: Sequelize.STRING,
+          references: {
+            model: 'labels',
+            key: 'id'
+          },
+          allowNull: false
+        },
         release_date: {
           type: Sequelize.DATE,
-          allowNull: true
+          allowNull: false
         },
         artwork_url: {
           type: Sequelize.STRING
@@ -96,35 +92,15 @@ module.exports = {
         spotify_uri: {
           type: Sequelize.STRING
         },
-        status: {
-          type: Sequelize.ENUM('draft', 'scheduled', 'published'),
-          allowNull: false,
-          defaultValue: 'draft'
-        },
-        label_id: {
-          type: Sequelize.STRING,
-          allowNull: false,
-          references: {
-            model: 'labels',
-            key: 'id'
-          },
-          onDelete: 'CASCADE',
-          onUpdate: 'CASCADE'
-        },
-        primary_artist_id: {
-          type: Sequelize.STRING,
-          allowNull: false,
-          references: {
-            model: 'artists',
-            key: 'id'
-          },
-          onDelete: 'CASCADE',
-          onUpdate: 'CASCADE'
-        },
         total_tracks: {
           type: Sequelize.INTEGER,
           allowNull: false,
           defaultValue: 0
+        },
+        status: {
+          type: Sequelize.ENUM('draft', 'scheduled', 'published'),
+          allowNull: false,
+          defaultValue: 'draft'
         },
         created_at: {
           type: Sequelize.DATE,
@@ -134,7 +110,7 @@ module.exports = {
           type: Sequelize.DATE,
           allowNull: false
         }
-      });
+      }, { transaction });
 
       // Create tracks table
       await queryInterface.createTable('tracks', {
@@ -147,63 +123,28 @@ module.exports = {
           type: Sequelize.STRING,
           allowNull: false
         },
-        duration: {
-          type: Sequelize.INTEGER,
+        release_id: {
+          type: Sequelize.STRING,
+          references: {
+            model: 'releases',
+            key: 'id'
+          },
           allowNull: false
+        },
+        duration: {
+          type: Sequelize.INTEGER
         },
         track_number: {
-          type: Sequelize.INTEGER,
-          allowNull: true
-        },
-        disc_number: {
-          type: Sequelize.INTEGER,
-          allowNull: true
-        },
-        isrc: {
-          type: Sequelize.STRING,
-          allowNull: true
+          type: Sequelize.INTEGER
         },
         preview_url: {
-          type: Sequelize.STRING,
-          allowNull: true
+          type: Sequelize.STRING
         },
         spotify_url: {
-          type: Sequelize.STRING,
-          allowNull: true
+          type: Sequelize.STRING
         },
         spotify_uri: {
-          type: Sequelize.STRING,
-          allowNull: true
-        },
-        release_id: {
-          type: Sequelize.STRING,
-          allowNull: false,
-          references: {
-            model: 'releases',
-            key: 'id'
-          },
-          onDelete: 'CASCADE',
-          onUpdate: 'CASCADE'
-        },
-        label_id: {
-          type: Sequelize.STRING,
-          allowNull: false,
-          references: {
-            model: 'labels',
-            key: 'id'
-          },
-          onDelete: 'CASCADE',
-          onUpdate: 'CASCADE'
-        },
-        remixer_id: {
-          type: Sequelize.STRING,
-          allowNull: true,
-          references: {
-            model: 'artists',
-            key: 'id'
-          },
-          onDelete: 'SET NULL',
-          onUpdate: 'CASCADE'
+          type: Sequelize.STRING
         },
         created_at: {
           type: Sequelize.DATE,
@@ -213,40 +154,9 @@ module.exports = {
           type: Sequelize.DATE,
           allowNull: false
         }
-      });
+      }, { transaction });
 
-      // Create join tables
-      await queryInterface.createTable('release_artists', {
-        release_id: {
-          type: Sequelize.STRING,
-          primaryKey: true,
-          references: {
-            model: 'releases',
-            key: 'id'
-          },
-          onDelete: 'CASCADE',
-          onUpdate: 'CASCADE'
-        },
-        artist_id: {
-          type: Sequelize.STRING,
-          primaryKey: true,
-          references: {
-            model: 'artists',
-            key: 'id'
-          },
-          onDelete: 'CASCADE',
-          onUpdate: 'CASCADE'
-        },
-        created_at: {
-          type: Sequelize.DATE,
-          allowNull: false
-        },
-        updated_at: {
-          type: Sequelize.DATE,
-          allowNull: false
-        }
-      });
-
+      // Create track_artists table
       await queryInterface.createTable('track_artists', {
         track_id: {
           type: Sequelize.STRING,
@@ -255,8 +165,7 @@ module.exports = {
             model: 'tracks',
             key: 'id'
           },
-          onDelete: 'CASCADE',
-          onUpdate: 'CASCADE'
+          allowNull: false
         },
         artist_id: {
           type: Sequelize.STRING,
@@ -265,8 +174,7 @@ module.exports = {
             model: 'artists',
             key: 'id'
           },
-          onDelete: 'CASCADE',
-          onUpdate: 'CASCADE'
+          allowNull: false
         },
         created_at: {
           type: Sequelize.DATE,
@@ -276,26 +184,62 @@ module.exports = {
           type: Sequelize.DATE,
           allowNull: false
         }
-      });
+      }, { transaction });
 
-      // Create indexes
-      await queryInterface.addIndex('artists', ['name']);
-      await queryInterface.addIndex('releases', ['name']);
-      await queryInterface.addIndex('tracks', ['name']);
-      await queryInterface.addIndex('labels', ['slug']);
+      // Create release_artists table with role field
+      await queryInterface.createTable('release_artists', {
+        release_id: {
+          type: Sequelize.STRING,
+          primaryKey: true,
+          references: {
+            model: 'releases',
+            key: 'id'
+          },
+          allowNull: false
+        },
+        artist_id: {
+          type: Sequelize.STRING,
+          primaryKey: true,
+          references: {
+            model: 'artists',
+            key: 'id'
+          },
+          allowNull: false
+        },
+        role: {
+          type: Sequelize.STRING,
+          allowNull: true,
+          defaultValue: 'primary'
+        },
+        created_at: {
+          type: Sequelize.DATE,
+          allowNull: false
+        },
+        updated_at: {
+          type: Sequelize.DATE,
+          allowNull: false
+        }
+      }, { transaction });
 
-      return Promise.resolve();
-    } catch (error) {
-      return Promise.reject(error);
-    }
+      // Add indexes
+      await queryInterface.addIndex('releases', ['label_id'], { transaction });
+      await queryInterface.addIndex('releases', ['release_date'], { transaction });
+      await queryInterface.addIndex('tracks', ['release_id'], { transaction });
+      await queryInterface.addIndex('track_artists', ['track_id'], { transaction });
+      await queryInterface.addIndex('track_artists', ['artist_id'], { transaction });
+      await queryInterface.addIndex('release_artists', ['release_id'], { transaction });
+      await queryInterface.addIndex('release_artists', ['artist_id'], { transaction });
+    });
   },
 
   down: async (queryInterface, Sequelize) => {
-    await queryInterface.dropTable('track_artists');
-    await queryInterface.dropTable('release_artists');
-    await queryInterface.dropTable('tracks');
-    await queryInterface.dropTable('releases');
-    await queryInterface.dropTable('artists');
-    await queryInterface.dropTable('labels');
+    await queryInterface.sequelize.transaction(async (transaction) => {
+      await queryInterface.dropTable('track_artists', { transaction });
+      await queryInterface.dropTable('release_artists', { transaction });
+      await queryInterface.dropTable('tracks', { transaction });
+      await queryInterface.dropTable('releases', { transaction });
+      await queryInterface.dropTable('artists', { transaction });
+      await queryInterface.dropTable('labels', { transaction });
+    });
   }
 };

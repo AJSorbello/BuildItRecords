@@ -97,6 +97,7 @@ export interface Track {
 export interface Release {
   id: string;
   title: string;
+  name: string;
   primaryArtist: Artist;
   artist: Artist;
   artists: Artist[];

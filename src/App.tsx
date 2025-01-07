@@ -21,7 +21,7 @@ import PlaylistPage from './pages/PlaylistsPage';
 import SubmitPage from './pages/SubmitPage';
 import NotFoundPage from './pages/NotFoundPage';
 import LegalPage from './pages/LegalPage';
-import AdminLogin from './components/admin/AdminLogin';
+import AdminLogin from './pages/admin/AdminLogin';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import ArtistDetailPage from './pages/ArtistDetailPage';
 
@@ -104,7 +104,7 @@ const App: React.FC = () => {
   return (
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
-      <Box sx={{ display: 'flex' }}>
+      <Box sx={{ minHeight: '100vh', backgroundColor: 'background.default' }}>
         <RouterProvider router={router} />
       </Box>
     </ThemeProvider>

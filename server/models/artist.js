@@ -1,7 +1,7 @@
 const { Model, DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 
-module.exports = (sequelize) => {
+module.exports = (sequelize, DataTypes) => {
   class Artist extends Model {
     static associate(models) {
       Artist.belongsTo(models.Label, {
@@ -9,21 +9,23 @@ module.exports = (sequelize) => {
         as: 'label'
       });
 
-      Artist.hasMany(models.Release, {
-        foreignKey: 'primary_artist_id',
-        as: 'releases'
-      });
-
       Artist.belongsToMany(models.Release, {
         through: 'release_artists',
         foreignKey: 'artist_id',
         otherKey: 'release_id',
-        as: 'collaborations'
+        as: 'releases'
       });
 
       Artist.hasMany(models.Track, {
         foreignKey: 'remixer_id',
         as: 'remixes'
+      });
+
+      Artist.belongsToMany(models.Track, {
+        through: 'track_artists',
+        foreignKey: 'artist_id',
+        otherKey: 'track_id',
+        as: 'tracks'
       });
     }
   }
@@ -47,9 +49,10 @@ module.exports = (sequelize) => {
     spotify_url: {
       type: DataTypes.STRING,
       allowNull: true,
-      validate: {
-        isUrl: true
-      }
+    },
+    profile_image: {
+      type: DataTypes.STRING,
+      allowNull: true
     },
     spotify_uri: {
       type: DataTypes.STRING,

@@ -90,9 +90,17 @@ const TrackManager: React.FC<TrackManagerProps> = ({
               <TableBody>
                 {displayedReleases.map((release) => (
                   <TableRow key={release.id}>
-                    <TableCell>{release.title}</TableCell>
-                    <TableCell>{release.primaryArtist.name}</TableCell>
-                    <TableCell>{new Date(release.releaseDate).toLocaleDateString()}</TableCell>
+                    <TableCell>{release.name || release.title}</TableCell>
+                    <TableCell>
+                      {release.primaryArtist?.name || 
+                       (release.artists && release.artists[0]?.name) || 
+                       'Unknown Artist'}
+                    </TableCell>
+                    <TableCell>
+                      {release.releaseDate ? 
+                        new Date(release.releaseDate).toLocaleDateString() : 
+                        'No date'}
+                    </TableCell>
                     <TableCell>
                       {release.tracks?.[0]?.preview_url && (
                         <IconButton

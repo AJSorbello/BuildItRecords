@@ -1,4 +1,3 @@
-import { SPOTIFY_CONFIG } from '../config';
 import type { RecordLabel } from '../types/labels';
 
 // Core labels that are always available
