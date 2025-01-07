@@ -55,10 +55,9 @@ const handleError = (res, error) => {
 router.get('/:labelId', async (req, res) => {
   try {
     const { labelId } = req.params;
-    const { page = 1, limit = 10, sort = 'release_date', order = 'DESC' } = req.query;
+    const { page = 1, limit = 10 } = req.query;
     
     console.log('Fetching releases for label ID:', labelId);
-    console.log('Pagination params:', { page, limit, sort, order });
     
     // Find the label by ID or slug
     const label = await Label.findOne({
@@ -81,19 +80,8 @@ router.get('/:labelId', async (req, res) => {
       });
     }
 
-    console.log('Found label:', label.toJSON());
-
     const offset = (parseInt(page) - 1) * parseInt(limit);
     
-    console.log('Querying database for releases with params:', {
-      labelId: label.id,
-      page,
-      limit,
-      offset,
-      sort,
-      order
-    });
-
     // Get releases from database with pagination
     const { count, rows: releases } = await Release.findAndCountAll({
       where: {
@@ -120,10 +108,10 @@ router.get('/:labelId', async (req, res) => {
           ]
         }
       ],
-      order: [[sort, order]],
+      order: [['release_date', 'DESC']],
       limit: parseInt(limit),
       offset: offset,
-      distinct: true // This is important for correct count with associations
+      distinct: true
     });
 
     console.log(`Found ${count} total releases, returning page ${page} with ${releases.length} items`);
@@ -157,12 +145,73 @@ router.get('/:labelId', async (req, res) => {
 
   } catch (error) {
     console.error('Error in GET /releases/:labelId:', error);
-    console.error('Error stack:', error.stack);
-    console.error('Error details:', {
-      message: error.message,
-      name: error.name,
-      code: error.code
+    handleError(res, error);
+  }
+});
+
+// Import releases from Spotify
+router.post('/:labelId/import', async (req, res) => {
+  try {
+    const { labelId } = req.params;
+    
+    // Find the label
+    const label = await Label.findOne({
+      where: {
+        [Op.or]: [
+          { id: labelId },
+          { slug: labelId }
+        ]
+      }
     });
+
+    if (!label) {
+      return res.status(404).json({ error: 'Label not found' });
+    }
+
+    // Initialize Spotify service
+    const spotifyService = new SpotifyService(
+      process.env.SPOTIFY_CLIENT_ID,
+      process.env.SPOTIFY_CLIENT_SECRET,
+      process.env.SPOTIFY_REDIRECT_URI
+    );
+
+    // Search and import releases
+    const albums = await spotifyService.searchAlbumsByLabel(label.name);
+    await spotifyService.importReleases(label, albums);
+
+    // Return the imported releases
+    const { count, rows: releases } = await Release.findAndCountAll({
+      where: { label_id: label.id },
+      include: [
+        {
+          model: Artist,
+          as: 'artists',
+          through: { attributes: [] }
+        },
+        {
+          model: Track,
+          as: 'tracks',
+          include: [
+            {
+              model: Artist,
+              as: 'artists',
+              through: { attributes: [] }
+            }
+          ]
+        }
+      ],
+      order: [['release_date', 'DESC']]
+    });
+
+    res.json({
+      success: true,
+      message: `Successfully imported ${albums.length} releases`,
+      totalReleases: count,
+      releases: releases
+    });
+
+  } catch (error) {
+    console.error('Error importing releases:', error);
     handleError(res, error);
   }
 });

@@ -9,19 +9,23 @@
     "server"
   ],
   "scripts": {
-    "start": "react-scripts start",
-    "server": "node server/server.js",
-    "server:dev": "nodemon server/server.js",
-    "dev": "concurrently \"yarn server:dev\" \"yarn start\"",
-    "db:init": "node -e \"require('./server/db/init.js')().catch(console.error)\"",
-    "test": "jest",
+    "start": "concurrently \"yarn server\" \"yarn client\"",
+    "server": "nodemon server/index.js",
+    "client": "react-scripts start",
     "build": "react-scripts build",
+    "test": "jest",
     "eject": "react-scripts eject",
+    "db:init": "node -e \"require('./server/db/init.js')().catch(console.error)\"",
+    "db:seed": "yarn sequelize-cli db:seed:all",
+    "db:seed:undo": "yarn sequelize-cli db:seed:undo:all",
+    "db:backup": "yarn sequelize-cli seed:generate --name backup_$(date +%Y%m%d)",
+    "db:restore": "yarn db:seed:undo && yarn db:seed",
     "db:start": "pg_ctl -D /usr/local/var/postgres start",
     "db:stop": "pg_ctl -D /usr/local/var/postgres stop",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "type-check": "tsc",
-    "vercel-build": "yarn build"
+    "vercel-build": "yarn build",
+    "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix"
   },
   "dependencies": {
     "@emotion/react": "^11.11.3",
@@ -58,6 +62,7 @@
     "react-router-dom": "^7.0.2",
     "react-scripts": "5.0.1",
     "sequelize": "^6.35.2",
+    "sequelize-cli": "^6.5.1",
     "spotify-web-api-node": "^5.0.2",
     "ts-node": "^10.9.2",
     "typescript": "4.9.5",

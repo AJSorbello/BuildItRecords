@@ -27,9 +27,10 @@ const AdminDashboard: React.FC = () => {
   const [selectedLabel, setSelectedLabel] = useState<string>('');
   const [releases, setReleases] = useState<Release[]>([]);
   const [totalReleases, setTotalReleases] = useState<number>(0);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const verifyToken = async () => {
@@ -99,17 +100,13 @@ const AdminDashboard: React.FC = () => {
   };
 
   const handleImportReleases = async (labelId: string) => {
-    setLoading(true);
+    setImporting(true);
     setError(null);
 
     try {
       const token = localStorage.getItem('adminToken');
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-
-      const response = await fetch(`${API_URL}/api/admin/import-releases/${labelId}`, {
-        method: 'GET',
+      const response = await fetch(`${API_URL}/api/releases/${labelId}/import`, {
+        method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -117,23 +114,19 @@ const AdminDashboard: React.FC = () => {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `Failed to import releases: ${response.statusText}`);
+        throw new Error(`Failed to import releases: ${response.statusText}`);
       }
 
-      // Refresh the releases list after import
-      await handleLabelSelect(labelId);
+      const data = await response.json();
+      
+      // After import, refresh the releases list
+      await handleLabelSelect(labelId, 1);
+      
     } catch (err) {
       console.error('Error importing releases:', err);
       setError(err instanceof Error ? err.message : 'Failed to import releases');
-      
-      // If token is invalid, redirect to login
-      if (err instanceof Error && err.message.includes('Invalid token')) {
-        localStorage.removeItem('adminToken');
-        navigate('/admin/login');
-      }
     } finally {
-      setLoading(false);
+      setImporting(false);
     }
   };
 
@@ -166,7 +159,7 @@ const AdminDashboard: React.FC = () => {
             key={label.id}
             variant={selectedLabel === label.id ? 'contained' : 'outlined'}
             onClick={() => handleLabelSelect(label.id, 1)}
-            disabled={loading}
+            disabled={loading || importing}
           >
             {label.displayName}
           </Button>
@@ -179,13 +172,20 @@ const AdminDashboard: React.FC = () => {
             variant="contained"
             color="primary"
             onClick={() => handleImportReleases(selectedLabel)}
-            disabled={loading}
+            disabled={loading || importing}
             sx={{ mb: 2 }}
           >
-            Import Releases
+            {importing ? (
+              <>
+                <CircularProgress size={24} sx={{ mr: 1 }} />
+                Importing...
+              </>
+            ) : (
+              'Import Releases'
+            )}
           </Button>
 
-          {loading ? (
+          {(loading || importing) ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
               <CircularProgress />
             </Box>
@@ -195,14 +195,14 @@ const AdminDashboard: React.FC = () => {
                 selectedLabel={selectedLabel}
                 releases={releases}
                 totalReleases={totalReleases}
-                onRefresh={fetchReleases}
+                onRefresh={() => handleLabelSelect(selectedLabel, currentPage)}
               />
               {totalReleases > 0 && (
                 <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
                   <Pagination 
                     count={Math.ceil(totalReleases / 10)} 
                     page={currentPage} 
-                    onChange={handlePageChange}
+                    onChange={(event, page) => handleLabelSelect(selectedLabel, page)}
                     color="primary"
                     showFirstButton
                     showLastButton
