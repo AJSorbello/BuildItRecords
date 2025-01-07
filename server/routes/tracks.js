@@ -100,15 +100,21 @@ async function getTrackWithCache(trackId, redisService) {
 // GET /tracks
 router.get('/', async (req, res) => {
     try {
-        const { label, limit = 50, offset = 0 } = req.query;
+        const { label, limit = 50, offset = 0, sort = 'created_at' } = req.query;
         
         const where = {};
         if (label) {
-            where.labelId = label;
+            where.label_id = label;
+        }
+
+        let order = [['created_at', 'DESC']];
+        if (sort === 'popularity') {
+            order = [['popularity', 'DESC', 'NULLS LAST']];
         }
 
         const tracks = await Track.findAndCountAll({
             where,
+            subQuery: false,
             limit: parseInt(limit),
             offset: parseInt(offset),
             include: [
@@ -126,7 +132,7 @@ router.get('/', async (req, res) => {
                     as: 'label'
                 }
             ],
-            order: [['createdAt', 'DESC']]
+            order
         });
 
         res.json({
@@ -207,7 +213,7 @@ router.get('/search', [
             ],
             limit: parseInt(limit),
             offset: parseInt(offset),
-            order: [['createdAt', 'DESC']]
+            order: [['created_at', 'DESC']]
         });
 
         res.json({
@@ -400,7 +406,7 @@ router.get('/:labelId', async (req, res) => {
                     attributes: ['id', 'title', 'releaseDate', 'artworkUrl', 'spotifyUrl']
                 }
             ],
-            order: [['createdAt', 'DESC']]
+            order: [['created_at', 'DESC']]
         });
 
         console.log(`Found ${tracks.length} tracks for label ${label.name}`);
@@ -569,58 +575,33 @@ router.post('/import', [
         console.log('Importing tracks:', tracks);
 
         const importedTracks = await Promise.all(tracks.map(async (track) => {
-            try {
-                // Create or update track
-                const [dbTrack, created] = await Track.findOrCreate({
-                    where: { id: track.id },
-                    defaults: {
-                        name: track.name,
-                        artists: track.artists,
-                        album: track.album,
-                        albumCover: track.albumCover || track.artwork_url,
-                        releaseDate: track.releaseDate || track.release_date,
-                        spotifyUrl: track.spotifyUrl,
-                        preview_url: track.preview_url,
-                        label_id: track.label_id
-                    }
-                });
+            const [newTrack] = await Track.upsert({
+                id: track.id,
+                name: track.name,
+                duration: track.duration_ms,
+                track_number: track.track_number,
+                disc_number: track.disc_number,
+                isrc: track.isrc,
+                preview_url: track.preview_url,
+                spotify_url: track.spotify_url,
+                spotify_uri: track.spotify_uri,
+                release_id: track.release_id,
+                label_id: track.label_id,
+                popularity: track.popularity
+            });
 
-                if (!created) {
-                    // Update existing track
-                    await dbTrack.update({
-                        name: track.name,
-                        artists: track.artists,
-                        album: track.album,
-                        albumCover: track.albumCover || track.artwork_url,
-                        releaseDate: track.releaseDate || track.release_date,
-                        spotifyUrl: track.spotifyUrl,
-                        preview_url: track.preview_url,
-                        label_id: track.label_id
-                    });
-                }
-
-                return dbTrack;
-            } catch (error) {
-                console.error('Error importing track:', error);
-                return null;
+            // Associate artists if they exist
+            if (track.artists?.length > 0) {
+                await newTrack.setArtists(track.artists.map(artist => artist.id));
             }
+
+            return newTrack;
         }));
 
-        const successfulImports = importedTracks.filter(track => track !== null);
-        console.log('Successfully imported tracks:', successfulImports);
-
-        res.json({
-            success: true,
-            message: `Successfully imported ${successfulImports.length} tracks`,
-            tracks: successfulImports
-        });
+        res.json(importedTracks);
     } catch (error) {
-        console.error('Error importing tracks:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to import tracks',
-            message: error.message
-        });
+        logger.error('Error importing tracks:', error);
+        res.status(500).json({ error: 'Failed to import tracks', details: error.message });
     }
 });
 

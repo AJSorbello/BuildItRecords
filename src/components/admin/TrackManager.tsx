@@ -26,16 +26,44 @@ const TrackManager: React.FC<TrackManagerProps> = ({
   onDelete = () => {},
 }) => {
   const getArtistNames = (track: Track): string => {
-    return track.artists?.map(artist => artist.name).join(', ') || '';
+    if (!track.artists) return 'Unknown Artist';
+    return track.artists.map(artist => artist.name || 'Unknown Artist').join(', ');
   };
 
-  const formatDuration = (ms: number): string => {
+  const formatDuration = (ms: number | undefined): string => {
+    if (!ms) return '0:00';
     const minutes = Math.floor(ms / 60000);
-    const seconds = ((ms % 60000) / 1000).toFixed(0);
-    return `${minutes}:${seconds.padStart(2, '0')}`;
+    const seconds = Math.floor((ms % 60000) / 1000);
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  if (!tracks || tracks.length === 0) {
+  const formatDate = (date: string | undefined): string => {
+    console.log('Formatting date:', date, typeof date);
+    if (!date) return 'No date';
+    
+    try {
+      // Handle both ISO dates and Unix timestamps
+      const dateObj = typeof date === 'number' ? new Date(date) : new Date(date);
+      
+      if (isNaN(dateObj.getTime())) {
+        console.error('Invalid date:', date);
+        return 'Invalid date';
+      }
+      
+      const formattedDate = dateObj.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+      console.log('Formatted date:', formattedDate);
+      return formattedDate;
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Error';
+    }
+  };
+
+  if (!tracks || !Array.isArray(tracks) || tracks.length === 0) {
     return (
       <Box sx={{ p: 3, textAlign: 'center' }}>
         <Typography variant="body1" color="textSecondary">
@@ -52,7 +80,6 @@ const TrackManager: React.FC<TrackManagerProps> = ({
           <TableRow>
             <TableCell>Track Name</TableCell>
             <TableCell>Artists</TableCell>
-            <TableCell>Album</TableCell>
             <TableCell>Duration</TableCell>
             <TableCell>Release Date</TableCell>
             <TableCell>Actions</TableCell>
@@ -63,10 +90,10 @@ const TrackManager: React.FC<TrackManagerProps> = ({
             <TableRow key={track.id}>
               <TableCell>
                 <Box display="flex" alignItems="center">
-                  {track.album?.artwork_url && (
+                  {track.artwork_url && (
                     <img
-                      src={track.album.artwork_url}
-                      alt={track.album.name}
+                      src={track.artwork_url}
+                      alt={track.name}
                       style={{
                         width: 40,
                         height: 40,
@@ -76,7 +103,7 @@ const TrackManager: React.FC<TrackManagerProps> = ({
                     />
                   )}
                   <Box>
-                    <Typography variant="body1">{track.name}</Typography>
+                    <Typography variant="body1">{track.name || 'Untitled'}</Typography>
                     {track.spotify_url && (
                       <Typography
                         variant="body2"
@@ -93,15 +120,34 @@ const TrackManager: React.FC<TrackManagerProps> = ({
                   </Box>
                 </Box>
               </TableCell>
-              <TableCell>{getArtistNames(track)}</TableCell>
-              <TableCell>{track.album?.name}</TableCell>
-              <TableCell>{formatDuration(track.duration_ms || 0)}</TableCell>
-              <TableCell>{track.album?.release_date}</TableCell>
+              <TableCell>
+                <Box display="flex" alignItems="center" gap={1}>
+                  {track.artists?.map((artist) => (
+                    <Box key={artist.id} display="flex" alignItems="center" gap={1}>
+                      {artist.profile_image && (
+                        <img
+                          src={artist.profile_image}
+                          alt={artist.name}
+                          style={{
+                            width: 32,
+                            height: 32,
+                            borderRadius: '50%',
+                            objectFit: 'cover'
+                          }}
+                        />
+                      )}
+                      <Typography variant="body2">{artist.name}</Typography>
+                    </Box>
+                  ))}
+                </Box>
+              </TableCell>
+              <TableCell>{formatDuration(track.duration_ms)}</TableCell>
+              <TableCell>{formatDate(track.release_date)}</TableCell>
               <TableCell>
                 <IconButton
                   onClick={() => onEdit(track)}
                   size="small"
-                  color="primary"
+                  sx={{ mr: 1 }}
                 >
                   <EditIcon />
                 </IconButton>

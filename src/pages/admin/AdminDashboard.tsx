@@ -15,24 +15,34 @@ import {
   FormControl,
   InputLabel,
   Select,
-  MenuItem
+  MenuItem,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  SelectChangeEvent
 } from '@mui/material';
 import TrackManager from '../../components/admin/TrackManager';
 import { databaseService } from '../../services/DatabaseService';
 import { RECORD_LABELS } from '../../constants/labels';
-import { Release, Track } from '../../types';
+import { Track } from '../../types/track';
+import { Release } from '../../types/release';
+import { RecordLabel } from '../../types/labels';
 
 const AdminDashboard: React.FC = () => {
   console.log('AdminDashboard initializing');
   const navigate = useNavigate();
-  const [selectedLabel, setSelectedLabel] = useState('buildit-deep');
+  const [selectedLabel, setSelectedLabel] = useState<string>('buildit-deep');
   const [releases, setReleases] = useState<Release[]>([]);
   const [tracks, setTracks] = useState<Track[]>([]);
+  const [topTracks, setTopTracks] = useState<Track[]>([]);
   const [totalReleases, setTotalReleases] = useState<number>(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [importLabel, setImportLabel] = useState<string>('buildit-deep');
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
 
   useEffect(() => {
     console.log('AdminDashboard mounted - Checking authentication');
@@ -46,52 +56,80 @@ const AdminDashboard: React.FC = () => {
 
   const handleRefresh = async () => {
     try {
-      console.log('Fetching releases for label:', selectedLabel);
+      console.log('Fetching releases and tracks for label:', selectedLabel);
       setLoading(true);
       setError(null);
-      
-      const response = await databaseService.getReleasesByLabelId(selectedLabel);
-      console.log('Received response:', response);
 
+      // Fetch regular releases
+      const response = await databaseService.getReleasesByLabelId(selectedLabel);
+      console.log('Got releases:', response);
+      
       if (response?.releases) {
-        console.log('Number of releases:', response.releases.length);
         setReleases(response.releases);
         setTotalReleases(response.totalReleases);
-
-        // Extract tracks from releases
-        const allTracks: Track[] = [];
-        response.releases.forEach(release => {
-          console.log('Processing release:', release.name, 'Tracks:', release.tracks?.length);
-          console.log('Release data:', release);
-          
-          if (release.tracks?.length) {
-            release.tracks.forEach(track => {
-              console.log('Processing track:', track.name, 'Album:', release.name);
-              allTracks.push({
-                ...track,
-                album: {
-                  id: release.id,
-                  name: release.name,
-                  release_date: release.release_date,
-                  artwork_url: release.artwork_url,
-                  images: [{ url: release.artwork_url || '', height: 640, width: 640 }],
-                  external_urls: {
-                    spotify: release.spotify_url || ''
-                  }
-                }
-              });
-            });
-          }
-        });
-        
-        console.log('Total tracks processed:', allTracks.length);
-        setTracks(allTracks);
+        setCurrentPage(response.currentPage);
       }
-    } catch (error: any) {
-      console.error('Error fetching releases:', error);
-      setError(error.message || 'Failed to fetch releases');
+
+      // Fetch all tracks for the label
+      const recordLabel = RECORD_LABELS[selectedLabel];
+      if (recordLabel) {
+        // Fetch regular tracks sorted by created_at
+        const allTracks = await databaseService.getTracksByLabel(recordLabel, 'created_at');
+        console.log('Got all tracks:', allTracks);
+        if (Array.isArray(allTracks)) {
+          setTracks(allTracks);
+          console.log('Set tracks state:', allTracks.length, 'tracks');
+        }
+
+        // Fetch top tracks by popularity
+        const popularTracks = await databaseService.getTracksByLabel(recordLabel, 'popularity');
+        console.log('Got popular tracks:', popularTracks);
+        if (Array.isArray(popularTracks)) {
+          setTopTracks(popularTracks.slice(0, 10));
+          console.log('Set top tracks state:', popularTracks.slice(0, 10).length, 'tracks');
+        }
+      }
+
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      setError(error instanceof Error ? error.message : 'Failed to fetch data');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleImportTracks = async () => {
+    if (!importLabel) {
+      setError('Please select a label to import');
+      return;
+    }
+
+    try {
+      setImporting(true);
+      setError(null);
+
+      const label = RECORD_LABELS[importLabel];
+      if (!label) {
+        throw new Error('Invalid label selected');
+      }
+
+      // Import tracks from Spotify
+      const response = await databaseService.getTracksByLabel(label);
+      console.log('Got tracks to import:', response);
+
+      if (Array.isArray(response)) {
+        await databaseService.saveTracks(response);
+        console.log('Successfully imported tracks');
+      }
+      
+      // Refresh the display
+      await handleRefresh();
+      setImportDialogOpen(false);
+    } catch (error) {
+      console.error('Error importing tracks:', error);
+      setError(error instanceof Error ? error.message : 'Failed to import tracks');
+    } finally {
+      setImporting(false);
     }
   };
 
@@ -102,23 +140,90 @@ const AdminDashboard: React.FC = () => {
     }
   }, [selectedLabel]);
 
-  console.log('Rendering AdminDashboard - Releases:', releases.length, 'Tracks:', tracks.length);
+  const handleLabelChange = (event: SelectChangeEvent<string>) => {
+    setSelectedLabel(event.target.value);
+  };
 
   return (
-    <Container maxWidth="lg">
-      <Box sx={{ my: 4 }}>
-        <Typography variant="h4" gutterBottom>
-          Admin Dashboard
-        </Typography>
+    <Container maxWidth="xl">
+      <Box sx={{ mt: 4, mb: 4 }}>
+        <Grid container spacing={2} alignItems="center" sx={{ mb: 4 }}>
+          <Grid item>
+            <FormControl sx={{ minWidth: 200 }}>
+              <InputLabel>Label</InputLabel>
+              <Select
+                value={selectedLabel}
+                label="Label"
+                onChange={handleLabelChange}
+              >
+                {Object.entries(RECORD_LABELS).map(([id, label]) => (
+                  <MenuItem key={id} value={id}>
+                    {label.displayName}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item>
+            <Button
+              variant="contained"
+              onClick={handleRefresh}
+              disabled={loading}
+            >
+              Refresh
+            </Button>
+          </Grid>
+          <Grid item>
+            <Button
+              variant="outlined"
+              onClick={() => setImportDialogOpen(true)}
+              disabled={loading || importing}
+            >
+              Import Tracks
+            </Button>
+          </Grid>
+        </Grid>
 
-        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
 
-        <Box sx={{ mb: 4 }}>
-          <FormControl fullWidth>
-            <InputLabel>Select Label</InputLabel>
+        {loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+            <CircularProgress />
+          </Box>
+        ) : (
+          <>
+            {topTracks?.length > 0 && (
+              <Box sx={{ mb: 4 }}>
+                <Typography variant="h5" gutterBottom>
+                  Top 10 Tracks by Popularity
+                </Typography>
+                <TrackManager tracks={topTracks} />
+              </Box>
+            )}
+
+            <Box>
+              <Typography variant="h5" gutterBottom>
+                Latest Releases
+              </Typography>
+              <TrackManager tracks={tracks} />
+            </Box>
+          </>
+        )}
+      </Box>
+
+      <Dialog open={importDialogOpen} onClose={() => setImportDialogOpen(false)}>
+        <DialogTitle>Import Tracks</DialogTitle>
+        <DialogContent>
+          <FormControl fullWidth sx={{ mt: 2 }}>
+            <InputLabel>Label</InputLabel>
             <Select
-              value={selectedLabel}
-              onChange={(e) => setSelectedLabel(e.target.value)}
+              value={importLabel}
+              label="Label"
+              onChange={(e) => setImportLabel(e.target.value)}
             >
               {Object.entries(RECORD_LABELS).map(([id, label]) => (
                 <MenuItem key={id} value={id}>
@@ -127,58 +232,18 @@ const AdminDashboard: React.FC = () => {
               ))}
             </Select>
           </FormControl>
-        </Box>
-
-        {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
-            <CircularProgress />
-          </Box>
-        ) : (
-          <>
-            <Box sx={{ mb: 4 }}>
-              <Typography variant="h5" gutterBottom>
-                {RECORD_LABELS[selectedLabel]?.displayName} Releases ({tracks.length} Tracks)
-              </Typography>
-              <Grid container spacing={2}>
-                {tracks.map((track) => (
-                  <Grid item xs={12} sm={6} md={4} lg={3} key={track.id}>
-                    <Card>
-                      <CardMedia
-                        component="img"
-                        height="140"
-                        image={track.album?.artwork_url || track.album?.images?.[0]?.url || ''}
-                        alt={track.name}
-                      />
-                      <CardContent>
-                        <Typography variant="subtitle1" noWrap>
-                          {track.name}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary" noWrap>
-                          {track.artists?.map(artist => artist.name).join(', ')}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary" display="block">
-                          {track.album?.name}
-                        </Typography>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                ))}
-              </Grid>
-            </Box>
-
-            <Box>
-              <Typography variant="h5" gutterBottom>
-                Track Management
-              </Typography>
-              <TrackManager
-                tracks={tracks}
-                onDeleteTrack={(id) => console.log('Delete track:', id)}
-                onUpdateTrack={(track) => console.log('Update track:', track)}
-              />
-            </Box>
-          </>
-        )}
-      </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setImportDialogOpen(false)}>Cancel</Button>
+          <Button
+            onClick={handleImportTracks}
+            variant="contained"
+            disabled={importing}
+          >
+            {importing ? 'Importing...' : 'Import'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };

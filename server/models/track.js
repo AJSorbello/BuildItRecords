@@ -88,6 +88,14 @@ module.exports = (sequelize) => {
         }
       }
     },
+    popularity: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      validate: {
+        min: 0,
+        max: 100
+      }
+    },
     release_id: {
       type: DataTypes.STRING,
       allowNull: false,
