@@ -158,24 +158,26 @@ class DatabaseService {
     return this.request<Release[]>(`/artists/${artistId}/releases`);
   }
 
-  async getReleasesByLabelId(labelId: string): Promise<PaginatedResponse<Release>> {
+  async getReleasesByLabelId(labelId: string, page: number = 1, limit: number = 10): Promise<PaginatedResponse<Release>> {
     try {
-      console.log('DatabaseService: Fetching releases for label:', labelId);
-      const endpoint = `/releases/${labelId}`;
+      console.log('DatabaseService: Fetching releases for label:', labelId, 'page:', page, 'limit:', limit);
+      const endpoint = `/releases/${labelId}?page=${page}&limit=${limit}&sort=release_date:desc`;
       console.log('DatabaseService: Using endpoint:', endpoint);
       
       const response = await this.request<PaginatedResponse<Release>>(endpoint);
-      console.log('DatabaseService: Raw server response:', response);
-      console.log('DatabaseService: Response type:', typeof response);
-      console.log('DatabaseService: Has releases?', Boolean(response?.releases));
-      console.log('DatabaseService: Number of releases:', response?.releases?.length);
+      console.log('DatabaseService: Response metadata:', {
+        totalReleases: response.totalReleases,
+        currentPage: response.currentPage,
+        totalPages: response.totalPages,
+        receivedReleases: response.releases?.length
+      });
 
       if (!response?.releases) {
         console.log('DatabaseService: No releases found');
         return {
           releases: [],
           totalReleases: 0,
-          currentPage: 1,
+          currentPage: page,
           totalPages: 1
         };
       }
@@ -183,32 +185,26 @@ class DatabaseService {
       // Transform releases to ensure they have the correct image URLs and track data
       const transformedReleases = response.releases.map(release => {
         console.log('DatabaseService: Processing release:', release.name);
-        console.log('DatabaseService: Release images:', release.album?.images);
-        console.log('DatabaseService: Release artwork:', release.artwork_url);
-        
         return {
           ...release,
           images: release.album?.images || [],
-          tracks: release.tracks?.map(track => {
-            console.log('DatabaseService: Processing track:', track.name);
-            return {
-              ...track,
-              album: {
-                ...release,
-                images: release.album?.images || []
-              },
-              artists: track.artists || release.artists || []
-            };
-          })
+          tracks: release.tracks?.map(track => ({
+            ...track,
+            album: {
+              ...release,
+              images: release.album?.images || []
+            },
+            artists: track.artists || release.artists || []
+          }))
         };
       });
 
-      console.log('DatabaseService: First transformed release:', transformedReleases[0]);
-      console.log('DatabaseService: Number of transformed releases:', transformedReleases.length);
-
+      console.log('DatabaseService: Transformed releases count:', transformedReleases.length);
+      
       return {
         ...response,
-        releases: transformedReleases
+        releases: transformedReleases,
+        currentPage: page
       };
     } catch (error) {
       console.error('DatabaseService: Error fetching releases:', error);
@@ -321,10 +317,11 @@ class DatabaseService {
 
   public async getTracksByArtist(artistId: string): Promise<Track[]> {
     try {
-      // Get tracks from all labels
+      // Get tracks from all labels with pagination
       const labels = ['buildit-records', 'buildit-tech', 'buildit-deep'];
+      const limit = 100; // Increase limit to get more tracks per request
       const trackPromises = labels.map(label => 
-        this.request<{ tracks: Track[], total: number }>(`/tracks?label=${this.getLabelPath(label)}`).then(response => ({
+        this.request<{ tracks: Track[], total: number }>(`/tracks?label=${this.getLabelPath(label)}&limit=${limit}`).then(response => ({
           ...response,
           tracks: response.tracks?.map(track => ({
             ...track,

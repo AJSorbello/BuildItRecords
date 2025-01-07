@@ -14,68 +14,70 @@ export const useReleases = ({ label }: UseReleasesProps) => {
   const [topTracks, setTopTracks] = useState<Track[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [page, setPage] = useState(1);
+  const [loadingMore, setLoadingMore] = useState(false);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        if (!label) {
-          setReleases([]);
-          setTopTracks([]);
-          return;
-        }
+  const fetchReleases = async (currentPage: number) => {
+    try {
+      if (!label) return;
 
-        // Get the label object from the constant
-        const recordLabel = RECORD_LABELS[label];
-        if (!recordLabel) {
-          throw new Error(`Invalid label: ${label}`);
-        }
+      const recordLabel = RECORD_LABELS[label];
+      if (!recordLabel) {
+        throw new Error(`Invalid label: ${label}`);
+      }
 
-        // Fetch regular releases
-        const response = await databaseService.getReleasesByLabelId(label);
-        console.log('Hook response:', response);
-        const releasesArray = Array.isArray(response.releases) ? response.releases : [];
-        setReleases(releasesArray);
-
-        // Fetch top tracks by popularity
+      setLoadingMore(true);
+      console.log('Fetching releases for page:', currentPage);
+      const response = await databaseService.getReleasesByLabelId(label, currentPage);
+      console.log('Response:', {
+        currentPage: response.currentPage,
+        totalPages: response.totalPages,
+        totalReleases: response.totalReleases,
+        receivedReleases: response.releases.length
+      });
+      
+      setReleases(prev => {
+        const newReleases = currentPage === 1 ? response.releases : [...prev, ...response.releases];
+        console.log('Total releases after update:', newReleases.length);
+        return newReleases;
+      });
+      
+      const hasMorePages = currentPage < response.totalPages;
+      console.log('Has more pages:', hasMorePages);
+      setHasMore(hasMorePages);
+      
+      if (currentPage === 1) {
+        // Fetch top tracks only on initial load
         const popularTracks = await databaseService.getTracksByLabel(recordLabel, 'popularity');
         if (Array.isArray(popularTracks)) {
-          setTopTracks(popularTracks.slice(0, 10)); // Keep only top 10
-        } else {
-          setTopTracks([]);
+          setTopTracks(popularTracks.slice(0, 10));
         }
-
-        setError(null);
-      } catch (err) {
-        console.error(`Error fetching data for label ${label}:`, err);
-        setError(err instanceof Error ? err.message : `Failed to load data for label ${label}`);
-        setReleases([]);
-        setTopTracks([]);
-      } finally {
-        setLoading(false);
       }
-    };
 
-    fetchData();
+      setError(null);
+    } catch (err) {
+      console.error(`Error fetching data for label ${label}:`, err);
+      setError(err instanceof Error ? err.message : `Failed to load data for label ${label}`);
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  };
+
+  useEffect(() => {
+    setPage(1);
+    setReleases([]);
+    setHasMore(true);
+    fetchReleases(1);
   }, [label]);
 
-  const addReleases = (newTracks: Track[]) => {
-    setReleases(prevReleases => {
-      const releasesFromTracks = newTracks.map(track => ({
-        id: track.id,
-        name: track.name,
-        type: 'single' as const,
-        artists: track.artists.map(artist => ({
-          id: artist.id,
-          name: artist.name,
-          external_urls: { spotify: artist.external_urls?.spotify }
-        })) as Artist[],
-        artwork_url: track.album?.artwork_url,
-        release_date: track.album?.release_date,
-        total_tracks: 1,
-        tracks: [track]
-      }));
-      return [...prevReleases, ...releasesFromTracks];
-    });
+  const loadMore = async () => {
+    if (!loadingMore && hasMore) {
+      const nextPage = page + 1;
+      setPage(nextPage);
+      await fetchReleases(nextPage);
+    }
   };
 
   return {
@@ -83,7 +85,9 @@ export const useReleases = ({ label }: UseReleasesProps) => {
     topTracks,
     loading,
     error,
-    addReleases
+    hasMore,
+    loadingMore,
+    loadMore
   };
 };
 
