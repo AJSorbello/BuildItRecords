@@ -167,7 +167,8 @@ class DatabaseService {
                 ...release,
                 images: release.album?.images || []
               },
-              artists: track.artists || release.artists || []
+              artists: track.artists || release.artists || [],
+              popularity: track.popularity || 0  // Ensure popularity is preserved
             };
           })
         };

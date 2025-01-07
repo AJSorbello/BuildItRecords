@@ -56,9 +56,40 @@ const ReleasesPage: React.FC = () => {
   // Get top 10 tracks by popularity
   const topReleases = useMemo(() => {
     if (!releases?.length) return [];
-    return [...releases]
-      .sort((a, b) => ((b.popularity || 0) - (a.popularity || 0)))
+    
+    // Create a map of releases with their highest popularity track
+    const releasesWithPopularity = releases
+      .filter(release => release.tracks && release.tracks.length > 0)
+      .map(release => {
+        // Get the highest popularity track for this release
+        const highestPopularityTrack = release.tracks?.reduce((highest, current) => {
+          const currentPopularity = current.popularity || 0;
+          const highestPopularity = highest.popularity || 0;
+          return currentPopularity > highestPopularity ? current : highest;
+        }, release.tracks[0]);
+
+        return {
+          ...release,
+          popularity: highestPopularityTrack.popularity || 0,
+          popularityTrack: highestPopularityTrack
+        };
+      });
+
+    // Sort by popularity and get top 10
+    const sortedReleases = releasesWithPopularity
+      .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
       .slice(0, 10);
+      
+    console.log('Sorted releases by popularity:', 
+      sortedReleases.map(r => ({ 
+        name: r.name, 
+        popularity: r.popularity,
+        trackName: r.popularityTrack?.name,
+        trackPopularity: r.popularityTrack?.popularity
+      }))
+    );
+    
+    return sortedReleases;
   }, [releases]);
 
   // Get catalog releases (excluding the latest)
