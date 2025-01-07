@@ -9,26 +9,28 @@ export type { SpotifyApiArtist as SpotifyArtist };
 export interface Artist {
   id: string;
   name: string;
-  uri: string;
-  type: 'artist';
-  external_urls: {
-    spotify: string;
+  profile_image?: string;
+  spotify_url?: string;
+  spotify_uri?: string | null;
+  external_urls?: {
+    spotify?: string;
+    [key: string]: string | undefined;
   };
-  spotifyUrl: string;
-  images?: SpotifyImage[];
-  genres?: string[];
-  popularity?: number;
   followers?: {
-    href: string | null;
     total: number;
+    href: string | null;
   };
-  // Optional related data
-  topTracks?: Track[];
-  albums?: Album[];
-  releases?: Album[];
-  relatedArtists?: Artist[];
-  // Build It Records specific fields
-  label?: RecordLabel;
+  genres?: string[];
+  href?: string;
+  images?: Array<{
+    url: string;
+    height: number | null;
+    width: number | null;
+  }>;
+  popularity?: number;
+  type?: string;
+  uri?: string;
+  cached_at?: number;
 }
 
 export interface ArtistResponse {
@@ -104,6 +106,9 @@ export function createArtist(data: Partial<Artist>): Artist {
     albums: data.albums || [],
     releases: data.releases || [],
     relatedArtists: data.relatedArtists || [],
-    label: data.label
+    label: data.label,
+    profile_image: data.profile_image || '',
+    spotify_url: data.spotify_url || '',
+    spotify_uri: data.spotify_uri || null
   };
 }

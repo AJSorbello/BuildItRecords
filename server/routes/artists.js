@@ -6,16 +6,129 @@ const { validateRequest, isValidSpotifyId } = require('../utils/validation');
 const { getSpotifyToken } = require('../utils/spotify');
 const { pool } = require('../db');
 
-// Format artist data
-const formatArtistData = (spotifyData) => ({
-    id: spotifyData.id,
-    name: spotifyData.name,
-    genres: spotifyData.genres,
-    popularity: spotifyData.popularity,
-    followers: spotifyData.followers.total,
-    images: spotifyData.images,
-    external_urls: spotifyData.external_urls,
-    cached_at: Date.now()
+// Format artist data to match Spotify SDK format
+const formatArtistData = (spotifyData) => {
+    console.log('Formatting artist data:', spotifyData);
+    const formattedData = {
+        id: spotifyData.id,
+        name: spotifyData.name,
+        external_urls: spotifyData.external_urls || { spotify: null },
+        followers: {
+            total: spotifyData.followers?.total || 0,
+            href: null
+        },
+        images: Array.isArray(spotifyData.images) 
+            ? spotifyData.images.map(img => ({
+                url: img.url,
+                height: img.height || null,
+                width: img.width || null
+              }))
+            : [],
+        popularity: spotifyData.popularity || 0,
+        type: 'artist',
+        uri: spotifyData.uri || `spotify:artist:${spotifyData.id}`,
+        cached_at: Date.now()
+    };
+    console.log('Formatted artist data:', formattedData);
+    return formattedData;
+};
+
+// Search artists - this must come before /:artistId routes
+router.get('/search', async (req, res) => {
+    console.log('Received search request:', {
+        query: req.query,
+        headers: req.headers,
+        path: req.path
+    });
+
+    try {
+        const searchQuery = req.query.q || '';
+        console.log('Searching artists with query:', searchQuery);
+
+        let queryText = 'SELECT * FROM artists';
+        const queryParams = [];
+
+        if (searchQuery.trim()) {
+            queryText += ' WHERE name ILIKE $1';
+            queryParams.push(`%${searchQuery.trim()}%`);
+        }
+
+        queryText += ' ORDER BY name ASC LIMIT 50';
+
+        console.log('Executing query:', queryText, 'with params:', queryParams);
+        const { rows } = await pool.query(queryText, queryParams);
+        console.log('Found artists:', rows.length);
+
+        // If no results from database and there's a search query, try Spotify
+        if (rows.length === 0 && searchQuery.trim()) {
+            try {
+                console.log('No results from database, trying Spotify');
+                const accessToken = await getSpotifyToken();
+                const spotifyResponse = await axios.get(
+                    `https://api.spotify.com/v1/search?q=${encodeURIComponent(searchQuery.trim())}&type=artist&limit=20`,
+                    {
+                        headers: {
+                            'Authorization': `Bearer ${accessToken}`
+                        }
+                    }
+                );
+
+                console.log('Got Spotify response:', spotifyResponse.data.artists.items.length, 'artists');
+                const artists = spotifyResponse.data.artists.items.map(formatArtistData);
+
+                // Insert artists into database
+                for (const artist of artists) {
+                    await pool.query(
+                        `INSERT INTO artists (
+                            id, 
+                            name, 
+                            external_urls, 
+                            followers, 
+                            images, 
+                            popularity,
+                            type,
+                            uri,
+                            cached_at
+                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
+                        ON CONFLICT (id) DO UPDATE SET
+                            name = EXCLUDED.name,
+                            external_urls = EXCLUDED.external_urls,
+                            followers = EXCLUDED.followers,
+                            images = EXCLUDED.images,
+                            popularity = EXCLUDED.popularity,
+                            type = EXCLUDED.type,
+                            uri = EXCLUDED.uri,
+                            cached_at = EXCLUDED.cached_at`,
+                        [
+                            artist.id,
+                            artist.name,
+                            artist.external_urls,
+                            artist.followers,
+                            artist.images,
+                            artist.popularity,
+                            artist.type,
+                            artist.uri,
+                            artist.cached_at
+                        ]
+                    );
+                }
+
+                res.set('X-Data-Source', 'spotify').json(artists);
+            } catch (spotifyError) {
+                console.error('Error searching Spotify:', spotifyError);
+                // If Spotify fails, just return empty results
+                res.json([]);
+            }
+        } else {
+            res.set('X-Data-Source', 'database').json(rows);
+        }
+    } catch (error) {
+        console.error('Error in /search route:', error);
+        res.status(500).json({
+            message: error.message || 'Internal server error',
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
+    }
 });
 
 // Get artist by ID
@@ -24,6 +137,13 @@ router.get('/:artistId', [
     query('fields').optional().isString(),
     validateRequest
 ], async (req, res) => {
+    console.log('Received artist request:', {
+        params: req.params,
+        query: req.query,
+        headers: req.headers,
+        path: req.path
+    });
+
     try {
         const { artistId } = req.params;
         const { fields } = req.query;
@@ -33,8 +153,11 @@ router.get('/:artistId', [
             [artistId]
         );
         
+        console.log('Found artist in database:', rows.length);
+        
         if (rows.length === 0) {
             // If not in database, fetch from Spotify
+            console.log('No artist found in database, trying Spotify');
             const accessToken = await getSpotifyToken();
             const artistResponse = await axios.get(
                 `https://api.spotify.com/v1/artists/${artistId}`,
@@ -45,6 +168,7 @@ router.get('/:artistId', [
                 }
             );
 
+            console.log('Got Spotify response:', artistResponse.data);
             let formattedArtist = formatArtistData(artistResponse.data);
 
             // Apply field filtering if requested
@@ -60,12 +184,42 @@ router.get('/:artistId', [
 
             // Insert artist into database
             await pool.query(
-                'INSERT INTO artists (id, name, genres, popularity, followers, images, external_urls) VALUES ($1, $2, $3, $4, $5, $6, $7)',
-                [formattedArtist.id, formattedArtist.name, formattedArtist.genres, formattedArtist.popularity, formattedArtist.followers, formattedArtist.images, formattedArtist.external_urls]
+                `INSERT INTO artists (
+                    id, 
+                    name, 
+                    external_urls, 
+                    followers, 
+                    images, 
+                    popularity,
+                    type,
+                    uri,
+                    cached_at
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
+                ON CONFLICT (id) DO UPDATE SET
+                    name = EXCLUDED.name,
+                    external_urls = EXCLUDED.external_urls,
+                    followers = EXCLUDED.followers,
+                    images = EXCLUDED.images,
+                    popularity = EXCLUDED.popularity,
+                    type = EXCLUDED.type,
+                    uri = EXCLUDED.uri,
+                    cached_at = EXCLUDED.cached_at`,
+                [
+                    formattedArtist.id,
+                    formattedArtist.name,
+                    formattedArtist.external_urls,
+                    formattedArtist.followers,
+                    formattedArtist.images,
+                    formattedArtist.popularity,
+                    formattedArtist.type,
+                    formattedArtist.uri,
+                    formattedArtist.cached_at
+                ]
             );
 
             res.set('X-Data-Source', 'spotify').json(formattedArtist);
         } else {
+            console.log('Found artist in database:', rows[0]);
             let artist = rows[0];
             
             // Apply field filtering if requested
@@ -83,9 +237,10 @@ router.get('/:artistId', [
         }
 
     } catch (error) {
-        console.error('Error fetching artist:', error);
+        console.error('Error in /artist route:', error);
         res.status(error.response?.status || 500).json({
-            message: error.message || 'Internal server error'
+            message: error.message || 'Internal server error',
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
         });
     }
 });
@@ -96,6 +251,13 @@ router.get('/:artistId/top-tracks', [
     query('market').optional().isString().isLength({ min: 2, max: 2 }),
     validateRequest
 ], async (req, res) => {
+    console.log('Received top tracks request:', {
+        params: req.params,
+        query: req.query,
+        headers: req.headers,
+        path: req.path
+    });
+
     try {
         const { artistId } = req.params;
         const market = req.query.market || 'US';
@@ -105,8 +267,11 @@ router.get('/:artistId/top-tracks', [
             [artistId, market]
         );
         
+        console.log('Found top tracks in database:', rows.length);
+        
         if (rows.length === 0) {
             // If not in database, fetch from Spotify
+            console.log('No top tracks found in database, trying Spotify');
             const accessToken = await getSpotifyToken();
             const topTracksResponse = await axios.get(
                 `https://api.spotify.com/v1/artists/${artistId}/top-tracks`,
@@ -118,6 +283,7 @@ router.get('/:artistId/top-tracks', [
                 }
             );
 
+            console.log('Got Spotify response:', topTracksResponse.data.tracks.length, 'tracks');
             const topTracks = topTracksResponse.data.tracks.map(track => ({
                 id: track.id,
                 name: track.name,
@@ -142,13 +308,15 @@ router.get('/:artistId/top-tracks', [
 
             res.set('X-Data-Source', 'spotify').json(topTracks);
         } else {
+            console.log('Found top tracks in database:', rows);
             res.set('X-Data-Source', 'database').json(rows);
         }
 
     } catch (error) {
-        console.error('Error fetching top tracks:', error);
+        console.error('Error in /top-tracks route:', error);
         res.status(error.response?.status || 500).json({
-            message: error.message || 'Internal server error'
+            message: error.message || 'Internal server error',
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
         });
     }
 });
@@ -161,6 +329,13 @@ router.get('/:artistId/albums', [
     query('offset').optional().isInt({ min: 0 }).toInt(),
     validateRequest
 ], async (req, res) => {
+    console.log('Received albums request:', {
+        params: req.params,
+        query: req.query,
+        headers: req.headers,
+        path: req.path
+    });
+
     try {
         const { artistId } = req.params;
         const { 
@@ -174,8 +349,11 @@ router.get('/:artistId/albums', [
             [artistId, include_groups, limit, offset]
         );
         
+        console.log('Found albums in database:', rows.length);
+        
         if (rows.length === 0) {
             // If not in database, fetch from Spotify
+            console.log('No albums found in database, trying Spotify');
             const accessToken = await getSpotifyToken();
             const albumsResponse = await axios.get(
                 `https://api.spotify.com/v1/artists/${artistId}/albums`,
@@ -192,6 +370,7 @@ router.get('/:artistId/albums', [
                 }
             );
 
+            console.log('Got Spotify response:', albumsResponse.data.items.length, 'albums');
             const albums = albumsResponse.data.items.map(album => ({
                 id: album.id,
                 name: album.name,
@@ -217,6 +396,7 @@ router.get('/:artistId/albums', [
                 limit
             });
         } else {
+            console.log('Found albums in database:', rows);
             res.set('X-Data-Source', 'database').json({
                 albums: rows,
                 total: rows.length,
@@ -226,9 +406,10 @@ router.get('/:artistId/albums', [
         }
 
     } catch (error) {
-        console.error('Error fetching albums:', error);
+        console.error('Error in /albums route:', error);
         res.status(error.response?.status || 500).json({
-            message: error.message || 'Internal server error'
+            message: error.message || 'Internal server error',
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
         });
     }
 });
@@ -238,6 +419,13 @@ router.get('/:artistId/related', [
     param('artistId').custom(isValidSpotifyId).withMessage('Invalid Spotify artist ID'),
     validateRequest
 ], async (req, res) => {
+    console.log('Received related artists request:', {
+        params: req.params,
+        query: req.query,
+        headers: req.headers,
+        path: req.path
+    });
+
     try {
         const { artistId } = req.params;
         
@@ -246,8 +434,11 @@ router.get('/:artistId/related', [
             [artistId]
         );
         
+        console.log('Found related artists in database:', rows.length);
+        
         if (rows.length === 0) {
             // If not in database, fetch from Spotify
+            console.log('No related artists found in database, trying Spotify');
             const accessToken = await getSpotifyToken();
             const relatedResponse = await axios.get(
                 `https://api.spotify.com/v1/artists/${artistId}/related-artists`,
@@ -258,25 +449,60 @@ router.get('/:artistId/related', [
                 }
             );
 
+            console.log('Got Spotify response:', relatedResponse.data.artists.length, 'artists');
             const relatedArtists = relatedResponse.data.artists.map(formatArtistData);
 
             // Insert related artists into database
             await Promise.all(relatedArtists.map(async (artist) => {
                 await pool.query(
-                    'INSERT INTO related_artists (artist_id, id, name, genres, popularity, followers, images, external_urls) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
-                    [artistId, artist.id, artist.name, artist.genres, artist.popularity, artist.followers, artist.images, artist.external_urls]
+                    `INSERT INTO related_artists (
+                        artist_id, 
+                        id, 
+                        name, 
+                        external_urls, 
+                        followers, 
+                        images, 
+                        popularity,
+                        type,
+                        uri,
+                        cached_at
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) 
+                    ON CONFLICT (id) DO UPDATE SET
+                        artist_id = EXCLUDED.artist_id,
+                        name = EXCLUDED.name,
+                        external_urls = EXCLUDED.external_urls,
+                        followers = EXCLUDED.followers,
+                        images = EXCLUDED.images,
+                        popularity = EXCLUDED.popularity,
+                        type = EXCLUDED.type,
+                        uri = EXCLUDED.uri,
+                        cached_at = EXCLUDED.cached_at`,
+                    [
+                        artistId,
+                        artist.id,
+                        artist.name,
+                        artist.external_urls,
+                        artist.followers,
+                        artist.images,
+                        artist.popularity,
+                        artist.type,
+                        artist.uri,
+                        artist.cached_at
+                    ]
                 );
             }));
 
             res.set('X-Data-Source', 'spotify').json(relatedArtists);
         } else {
+            console.log('Found related artists in database:', rows);
             res.set('X-Data-Source', 'database').json(rows);
         }
 
     } catch (error) {
-        console.error('Error fetching related artists:', error);
+        console.error('Error in /related route:', error);
         res.status(error.response?.status || 500).json({
-            message: error.message || 'Internal server error'
+            message: error.message || 'Internal server error',
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
         });
     }
 });
@@ -286,6 +512,13 @@ router.get('/:artistId/releases', [
     param('artistId').custom(isValidSpotifyId).withMessage('Invalid Spotify artist ID'),
     validateRequest
 ], async (req, res) => {
+    console.log('Received releases request:', {
+        params: req.params,
+        query: req.query,
+        headers: req.headers,
+        path: req.path
+    });
+
     try {
         const { artistId } = req.params;
         
@@ -294,8 +527,11 @@ router.get('/:artistId/releases', [
             [artistId]
         );
         
+        console.log('Found releases in database:', rows.length);
+        
         if (rows.length === 0) {
             // If not in database, fetch from Spotify
+            console.log('No releases found in database, trying Spotify');
             const accessToken = await getSpotifyToken();
 
             // Get artist's tracks and singles
@@ -313,6 +549,7 @@ router.get('/:artistId/releases', [
                 }
             );
 
+            console.log('Got Spotify response:', tracksResponse.data.items.length, 'releases');
             // Format the releases
             const releases = tracksResponse.data.items.map(item => ({
                 id: item.id,
@@ -336,13 +573,15 @@ router.get('/:artistId/releases', [
 
             res.set('X-Data-Source', 'spotify').json(releases);
         } else {
+            console.log('Found releases in database:', rows);
             res.set('X-Data-Source', 'database').json(rows);
         }
 
     } catch (error) {
-        console.error('Error fetching releases:', error);
+        console.error('Error in /releases route:', error);
         res.status(error.response?.status || 500).json({
-            message: error.message || 'Internal server error'
+            message: error.message || 'Internal server error',
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
         });
     }
 });
@@ -352,6 +591,12 @@ router.post('/batch', [
     body('artists').isArray().withMessage('Artists array is required'),
     validateRequest
 ], async (req, res) => {
+    console.log('Received batch request:', {
+        body: req.body,
+        headers: req.headers,
+        path: req.path
+    });
+
     try {
         const { artists } = req.body;
         
@@ -359,6 +604,7 @@ router.post('/batch', [
         const processedArtists = await Promise.all(
             artists.map(async (artist) => {
                 try {
+                    console.log('Processing artist:', artist.id);
                     const accessToken = await getSpotifyToken();
                     const artistResponse = await axios.get(
                         `https://api.spotify.com/v1/artists/${artist.id}`,
@@ -369,6 +615,7 @@ router.post('/batch', [
                         }
                     );
                     
+                    console.log('Got Spotify response:', artistResponse.data);
                     return formatArtistData(artistResponse.data);
                 } catch (error) {
                     console.error(`Error processing artist ${artist.id}:`, error);
@@ -384,8 +631,37 @@ router.post('/batch', [
         // Insert artists into database
         await Promise.all(processedArtists.map(async (artist) => {
             await pool.query(
-                'INSERT INTO artists (id, name, genres, popularity, followers, images, external_urls) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (id) DO UPDATE SET name = $2, genres = $3, popularity = $4, followers = $5, images = $6, external_urls = $7',
-                [artist.id, artist.name, artist.genres, artist.popularity, artist.followers, artist.images, artist.external_urls]
+                `INSERT INTO artists (
+                    id, 
+                    name, 
+                    external_urls, 
+                    followers, 
+                    images, 
+                    popularity,
+                    type,
+                    uri,
+                    cached_at
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
+                ON CONFLICT (id) DO UPDATE SET
+                    name = EXCLUDED.name,
+                    external_urls = EXCLUDED.external_urls,
+                    followers = EXCLUDED.followers,
+                    images = EXCLUDED.images,
+                    popularity = EXCLUDED.popularity,
+                    type = EXCLUDED.type,
+                    uri = EXCLUDED.uri,
+                    cached_at = EXCLUDED.cached_at`,
+                [
+                    artist.id,
+                    artist.name,
+                    artist.external_urls,
+                    artist.followers,
+                    artist.images,
+                    artist.popularity,
+                    artist.type,
+                    artist.uri,
+                    artist.cached_at
+                ]
             );
         }));
 
@@ -395,9 +671,10 @@ router.post('/batch', [
         });
         
     } catch (error) {
-        console.error('Error processing artists:', error);
+        console.error('Error in /batch route:', error);
         res.status(500).json({
-            message: error.message || 'Internal server error'
+            message: error.message || 'Internal server error',
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
         });
     }
 });

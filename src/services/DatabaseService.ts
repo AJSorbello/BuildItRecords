@@ -59,13 +59,29 @@ class DatabaseService {
   }
 
   // Artists
-  public async getArtists(params: { label?: string; search?: string } = {}): Promise<Artist[]> {
-    const queryParams = new URLSearchParams();
-    if (params.label) queryParams.set('labelId', params.label);
-    if (params.search) queryParams.set('search', params.search);
-
-    const queryString = queryParams.toString();
-    return this.request<Artist[]>(`/artists${queryString ? `?${queryString}` : ''}`);
+  public async getArtists(params: { search?: string } = {}): Promise<Artist[]> {
+    console.log('Getting artists with params:', params);
+    const endpoint = '/artists/search';
+    console.log('Making request to endpoint:', endpoint);
+    try {
+      const queryParams = new URLSearchParams();
+      
+      // Only add search param if it's a non-empty string
+      if (params.search?.trim()) {
+        queryParams.append('q', params.search.trim());
+      }
+      
+      const url = `${endpoint}${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+      console.log('Making request to endpoint:', url);
+      
+      const response = await this.request<Artist[]>(url);
+      console.log('Raw artist response:', response);
+      console.log('Sample artist data:', response[0]);
+      return response;
+    } catch (error) {
+      console.error('Error getting artists:', error);
+      throw error; // Let the component handle the error
+    }
   }
 
   public async getArtistById(id: string): Promise<Artist & { releases: Release[] }> {

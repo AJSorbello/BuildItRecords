@@ -8,178 +8,101 @@ import {
   TableRow,
   Paper,
   IconButton,
-  Box,
-  Avatar,
   Typography,
-  Tooltip
+  Box
 } from '@mui/material';
-import { Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import { Delete as DeleteIcon, Edit as EditIcon } from '@mui/icons-material';
 import { Track } from '../../types/track';
 
 interface TrackManagerProps {
-  tracks?: Track[];
-  onEditTrack?: (track: Track) => void;
-  onDeleteTrack?: (trackId: string) => void;
+  tracks: Track[];
+  onEditTrack: (track: Track) => void;
+  onDeleteTrack: (trackId: string) => void;
 }
 
 const TrackManager: React.FC<TrackManagerProps> = ({
-  tracks = [],
-  onEditTrack = () => {},
-  onDeleteTrack = () => {},
+  tracks,
+  onEditTrack,
+  onDeleteTrack,
 }) => {
-  console.log('TrackManager received tracks:', tracks);
-
-  const formatDate = (dateString: string | undefined) => {
-    if (!dateString) return 'No date';
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      });
-    } catch (error) {
-      console.error('Error formatting date:', error);
-      return 'Invalid date';
-    }
+  const getArtistNames = (track: Track): string => {
+    return track.artists.map(artist => artist.name).join(', ');
   };
 
-  const getArtistName = (track: Track) => {
-    if (!track) return 'Unknown Artist';
-    
-    if (Array.isArray(track.artists)) {
-      return track.artists.map(artist => {
-        if (typeof artist === 'string') return artist;
-        return artist.name || 'Unknown Artist';
-      }).join(', ');
-    }
-    
-    return 'Unknown Artist';
+  const formatDuration = (ms: number): string => {
+    const minutes = Math.floor(ms / 60000);
+    const seconds = ((ms % 60000) / 1000).toFixed(0);
+    return `${minutes}:${seconds.padStart(2, '0')}`;
   };
-
-  const getAlbumCover = (track: Track) => {
-    if (!track) return '/placeholder-album.jpg';
-    
-    if (track.artwork_url) return track.artwork_url;
-    if (track.albumCover) return track.albumCover;
-    if (track.album?.artwork_url) return track.album.artwork_url;
-    if (track.album?.images?.[0]?.url) return track.album.images[0].url;
-    
-    return '/placeholder-album.jpg';
-  };
-
-  if (!Array.isArray(tracks)) {
-    console.error('Tracks is not an array:', tracks);
-    return (
-      <TableContainer component={Paper} sx={{ mt: 2 }}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Album Art</TableCell>
-              <TableCell>Title</TableCell>
-              <TableCell>Artist</TableCell>
-              <TableCell>Album</TableCell>
-              <TableCell>Release Date</TableCell>
-              <TableCell>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            <TableRow>
-              <TableCell colSpan={6} align="center">
-                <Typography>Invalid tracks data</Typography>
-              </TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
-      </TableContainer>
-    );
-  }
 
   return (
-    <TableContainer component={Paper} sx={{ mt: 2 }}>
+    <TableContainer component={Paper}>
       <Table>
         <TableHead>
           <TableRow>
-            <TableCell>Album Art</TableCell>
-            <TableCell>Title</TableCell>
-            <TableCell>Artist</TableCell>
+            <TableCell>Track Name</TableCell>
+            <TableCell>Artists</TableCell>
             <TableCell>Album</TableCell>
+            <TableCell>Duration</TableCell>
             <TableCell>Release Date</TableCell>
             <TableCell>Actions</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
-          {tracks.length > 0 ? (
-            tracks.map((track) => {
-              console.log('Rendering track:', track);
-              if (!track || !track.id) {
-                console.warn('Invalid track:', track);
-                return null;
-              }
-              return (
-                <TableRow key={track.id}>
-                  <TableCell>
-                    <Avatar
-                      src={getAlbumCover(track)}
-                      alt={track.name || 'Album Art'}
-                      variant="rounded"
-                      sx={{ width: 50, height: 50 }}
+          {tracks.map((track) => (
+            <TableRow key={track.id}>
+              <TableCell>
+                <Box display="flex" alignItems="center">
+                  {track.album.images[0] && (
+                    <img
+                      src={track.album.images[0].url}
+                      alt={track.album.name}
+                      style={{
+                        width: 40,
+                        height: 40,
+                        marginRight: 10,
+                        borderRadius: 4
+                      }}
                     />
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body1">
-                      {track.name || 'Untitled'}
+                  )}
+                  <Box>
+                    <Typography variant="body1">{track.name}</Typography>
+                    <Typography
+                      variant="body2"
+                      color="textSecondary"
+                      component="a"
+                      href={track.external_urls.spotify}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      sx={{ textDecoration: 'none' }}
+                    >
+                      Open in Spotify
                     </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Typography>
-                        {getArtistName(track)}
-                      </Typography>
-                    </Box>
-                  </TableCell>
-                  <TableCell>
-                    <Typography>
-                      {track.album?.name || 'No album'}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Typography>
-                      {formatDate(track.release_date)}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', gap: 1 }}>
-                      <Tooltip title="Edit Track">
-                        <IconButton
-                          onClick={() => onEditTrack(track)}
-                          size="small"
-                          color="primary"
-                        >
-                          <EditIcon />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Delete Track">
-                        <IconButton
-                          onClick={() => onDeleteTrack(track.id)}
-                          size="small"
-                          color="error"
-                        >
-                          <DeleteIcon />
-                        </IconButton>
-                      </Tooltip>
-                    </Box>
-                  </TableCell>
-                </TableRow>
-              );
-            })
-          ) : (
-            <TableRow>
-              <TableCell colSpan={6} align="center">
-                <Typography>No tracks available. Import some tracks using the Import Releases button above.</Typography>
+                  </Box>
+                </Box>
+              </TableCell>
+              <TableCell>{getArtistNames(track)}</TableCell>
+              <TableCell>{track.album.name}</TableCell>
+              <TableCell>{formatDuration(track.duration_ms)}</TableCell>
+              <TableCell>{track.album.release_date}</TableCell>
+              <TableCell>
+                <IconButton
+                  onClick={() => onEditTrack(track)}
+                  size="small"
+                  color="primary"
+                >
+                  <EditIcon />
+                </IconButton>
+                <IconButton
+                  onClick={() => onDeleteTrack(track.id)}
+                  size="small"
+                  color="error"
+                >
+                  <DeleteIcon />
+                </IconButton>
               </TableCell>
             </TableRow>
-          )}
+          ))}
         </TableBody>
       </Table>
     </TableContainer>

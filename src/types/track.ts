@@ -1,5 +1,5 @@
-import type { Artist } from './artist';
 import type { SpotifyImage } from './spotify';
+import type { SpotifyArtist } from './artist';
 
 export interface Album {
   id: string;
@@ -12,30 +12,28 @@ export interface Album {
 export interface Track {
   id: string;
   name: string;
-  uri?: string;
-  type?: 'track' | 'single' | 'album';
-  artists: Artist[] | string[];
-  album?: Album;
-  albumCover?: string;
-  artwork_url?: string;
-  duration_ms?: number;
-  preview_url?: string | null;
-  external_urls?: {
+  uri: string;
+  duration_ms: number;
+  artists: SpotifyArtist[];
+  album: {
+    id: string;
+    name: string;
+    images: SpotifyImage[];
+    release_date: string;
+    external_urls: {
+      spotify: string;
+    };
+  };
+  preview_url: string | null;
+  external_urls: {
     spotify: string;
   };
-  external_ids?: {
-    [key: string]: string;
-  };
-  popularity?: number;
-  spotifyUrl?: string;
-  recordLabel?: string;
-  releaseDate?: string;
-  release_date?: string;
-  beatportUrl?: string;
-  soundcloudUrl?: string;
-  label_id?: string;
-  total_tracks?: number;
-  tracks?: Track[];
+  popularity: number;
+  explicit: boolean;
+  track_number: number;
+  disc_number: number;
+  is_local: boolean;
+  cached_at?: number;
 }
 
 export interface TrackResponse {
