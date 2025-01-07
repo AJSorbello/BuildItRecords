@@ -130,12 +130,18 @@ router.get('/:labelId', async (req, res) => {
     const formattedReleases = releases.map(release => ({
       id: release.id,
       name: release.name,
-      release_date: release.release_date,
-      artwork_url: release.artwork_url,
-      spotify_url: release.spotify_url,
+      title: release.name,
+      releaseDate: release.release_date,
+      artworkUrl: release.artwork_url,
+      spotifyUrl: release.spotify_url,
       total_tracks: release.total_tracks,
       artists: release.artists,
-      tracks: release.tracks
+      tracks: release.tracks,
+      external_urls: {
+        spotify: release.spotify_url
+      },
+      uri: release.spotify_uri,
+      type: 'release'
     }));
 
     return res.json({

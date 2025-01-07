@@ -7,7 +7,8 @@ import {
   Paper,
   Button,
   CircularProgress,
-  Alert
+  Alert,
+  Pagination
 } from '@mui/material';
 import TrackManager from '../../components/admin/TrackManager';
 import { API_URL } from '../../config';
@@ -28,6 +29,7 @@ const AdminDashboard: React.FC = () => {
   const [totalReleases, setTotalReleases] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     const verifyToken = async () => {
@@ -58,14 +60,14 @@ const AdminDashboard: React.FC = () => {
     verifyToken();
   }, [navigate]);
 
-  const handleLabelSelect = async (labelId: string) => {
+  const handleLabelSelect = async (labelId: string, page: number = 1) => {
     setSelectedLabel(labelId);
     setLoading(true);
     setError(null);
 
     try {
       const token = localStorage.getItem('adminToken');
-      const response = await fetch(`${API_URL}/api/releases/${labelId}`, {
+      const response = await fetch(`${API_URL}/api/releases/${labelId}?page=${page}&limit=10`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -79,6 +81,7 @@ const AdminDashboard: React.FC = () => {
       const data: ReleasesResponse = await response.json();
       setReleases(data.releases || []);
       setTotalReleases(data.totalReleases || 0);
+      setCurrentPage(page);
     } catch (err) {
       console.error('Error fetching releases:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch releases');
@@ -86,6 +89,12 @@ const AdminDashboard: React.FC = () => {
       setTotalReleases(0);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePageChange = (page: number) => {
+    if (selectedLabel) {
+      handleLabelSelect(selectedLabel, page);
     }
   };
 
@@ -134,7 +143,7 @@ const AdminDashboard: React.FC = () => {
   };
 
   const fetchReleases = async () => {
-    await handleLabelSelect(selectedLabel);
+    await handleLabelSelect(selectedLabel, currentPage);
   };
 
   return (
@@ -194,6 +203,12 @@ const AdminDashboard: React.FC = () => {
                   selectedLabel={selectedLabel}
                   totalReleases={totalReleases}
                   onRefresh={fetchReleases}
+                />
+                <Pagination 
+                  count={Math.ceil(totalReleases / 10)} 
+                  page={currentPage} 
+                  onChange={(event, page) => handlePageChange(page)} 
+                  sx={{ mt: 2 }}
                 />
               </Box>
             )}
