@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
-  Box,
   Table,
   TableBody,
   TableCell,
@@ -9,109 +8,181 @@ import {
   TableRow,
   Paper,
   IconButton,
+  Box,
+  Avatar,
   Typography,
-  CircularProgress,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  SelectChangeEvent
+  Tooltip
 } from '@mui/material';
-import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-import PauseIcon from '@mui/icons-material/Pause';
-import { Release } from '../../types';
+import { Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import { Track } from '../../types/track';
 
 interface TrackManagerProps {
-  selectedLabel: string;
-  releases: Release[];
-  totalReleases: number;
-  onRefresh: () => void;
+  tracks?: Track[];
+  onEditTrack?: (track: Track) => void;
+  onDeleteTrack?: (trackId: string) => void;
 }
 
 const TrackManager: React.FC<TrackManagerProps> = ({
-  selectedLabel,
-  releases,
-  totalReleases,
-  onRefresh
+  tracks = [],
+  onEditTrack = () => {},
+  onDeleteTrack = () => {},
 }) => {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [currentlyPlaying, setCurrentlyPlaying] = useState<string | null>(null);
+  console.log('TrackManager received tracks:', tracks);
 
-  const handlePlay = (trackId: string) => {
-    if (currentlyPlaying === trackId) {
-      setCurrentlyPlaying(null);
-    } else {
-      setCurrentlyPlaying(trackId);
+  const formatDate = (dateString: string | undefined) => {
+    if (!dateString) return 'No date';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Invalid date';
     }
   };
 
+  const getArtistName = (track: Track) => {
+    if (!track) return 'Unknown Artist';
+    
+    if (Array.isArray(track.artists)) {
+      return track.artists.map(artist => {
+        if (typeof artist === 'string') return artist;
+        return artist.name || 'Unknown Artist';
+      }).join(', ');
+    }
+    
+    return 'Unknown Artist';
+  };
+
+  const getAlbumCover = (track: Track) => {
+    if (!track) return '/placeholder-album.jpg';
+    
+    if (track.artwork_url) return track.artwork_url;
+    if (track.albumCover) return track.albumCover;
+    if (track.album?.artwork_url) return track.album.artwork_url;
+    if (track.album?.images?.[0]?.url) return track.album.images[0].url;
+    
+    return '/placeholder-album.jpg';
+  };
+
+  if (!Array.isArray(tracks)) {
+    console.error('Tracks is not an array:', tracks);
+    return (
+      <TableContainer component={Paper} sx={{ mt: 2 }}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Album Art</TableCell>
+              <TableCell>Title</TableCell>
+              <TableCell>Artist</TableCell>
+              <TableCell>Album</TableCell>
+              <TableCell>Release Date</TableCell>
+              <TableCell>Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            <TableRow>
+              <TableCell colSpan={6} align="center">
+                <Typography>Invalid tracks data</Typography>
+              </TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </TableContainer>
+    );
+  }
+
   return (
-    <Box>
-      <Typography variant="h6" gutterBottom>
-        {totalReleases} Releases Found
-      </Typography>
-
-      {error && (
-        <Typography color="error" sx={{ mb: 2 }}>
-          {error}
-        </Typography>
-      )}
-
-      {loading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
-          <CircularProgress />
-        </Box>
-      ) : (
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Artwork</TableCell>
-                <TableCell>Title</TableCell>
-                <TableCell>Artist</TableCell>
-                <TableCell>Release Date</TableCell>
-                <TableCell>Preview</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {releases.map((release) => (
-                <TableRow key={release.id}>
+    <TableContainer component={Paper} sx={{ mt: 2 }}>
+      <Table>
+        <TableHead>
+          <TableRow>
+            <TableCell>Album Art</TableCell>
+            <TableCell>Title</TableCell>
+            <TableCell>Artist</TableCell>
+            <TableCell>Album</TableCell>
+            <TableCell>Release Date</TableCell>
+            <TableCell>Actions</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {tracks.length > 0 ? (
+            tracks.map((track) => {
+              console.log('Rendering track:', track);
+              if (!track || !track.id) {
+                console.warn('Invalid track:', track);
+                return null;
+              }
+              return (
+                <TableRow key={track.id}>
                   <TableCell>
-                    {release.artworkUrl && (
-                      <img 
-                        src={release.artworkUrl} 
-                        alt={release.name} 
-                        style={{ width: '50px', height: '50px' }} 
-                      />
-                    )}
-                  </TableCell>
-                  <TableCell>{release.name || release.title}</TableCell>
-                  <TableCell>
-                    {release.artists?.map(artist => artist.name).join(', ') || 'Unknown Artist'}
+                    <Avatar
+                      src={getAlbumCover(track)}
+                      alt={track.name || 'Album Art'}
+                      variant="rounded"
+                      sx={{ width: 50, height: 50 }}
+                    />
                   </TableCell>
                   <TableCell>
-                    {release.releaseDate ? 
-                      new Date(release.releaseDate).toLocaleDateString() : 
-                      'No date'}
+                    <Typography variant="body1">
+                      {track.name || 'Untitled'}
+                    </Typography>
                   </TableCell>
                   <TableCell>
-                    {release.tracks?.[0]?.preview_url && (
-                      <IconButton
-                        onClick={() => handlePlay(release.id)}
-                        color={currentlyPlaying === release.id ? 'primary' : 'default'}
-                      >
-                        {currentlyPlaying === release.id ? <PauseIcon /> : <PlayArrowIcon />}
-                      </IconButton>
-                    )}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Typography>
+                        {getArtistName(track)}
+                      </Typography>
+                    </Box>
+                  </TableCell>
+                  <TableCell>
+                    <Typography>
+                      {track.album?.name || 'No album'}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography>
+                      {formatDate(track.release_date)}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <Tooltip title="Edit Track">
+                        <IconButton
+                          onClick={() => onEditTrack(track)}
+                          size="small"
+                          color="primary"
+                        >
+                          <EditIcon />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Delete Track">
+                        <IconButton
+                          onClick={() => onDeleteTrack(track.id)}
+                          size="small"
+                          color="error"
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
                   </TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      )}
-    </Box>
+              );
+            })
+          ) : (
+            <TableRow>
+              <TableCell colSpan={6} align="center">
+                <Typography>No tracks available. Import some tracks using the Import Releases button above.</Typography>
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
+    </TableContainer>
   );
 };
 

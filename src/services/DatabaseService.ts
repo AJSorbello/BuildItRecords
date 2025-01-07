@@ -1,10 +1,11 @@
 import axios, { AxiosRequestConfig } from 'axios';
 import { Track } from '../types/track';
-import { Album, Release } from '../types/release';
+import type { Release } from '../types/release';
 import { Artist } from '../types/artist';
 import { RecordLabel } from '../constants/labels';
+import { createRelease } from '../types/release';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
 interface Label {
   id: string;
@@ -13,12 +14,19 @@ interface Label {
   website?: string;
 }
 
+interface PaginatedResponse<T> {
+  releases: T[];
+  totalReleases: number;
+  currentPage: number;
+  totalPages: number;
+}
+
 class DatabaseService {
   private static instance: DatabaseService;
   private baseUrl: string;
 
   private constructor() {
-    this.baseUrl = API_BASE_URL;
+    this.baseUrl = `${API_BASE_URL}`;
   }
 
   public static getInstance(): DatabaseService {
@@ -28,18 +36,19 @@ class DatabaseService {
     return DatabaseService.instance;
   }
 
-  private async request<T>(url: string, options: AxiosRequestConfig = {}): Promise<T> {
+  private async request<T>(endpoint: string, options: AxiosRequestConfig = {}): Promise<T> {
     try {
+      const url = `${this.baseUrl}/api${endpoint}`;
+      console.log('Making request to:', url);
+      
       const response = await axios({
-        url: `${this.baseUrl}${url}`,
+        url,
         ...options,
       });
+      console.log('Response data:', response.data);
       return response.data;
     } catch (error) {
-      console.error('API request failed:', {
-        url,
-        error: error instanceof Error ? error.message : String(error),
-      });
+      console.error('Request failed:', error);
       throw error;
     }
   }
@@ -52,7 +61,7 @@ class DatabaseService {
   // Artists
   public async getArtists(params: { label?: string; search?: string } = {}): Promise<Artist[]> {
     const queryParams = new URLSearchParams();
-    if (params.label) queryParams.set('label', params.label);
+    if (params.label) queryParams.set('labelId', params.label);
     if (params.search) queryParams.set('search', params.search);
 
     const queryString = queryParams.toString();
@@ -65,33 +74,26 @@ class DatabaseService {
     return { ...artist, releases };
   }
 
-  public async getArtistsForLabel(label: RecordLabel): Promise<(Artist & { releases: Release[] })[]> {
-    const artists = await this.getArtists({ label });
-
-    const artistsWithReleases = await Promise.all(
-      artists.map(async (artist) => {
-        const releases = await this.getReleasesByArtistId(artist.id);
-        return { ...artist, releases };
-      })
-    );
-
-    return artistsWithReleases;
+  public async getArtistsForLabel(labelId: string): Promise<Artist[]> {
+    try {
+      const response = await this.request<{ artists: Artist[] }>(`/labels/${labelId}/artists`);
+      return response.artists;
+    } catch (error) {
+      console.error(`Error fetching artists for label ${labelId}:`, error);
+      return [];
+    }
   }
 
   // Releases
-  public async getReleases(params: { artistId?: string; labelId?: string; label?: RecordLabel } = {}): Promise<Release[]> {
-    const queryParams = new URLSearchParams();
-    if (params.artistId) queryParams.set('artistId', params.artistId);
-    if (params.labelId) queryParams.set('labelId', params.labelId);
-    if (params.label) queryParams.set('label', params.label.toLowerCase());
-
+  public async getReleases(params: { artistId?: string; labelId?: string } = {}): Promise<Release[]> {
     try {
-      const queryString = queryParams.toString();
-      const albums = await this.request<Album[]>(`/tracks${queryString ? `?${queryString}` : ''}`);
-      return albums.map((album) => ({
-        ...album,
-        artist: album.artists[0]?.name || '',
-      }));
+      if (params.labelId) {
+        return this.getReleasesByLabelId(params.labelId);
+      }
+      if (params.artistId) {
+        return this.getReleasesByArtistId(params.artistId);
+      }
+      return this.request<Release[]>('/releases');
     } catch (error) {
       console.error('Error fetching releases:', error);
       return [];
@@ -99,16 +101,140 @@ class DatabaseService {
   }
 
   public async getReleasesByArtistId(artistId: string): Promise<Release[]> {
-    return this.getReleases({ artistId });
+    return this.request<Release[]>(`/artists/${artistId}/releases`);
   }
 
-  public async getReleasesByLabel(label: RecordLabel): Promise<Release[]> {
+  async getReleasesByLabelId(labelId: string): Promise<PaginatedResponse<Release>> {
     try {
-      const releases = await this.getReleases({ label });
-      return releases;
+      console.log('Fetching releases for label:', labelId);
+      const endpoint = `/releases/${labelId}`;
+      console.log('Using endpoint:', endpoint);
+      
+      const response = await this.request<Release[] | PaginatedResponse<Release>>(endpoint);
+      console.log('Raw server response:', response);
+
+      // Handle both paginated and non-paginated responses
+      const releases = Array.isArray(response) ? response : response.releases || [];
+      console.log('Extracted releases:', releases);
+
+      if (!releases || releases.length === 0) {
+        console.log('No releases found');
+        return {
+          releases: [],
+          totalReleases: 0,
+          currentPage: 1,
+          totalPages: 1
+        };
+      }
+
+      // Transform the server response to match our Release type
+      const transformedReleases = releases.map((release: Partial<Release>): Release => {
+        console.log('Processing release:', release);
+        
+        // Get the best quality image URL from the album images array
+        const artworkUrl = release.album?.images?.[0]?.url || 
+                          release.artwork_url || 
+                          release.albumCover;
+        console.log('Artwork URL:', artworkUrl);
+
+        // Transform tracks if they exist
+        const tracks = (release.tracks || []).map((track: Partial<Track>) => {
+          console.log('Processing track:', track);
+          return {
+            id: track.id || '',
+            name: track.name || '',
+            artists: track.artists || [],
+            album: {
+              name: release.name || '',
+              artwork_url: artworkUrl
+            },
+            artwork_url: artworkUrl,
+            albumCover: artworkUrl,
+            release_date: track.release_date || release.release_date || '',
+            preview_url: track.preview_url,
+            spotifyUrl: track.spotifyUrl || track.external_urls?.spotify,
+            label_id: labelId
+          };
+        });
+
+        console.log('Transformed tracks:', tracks);
+
+        return createRelease({
+          id: release.id || '',
+          name: release.name || '',
+          type: release.type || 'single',
+          artists: release.artists || [],
+          artwork_url: artworkUrl,
+          albumCover: artworkUrl,
+          album: {
+            name: release.name || '',
+            artwork_url: artworkUrl,
+            images: release.images
+          },
+          release_date: release.release_date || '',
+          total_tracks: release.total_tracks || 1,
+          tracks: tracks,
+          label: { id: labelId, name: labelId }
+        });
+      });
+
+      console.log('All transformed releases:', transformedReleases);
+      
+      // Return paginated response
+      const paginatedResponse: PaginatedResponse<Release> = {
+        releases: transformedReleases,
+        totalReleases: transformedReleases.length,
+        currentPage: 1,
+        totalPages: 1
+      };
+
+      console.log('Final paginated response:', paginatedResponse);
+      return paginatedResponse;
     } catch (error) {
-      console.error(`Error fetching releases for label ${label}:`, error);
-      return [];
+      console.error('Error fetching releases:', error);
+      return {
+        releases: [],
+        totalReleases: 0,
+        currentPage: 1,
+        totalPages: 1
+      };
+    }
+  }
+
+  async saveTrack(track: Track): Promise<Track> {
+    try {
+      const response = await axios.post(`${this.baseUrl}/api/tracks`, {
+        id: track.id,
+        name: track.name,
+        artists: track.artists,
+        album: track.album,
+        albumCover: track.albumCover,
+        releaseDate: track.releaseDate,
+        spotifyUrl: track.spotifyUrl,
+        preview_url: track.preview_url,
+        recordLabel: track.recordLabel,
+        beatportUrl: track.beatportUrl,
+        soundcloudUrl: track.soundcloudUrl
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error saving track:', error);
+      throw error;
+    }
+  }
+
+  public async saveTracks(tracks: Track[]): Promise<Track[]> {
+    try {
+      console.log('Saving tracks:', tracks);
+      const response = await this.request<Track[]>('/tracks/batch', {
+        method: 'POST',
+        data: { tracks }
+      });
+      console.log('Saved tracks response:', response);
+      return response;
+    } catch (error) {
+      console.error('Error saving tracks:', error);
+      throw error;
     }
   }
 
@@ -129,26 +255,13 @@ class DatabaseService {
 
   public async importTracks(tracks: Track[]): Promise<Track[]> {
     try {
-      // Get existing tracks to check for duplicates
-      const existingTracks = await this.getTracksFromApi();
-      
-      // Filter out duplicates based on Spotify ID
-      const newTracks = tracks.filter(track => 
-        !existingTracks.some(existing => existing.id === track.id)
-      );
-
-      if (newTracks.length === 0) {
-        console.log('No new tracks to import - all tracks already exist');
-        return [];
-      }
-
-      // Import only new tracks
-      const response = await axios.post(`${this.baseUrl}/tracks/import`, {
-        tracks: newTracks
+      console.log('Importing tracks:', tracks);
+      const response = await this.request<Track[]>('/tracks/import', {
+        method: 'POST',
+        data: { tracks }
       });
-
-      console.log(`Imported ${newTracks.length} new tracks`);
-      return response.data;
+      console.log('Import response:', response);
+      return response;
     } catch (error) {
       console.error('Error importing tracks:', error);
       throw error;
@@ -157,7 +270,7 @@ class DatabaseService {
 
   public async updateTrack(trackId: string, updates: Partial<Track>): Promise<Track> {
     try {
-      const response = await axios.put(`${this.baseUrl}/tracks/${trackId}`, updates);
+      const response = await axios.put(`${this.baseUrl}/api/tracks/${trackId}`, updates);
       return response.data;
     } catch (error) {
       console.error('Error updating track:', error);
@@ -165,26 +278,9 @@ class DatabaseService {
     }
   }
 
-  // Search methods
-  public async searchTracks(query: string): Promise<Track[]> {
-    return this.request<Track[]>(`/search/tracks?q=${encodeURIComponent(query)}`);
-  }
-
-  public async searchArtists(query: string): Promise<Artist[]> {
-    return this.request<Artist[]>(`/search/artists?q=${encodeURIComponent(query)}`);
-  }
-
-  public async searchReleases(query: string): Promise<Release[]> {
-    const albums = await this.request<Album[]>(`/search/releases?q=${encodeURIComponent(query)}`);
-    return albums.map((album) => ({
-      ...album,
-      artist: album.artists[0]?.name || '',
-    }));
-  }
-
   // Helper methods
   private getLabelPath(label: RecordLabel | string): string {
-    return label.toLowerCase().replace('_', '-');
+    return typeof label === 'string' ? label : label.id;
   }
 }
 

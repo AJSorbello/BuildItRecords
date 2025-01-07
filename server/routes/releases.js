@@ -51,104 +51,6 @@ const handleError = (res, error) => {
   });
 };
 
-// GET /api/releases/:labelId
-router.get('/:labelId', async (req, res) => {
-  try {
-    const { labelId } = req.params;
-    const { page = 1, limit = 10 } = req.query;
-    
-    console.log('Fetching releases for label ID:', labelId);
-    
-    // Find the label by ID or slug
-    const label = await Label.findOne({
-      where: {
-        [Op.or]: [
-          { id: labelId },
-          { slug: labelId }
-        ]
-      }
-    });
-
-    if (!label) {
-      console.log('Label not found:', labelId);
-      return res.status(404).json({ 
-        success: false, 
-        error: 'Label not found',
-        message: `No label found with ID or slug: ${labelId}`,
-        releases: [],
-        totalReleases: 0
-      });
-    }
-
-    const offset = (parseInt(page) - 1) * parseInt(limit);
-    
-    // Get releases from database with pagination
-    const { count, rows: releases } = await Release.findAndCountAll({
-      where: {
-        label_id: label.id
-      },
-      include: [
-        {
-          model: Artist,
-          as: 'artists',
-          through: { attributes: [] },
-          attributes: ['id', 'name', 'spotify_url', 'profile_image']
-        },
-        {
-          model: Track,
-          as: 'tracks',
-          attributes: ['id', 'name', 'duration', 'preview_url', 'spotify_url', 'track_number'],
-          include: [
-            {
-              model: Artist,
-              as: 'artists',
-              through: { attributes: [] },
-              attributes: ['id', 'name', 'spotify_url', 'profile_image']
-            }
-          ]
-        }
-      ],
-      order: [['release_date', 'DESC']],
-      limit: parseInt(limit),
-      offset: offset,
-      distinct: true
-    });
-
-    console.log(`Found ${count} total releases, returning page ${page} with ${releases.length} items`);
-
-    // Format the response
-    const formattedReleases = releases.map(release => ({
-      id: release.id,
-      name: release.name,
-      title: release.name,
-      releaseDate: release.release_date,
-      artworkUrl: release.artwork_url,
-      spotifyUrl: release.spotify_url,
-      total_tracks: release.total_tracks,
-      artists: release.artists,
-      tracks: release.tracks,
-      external_urls: {
-        spotify: release.spotify_url
-      },
-      uri: release.spotify_uri,
-      type: 'release'
-    }));
-
-    return res.json({
-      success: true,
-      releases: formattedReleases,
-      totalReleases: count,
-      currentPage: parseInt(page),
-      totalPages: Math.ceil(count / parseInt(limit)),
-      hasMore: offset + releases.length < count
-    });
-
-  } catch (error) {
-    console.error('Error in GET /releases/:labelId:', error);
-    handleError(res, error);
-  }
-});
-
 // Import releases from Spotify
 router.post('/:labelId/import', async (req, res) => {
   try {
@@ -176,10 +78,81 @@ router.post('/:labelId/import', async (req, res) => {
     );
 
     // Search and import releases
+    console.log('Starting Spotify search for label:', label.name);
     const albums = await spotifyService.searchAlbumsByLabel(label.name);
-    await spotifyService.importReleases(label, albums);
+    console.log(`Found ${albums.length} releases, starting import...`);
 
-    // Return the imported releases
+    // Use a transaction to ensure data consistency
+    const result = await sequelize.transaction(async (t) => {
+      // Import the releases
+      await spotifyService.importReleases(label, albums, t);
+
+      // Return the imported releases
+      const { count, rows: releases } = await Release.findAndCountAll({
+        where: { label_id: label.id },
+        include: [
+          {
+            model: Artist,
+            as: 'artists',
+            through: { attributes: [] }
+          },
+          {
+            model: Track,
+            as: 'tracks',
+            include: [
+              {
+                model: Artist,
+                as: 'artists',
+                through: { attributes: [] }
+              }
+            ]
+          }
+        ],
+        order: [['release_date', 'DESC']],
+        transaction: t
+      });
+
+      return { count, releases };
+    });
+
+    console.log(`Successfully imported ${result.count} releases for label: ${label.name}`);
+
+    res.json({
+      success: true,
+      message: `Successfully imported ${albums.length} releases`,
+      totalReleases: result.count,
+      releases: result.releases
+    });
+
+  } catch (error) {
+    console.error('Error importing releases:', error);
+    handleError(res, error);
+  }
+});
+
+// GET /api/releases/:labelId
+router.get('/:labelId', async (req, res) => {
+  try {
+    const { labelId } = req.params;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    
+    // Find the label
+    const label = await Label.findOne({
+      where: {
+        [Op.or]: [
+          { id: labelId },
+          { slug: labelId }
+        ]
+      }
+    });
+
+    if (!label) {
+      return res.status(404).json({ error: 'Label not found' });
+    }
+
+    // Get releases from database with pagination
     const { count, rows: releases } = await Release.findAndCountAll({
       where: { label_id: label.id },
       include: [
@@ -200,18 +173,41 @@ router.post('/:labelId/import', async (req, res) => {
           ]
         }
       ],
-      order: [['release_date', 'DESC']]
+      order: [['release_date', 'DESC']],
+      limit,
+      offset
     });
+
+    // Transform the releases to include all necessary data
+    const transformedReleases = releases.map(release => {
+      const releaseJson = release.toJSON();
+      return {
+        ...releaseJson,
+        artists: releaseJson.artists.map(artist => ({
+          id: artist.id,
+          name: artist.name
+        })),
+        albumCover: releaseJson.artworkUrl || releaseJson.artwork,
+        tracks: releaseJson.tracks.map(track => ({
+          ...track,
+          artists: track.artists.map(artist => ({
+            id: artist.id,
+            name: artist.name
+          }))
+        }))
+      };
+    });
+
+    console.log('Transformed releases:', JSON.stringify(transformedReleases, null, 2));
 
     res.json({
-      success: true,
-      message: `Successfully imported ${albums.length} releases`,
+      releases: transformedReleases,
       totalReleases: count,
-      releases: releases
+      currentPage: page,
+      totalPages: Math.ceil(count / limit)
     });
-
   } catch (error) {
-    console.error('Error importing releases:', error);
+    console.error('Error fetching releases:', error);
     handleError(res, error);
   }
 });
@@ -431,6 +427,83 @@ router.get('/featured', async (req, res) => {
       code: error.code
     });
     handleError(res, error);
+  }
+});
+
+// Get all releases
+router.get('/', async (req, res) => {
+  try {
+    const { labelId, artistId } = req.query;
+    let queryText = 'SELECT * FROM releases';
+    const queryParams = [];
+
+    if (labelId || artistId) {
+      queryText += ' WHERE';
+      if (labelId) {
+        queryText += ' label_id = $1';
+        queryParams.push(labelId);
+      }
+      if (artistId) {
+        if (labelId) queryText += ' AND';
+        queryText += ` artist_id = $${queryParams.length + 1}`;
+        queryParams.push(artistId);
+      }
+    }
+
+    queryText += ' ORDER BY release_date DESC';
+
+    const { rows: releases } = await sequelize.query(queryText, {
+      replacements: queryParams,
+      type: sequelize.QueryTypes.SELECT
+    });
+    res.json(releases);
+  } catch (error) {
+    console.error('Error fetching releases:', error);
+    res.status(500).json({ error: 'Failed to fetch releases' });
+  }
+});
+
+// Get release by ID
+router.get('/:releaseId', async (req, res) => {
+  try {
+    const { releaseId } = req.params;
+    
+    const { rows } = await sequelize.query(
+      'SELECT * FROM releases WHERE id = $1',
+      {
+        replacements: [releaseId],
+        type: sequelize.QueryTypes.SELECT
+      }
+    );
+    
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Release not found' });
+    }
+    
+    res.json(rows[0]);
+  } catch (error) {
+    console.error('Error fetching release:', error);
+    res.status(500).json({ error: 'Failed to fetch release' });
+  }
+});
+
+// Get release's tracks
+router.get('/:releaseId/tracks', async (req, res) => {
+  try {
+    const { releaseId } = req.params;
+    
+    const { rows: tracks } = await sequelize.query(
+      'SELECT * FROM tracks WHERE release_id = $1 ORDER BY track_number ASC',
+      {
+        replacements: [releaseId],
+        type: sequelize.QueryTypes.SELECT
+      }
+    );
+    
+    res.json({ tracks });
+  } catch (error) {
+    console.error('Error fetching release tracks:', error);
+    res.status(500).json({ error: 'Failed to fetch release tracks' });
   }
 });
 

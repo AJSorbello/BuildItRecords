@@ -23,7 +23,7 @@ interface TrackListProps {
   onTrackClick?: (track: Track) => void;
 }
 
-export const TrackList: React.FC<TrackListProps> = ({
+const TrackList: React.FC<TrackListProps> = ({
   tracks,
   loading,
   error,
@@ -84,7 +84,7 @@ export const TrackList: React.FC<TrackListProps> = ({
                   {' — '}
                   {track.album?.name}
                   {' • '}
-                  {formatDuration(track.duration_ms)}
+                  {formatDuration(track.duration_ms || 0)}
                 </React.Fragment>
               }
             />
@@ -94,7 +94,9 @@ export const TrackList: React.FC<TrackListProps> = ({
                 aria-label="play"
                 onClick={(e) => {
                   e.stopPropagation();
-                  window.open(track.external_urls.spotify, '_blank');
+                  if (track.external_urls?.spotify) {
+                    window.open(track.external_urls.spotify, '_blank');
+                  }
                 }}
               >
                 <PlayIcon />
@@ -106,3 +108,5 @@ export const TrackList: React.FC<TrackListProps> = ({
     </Paper>
   );
 };
+
+export default TrackList;

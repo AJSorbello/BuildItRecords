@@ -37,7 +37,7 @@ export const router = createBrowserRouter(
       {/* Records Routes */}
       <Route path="/records" element={<Layout />}>
         <Route index element={<RecordsHome />} />
-        <Route path="releases" element={<ReleasesPage label="records" />} />
+        <Route path="releases" element={<ReleasesPage />} />
         <Route path="artists" element={<ArtistsPage />} />
         <Route path="artists/:artistName" element={<ArtistDetailPage />} />
         <Route path="playlists" element={<PlaylistsPage label="records" />} />
@@ -48,7 +48,7 @@ export const router = createBrowserRouter(
       {/* Tech Routes */}
       <Route path="/tech" element={<Layout />}>
         <Route index element={<TechHome />} />
-        <Route path="releases" element={<ReleasesPage label="tech" />} />
+        <Route path="releases" element={<ReleasesPage />} />
         <Route path="artists" element={<ArtistsPage />} />
         <Route path="artists/:artistName" element={<ArtistDetailPage />} />
         <Route path="playlists" element={<PlaylistsPage label="tech" />} />
@@ -59,7 +59,7 @@ export const router = createBrowserRouter(
       {/* Deep Routes */}
       <Route path="/deep" element={<Layout />}>
         <Route index element={<DeepHome />} />
-        <Route path="releases" element={<ReleasesPage label="deep" />} />
+        <Route path="releases" element={<ReleasesPage />} />
         <Route path="artists" element={<ArtistsPage />} />
         <Route path="artists/:artistName" element={<ArtistDetailPage />} />
         <Route path="playlists" element={<PlaylistsPage label="deep" />} />

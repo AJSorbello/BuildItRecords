@@ -135,10 +135,8 @@ const AdminDashboard: React.FC = () => {
     navigate('/admin/login');
   };
 
-  const fetchReleases = async () => {
-    if (selectedLabel) {
-      await handleLabelSelect(selectedLabel, currentPage);
-    }
+  const handleRefresh = async () => {
+    await handleLabelSelect(selectedLabel, currentPage);
   };
 
   return (
@@ -191,11 +189,11 @@ const AdminDashboard: React.FC = () => {
             </Box>
           ) : (
             <Box>
-              <TrackManager
-                selectedLabel={selectedLabel}
+              <TrackManager 
                 releases={releases}
+                selectedLabel={selectedLabel}
                 totalReleases={totalReleases}
-                onRefresh={() => handleLabelSelect(selectedLabel, currentPage)}
+                onRefresh={handleRefresh}
               />
               {totalReleases > 0 && (
                 <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>

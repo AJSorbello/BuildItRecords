@@ -1,42 +1,34 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Grid, Card, CardMedia, CardContent, Typography, FormControl, InputLabel, Select, MenuItem, CircularProgress, Container, IconButton, Collapse, Button } from '@mui/material';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { RecordLabel, LABEL_DISPLAY_NAMES } from '../constants/labels';
+import { RecordLabel, RECORD_LABELS } from '../constants/labels';
 import { databaseService } from '../services/DatabaseService';
 import { Artist } from '../types/artist';
 import { FaSpotify } from 'react-icons/fa';
 import { Release } from '../types/release';
 
-const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
-
-interface CachedArtistData {
-  artist: Artist;
-  timestamp: number;
-}
-
-const getArtists = async (label: RecordLabel): Promise<{ artists: Artist[], totalCount: number }> => {
-  console.log('Getting artists for label:', label);
-  
-  try {
-    const artists = await databaseService.getArtistsForLabel(label);
-    
-    if (!artists || artists.length === 0) {
-      console.log('No artists found in database');
-      return { artists: [], totalCount: 0 };
-    }
-    
-    return { 
-      artists,
-      totalCount: artists.length 
-    };
-  } catch (error) {
-    console.error('Error fetching artists:', error);
-    return { artists: [], totalCount: 0 };
-  }
-};
-
 const ArtistCard: React.FC<{ artist: Artist }> = ({ artist }) => {
   const [showReleases, setShowReleases] = useState(false);
+  const [releases, setReleases] = useState<Release[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const loadReleases = async () => {
+      if (showReleases && artist.id) {
+        setLoading(true);
+        try {
+          const artistReleases = await databaseService.getReleasesByArtistId(artist.id);
+          setReleases(artistReleases);
+        } catch (error) {
+          console.error('Error loading releases:', error);
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadReleases();
+  }, [showReleases, artist.id]);
 
   return (
     <Card sx={{ 
@@ -50,105 +42,89 @@ const ArtistCard: React.FC<{ artist: Artist }> = ({ artist }) => {
     }}>
       <CardMedia
         component="img"
-        height="300"
-        image={artist.artworkUrl || artist.images?.[0]?.url || 'https://via.placeholder.com/300'}
+        height="200"
+        image={artist.images?.[0]?.url || '/placeholder-artist.jpg'}
         alt={artist.name}
-        sx={{ objectFit: 'cover' }}
       />
       <CardContent sx={{ flexGrow: 1 }}>
-        <Typography gutterBottom variant="h6" component="div" noWrap>
+        <Typography variant="h6" component="div" gutterBottom>
           {artist.name}
         </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{
-          display: '-webkit-box',
-          WebkitLineClamp: 3,
-          WebkitBoxOrient: 'vertical',
-          overflow: 'hidden',
-          mb: 2
-        }}>
-          {artist.bio || `Artist on ${artist.label}`}
-        </Typography>
-
-        {/* Social Links */}
-        <Box sx={{ 
-          display: 'flex', 
-          gap: 1,
-          justifyContent: 'flex-start',
-          mb: 2
-        }}>
-          {artist.external_urls?.spotify && (
-            <IconButton
-              href={artist.external_urls.spotify}
-              target="_blank"
-              rel="noopener noreferrer"
-              size="small"
-              sx={{ color: '#1DB954' }}
-            >
-              <FaSpotify />
-            </IconButton>
-          )}
-        </Box>
-
-        {/* Releases Section */}
-        {artist.releases && artist.releases.length > 0 && (
-          <>
-            <Button
-              onClick={() => setShowReleases(!showReleases)}
-              variant="outlined"
-              size="small"
-              fullWidth
-              sx={{ mb: 1 }}
-            >
-              {showReleases ? 'Hide Releases' : `Show Releases (${artist.releases.length})`}
-            </Button>
-            <Collapse in={showReleases}>
-              <Box sx={{ mt: 2 }}>
-                {artist.releases.map((release) => (
-                  <Box
-                    key={release.id}
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      mb: 2,
-                      p: 1,
-                      borderRadius: 1,
-                      bgcolor: 'background.paper',
-                      boxShadow: 1
-                    }}
-                  >
-                    <CardMedia
-                      component="img"
-                      sx={{ width: 60, height: 60, borderRadius: 1, mr: 2 }}
-                      image={release.artworkUrl || 'https://via.placeholder.com/60'}
-                      alt={release.name}
-                    />
-                    <Box sx={{ flexGrow: 1 }}>
-                      <Typography variant="subtitle2" noWrap>
-                        {release.name}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary" display="block">
-                        {new Date(release.releaseDate).toLocaleDateString()}
-                      </Typography>
-                      <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
-                        {release.external_urls?.spotify && (
-                          <IconButton
-                            href={release.external_urls.spotify}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            size="small"
-                            sx={{ padding: 0.5 }}
-                          >
-                            <FaSpotify fontSize="small" />
-                          </IconButton>
-                        )}
-                      </Box>
-                    </Box>
-                  </Box>
-                ))}
-              </Box>
-            </Collapse>
-          </>
+        {artist.spotify_url && (
+          <IconButton
+            href={artist.spotify_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            color="primary"
+          >
+            <FaSpotify />
+          </IconButton>
         )}
+
+        <Button
+          onClick={() => setShowReleases(!showReleases)}
+          variant="outlined"
+          size="small"
+          fullWidth
+          sx={{ mt: 2 }}
+        >
+          {showReleases ? 'Hide Releases' : 'Show Releases'}
+        </Button>
+
+        <Collapse in={showReleases}>
+          <Box sx={{ mt: 2 }}>
+            {loading ? (
+              <CircularProgress size={20} />
+            ) : releases.length > 0 ? (
+              releases.map((release) => (
+                <Box
+                  key={release.id}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    mb: 2,
+                    p: 1,
+                    borderRadius: 1,
+                    bgcolor: 'background.paper',
+                    boxShadow: 1
+                  }}
+                >
+                  <CardMedia
+                    component="img"
+                    sx={{ width: 60, height: 60, borderRadius: 1, mr: 2 }}
+                    image={release.images?.[0]?.url || '/placeholder-release.jpg'}
+                    alt={release.name}
+                  />
+                  <Box sx={{ flexGrow: 1 }}>
+                    <Typography variant="subtitle2" noWrap>
+                      {release.name}
+                    </Typography>
+                    {release.release_date && (
+                      <Typography variant="caption" color="text.secondary" display="block">
+                        {new Date(release.release_date).toLocaleDateString()}
+                      </Typography>
+                    )}
+                    {release.external_urls?.spotify && (
+                      <IconButton
+                        href={release.external_urls.spotify}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        size="small"
+                        sx={{ padding: 0.5 }}
+                      >
+                        <FaSpotify fontSize="small" />
+                      </IconButton>
+                    )}
+                  </Box>
+                </Box>
+              ))
+            ) : (
+              <Typography variant="body2" color="text.secondary" align="center">
+                No releases found
+              </Typography>
+            )}
+          </Box>
+        </Collapse>
       </CardContent>
     </Card>
   );
@@ -158,45 +134,37 @@ const ArtistsPage: React.FC = () => {
   const [artists, setArtists] = useState<Artist[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const location = useLocation();
+  const [selectedLabel, setSelectedLabel] = useState<string>('buildit-records');
   const navigate = useNavigate();
-
-  const params = new URLSearchParams(location.search);
-  const label = (params.get('label') || RecordLabel.RECORDS) as RecordLabel;
+  const location = useLocation();
 
   useEffect(() => {
-    const fetchArtists = async () => {
+    const loadArtists = async () => {
       setLoading(true);
+      setError(null);
       try {
-        const { artists: fetchedArtists } = await getArtists(label);
+        const fetchedArtists = await databaseService.getArtistsForLabel(selectedLabel);
         setArtists(fetchedArtists);
-        setError(null);
       } catch (err) {
-        console.error('Error fetching artists:', err);
-        setError(err instanceof Error ? err.message : 'An unexpected error occurred.');
+        setError(err instanceof Error ? err.message : 'Failed to load artists');
+        setArtists([]);
       } finally {
         setLoading(false);
       }
     };
-  
-    fetchArtists();
-  }, [label]);
+
+    loadArtists();
+  }, [selectedLabel]);
 
   const handleLabelChange = (event: any) => {
-    const newLabel = event.target.value as RecordLabel;
-    const searchParams = new URLSearchParams(location.search);
-    searchParams.set('label', newLabel);
-    navigate({ search: searchParams.toString() });
+    const newLabel = event.target.value;
+    setSelectedLabel(newLabel);
+    navigate(`/records/artists?label=${newLabel}`);
   };
 
   if (loading) {
     return (
-      <Box sx={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center',
-        minHeight: '60vh'
-      }}>
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
         <CircularProgress />
       </Box>
     );
@@ -204,57 +172,45 @@ const ArtistsPage: React.FC = () => {
 
   if (error) {
     return (
-      <Box sx={{ 
-        p: 3, 
-        textAlign: 'center',
-        color: 'error.main',
-        bgcolor: 'error.light',
-        borderRadius: 1,
-        m: 2
-      }}>
-        <Typography variant="h6">Error Loading Artists</Typography>
-        <Typography>{error}</Typography>
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+        <Typography color="error">{error}</Typography>
       </Box>
     );
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-        <FormControl sx={{ minWidth: 200 }}>
-          <InputLabel id="label-select-label">Record Label</InputLabel>
+    <Container maxWidth="xl" sx={{ py: 4 }}>
+      <Box mb={4}>
+        <FormControl fullWidth>
+          <InputLabel id="label-select-label">Label</InputLabel>
           <Select
             labelId="label-select-label"
-            value={label}
-            label="Record Label"
+            value={selectedLabel}
+            label="Label"
             onChange={handleLabelChange}
           >
-            <MenuItem value={RecordLabel.RECORDS}>{LABEL_DISPLAY_NAMES[RecordLabel.RECORDS]}</MenuItem>
-            <MenuItem value={RecordLabel.TECH}>{LABEL_DISPLAY_NAMES[RecordLabel.TECH]}</MenuItem>
-            <MenuItem value={RecordLabel.DEEP}>{LABEL_DISPLAY_NAMES[RecordLabel.DEEP]}</MenuItem>
+            {Object.entries(RECORD_LABELS).map(([id, label]) => (
+              <MenuItem key={id} value={id}>
+                {label.displayName}
+              </MenuItem>
+            ))}
           </Select>
         </FormControl>
       </Box>
-      <Box sx={{ my: 4 }}>
-        <Typography variant="h2" component="h1" gutterBottom>
-          Artists
+
+      {artists.length === 0 ? (
+        <Typography variant="h6" textAlign="center" color="text.secondary">
+          No artists found for this label
         </Typography>
-        {artists.length === 0 ? (
-          <Box sx={{ textAlign: 'center', py: 4 }}>
-            <Typography variant="h6" color="text.secondary">
-              No artists found for {LABEL_DISPLAY_NAMES[label]}
-            </Typography>
-          </Box>
-        ) : (
-          <Grid container spacing={3}>
-            {artists.map((artist) => (
-              <Grid item xs={12} sm={6} md={4} lg={3} key={artist.id}>
-                <ArtistCard artist={artist} />
-              </Grid>
-            ))}
-          </Grid>
-        )}
-      </Box>
+      ) : (
+        <Grid container spacing={4}>
+          {artists.map((artist) => (
+            <Grid item key={artist.id} xs={12} sm={6} md={4} lg={3}>
+              <ArtistCard artist={artist} />
+            </Grid>
+          ))}
+        </Grid>
+      )}
     </Container>
   );
 };

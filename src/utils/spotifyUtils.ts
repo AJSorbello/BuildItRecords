@@ -1,46 +1,73 @@
-import { type SpotifyApiTrack } from '../types/track';
-import { Track } from '../types/track';
-import { Artist } from '../types/artist';
-import { Album } from '../types/release';
-import { 
-  type Artist as SpotifyArtist,
-  type SimplifiedArtist, 
-  type SimplifiedAlbum,
-  type Album as SpotifyAlbum 
-} from '@spotify/web-api-ts-sdk';
+import type { Track } from '../types/track';
+import type { Artist } from '../types/artist';
+import type { Album } from '../types/release';
+import type { SpotifyImage } from '../types/spotify';
+
+interface SpotifyArtist {
+  id: string;
+  name: string;
+  uri: string;
+  external_urls: {
+    spotify: string;
+  };
+}
+
+interface SpotifyAlbum {
+  id: string;
+  name: string;
+  images: SpotifyImage[];
+  release_date: string;
+  artists: SpotifyArtist[];
+  album_type: string;
+  available_markets: string[];
+}
+
+interface SpotifyTrack {
+  id: string;
+  name: string;
+  uri: string;
+  duration_ms: number;
+  artists: SpotifyArtist[];
+  album: SpotifyAlbum;
+  external_urls: {
+    spotify: string;
+  };
+  external_ids: {
+    [key: string]: string;
+  };
+  preview_url: string | null;
+  popularity: number;
+}
 
 // Convert a Spotify track to our Track type
-export const transformSpotifyTrack = (spotifyTrack: SpotifyApiTrack): Track => {
-  return {
-    id: spotifyTrack.id,
-    name: spotifyTrack.name,
-    title: spotifyTrack.name,
-    type: 'track',
-    artists: spotifyTrack.artists.map(artist => ({
-      id: artist.id,
-      name: artist.name,
-      uri: artist.uri,
-      external_urls: artist.external_urls,
-      spotifyUrl: artist.external_urls.spotify,
-      type: 'artist'
-    })),
-    duration_ms: spotifyTrack.duration_ms,
-    preview_url: spotifyTrack.preview_url,
-    external_urls: {
-      spotify: spotifyTrack.external_urls.spotify
-    },
-    external_ids: spotifyTrack.external_ids,
-    uri: spotifyTrack.uri,
-    album: transformSpotifyAlbum(spotifyTrack.album),
-    popularity: spotifyTrack.popularity,
-    releaseDate: spotifyTrack.album.release_date,
-    spotifyUrl: spotifyTrack.external_urls.spotify,
-    images: spotifyTrack.album.images || []
-  };
-};
+export const transformSpotifyTrack = (track: SpotifyTrack): Track => ({
+  id: track.id,
+  name: track.name,
+  uri: track.uri,
+  type: 'track',
+  artists: track.artists.map(artist => ({
+    id: artist.id,
+    name: artist.name,
+    uri: artist.uri,
+    external_urls: artist.external_urls
+  })),
+  album: {
+    id: track.album.id,
+    name: track.album.name,
+    images: track.album.images,
+    release_date: track.album.release_date
+  },
+  duration_ms: track.duration_ms,
+  preview_url: track.preview_url,
+  external_urls: track.external_urls,
+  external_ids: track.external_ids,
+  popularity: track.popularity,
+  spotifyUrl: track.external_urls.spotify,
+  releaseDate: track.album.release_date
+});
 
 // Convert a Spotify artist to our Artist type
-export const transformSpotifyArtist = (spotifyArtist: SpotifyArtist | SimplifiedArtist): Artist => {
+export const transformSpotifyArtist = (spotifyArtist: SpotifyArtist): Artist => {
   return {
     id: spotifyArtist.id,
     name: spotifyArtist.name,
@@ -48,14 +75,14 @@ export const transformSpotifyArtist = (spotifyArtist: SpotifyArtist | Simplified
     external_urls: spotifyArtist.external_urls,
     spotifyUrl: spotifyArtist.external_urls.spotify,
     type: 'artist',
-    images: 'images' in spotifyArtist ? spotifyArtist.images : [],
-    genres: 'genres' in spotifyArtist ? spotifyArtist.genres : [],
-    popularity: 'popularity' in spotifyArtist ? spotifyArtist.popularity : undefined
+    images: [],
+    genres: [],
+    popularity: undefined
   };
 };
 
 // Convert a Spotify album to our Album type
-export const transformSpotifyAlbum = (spotifyAlbum: SpotifyAlbum | SimplifiedAlbum): Album => {
+export const transformSpotifyAlbum = (spotifyAlbum: SpotifyAlbum): Album => {
   return {
     id: spotifyAlbum.id,
     name: spotifyAlbum.name,
@@ -68,12 +95,31 @@ export const transformSpotifyAlbum = (spotifyAlbum: SpotifyAlbum | SimplifiedAlb
       type: 'artist'
     })),
     release_date: spotifyAlbum.release_date,
-    release_date_precision: spotifyAlbum.release_date_precision,
-    total_tracks: spotifyAlbum.total_tracks,
+    release_date_precision: '',
+    total_tracks: 0,
     uri: spotifyAlbum.uri,
     external_urls: spotifyAlbum.external_urls,
     images: spotifyAlbum.images,
     type: spotifyAlbum.album_type === 'single' ? 'single' : 'album',
     spotifyUrl: spotifyAlbum.external_urls.spotify
   };
+};
+
+export const extractSpotifyId = (url: string): string | null => {
+  // Handle both track and album URLs
+  const trackMatch = url.match(/track\/([a-zA-Z0-9]+)/);
+  const albumMatch = url.match(/album\/([a-zA-Z0-9]+)/);
+  return trackMatch?.[1] || albumMatch?.[1] || null;
+};
+
+export const isValidSpotifyUrl = (url: string): boolean => {
+  const spotifyUrlPattern = /^https:\/\/open\.spotify\.com\/(track|album)\/[a-zA-Z0-9]+(\?.*)?$/;
+  return spotifyUrlPattern.test(url);
+};
+
+export const normalizeSpotifyUrl = (url: string): string => {
+  const id = extractSpotifyId(url);
+  if (!id) return url;
+  // Always normalize to track URL format
+  return `https://open.spotify.com/track/${id}`;
 };

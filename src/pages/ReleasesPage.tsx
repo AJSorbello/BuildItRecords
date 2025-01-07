@@ -1,39 +1,67 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Typography, Grid, Box, Pagination } from '@mui/material';
-import { Release } from '../types/release';
-import { LoadingSpinner, ErrorMessage } from '../components';
-import ReleaseCard from '../components/ReleaseCard';
+import { LoadingSpinner, ErrorMessage, ReleaseCard } from '../components';
 import { useReleases } from '../hooks/useReleases';
 import { RECORD_LABELS } from '../constants/labels';
-import { useParams } from 'react-router-dom';
+import { useParams, useLocation } from 'react-router-dom';
 
 const ITEMS_PER_PAGE = 20;
 
-export interface ReleasesPageProps {
-  label: 'records' | 'tech' | 'deep';
+interface ReleasesPageProps {
+  label?: string;
 }
 
-const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
+const getLabelFromPath = (pathname: string): string => {
+  const path = pathname.split('/')[1]; // Get 'records', 'tech', or 'deep'
+  return `buildit-${path}`;
+};
+
+const ReleasesPage: React.FC<ReleasesPageProps> = ({ label: propLabel }) => {
   const [page, setPage] = useState(1);
-  const { releases, loading, error } = useReleases({ label });
+  const location = useLocation();
+  const labelFromPath = getLabelFromPath(location.pathname);
+  const labelId = propLabel || labelFromPath;
+  const { releases = [], loading, error } = useReleases({ label: labelId });
+
+  console.log('Releases in component:', releases);
+  console.log('Releases type:', typeof releases);
+  console.log('Is array?', Array.isArray(releases));
 
   const handlePageChange = (_event: React.ChangeEvent<unknown>, value: number) => {
     setPage(value);
   };
 
-  const paginatedReleases = releases.slice(
+  // Ensure releases is always an array before slicing
+  const releasesArray = Array.isArray(releases) ? releases : [];
+  const paginatedReleases = releasesArray.slice(
     (page - 1) * ITEMS_PER_PAGE,
     page * ITEMS_PER_PAGE
   );
 
   if (loading) return <LoadingSpinner />;
   if (error) return <ErrorMessage message={error} />;
+  if (releasesArray.length === 0) {
+    return (
+      <Container maxWidth="lg">
+        <Box sx={{ my: 4 }}>
+          <Typography variant="h2" component="h1" gutterBottom>
+            No Releases Found
+          </Typography>
+          <Typography>
+            There are currently no releases available for this label.
+          </Typography>
+        </Box>
+      </Container>
+    );
+  }
+
+  const labelDisplayName = RECORD_LABELS[labelId]?.displayName || '';
 
   return (
     <Container maxWidth="lg">
       <Box sx={{ my: 4 }}>
         <Typography variant="h2" component="h1" gutterBottom>
-          {RECORD_LABELS[label]} Releases
+          {labelDisplayName} Releases
         </Typography>
         <Grid container spacing={4}>
           {paginatedReleases.map((release) => (
@@ -42,13 +70,14 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
             </Grid>
           ))}
         </Grid>
-        {releases.length > ITEMS_PER_PAGE && (
+        {releasesArray.length > ITEMS_PER_PAGE && (
           <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
             <Pagination
-              count={Math.ceil(releases.length / ITEMS_PER_PAGE)}
+              count={Math.ceil(releasesArray.length / ITEMS_PER_PAGE)}
               page={page}
               onChange={handlePageChange}
               color="primary"
+              size="large"
             />
           </Box>
         )}

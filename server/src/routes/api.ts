@@ -52,26 +52,25 @@ router.get('/tracks', async (req, res) => {
   try {
     const { label } = req.query;
     let query = `
-      SELECT t.*, a.name as album_name, ar.name as artist_name, l.name as label_name
+      SELECT t.*, ar.name as artist_name, al.name as album_name, l.name as label_name
       FROM tracks t
-      JOIN albums a ON t."albumId" = a.id
-      JOIN artists ar ON t."artistId" = ar.id
-      JOIN labels l ON a."labelId" = l.id
+      JOIN artists ar ON t.artist_id = ar.id
+      JOIN albums al ON t.album_id = al.id
+      JOIN labels l ON al.label_id = l.id
     `;
-    
-    const params: any[] = [];
+
+    const params = [];
     if (label) {
-      query += ` WHERE l.name = $1`;
+      query += ' WHERE l.id = $1';
       params.push(label);
     }
-    
-    query += ` ORDER BY t.name`;
-    
+
+    query += ' ORDER BY t.name';
     const result = await pool.query(query, params);
     res.json(result.rows);
   } catch (error) {
     console.error('Error fetching tracks:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Failed to fetch tracks' });
   }
 });
 
@@ -81,22 +80,34 @@ router.get('/releases/:labelId', async (req, res) => {
     const { labelId } = req.params;
     console.log('Fetching releases for label:', labelId);
 
+    // First verify the label exists
+    const labelResult = await pool.query('SELECT * FROM labels WHERE id = $1', [labelId]);
+    if (labelResult.rows.length === 0) {
+      console.error('Label not found:', labelId);
+      return res.status(404).json({ error: 'Label not found' });
+    }
+
     const query = `
       SELECT 
-        a.id,
-        a.name,
-        a."artistId",
-        art.name as artist_name,
-        a.release_date,
-        a.external_urls
-      FROM albums a
-      JOIN artists art ON a."artistId" = art.id
-      WHERE a."labelId" = $1
-      ORDER BY a.release_date DESC
+        r.id,
+        r.name,
+        r.release_date,
+        r.total_tracks,
+        r.artwork_url,
+        r.spotify_url,
+        r.spotify_uri,
+        r.status,
+        a.id as artist_id,
+        a.name as artist_name
+      FROM releases r
+      JOIN release_artists ra ON r.id = ra.release_id
+      JOIN artists a ON ra.artist_id = a.id
+      WHERE r.label_id = $1 AND r.status = 'published'
+      ORDER BY r.release_date DESC
     `;
 
     const result = await pool.query(query, [labelId]);
-    console.log(`Found ${result.rows.length} releases`);
+    console.log(`Found ${result.rows.length} releases for label ${labelId}`);
     res.json(result.rows);
   } catch (error) {
     console.error('Error fetching releases:', error);
@@ -163,6 +174,12 @@ router.post('/import/:labelId', async (req, res) => {
   try {
     const { labelId } = req.params;
     
+    // Verify label exists
+    const labelResult = await pool.query('SELECT * FROM labels WHERE id = $1', [labelId]);
+    if (labelResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Label not found' });
+    }
+
     // Verify Spotify credentials
     if (!process.env.SPOTIFY_CLIENT_ID || !process.env.SPOTIFY_CLIENT_SECRET) {
       console.error('Missing Spotify credentials');
@@ -219,161 +236,68 @@ router.post('/import/:labelId', async (req, res) => {
       return res.status(400).json({ error: 'No search queries defined for this label' });
     }
 
-    let processedAlbums = new Set<string>();
-    let processedArtists = new Set<string>();
-
-    // Search for albums using each label variation
+    let processedReleases = new Set();
+    
     for (const query of searchQueries) {
       console.log('Searching with query:', query);
       try {
         const searchResults = await spotifyApi.search(query, ['album'], { limit: 50 });
         console.log(`Found ${searchResults.albums?.items.length || 0} albums for query:`, query);
 
-        if (!searchResults.albums?.items.length) {
-          continue;
-        }
+        if (!searchResults.albums?.items.length) continue;
 
         for (const album of searchResults.albums.items) {
-          if (processedAlbums.has(album.id)) {
-            console.log('Album already processed:', album.name);
-            continue;
-          }
+          if (processedReleases.has(album.id)) continue;
 
-          try {
-            // Get full album details to verify the label
-            const fullAlbum = await spotifyApi.albums.get(album.id);
-            const albumLabel = fullAlbum.label?.toLowerCase() || '';
-            const labelName = label.displayName.toLowerCase();
+          // Insert release
+          const releaseResult = await pool.query(
+            `INSERT INTO releases (
+              id, name, release_date, total_tracks,
+              artwork_url, spotify_url, spotify_uri, label_id,
+              status
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            ON CONFLICT (id) DO UPDATE SET
+              name = EXCLUDED.name,
+              release_date = EXCLUDED.release_date,
+              total_tracks = EXCLUDED.total_tracks,
+              artwork_url = EXCLUDED.artwork_url,
+              spotify_url = EXCLUDED.spotify_url,
+              spotify_uri = EXCLUDED.spotify_uri,
+              label_id = EXCLUDED.label_id,
+              status = EXCLUDED.status
+            RETURNING *`,
+            [
+              album.id,
+              album.name,
+              album.release_date,
+              album.total_tracks,
+              album.images[0]?.url,
+              album.external_urls.spotify,
+              album.uri,
+              labelId,
+              'published'
+            ]
+          );
 
-            console.log('Comparing labels:', {
-              albumLabel,
-              labelName,
-              albumName: album.name,
-              fullLabel: fullAlbum.label
-            });
+          // Insert artist relation
+          await pool.query(
+            `INSERT INTO release_artists (release_id, artist_id)
+             VALUES ($1, $2)
+             ON CONFLICT DO NOTHING`,
+            [album.id, album.artists[0]?.id]
+          );
 
-            // More lenient label matching
-            const normalizedAlbumLabel = albumLabel.replace(/[-\s]/g, '');
-            const normalizedLabelName = labelName.replace(/[-\s]/g, '');
-
-            if (!normalizedAlbumLabel.includes(normalizedLabelName) && 
-                !normalizedLabelName.includes(normalizedAlbumLabel)) {
-              console.log('Skipping album with non-matching label:', {
-                albumName: album.name,
-                albumLabel: fullAlbum.label,
-                normalizedAlbumLabel,
-                normalizedLabelName
-              });
-              continue;
-            }
-
-            console.log('Processing album:', album.name, 'with label:', fullAlbum.label);
-            processedAlbums.add(album.id);
-
-            // First, check if the artist exists
-            let artistId = album.artists[0].id;
-            if (!processedArtists.has(artistId)) {
-              const artistResult = await pool.query(
-                'INSERT INTO artists (id, name, images, external_urls, uri) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO UPDATE SET name = $2, images = $3, external_urls = $4, uri = $5 RETURNING id',
-                [
-                  artistId,
-                  album.artists[0].name,
-                  JSON.stringify(album.artists[0].images || []),
-                  JSON.stringify(album.artists[0].external_urls || {}),
-                  album.artists[0].uri || null
-                ]
-              );
-              processedArtists.add(artistId);
-            }
-
-            // Insert the album
-            await pool.query(
-              `INSERT INTO albums (
-                id, name, "artistId", "labelId", images, release_date,
-                total_tracks, external_urls, uri, album_type, popularity
-              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-              ON CONFLICT (id) DO UPDATE SET
-                name = $2,
-                "artistId" = $3,
-                "labelId" = $4,
-                images = $5,
-                release_date = $6,
-                total_tracks = $7,
-                external_urls = $8,
-                uri = $9,
-                album_type = $10,
-                popularity = $11`,
-              [
-                album.id,
-                album.name,
-                artistId,
-                labelId,
-                JSON.stringify(album.images || []),
-                album.release_date,
-                album.total_tracks,
-                JSON.stringify(album.external_urls || {}),
-                album.uri || null,
-                album.album_type || null,
-                album.popularity || 0
-              ]
-            );
-
-            // Insert tracks
-            for (const track of fullAlbum.tracks.items) {
-              try {
-                const trackResult = await pool.query(
-                  `INSERT INTO tracks (
-                    id, name, "albumId", "artistId", duration_ms,
-                    preview_url, external_urls, uri, track_number
-                  ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-                  ON CONFLICT (id) DO UPDATE SET
-                    name = $2,
-                    "albumId" = $3,
-                    "artistId" = $4,
-                    duration_ms = $5,
-                    preview_url = $6,
-                    external_urls = $7,
-                    uri = $8,
-                    track_number = $9`,
-                  [
-                    track.id,
-                    track.name,
-                    album.id,
-                    track.artists[0].id,
-                    track.duration_ms,
-                    track.preview_url,
-                    JSON.stringify(track.external_urls || {}),
-                    track.uri || null,
-                    track.track_number
-                  ]
-                );
-              } catch (trackError) {
-                console.error('Error inserting track:', track.name, trackError);
-              }
-            }
-          } catch (albumError) {
-            console.error('Error processing album:', album.name, albumError);
-          }
+          processedReleases.add(album.id);
         }
       } catch (searchError) {
         console.error('Error searching with query:', query, searchError);
       }
     }
 
-    console.log('Import completed successfully');
-    res.json({ 
-      message: 'Import completed successfully',
-      stats: {
-        albums: processedAlbums.size,
-        artists: processedArtists.size
-      }
-    });
+    res.json({ message: 'Import completed successfully' });
   } catch (error) {
     console.error('Error importing releases:', error);
-    res.status(500).json({ 
-      error: 'Internal server error',
-      details: error instanceof Error ? error.message : String(error)
-    });
+    res.status(500).json({ error: 'Failed to import releases' });
   }
 });
 
@@ -497,15 +421,19 @@ router.get('/releases/:labelId', async (req, res) => {
       SELECT 
         r.id,
         r.name,
-        r."artistId" as artist_id,
-        r.images::text as images,
         r.release_date,
-        r.external_urls->'spotify' as spotify_url,
+        r.total_tracks,
+        r.artwork_url,
+        r.spotify_url,
+        r.spotify_uri,
+        r.status,
+        a.id as artist_id,
         a.name as artist_name
-      FROM albums r
-      JOIN artists a ON r."artistId" = a.id
-      WHERE r."labelId" = $1
-      ORDER BY r.release_date DESC NULLS LAST
+      FROM releases r
+      JOIN release_artists ra ON r.id = ra.release_id
+      JOIN artists a ON ra.artist_id = a.id
+      WHERE r.label_id = $1 AND r.status = 'published'
+      ORDER BY r.release_date DESC
     `;
     console.log('Executing query:', query);
     console.log('With parameters:', [labelId]);
@@ -534,17 +462,19 @@ router.get('/releases/:releaseId/tracks', async (req, res) => {
   try {
     const { releaseId } = req.params;
     const result = await pool.query(
-      `SELECT t.*, ar.name as artist_name
+      `SELECT t.*, ar.name as artist_name, al.name as album_name, l.name as label_name
        FROM tracks t
-       JOIN artists ar ON t."artistId" = ar.id
-       WHERE t."albumId" = $1
-       ORDER BY t.name`,
+       JOIN artists ar ON t.artist_id = ar.id
+       JOIN albums al ON t.album_id = al.id
+       JOIN labels l ON al.label_id = l.id
+       WHERE t.album_id = $1
+       ORDER BY t.track_number`,
       [releaseId]
     );
     res.json(result.rows);
   } catch (error) {
-    console.error('Error fetching tracks:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Error fetching release tracks:', error);
+    res.status(500).json({ error: 'Failed to fetch release tracks' });
   }
 });
 
@@ -569,13 +499,11 @@ router.get('/artists/:labelId', async (req, res) => {
 // Get all labels
 router.get('/labels', async (req, res) => {
   try {
-    const result = await pool.query(
-      `SELECT * FROM labels ORDER BY name`
-    );
+    const result = await pool.query('SELECT * FROM labels ORDER BY display_name');
     res.json(result.rows);
   } catch (error) {
     console.error('Error fetching labels:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Failed to fetch labels' });
   }
 });
 

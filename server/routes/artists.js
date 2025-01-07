@@ -4,6 +4,7 @@ const axios = require('axios');
 const { query, param, body } = require('express-validator');
 const { validateRequest, isValidSpotifyId } = require('../utils/validation');
 const { getSpotifyToken } = require('../utils/spotify');
+const { pool } = require('../db');
 
 // Format artist data
 const formatArtistData = (spotifyData) => ({
@@ -26,61 +27,60 @@ router.get('/:artistId', [
     try {
         const { artistId } = req.params;
         const { fields } = req.query;
-        const redisService = req.app.get('redisService');
         
-        // Try to get from cache first
-        if (redisService) {
-            const cachedArtist = await redisService.getArtistJson(artistId);
-            if (cachedArtist) {
-                console.log(`Using cached data for artist: ${artistId}`);
-                let responseData = cachedArtist;
-                
-                // Apply field filtering if requested
-                if (fields) {
-                    const requestedFields = fields.split(',');
-                    responseData = requestedFields.reduce((filtered, field) => {
-                        if (field in cachedArtist) {
-                            filtered[field] = cachedArtist[field];
-                        }
-                        return filtered;
-                    }, {});
-                }
-                
-                return res.set('X-Data-Source', 'cache').json(responseData);
-            }
-        }
-
-        // If not in cache or no Redis service, fetch from Spotify
-        const accessToken = await getSpotifyToken();
-        const artistResponse = await axios.get(
-            `https://api.spotify.com/v1/artists/${artistId}`,
-            {
-                headers: {
-                    'Authorization': `Bearer ${accessToken}`
-                }
-            }
+        const { rows } = await pool.query(
+            'SELECT * FROM artists WHERE id = $1',
+            [artistId]
         );
-
-        let formattedArtist = formatArtistData(artistResponse.data);
-
-        // Cache the artist data
-        if (redisService) {
-            await redisService.setArtistJson(artistId, formattedArtist)
-                .catch(err => console.error('Failed to cache artist:', err));
-        }
-
-        // Apply field filtering if requested
-        if (fields) {
-            const requestedFields = fields.split(',');
-            formattedArtist = requestedFields.reduce((filtered, field) => {
-                if (field in formattedArtist) {
-                    filtered[field] = formattedArtist[field];
+        
+        if (rows.length === 0) {
+            // If not in database, fetch from Spotify
+            const accessToken = await getSpotifyToken();
+            const artistResponse = await axios.get(
+                `https://api.spotify.com/v1/artists/${artistId}`,
+                {
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`
+                    }
                 }
-                return filtered;
-            }, {});
-        }
+            );
 
-        res.set('X-Data-Source', 'spotify').json(formattedArtist);
+            let formattedArtist = formatArtistData(artistResponse.data);
+
+            // Apply field filtering if requested
+            if (fields) {
+                const requestedFields = fields.split(',');
+                formattedArtist = requestedFields.reduce((filtered, field) => {
+                    if (field in formattedArtist) {
+                        filtered[field] = formattedArtist[field];
+                    }
+                    return filtered;
+                }, {});
+            }
+
+            // Insert artist into database
+            await pool.query(
+                'INSERT INTO artists (id, name, genres, popularity, followers, images, external_urls) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+                [formattedArtist.id, formattedArtist.name, formattedArtist.genres, formattedArtist.popularity, formattedArtist.followers, formattedArtist.images, formattedArtist.external_urls]
+            );
+
+            res.set('X-Data-Source', 'spotify').json(formattedArtist);
+        } else {
+            let artist = rows[0];
+            
+            // Apply field filtering if requested
+            if (fields) {
+                const requestedFields = fields.split(',');
+                artist = requestedFields.reduce((filtered, field) => {
+                    if (field in artist) {
+                        filtered[field] = artist[field];
+                    }
+                    return filtered;
+                }, {});
+            }
+            
+            res.set('X-Data-Source', 'database').json(artist);
+        }
 
     } catch (error) {
         console.error('Error fetching artist:', error);
@@ -99,50 +99,51 @@ router.get('/:artistId/top-tracks', [
     try {
         const { artistId } = req.params;
         const market = req.query.market || 'US';
-        const redisService = req.app.get('redisService');
         
-        // Try to get from cache first
-        if (redisService) {
-            const cachedTopTracks = await redisService.getTopTracksJson(artistId, market);
-            if (cachedTopTracks) {
-                console.log(`Using cached data for top tracks of artist: ${artistId}`);
-                return res.set('X-Data-Source', 'cache').json(cachedTopTracks);
-            }
-        }
-
-        // If not in cache or no Redis service, fetch from Spotify
-        const accessToken = await getSpotifyToken();
-        const topTracksResponse = await axios.get(
-            `https://api.spotify.com/v1/artists/${artistId}/top-tracks`,
-            {
-                params: { market },
-                headers: {
-                    'Authorization': `Bearer ${accessToken}`
-                }
-            }
+        const { rows } = await pool.query(
+            'SELECT * FROM top_tracks WHERE artist_id = $1 AND market = $2',
+            [artistId, market]
         );
+        
+        if (rows.length === 0) {
+            // If not in database, fetch from Spotify
+            const accessToken = await getSpotifyToken();
+            const topTracksResponse = await axios.get(
+                `https://api.spotify.com/v1/artists/${artistId}/top-tracks`,
+                {
+                    params: { market },
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`
+                    }
+                }
+            );
 
-        const topTracks = topTracksResponse.data.tracks.map(track => ({
-            id: track.id,
-            name: track.name,
-            popularity: track.popularity,
-            preview_url: track.preview_url,
-            duration_ms: track.duration_ms,
-            album: {
-                id: track.album.id,
-                name: track.album.name,
-                release_date: track.album.release_date,
-                images: track.album.images
-            }
-        }));
+            const topTracks = topTracksResponse.data.tracks.map(track => ({
+                id: track.id,
+                name: track.name,
+                popularity: track.popularity,
+                preview_url: track.preview_url,
+                duration_ms: track.duration_ms,
+                album: {
+                    id: track.album.id,
+                    name: track.album.name,
+                    release_date: track.album.release_date,
+                    images: track.album.images
+                }
+            }));
 
-        // Cache the top tracks data
-        if (redisService) {
-            await redisService.setTopTracksJson(artistId, market, topTracks)
-                .catch(err => console.error('Failed to cache top tracks:', err));
+            // Insert top tracks into database
+            await Promise.all(topTracks.map(async (track) => {
+                await pool.query(
+                    'INSERT INTO top_tracks (artist_id, market, id, name, popularity, preview_url, duration_ms, album_id, album_name, album_release_date, album_images) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)',
+                    [artistId, market, track.id, track.name, track.popularity, track.preview_url, track.duration_ms, track.album.id, track.album.name, track.album.release_date, track.album.images]
+                );
+            }));
+
+            res.set('X-Data-Source', 'spotify').json(topTracks);
+        } else {
+            res.set('X-Data-Source', 'database').json(rows);
         }
-
-        res.set('X-Data-Source', 'spotify').json(topTracks);
 
     } catch (error) {
         console.error('Error fetching top tracks:', error);
@@ -167,61 +168,62 @@ router.get('/:artistId/albums', [
             limit = 20,
             offset = 0
         } = req.query;
-        const redisService = req.app.get('redisService');
         
-        // Try to get from cache first
-        if (redisService) {
-            const cachedAlbums = await redisService.getAlbumsJson(artistId, include_groups, limit, offset);
-            if (cachedAlbums) {
-                console.log(`Using cached data for albums of artist: ${artistId}`);
-                return res.set('X-Data-Source', 'cache').json(cachedAlbums);
-            }
-        }
-
-        // If not in cache or no Redis service, fetch from Spotify
-        const accessToken = await getSpotifyToken();
-        const albumsResponse = await axios.get(
-            `https://api.spotify.com/v1/artists/${artistId}/albums`,
-            {
-                params: {
-                    include_groups,
-                    limit,
-                    offset,
-                    market: 'US'
-                },
-                headers: {
-                    'Authorization': `Bearer ${accessToken}`
-                }
-            }
+        const { rows } = await pool.query(
+            'SELECT * FROM albums WHERE artist_id = $1 AND include_groups = $2 LIMIT $3 OFFSET $4',
+            [artistId, include_groups, limit, offset]
         );
+        
+        if (rows.length === 0) {
+            // If not in database, fetch from Spotify
+            const accessToken = await getSpotifyToken();
+            const albumsResponse = await axios.get(
+                `https://api.spotify.com/v1/artists/${artistId}/albums`,
+                {
+                    params: {
+                        include_groups,
+                        limit,
+                        offset,
+                        market: 'US'
+                    },
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`
+                    }
+                }
+            );
 
-        const albums = albumsResponse.data.items.map(album => ({
-            id: album.id,
-            name: album.name,
-            release_date: album.release_date,
-            total_tracks: album.total_tracks,
-            type: album.album_type,
-            images: album.images,
-            external_urls: album.external_urls
-        }));
+            const albums = albumsResponse.data.items.map(album => ({
+                id: album.id,
+                name: album.name,
+                release_date: album.release_date,
+                total_tracks: album.total_tracks,
+                type: album.album_type,
+                images: album.images,
+                external_urls: album.external_urls
+            }));
 
-        // Cache the albums data
-        if (redisService) {
-            await redisService.setAlbumsJson(artistId, include_groups, limit, offset, {
+            // Insert albums into database
+            await Promise.all(albums.map(async (album) => {
+                await pool.query(
+                    'INSERT INTO albums (artist_id, include_groups, id, name, release_date, total_tracks, type, images, external_urls) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)',
+                    [artistId, include_groups, album.id, album.name, album.release_date, album.total_tracks, album.type, album.images, album.external_urls]
+                );
+            }));
+
+            res.set('X-Data-Source', 'spotify').json({
                 albums,
                 total: albumsResponse.data.total,
                 offset,
                 limit
-            })
-                .catch(err => console.error('Failed to cache albums:', err));
+            });
+        } else {
+            res.set('X-Data-Source', 'database').json({
+                albums: rows,
+                total: rows.length,
+                offset,
+                limit
+            });
         }
-
-        res.set('X-Data-Source', 'spotify').json({
-            albums,
-            total: albumsResponse.data.total,
-            offset,
-            limit
-        });
 
     } catch (error) {
         console.error('Error fetching albums:', error);
@@ -238,37 +240,38 @@ router.get('/:artistId/related', [
 ], async (req, res) => {
     try {
         const { artistId } = req.params;
-        const redisService = req.app.get('redisService');
         
-        // Try to get from cache first
-        if (redisService) {
-            const cachedRelatedArtists = await redisService.getRelatedArtistsJson(artistId);
-            if (cachedRelatedArtists) {
-                console.log(`Using cached data for related artists of artist: ${artistId}`);
-                return res.set('X-Data-Source', 'cache').json(cachedRelatedArtists);
-            }
-        }
-
-        // If not in cache or no Redis service, fetch from Spotify
-        const accessToken = await getSpotifyToken();
-        const relatedResponse = await axios.get(
-            `https://api.spotify.com/v1/artists/${artistId}/related-artists`,
-            {
-                headers: {
-                    'Authorization': `Bearer ${accessToken}`
-                }
-            }
+        const { rows } = await pool.query(
+            'SELECT * FROM related_artists WHERE artist_id = $1',
+            [artistId]
         );
+        
+        if (rows.length === 0) {
+            // If not in database, fetch from Spotify
+            const accessToken = await getSpotifyToken();
+            const relatedResponse = await axios.get(
+                `https://api.spotify.com/v1/artists/${artistId}/related-artists`,
+                {
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`
+                    }
+                }
+            );
 
-        const relatedArtists = relatedResponse.data.artists.map(formatArtistData);
+            const relatedArtists = relatedResponse.data.artists.map(formatArtistData);
 
-        // Cache the related artists data
-        if (redisService) {
-            await redisService.setRelatedArtistsJson(artistId, relatedArtists)
-                .catch(err => console.error('Failed to cache related artists:', err));
+            // Insert related artists into database
+            await Promise.all(relatedArtists.map(async (artist) => {
+                await pool.query(
+                    'INSERT INTO related_artists (artist_id, id, name, genres, popularity, followers, images, external_urls) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
+                    [artistId, artist.id, artist.name, artist.genres, artist.popularity, artist.followers, artist.images, artist.external_urls]
+                );
+            }));
+
+            res.set('X-Data-Source', 'spotify').json(relatedArtists);
+        } else {
+            res.set('X-Data-Source', 'database').json(rows);
         }
-
-        res.set('X-Data-Source', 'spotify').json(relatedArtists);
 
     } catch (error) {
         console.error('Error fetching related artists:', error);
@@ -285,55 +288,56 @@ router.get('/:artistId/releases', [
 ], async (req, res) => {
     try {
         const { artistId } = req.params;
-        const redisService = req.app.get('redisService');
         
-        // Try to get from cache first
-        if (redisService) {
-            const cachedReleases = await redisService.getReleasesJson(artistId);
-            if (cachedReleases) {
-                console.log(`Using cached data for releases of artist: ${artistId}`);
-                return res.set('X-Data-Source', 'cache').json(cachedReleases);
-            }
-        }
-
-        // If not in cache or no Redis service, fetch from Spotify
-        const accessToken = await getSpotifyToken();
-
-        // Get artist's tracks and singles
-        const tracksResponse = await axios.get(
-            `https://api.spotify.com/v1/artists/${artistId}/albums`,
-            {
-                params: {
-                    include_groups: 'single,album',
-                    limit: 50,
-                    market: 'US'
-                },
-                headers: {
-                    'Authorization': `Bearer ${accessToken}`
-                }
-            }
+        const { rows } = await pool.query(
+            'SELECT * FROM releases WHERE artist_id = $1',
+            [artistId]
         );
+        
+        if (rows.length === 0) {
+            // If not in database, fetch from Spotify
+            const accessToken = await getSpotifyToken();
 
-        // Format the releases
-        const releases = tracksResponse.data.items.map(item => ({
-            id: item.id,
-            name: item.name,
-            type: item.type,
-            release_date: item.release_date,
-            images: item.images,
-            artists: item.artists.map(artist => ({
-                id: artist.id,
-                name: artist.name
-            }))
-        }));
+            // Get artist's tracks and singles
+            const tracksResponse = await axios.get(
+                `https://api.spotify.com/v1/artists/${artistId}/albums`,
+                {
+                    params: {
+                        include_groups: 'single,album',
+                        limit: 50,
+                        market: 'US'
+                    },
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`
+                    }
+                }
+            );
 
-        // Cache the releases data
-        if (redisService) {
-            await redisService.setReleasesJson(artistId, releases)
-                .catch(err => console.error('Failed to cache releases:', err));
+            // Format the releases
+            const releases = tracksResponse.data.items.map(item => ({
+                id: item.id,
+                name: item.name,
+                type: item.type,
+                release_date: item.release_date,
+                images: item.images,
+                artists: item.artists.map(artist => ({
+                    id: artist.id,
+                    name: artist.name
+                }))
+            }));
+
+            // Insert releases into database
+            await Promise.all(releases.map(async (release) => {
+                await pool.query(
+                    'INSERT INTO releases (artist_id, id, name, type, release_date, images, artists) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+                    [artistId, release.id, release.name, release.type, release.release_date, release.images, JSON.stringify(release.artists)]
+                );
+            }));
+
+            res.set('X-Data-Source', 'spotify').json(releases);
+        } else {
+            res.set('X-Data-Source', 'database').json(rows);
         }
-
-        res.set('X-Data-Source', 'spotify').json(releases);
 
     } catch (error) {
         console.error('Error fetching releases:', error);
@@ -377,6 +381,14 @@ router.post('/batch', [
             })
         );
         
+        // Insert artists into database
+        await Promise.all(processedArtists.map(async (artist) => {
+            await pool.query(
+                'INSERT INTO artists (id, name, genres, popularity, followers, images, external_urls) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (id) DO UPDATE SET name = $2, genres = $3, popularity = $4, followers = $5, images = $6, external_urls = $7',
+                [artist.id, artist.name, artist.genres, artist.popularity, artist.followers, artist.images, artist.external_urls]
+            );
+        }));
+
         res.json({
             message: 'Artist profiles processed',
             artists: processedArtists

@@ -3701,6 +3701,24 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/nodemailer@npm:^6.4.17":
+  version: 6.4.17
+  resolution: "@types/nodemailer@npm:6.4.17"
+  dependencies:
+    "@types/node": "npm:*"
+  checksum: 10c0/689abb3005cf36cf89c2abe56f0aa4469a37e0814633a73fbeb35732e856f4b0d7ab32b6d91585038b6941f5b70db58ec2bd147ebe9f73e528eb6c99604f4e82
+  languageName: node
+  linkType: hard
+
+"@types/papaparse@npm:^5.3.15":
+  version: 5.3.15
+  resolution: "@types/papaparse@npm:5.3.15"
+  dependencies:
+    "@types/node": "npm:*"
+  checksum: 10c0/9333e980b9ed4102f80b1791b6dfefb23fb4d27252b2b6ee6084b2cd847cbe802cfb838d46b4f6b4cb035f9225e0323034c956ee21bbcbcb4cbdb663302d5eeb
+  languageName: node
+  linkType: hard
+
 "@types/parse-json@npm:^4.0.0":
   version: 4.0.2
   resolution: "@types/parse-json@npm:4.0.2"
@@ -5320,6 +5338,8 @@ __metadata:
     "@types/jest": "npm:^29.5.11"
     "@types/jsonwebtoken": "npm:^9"
     "@types/node": "npm:^20.11.0"
+    "@types/nodemailer": "npm:^6.4.17"
+    "@types/papaparse": "npm:^5.3.15"
     "@types/pg": "npm:^8.11.10"
     "@types/react": "npm:^18.2.0"
     "@types/react-dom": "npm:^18.2.0"
@@ -5357,6 +5377,7 @@ __metadata:
     react-router-dom: "npm:^7.0.2"
     react-scripts: "npm:5.0.1"
     sequelize: "npm:^6.35.2"
+    sequelize-cli: "npm:^6.5.1"
     source-map-loader: "npm:^5.0.0"
     spotify-web-api-node: "npm:^5.0.2"
     supertest: "npm:^6.3.3"
@@ -7830,7 +7851,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"express-validator@npm:^7.0.1":
+"express-validator@npm:^7.0.1, express-validator@npm:^7.2.1":
   version: 7.2.1
   resolution: "express-validator@npm:7.2.1"
   dependencies:
@@ -12338,7 +12359,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"pg@npm:^8.11.3":
+"pg@npm:^8.11.3, pg@npm:^8.13.1":
   version: 8.13.1
   resolution: "pg@npm:8.13.1"
   dependencies:
@@ -14502,7 +14523,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"sequelize-cli@npm:^6.6.2":
+"sequelize-cli@npm:^6.5.1, sequelize-cli@npm:^6.6.2":
   version: 6.6.2
   resolution: "sequelize-cli@npm:6.6.2"
   dependencies:
@@ -14624,11 +14645,11 @@ __metadata:
     dotenv: "npm:^16.4.7"
     express: "npm:^4.18.2"
     express-rate-limit: "npm:^7.5.0"
-    express-validator: "npm:^7.0.1"
+    express-validator: "npm:^7.2.1"
     helmet: "npm:^8.0.0"
     jsonwebtoken: "npm:^9.0.2"
     nodemon: "npm:^3.0.2"
-    pg: "npm:^8.11.3"
+    pg: "npm:^8.13.1"
     sequelize: "npm:^6.35.2"
     sequelize-cli: "npm:^6.6.2"
     uuid: "npm:^11.0.4"

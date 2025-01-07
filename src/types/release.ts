@@ -3,40 +3,49 @@ import type { Track } from './track';
 import type { RecordLabel } from './label';
 import type { SpotifyImage } from './spotify';
 
-export interface Album {
+export interface Release {
   id: string;
   name: string;
-  type: 'album' | 'single' | 'compilation';
-  artists: Artist[];
-  release_date: string;
-  release_date_precision: 'year' | 'month' | 'day';
-  total_tracks: number;
-  uri: string;
-  external_urls: {
-    spotify: string;
+  type?: 'album' | 'single' | 'compilation';
+  artists?: Artist[];
+  release_date?: string;
+  total_tracks?: number;
+  images?: SpotifyImage[];
+  external_urls?: {
+    spotify?: string;
   };
-  images: SpotifyImage[];
-  spotifyUrl: string;
-  tracks?: Track[];
-}
-
-export interface Release extends Album {
   label?: RecordLabel;
   featured?: boolean;
   description?: string;
-  artwork?: string;
+  artwork_url?: string;
+  albumCover?: string;
+  album?: {
+    name: string;
+    artwork_url?: string;
+    images?: SpotifyImage[];
+  };
+  tracks?: Track[];
 }
+
+export interface PaginatedResponse<T> {
+  releases: T[];
+  totalReleases: number;
+  currentPage: number;
+  totalPages: number;
+}
+
+export type RecordLabelId = 'buildit-deep' | 'buildit-tech' | 'buildit-house';
 
 export interface AlbumResponse {
   albums: {
-    items: Album[];
+    items: Release[];
     total: number;
     limit: number;
     offset: number;
   };
 }
 
-export interface AlbumSearchParams {
+export interface ReleaseSearchParams {
   artistId?: string;
   query?: string;
   limit?: number;
@@ -50,39 +59,7 @@ export interface ReleaseFormData {
   artworkUrl: string;
   releaseDate: string;
   label: string;
-  spotifyUrl: string;
-}
-
-export interface SpotifyAlbum {
-  id: string;
-  name: string;
-  artists: {
-    id: string;
-    name: string;
-    uri: string;
-    external_urls: { spotify: string };
-  }[];
-  images: {
-    url: string;
-    height: number | null;
-    width: number | null;
-  }[];
-  release_date: string;
-  total_tracks: number;
-  tracks?: {
-    items: Track[];
-  };
-  external_urls: {
-    spotify: string;
-  };
-  uri: string;
-  popularity: number;
-  album_group?: string;
-  external_ids?: {
-    upc?: string;
-    isrc?: string;
-    ean?: string;
-  };
+  featured: boolean;
 }
 
 export function getArtistName(artist: string | { id: string; name: string; uri: string }): string {
@@ -93,29 +70,22 @@ export function getArtistId(artist: string | { id: string; name: string; uri: st
   return typeof artist === 'string' ? undefined : artist.id;
 }
 
-export function createAlbum(data: Partial<Album>): Album {
+export function createRelease(data: Partial<Release>): Release {
   return {
     id: data.id || '',
     name: data.name || '',
-    type: data.type || 'album',
+    type: data.type,
     artists: data.artists || [],
-    release_date: data.release_date || new Date().toISOString().split('T')[0],
-    release_date_precision: data.release_date_precision || 'day',
-    total_tracks: data.total_tracks || 0,
-    uri: data.uri || '',
-    external_urls: data.external_urls || { spotify: '' },
+    release_date: data.release_date,
+    total_tracks: data.total_tracks,
     images: data.images || [],
-    spotifyUrl: data.spotifyUrl || '',
-    tracks: data.tracks || []
-  };
-}
-
-export function createRelease(data: Partial<Release>): Release {
-  return {
-    ...createAlbum(data),
+    external_urls: data.external_urls || {},
     label: data.label,
     featured: data.featured || false,
     description: data.description || '',
-    artwork: data.artwork || ''
+    artwork_url: data.artwork_url || '',
+    albumCover: data.albumCover || '',
+    album: data.album || {},
+    tracks: data.tracks || []
   };
 }

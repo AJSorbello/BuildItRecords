@@ -559,4 +559,134 @@ router.get('/:trackId/imports', [
     }
 });
 
+// Import multiple tracks
+router.post('/import', [
+    body('tracks').isArray().withMessage('tracks must be an array'),
+    validateRequest
+], async (req, res) => {
+    try {
+        const { tracks } = req.body;
+        console.log('Importing tracks:', tracks);
+
+        const importedTracks = await Promise.all(tracks.map(async (track) => {
+            try {
+                // Create or update track
+                const [dbTrack, created] = await Track.findOrCreate({
+                    where: { id: track.id },
+                    defaults: {
+                        name: track.name,
+                        artists: track.artists,
+                        album: track.album,
+                        albumCover: track.albumCover || track.artwork_url,
+                        releaseDate: track.releaseDate || track.release_date,
+                        spotifyUrl: track.spotifyUrl,
+                        preview_url: track.preview_url,
+                        label_id: track.label_id
+                    }
+                });
+
+                if (!created) {
+                    // Update existing track
+                    await dbTrack.update({
+                        name: track.name,
+                        artists: track.artists,
+                        album: track.album,
+                        albumCover: track.albumCover || track.artwork_url,
+                        releaseDate: track.releaseDate || track.release_date,
+                        spotifyUrl: track.spotifyUrl,
+                        preview_url: track.preview_url,
+                        label_id: track.label_id
+                    });
+                }
+
+                return dbTrack;
+            } catch (error) {
+                console.error('Error importing track:', error);
+                return null;
+            }
+        }));
+
+        const successfulImports = importedTracks.filter(track => track !== null);
+        console.log('Successfully imported tracks:', successfulImports);
+
+        res.json({
+            success: true,
+            message: `Successfully imported ${successfulImports.length} tracks`,
+            tracks: successfulImports
+        });
+    } catch (error) {
+        console.error('Error importing tracks:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to import tracks',
+            message: error.message
+        });
+    }
+});
+
+// Save multiple tracks in batch
+router.post('/batch', [
+    body('tracks').isArray().withMessage('tracks must be an array'),
+    validateRequest
+], async (req, res) => {
+    try {
+        const { tracks } = req.body;
+        console.log('Saving tracks in batch:', tracks);
+
+        const savedTracks = await Promise.all(tracks.map(async (track) => {
+            try {
+                // Create or update track
+                const [dbTrack, created] = await Track.findOrCreate({
+                    where: { id: track.id },
+                    defaults: {
+                        name: track.name,
+                        artists: track.artists,
+                        album: track.album,
+                        albumCover: track.albumCover || track.artwork_url,
+                        releaseDate: track.releaseDate || track.release_date,
+                        spotifyUrl: track.spotifyUrl,
+                        preview_url: track.preview_url,
+                        label_id: track.label_id
+                    }
+                });
+
+                if (!created) {
+                    // Update existing track
+                    await dbTrack.update({
+                        name: track.name,
+                        artists: track.artists,
+                        album: track.album,
+                        albumCover: track.albumCover || track.artwork_url,
+                        releaseDate: track.releaseDate || track.release_date,
+                        spotifyUrl: track.spotifyUrl,
+                        preview_url: track.preview_url,
+                        label_id: track.label_id
+                    });
+                }
+
+                return dbTrack;
+            } catch (error) {
+                console.error('Error saving track:', error);
+                return null;
+            }
+        }));
+
+        const successfulSaves = savedTracks.filter(track => track !== null);
+        console.log('Successfully saved tracks:', successfulSaves);
+
+        res.json({
+            success: true,
+            message: `Successfully saved ${successfulSaves.length} tracks`,
+            tracks: successfulSaves
+        });
+    } catch (error) {
+        console.error('Error saving tracks:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to save tracks',
+            message: error.message
+        });
+    }
+});
+
 module.exports = router;
