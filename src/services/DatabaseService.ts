@@ -130,19 +130,18 @@ class DatabaseService {
 
   async getReleasesByLabelId(labelId: string): Promise<PaginatedResponse<Release>> {
     try {
-      console.log('Fetching releases for label:', labelId);
+      console.log('DatabaseService: Fetching releases for label:', labelId);
       const endpoint = `/releases/${labelId}`;
-      console.log('Using endpoint:', endpoint);
+      console.log('DatabaseService: Using endpoint:', endpoint);
       
-      const response = await this.request<Release[] | PaginatedResponse<Release>>(endpoint);
-      console.log('Raw server response:', response);
+      const response = await this.request<PaginatedResponse<Release>>(endpoint);
+      console.log('DatabaseService: Raw server response:', response);
+      console.log('DatabaseService: Response type:', typeof response);
+      console.log('DatabaseService: Has releases?', Boolean(response?.releases));
+      console.log('DatabaseService: Number of releases:', response?.releases?.length);
 
-      // Handle both paginated and non-paginated responses
-      const releases = Array.isArray(response) ? response : response.releases || [];
-      console.log('Extracted releases:', releases);
-
-      if (!releases || releases.length === 0) {
-        console.log('No releases found');
+      if (!response?.releases) {
+        console.log('DatabaseService: No releases found');
         return {
           releases: [],
           totalReleases: 0,
@@ -151,77 +150,49 @@ class DatabaseService {
         };
       }
 
-      // Transform the server response to match our Release type
-      const transformedReleases = releases.map((release: Partial<Release>): Release => {
-        console.log('Processing release:', release);
+      // Transform releases to ensure they have the correct image URLs and track data
+      const transformedReleases = response.releases.map(release => {
+        console.log('DatabaseService: Processing release:', release.name);
+        console.log('DatabaseService: Release images:', release.album?.images);
+        console.log('DatabaseService: Release artwork:', release.artwork_url);
         
-        // Get the best quality image URL from the album images array
-        const artworkUrl = release.album?.images?.[0]?.url || 
-                          release.artwork_url || 
-                          release.albumCover;
-        console.log('Artwork URL:', artworkUrl);
-
-        // Transform tracks if they exist
-        const tracks = (release.tracks || []).map((track: Partial<Track>) => {
-          console.log('Processing track:', track);
-          return {
-            id: track.id || '',
-            name: track.name || '',
-            artists: track.artists || [],
-            album: {
-              name: release.name || '',
-              artwork_url: artworkUrl
-            },
-            artwork_url: artworkUrl,
-            albumCover: artworkUrl,
-            release_date: track.release_date || release.release_date || '',
-            preview_url: track.preview_url,
-            spotifyUrl: track.spotifyUrl || track.external_urls?.spotify,
-            label_id: labelId
-          };
-        });
-
-        console.log('Transformed tracks:', tracks);
-
-        return createRelease({
-          id: release.id || '',
-          name: release.name || '',
-          type: release.type || 'single',
-          artists: release.artists || [],
-          artwork_url: artworkUrl,
-          albumCover: artworkUrl,
-          album: {
-            name: release.name || '',
-            artwork_url: artworkUrl,
-            images: release.images
-          },
-          release_date: release.release_date || '',
-          total_tracks: release.total_tracks || 1,
-          tracks: tracks,
-          label: { id: labelId, name: labelId }
-        });
+        return {
+          ...release,
+          images: release.album?.images || [],
+          tracks: release.tracks?.map(track => {
+            console.log('DatabaseService: Processing track:', track.name);
+            return {
+              ...track,
+              album: {
+                ...release,
+                images: release.album?.images || []
+              },
+              artists: track.artists || release.artists || []
+            };
+          })
+        };
       });
 
-      console.log('All transformed releases:', transformedReleases);
-      
-      // Return paginated response
-      const paginatedResponse: PaginatedResponse<Release> = {
-        releases: transformedReleases,
-        totalReleases: transformedReleases.length,
-        currentPage: 1,
-        totalPages: 1
-      };
+      console.log('DatabaseService: First transformed release:', transformedReleases[0]);
+      console.log('DatabaseService: Number of transformed releases:', transformedReleases.length);
 
-      console.log('Final paginated response:', paginatedResponse);
-      return paginatedResponse;
-    } catch (error) {
-      console.error('Error fetching releases:', error);
       return {
-        releases: [],
-        totalReleases: 0,
-        currentPage: 1,
-        totalPages: 1
+        ...response,
+        releases: transformedReleases
       };
+    } catch (error) {
+      console.error('DatabaseService: Error fetching releases:', error);
+      throw error;
+    }
+  }
+
+  async getLabelStats(): Promise<any> {
+    try {
+      const response = await this.request('/api/labels/stats');
+      return response;
+    } catch (error) {
+      console.error('Error fetching label stats:', error);
+      throw error;
     }
   }
 
@@ -302,6 +273,22 @@ class DatabaseService {
     }
   }
 
+  async verifyAdminToken(): Promise<{ verified: boolean }> {
+    try {
+      const token = localStorage.getItem('adminToken');
+      const response = await this.request('/api/admin/verify-admin-token', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      return { verified: true };
+    } catch (error) {
+      console.error('Error verifying admin token:', error);
+      throw error;
+    }
+  }
+
   // Helper methods
   private getLabelPath(label: RecordLabel | string): string {
     return typeof label === 'string' ? label : label.id;
@@ -309,4 +296,3 @@ class DatabaseService {
 }
 
 export const databaseService = DatabaseService.getInstance();
-export default DatabaseService;

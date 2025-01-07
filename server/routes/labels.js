@@ -78,4 +78,38 @@ router.get('/:labelId/releases', [
   }
 });
 
+// Get label statistics
+router.get('/stats', async (req, res) => {
+  try {
+    const query = `
+      SELECT 
+        l.name as label,
+        COUNT(DISTINCT a.id) as artist_count,
+        COUNT(DISTINCT r.id) as release_count,
+        COUNT(DISTINCT t.id) as track_count
+      FROM labels l
+      LEFT JOIN releases r ON r.label_id = l.id
+      LEFT JOIN release_artists ra ON ra.release_id = r.id
+      LEFT JOIN artists a ON a.id = ra.artist_id
+      LEFT JOIN tracks t ON t.release_id = r.id
+      GROUP BY l.id, l.name
+      ORDER BY l.name ASC;
+    `;
+
+    const result = await pool.query(query);
+    
+    const stats = result.rows.map(row => ({
+      label: row.label,
+      artistCount: parseInt(row.artist_count),
+      releaseCount: parseInt(row.release_count),
+      trackCount: parseInt(row.track_count)
+    }));
+
+    res.json(stats);
+  } catch (error) {
+    console.error('Error getting label stats:', error);
+    res.status(500).json({ error: 'Failed to get label statistics' });
+  }
+});
+
 module.exports = router;

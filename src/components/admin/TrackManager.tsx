@@ -15,18 +15,18 @@ import { Delete as DeleteIcon, Edit as EditIcon } from '@mui/icons-material';
 import { Track } from '../../types/track';
 
 interface TrackManagerProps {
-  tracks: Track[];
-  onEditTrack: (track: Track) => void;
-  onDeleteTrack: (trackId: string) => void;
+  tracks?: Track[];
+  onEdit?: (track: Track) => void;
+  onDelete?: (trackId: string) => void;
 }
 
 const TrackManager: React.FC<TrackManagerProps> = ({
-  tracks,
-  onEditTrack,
-  onDeleteTrack,
+  tracks = [],
+  onEdit = () => {},
+  onDelete = () => {},
 }) => {
   const getArtistNames = (track: Track): string => {
-    return track.artists.map(artist => artist.name).join(', ');
+    return track.artists?.map(artist => artist.name).join(', ') || '';
   };
 
   const formatDuration = (ms: number): string => {
@@ -34,6 +34,16 @@ const TrackManager: React.FC<TrackManagerProps> = ({
     const seconds = ((ms % 60000) / 1000).toFixed(0);
     return `${minutes}:${seconds.padStart(2, '0')}`;
   };
+
+  if (!tracks || tracks.length === 0) {
+    return (
+      <Box sx={{ p: 3, textAlign: 'center' }}>
+        <Typography variant="body1" color="textSecondary">
+          No tracks available
+        </Typography>
+      </Box>
+    );
+  }
 
   return (
     <TableContainer component={Paper}>
@@ -53,9 +63,9 @@ const TrackManager: React.FC<TrackManagerProps> = ({
             <TableRow key={track.id}>
               <TableCell>
                 <Box display="flex" alignItems="center">
-                  {track.album.images[0] && (
+                  {track.album?.artwork_url && (
                     <img
-                      src={track.album.images[0].url}
+                      src={track.album.artwork_url}
                       alt={track.album.name}
                       style={{
                         width: 40,
@@ -67,34 +77,36 @@ const TrackManager: React.FC<TrackManagerProps> = ({
                   )}
                   <Box>
                     <Typography variant="body1">{track.name}</Typography>
-                    <Typography
-                      variant="body2"
-                      color="textSecondary"
-                      component="a"
-                      href={track.external_urls.spotify}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      sx={{ textDecoration: 'none' }}
-                    >
-                      Open in Spotify
-                    </Typography>
+                    {track.spotify_url && (
+                      <Typography
+                        variant="body2"
+                        color="textSecondary"
+                        component="a"
+                        href={track.spotify_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        sx={{ textDecoration: 'none' }}
+                      >
+                        Open in Spotify
+                      </Typography>
+                    )}
                   </Box>
                 </Box>
               </TableCell>
               <TableCell>{getArtistNames(track)}</TableCell>
-              <TableCell>{track.album.name}</TableCell>
-              <TableCell>{formatDuration(track.duration_ms)}</TableCell>
-              <TableCell>{track.album.release_date}</TableCell>
+              <TableCell>{track.album?.name}</TableCell>
+              <TableCell>{formatDuration(track.duration_ms || 0)}</TableCell>
+              <TableCell>{track.album?.release_date}</TableCell>
               <TableCell>
                 <IconButton
-                  onClick={() => onEditTrack(track)}
+                  onClick={() => onEdit(track)}
                   size="small"
                   color="primary"
                 >
                   <EditIcon />
                 </IconButton>
                 <IconButton
-                  onClick={() => onDeleteTrack(track.id)}
+                  onClick={() => onDelete(track.id)}
                   size="small"
                   color="error"
                 >

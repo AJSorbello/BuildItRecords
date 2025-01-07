@@ -69,11 +69,10 @@ export const ReleaseCard: React.FC<ReleaseCardProps> = ({
   };
 
   const getAlbumCover = () => {
-    if (release.albumCover) return release.albumCover;
-    if (release.images && release.images.length > 0) return release.images[0].url;
+    if (release.artwork_url) return release.artwork_url;
     if (release.album?.images && release.album.images.length > 0) return release.album.images[0].url;
-    if (track?.album?.images?.[0]?.url) return track.album.images[0].url;
-    return '/placeholder-album.jpg';
+    if (release.images && release.images.length > 0) return release.images[0].url;
+    return '';
   };
 
   const getSpotifyUrl = () => {

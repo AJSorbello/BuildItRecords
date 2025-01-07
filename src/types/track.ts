@@ -2,37 +2,37 @@ import type { SpotifyImage } from './spotify';
 import type { SpotifyArtist } from './artist';
 
 export interface Album {
-  id: string;
+  id?: string;
   name: string;
   artwork_url?: string;
   images?: SpotifyImage[];
   release_date?: string;
+  external_urls?: {
+    spotify: string;
+  };
 }
 
 export interface Track {
   id: string;
   name: string;
-  uri: string;
-  duration_ms: number;
+  uri?: string;
+  duration_ms?: number;
+  duration?: number;
   artists: SpotifyArtist[];
-  album: {
-    id: string;
-    name: string;
-    images: SpotifyImage[];
-    release_date: string;
-    external_urls: {
-      spotify: string;
-    };
-  };
-  preview_url: string | null;
-  external_urls: {
+  album?: Album;
+  preview_url?: string | null;
+  external_urls?: {
     spotify: string;
   };
-  popularity: number;
-  explicit: boolean;
-  track_number: number;
-  disc_number: number;
-  is_local: boolean;
+  spotify_url?: string;
+  artwork_url?: string;
+  popularity?: number;
+  explicit?: boolean;
+  track_number?: number;
+  disc_number?: number;
+  is_local?: boolean;
+  label_id?: string;
+  spotify_uri?: string;
   cached_at?: number;
 }
 
@@ -49,7 +49,7 @@ export interface TrackSearchParams {
   artistId?: string;
   albumId?: string;
   labelId?: string;
-  query?: string;
+  search?: string;
   limit?: number;
   offset?: number;
 }

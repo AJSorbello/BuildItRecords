@@ -8,24 +8,26 @@ import {
   Button,
   CircularProgress,
   Alert,
-  Pagination
+  Grid,
+  Card,
+  CardContent,
+  CardMedia,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
 } from '@mui/material';
 import TrackManager from '../../components/admin/TrackManager';
-import { API_URL } from '../../config';
+import { databaseService } from '../../services/DatabaseService';
 import { RECORD_LABELS } from '../../constants/labels';
-import { Release } from '../../types';
-
-interface ReleasesResponse {
-  label: string;
-  totalReleases: number;
-  releases: Release[];
-  error?: string;
-}
+import { Release, Track } from '../../types';
 
 const AdminDashboard: React.FC = () => {
+  console.log('AdminDashboard initializing');
   const navigate = useNavigate();
-  const [selectedLabel, setSelectedLabel] = useState<string>('');
+  const [selectedLabel, setSelectedLabel] = useState('buildit-deep');
   const [releases, setReleases] = useState<Release[]>([]);
+  const [tracks, setTracks] = useState<Track[]>([]);
   const [totalReleases, setTotalReleases] = useState<number>(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -33,184 +35,150 @@ const AdminDashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const verifyToken = async () => {
-      const token = localStorage.getItem('adminToken');
-      if (!token) {
-        navigate('/admin/login');
-        return;
-      }
+    console.log('AdminDashboard mounted - Checking authentication');
+    const token = localStorage.getItem('adminToken');
+    if (!token) {
+      console.log('No token found, redirecting to login');
+      navigate('/admin/login');
+      return;
+    }
+  }, []);
 
-      try {
-        const response = await fetch(`${API_URL}/api/admin/verify`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
+  const handleRefresh = async () => {
+    try {
+      console.log('Fetching releases for label:', selectedLabel);
+      setLoading(true);
+      setError(null);
+      
+      const response = await databaseService.getReleasesByLabelId(selectedLabel);
+      console.log('Received response:', response);
+
+      if (response?.releases) {
+        console.log('Number of releases:', response.releases.length);
+        setReleases(response.releases);
+        setTotalReleases(response.totalReleases);
+
+        // Extract tracks from releases
+        const allTracks: Track[] = [];
+        response.releases.forEach(release => {
+          console.log('Processing release:', release.name, 'Tracks:', release.tracks?.length);
+          console.log('Release data:', release);
+          
+          if (release.tracks?.length) {
+            release.tracks.forEach(track => {
+              console.log('Processing track:', track.name, 'Album:', release.name);
+              allTracks.push({
+                ...track,
+                album: {
+                  id: release.id,
+                  name: release.name,
+                  release_date: release.release_date,
+                  artwork_url: release.artwork_url,
+                  images: [{ url: release.artwork_url || '', height: 640, width: 640 }],
+                  external_urls: {
+                    spotify: release.spotify_url || ''
+                  }
+                }
+              });
+            });
           }
         });
-
-        if (!response.ok) {
-          throw new Error('Token verification failed');
-        }
-      } catch (err) {
-        console.error('Token verification error:', err);
-        localStorage.removeItem('adminToken');
-        navigate('/admin/login');
+        
+        console.log('Total tracks processed:', allTracks.length);
+        setTracks(allTracks);
       }
-    };
-
-    verifyToken();
-  }, [navigate]);
-
-  const handleLabelSelect = async (labelId: string, page: number = 1) => {
-    setSelectedLabel(labelId);
-    setLoading(true);
-    setError(null);
-
-    try {
-      const token = localStorage.getItem('adminToken');
-      const response = await fetch(`${API_URL}/api/releases/${labelId}?page=${page}&limit=10`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch releases: ${response.statusText}`);
-      }
-
-      const data: ReleasesResponse = await response.json();
-      setReleases(data.releases || []);
-      setTotalReleases(data.totalReleases || 0);
-      setCurrentPage(page);
-    } catch (err) {
-      console.error('Error fetching releases:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch releases');
-      setReleases([]);
-      setTotalReleases(0);
+    } catch (error: any) {
+      console.error('Error fetching releases:', error);
+      setError(error.message || 'Failed to fetch releases');
     } finally {
       setLoading(false);
     }
   };
 
-  const handlePageChange = (event: React.ChangeEvent<unknown>, page: number) => {
+  useEffect(() => {
+    console.log('Selected label changed:', selectedLabel);
     if (selectedLabel) {
-      handleLabelSelect(selectedLabel, page);
+      handleRefresh();
     }
-  };
+  }, [selectedLabel]);
 
-  const handleImportReleases = async (labelId: string) => {
-    setImporting(true);
-    setError(null);
-
-    try {
-      const token = localStorage.getItem('adminToken');
-      const response = await fetch(`${API_URL}/api/releases/${labelId}/import`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to import releases: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      
-      // After import, refresh the releases list
-      await handleLabelSelect(labelId, 1);
-      
-    } catch (err) {
-      console.error('Error importing releases:', err);
-      setError(err instanceof Error ? err.message : 'Failed to import releases');
-    } finally {
-      setImporting(false);
-    }
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem('adminToken');
-    navigate('/admin/login');
-  };
-
-  const handleRefresh = async () => {
-    await handleLabelSelect(selectedLabel, currentPage);
-  };
+  console.log('Rendering AdminDashboard - Releases:', releases.length, 'Tracks:', tracks.length);
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Typography variant="h4" gutterBottom>
-        Admin Dashboard
-      </Typography>
+    <Container maxWidth="lg">
+      <Box sx={{ my: 4 }}>
+        <Typography variant="h4" gutterBottom>
+          Admin Dashboard
+        </Typography>
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      )}
+        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-      <Box sx={{ display: 'flex', gap: 2, mb: 4 }}>
-        {Object.values(RECORD_LABELS).map((label) => (
-          <Button
-            key={label.id}
-            variant={selectedLabel === label.id ? 'contained' : 'outlined'}
-            onClick={() => handleLabelSelect(label.id, 1)}
-            disabled={loading || importing}
-          >
-            {label.displayName}
-          </Button>
-        ))}
-      </Box>
-
-      {selectedLabel && (
         <Box sx={{ mb: 4 }}>
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={() => handleImportReleases(selectedLabel)}
-            disabled={loading || importing}
-            sx={{ mb: 2 }}
-          >
-            {importing ? (
-              <>
-                <CircularProgress size={24} sx={{ mr: 1 }} />
-                Importing...
-              </>
-            ) : (
-              'Import Releases'
-            )}
-          </Button>
-
-          {(loading || importing) ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
-              <CircularProgress />
-            </Box>
-          ) : (
-            <Box>
-              <TrackManager 
-                releases={releases}
-                selectedLabel={selectedLabel}
-                totalReleases={totalReleases}
-                onRefresh={handleRefresh}
-              />
-              {totalReleases > 0 && (
-                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
-                  <Pagination 
-                    count={Math.ceil(totalReleases / 10)} 
-                    page={currentPage} 
-                    onChange={(event, page) => handleLabelSelect(selectedLabel, page)}
-                    color="primary"
-                    showFirstButton
-                    showLastButton
-                  />
-                </Box>
-              )}
-            </Box>
-          )}
+          <FormControl fullWidth>
+            <InputLabel>Select Label</InputLabel>
+            <Select
+              value={selectedLabel}
+              onChange={(e) => setSelectedLabel(e.target.value)}
+            >
+              {Object.entries(RECORD_LABELS).map(([id, label]) => (
+                <MenuItem key={id} value={id}>
+                  {label.displayName}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
         </Box>
-      )}
+
+        {loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+            <CircularProgress />
+          </Box>
+        ) : (
+          <>
+            <Box sx={{ mb: 4 }}>
+              <Typography variant="h5" gutterBottom>
+                {RECORD_LABELS[selectedLabel]?.displayName} Releases ({tracks.length} Tracks)
+              </Typography>
+              <Grid container spacing={2}>
+                {tracks.map((track) => (
+                  <Grid item xs={12} sm={6} md={4} lg={3} key={track.id}>
+                    <Card>
+                      <CardMedia
+                        component="img"
+                        height="140"
+                        image={track.album?.artwork_url || track.album?.images?.[0]?.url || ''}
+                        alt={track.name}
+                      />
+                      <CardContent>
+                        <Typography variant="subtitle1" noWrap>
+                          {track.name}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" noWrap>
+                          {track.artists?.map(artist => artist.name).join(', ')}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" display="block">
+                          {track.album?.name}
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
+            </Box>
+
+            <Box>
+              <Typography variant="h5" gutterBottom>
+                Track Management
+              </Typography>
+              <TrackManager
+                tracks={tracks}
+                onDeleteTrack={(id) => console.log('Delete track:', id)}
+                onUpdateTrack={(track) => console.log('Update track:', track)}
+              />
+            </Box>
+          </>
+        )}
+      </Box>
     </Container>
   );
 };

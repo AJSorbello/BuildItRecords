@@ -137,6 +137,11 @@ router.get('/verify-admin', verifyToken, (req, res) => {
   res.json({ message: 'Token is valid', user: req.user });
 });
 
+// Verify admin token
+router.get('/verify-admin-token', verifyToken, (req, res) => {
+  res.json({ verified: true });
+});
+
 // Import releases for a label
 router.get('/import-releases/:labelId', verifyToken, async (req, res) => {
   let importLog = null;
