@@ -93,9 +93,76 @@ class DatabaseService {
   }
 
   public async getArtistById(id: string): Promise<Artist & { releases: Release[] }> {
-    const artist = await this.request<Artist>(`/artists/${id}`);
-    const releases = await this.getReleasesByArtistId(id);
-    return { ...artist, releases };
+    try {
+      console.log('Getting artist by ID:', id);
+      
+      // Get artist data
+      const artist = await this.request<Artist>(`/artists/${id}`);
+      console.log('Raw artist data:', {
+        id: artist.id,
+        name: artist.name,
+        hasProfileImage: !!artist.profile_image,
+        hasImages: !!artist.images?.length
+      });
+
+      // Transform artist data
+      const transformedArtist = {
+        ...artist,
+        id: artist.id || artist.spotify_id,
+        profile_image: artist.profile_image || artist.images?.[0]?.url,
+        images: artist.images || [],
+        genres: artist.genres || []
+      };
+
+      // Get all releases that feature this artist
+      const releases = await this.getReleasesByArtistId(id);
+      console.log('Found releases for artist:', releases.length);
+
+      // Transform releases to ensure consistent data
+      const transformedReleases = releases.map(release => {
+        // Transform release artists
+        const releaseArtists = release.artists?.map(artist => ({
+          ...artist,
+          id: artist.id || artist.spotify_id,
+          profile_image: artist.profile_image || artist.images?.[0]?.url,
+          images: artist.images || [],
+          genres: artist.genres || []
+        })) || [];
+
+        // Transform tracks and their artists
+        const transformedTracks = release.tracks?.map(track => {
+          const trackArtists = track.artists?.map(artist => ({
+            ...artist,
+            id: artist.id || artist.spotify_id,
+            profile_image: artist.profile_image || artist.images?.[0]?.url,
+            images: artist.images || [],
+            genres: artist.genres || []
+          })) || releaseArtists;
+
+          return {
+            ...track,
+            duration_ms: track.duration_ms || track.duration || 0,
+            artists: trackArtists.filter(artist => artist.name !== 'Various Artists')
+          };
+        });
+
+        return {
+          ...release,
+          artists: releaseArtists.filter(artist => artist.name !== 'Various Artists'),
+          tracks: transformedTracks,
+          artwork_url: release.artwork_url || release.album?.artwork_url || release.tracks?.[0]?.artwork_url,
+          images: release.album?.images || []
+        };
+      });
+
+      return {
+        ...transformedArtist,
+        releases: transformedReleases
+      };
+    } catch (error) {
+      console.error('Error getting artist by ID:', id, error);
+      throw error;
+    }
   }
 
   public async getArtistsForLabel(labelId: string): Promise<Artist[]> {
@@ -108,32 +175,220 @@ class DatabaseService {
     }
   }
 
-  public async getArtistsByLabel(label: RecordLabel): Promise<Artist[]> {
+  private async getArtistDetails(artistId: string): Promise<Artist | null> {
     try {
-      // Get all tracks for the label
-      const response = await this.request<{ tracks: Track[], total: number }>(`/tracks?label=${this.getLabelPath(label)}`);
+      // First try to get from our backend
+      const response = await this.request<Artist>(`/artists/${artistId}`);
       
-      // Extract unique artists from tracks
-      const artistsMap = new Map<string, Artist>();
-      
-      response.tracks?.forEach(track => {
-        track.artists?.forEach(artist => {
-          if (artist.id && !artistsMap.has(artist.id)) {
-            artistsMap.set(artist.id, {
-              id: artist.id,
-              name: artist.name,
-              profile_image: artist.profile_image,
-              spotify_url: artist.spotify_url,
-              bio: artist.bio,
-              genres: artist.genres
+      // If we don't have images, try to get from Spotify
+      if (!response.profile_image && (!response.images || response.images.length === 0)) {
+        console.log('No images found in backend, fetching from Spotify:', artistId);
+        try {
+          const spotifyResponse = await this.request<Artist>(`/spotify/artists/${artistId}`);
+          if (spotifyResponse) {
+            // Update our response with Spotify data
+            response.profile_image = spotifyResponse.profile_image || spotifyResponse.images?.[0]?.url;
+            response.images = spotifyResponse.images;
+            response.spotify_url = spotifyResponse.spotify_url;
+            response.genres = spotifyResponse.genres;
+            
+            // Save the updated artist data back to our backend
+            await this.request(`/artists/${artistId}`, {
+              method: 'PUT',
+              data: response
             });
           }
-        });
+        } catch (spotifyError) {
+          console.error('Error fetching artist from Spotify:', artistId, spotifyError);
+        }
+      }
+
+      console.log('Artist details response:', {
+        id: artistId,
+        name: response.name,
+        hasProfileImage: !!response.profile_image,
+        hasImages: !!response.images?.length,
+        imageUrl: response.profile_image || response.images?.[0]?.url
       });
       
-      return Array.from(artistsMap.values());
+      return response;
     } catch (error) {
-      console.error('Error getting artists by label:', error);
+      console.error('Error getting artist details:', artistId, error);
+      return null;
+    }
+  }
+
+  public async getArtistsByLabel(label: RecordLabel): Promise<Artist[]> {
+    try {
+      console.log('Getting artists for label:', label);
+      const artistsMap = new Map<string, Artist>();
+
+      // First, get all releases for the label
+      const releasesResponse = await this.request<PaginatedResponse<Release>>(`/releases/${this.getLabelPath(label)}?limit=100&sort=release_date:desc`);
+      console.log('Releases response:', {
+        total: releasesResponse.totalReleases,
+        received: releasesResponse.releases?.length
+      });
+
+      // Process releases to collect artists
+      for (const release of releasesResponse.releases || []) {
+        // Add release artists
+        for (const artist of release.artists || []) {
+          if (artist.name !== 'Various Artists' && (artist.id || artist.spotify_id)) {
+            const artistId = artist.id || artist.spotify_id;
+            if (!artistsMap.has(artistId)) {
+              // Get full artist details
+              const artistDetails = await this.getArtistDetails(artistId);
+              if (artistDetails) {
+                console.log('Processing artist:', {
+                  name: artistDetails.name,
+                  id: artistId,
+                  profile_image: artistDetails.profile_image,
+                  hasImages: !!artistDetails.images?.length
+                });
+                artistsMap.set(artistId, {
+                  ...artistDetails,
+                  id: artistId,
+                  name: artistDetails.name,
+                  profile_image: artistDetails.profile_image || artistDetails.images?.[0]?.url,
+                  images: artistDetails.images || [],
+                  spotify_url: artistDetails.spotify_url,
+                  genres: artistDetails.genres || []
+                });
+              }
+            }
+          }
+        }
+
+        // Add track artists
+        for (const track of release.tracks || []) {
+          for (const artist of track.artists || []) {
+            if (artist.name !== 'Various Artists' && (artist.id || artist.spotify_id)) {
+              const artistId = artist.id || artist.spotify_id;
+              if (!artistsMap.has(artistId)) {
+                // Get full artist details
+                const artistDetails = await this.getArtistDetails(artistId);
+                if (artistDetails) {
+                  console.log('Processing track artist:', {
+                    name: artistDetails.name,
+                    id: artistId,
+                    profile_image: artistDetails.profile_image,
+                    hasImages: !!artistDetails.images?.length
+                  });
+                  artistsMap.set(artistId, {
+                    ...artistDetails,
+                    id: artistId,
+                    name: artistDetails.name,
+                    profile_image: artistDetails.profile_image || artistDetails.images?.[0]?.url,
+                    images: artistDetails.images || [],
+                    spotify_url: artistDetails.spotify_url,
+                    genres: artistDetails.genres || []
+                  });
+                }
+              }
+            }
+          }
+        }
+      }
+      
+      // Now get all tracks with pagination
+      let page = 1;
+      let hasMore = true;
+      const limit = 100;
+
+      while (hasMore) {
+        const tracksResponse = await this.request<{ tracks: Track[], total: number }>(
+          `/tracks?label=${this.getLabelPath(label)}&limit=${limit}&page=${page}`
+        );
+        console.log(`Tracks response page ${page}:`, {
+          total: tracksResponse.total,
+          received: tracksResponse.tracks?.length
+        });
+
+        // Process tracks to collect artists
+        for (const track of tracksResponse.tracks || []) {
+          // Add track artists
+          for (const artist of track.artists || []) {
+            if (artist.name !== 'Various Artists' && (artist.id || artist.spotify_id)) {
+              const artistId = artist.id || artist.spotify_id;
+              if (!artistsMap.has(artistId)) {
+                // Get full artist details
+                const artistDetails = await this.getArtistDetails(artistId);
+                if (artistDetails) {
+                  console.log('Processing paginated track artist:', {
+                    name: artistDetails.name,
+                    id: artistId,
+                    profile_image: artistDetails.profile_image,
+                    hasImages: !!artistDetails.images?.length
+                  });
+                  artistsMap.set(artistId, {
+                    ...artistDetails,
+                    id: artistId,
+                    name: artistDetails.name,
+                    profile_image: artistDetails.profile_image || artistDetails.images?.[0]?.url,
+                    images: artistDetails.images || [],
+                    spotify_url: artistDetails.spotify_url,
+                    genres: artistDetails.genres || []
+                  });
+                }
+              }
+            }
+          }
+
+          // Add album artists if present
+          for (const artist of track.album?.artists || []) {
+            if (artist.name !== 'Various Artists' && (artist.id || artist.spotify_id)) {
+              const artistId = artist.id || artist.spotify_id;
+              if (!artistsMap.has(artistId)) {
+                // Get full artist details
+                const artistDetails = await this.getArtistDetails(artistId);
+                if (artistDetails) {
+                  console.log('Processing album artist:', {
+                    name: artistDetails.name,
+                    id: artistId,
+                    profile_image: artistDetails.profile_image,
+                    hasImages: !!artistDetails.images?.length
+                  });
+                  artistsMap.set(artistId, {
+                    ...artistDetails,
+                    id: artistId,
+                    name: artistDetails.name,
+                    profile_image: artistDetails.profile_image || artistDetails.images?.[0]?.url,
+                    images: artistDetails.images || [],
+                    spotify_url: artistDetails.spotify_url,
+                    genres: artistDetails.genres || []
+                  });
+                }
+              }
+            }
+          }
+        }
+
+        // Check if we should continue pagination
+        hasMore = tracksResponse.tracks?.length === limit;
+        if (hasMore) {
+          page++;
+        }
+      }
+
+      // Convert Map to array and sort by name
+      const artists = Array.from(artistsMap.values())
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+      console.log('Found artists:', {
+        total: artists.length,
+        withImages: artists.filter(a => !!a.profile_image).length,
+        sample: artists.slice(0, 3).map(a => ({
+          id: a.id,
+          name: a.name,
+          hasProfileImage: !!a.profile_image,
+          hasImages: !!a.images?.length
+        }))
+      });
+
+      return artists;
+    } catch (error) {
+      console.error('Error getting artists for label:', label, error);
       return [];
     }
   }
@@ -185,21 +440,85 @@ class DatabaseService {
       // Transform releases to ensure they have the correct image URLs and track data
       const transformedReleases = response.releases.map(release => {
         console.log('DatabaseService: Processing release:', release.name);
-        return {
-          ...release,
-          images: release.album?.images || [],
-          tracks: release.tracks?.map(track => ({
+        console.log('Raw release data:', {
+          name: release.name,
+          artists: release.artists,
+          tracks: release.tracks?.map(t => ({
+            name: t.name,
+            artists: t.artists
+          }))
+        });
+
+        // Get all unique artists from both release and tracks
+        const allArtists = new Map();
+        
+        // Add release artists
+        release.artists?.forEach(artist => {
+          if (artist.id && artist.name !== 'Various Artists') {
+            allArtists.set(artist.id, {
+              ...artist,
+              id: artist.id || artist.spotify_id,
+              profile_image: artist.profile_image || artist.images?.[0]?.url,
+              images: artist.images || []
+            });
+          }
+        });
+
+        // Add track artists
+        release.tracks?.forEach(track => {
+          track.artists?.forEach(artist => {
+            if (artist.id && artist.name !== 'Various Artists') {
+              allArtists.set(artist.id, {
+                ...artist,
+                id: artist.id || artist.spotify_id,
+                profile_image: artist.profile_image || artist.images?.[0]?.url,
+                images: artist.images || []
+              });
+            }
+          });
+        });
+
+        const transformedArtists = Array.from(allArtists.values());
+        console.log('Transformed artists:', transformedArtists.map(a => a.name));
+
+        // Transform tracks to ensure they have the correct data
+        const transformedTracks = release.tracks?.map(track => {
+          const trackArtists = track.artists?.filter(artist => artist.name !== 'Various Artists')
+            .map(artist => ({
+              ...artist,
+              id: artist.id || artist.spotify_id,
+              profile_image: artist.profile_image || artist.images?.[0]?.url,
+              images: artist.images || []
+            })) || transformedArtists;
+
+          return {
             ...track,
+            duration_ms: track.duration_ms || track.duration || 0,
             album: {
               ...release,
               images: release.album?.images || []
             },
-            artists: track.artists || release.artists || []
-          }))
+            artists: trackArtists
+          };
+        });
+
+        return {
+          ...release,
+          images: release.album?.images || [],
+          artists: transformedArtists,
+          tracks: transformedTracks
         };
       });
 
-      console.log('DatabaseService: Transformed releases count:', transformedReleases.length);
+      console.log('Sample transformed release:', {
+        name: transformedReleases[0]?.name,
+        artistCount: transformedReleases[0]?.artists?.length,
+        artists: transformedReleases[0]?.artists?.map(a => ({
+          id: a.id,
+          name: a.name,
+          profile_image: a.profile_image
+        }))
+      });
       
       return {
         ...response,
@@ -274,7 +593,6 @@ class DatabaseService {
       queryParams.set('label', this.getLabelPath(label));
       queryParams.set('sort', sort);
       const response = await this.request<{ tracks: Track[], total: number, limit: number, offset: number }>(`/tracks?${queryParams.toString()}`);
-      console.log('DatabaseService: Raw track data:', JSON.stringify(response.tracks?.[0], null, 2));
       
       // Transform tracks to ensure they have the correct data
       const transformedTracks = (response.tracks || []).map(track => {
@@ -317,6 +635,7 @@ class DatabaseService {
 
   public async getTracksByArtist(artistId: string): Promise<Track[]> {
     try {
+      console.log('Getting tracks for artist:', artistId);
       // Get tracks from all labels with pagination
       const labels = ['buildit-records', 'buildit-tech', 'buildit-deep'];
       const limit = 100; // Increase limit to get more tracks per request
@@ -332,11 +651,35 @@ class DatabaseService {
 
       const responses = await Promise.all(trackPromises);
       const allTracks = responses.flatMap(response => response.tracks || []);
+      console.log('Total tracks fetched:', allTracks.length);
       
-      // Filter tracks by artist ID
-      const artistTracks = allTracks.filter(track => 
-        track.artists?.some(artist => artist.id === artistId)
-      );
+      // Log a sample of tracks to debug artist IDs
+      console.log('Sample track artist data:', allTracks.slice(0, 3).map(track => ({
+        trackName: track.name,
+        artists: track.artists?.map(a => ({
+          id: a.id || a.spotify_id,
+          name: a.name
+        }))
+      })));
+      
+      // Filter tracks by artist ID with more detailed logging
+      const artistTracks = allTracks.filter(track => {
+        const hasArtist = track.artists?.some(artist => {
+          const artistMatches = (artist.id === artistId || artist.spotify_id === artistId) && 
+                              artist.name !== 'Various Artists';
+          if (artistMatches) {
+            console.log('Found matching artist in track:', {
+              trackName: track.name,
+              artistId: artist.id || artist.spotify_id,
+              artistName: artist.name
+            });
+          }
+          return artistMatches;
+        });
+        return hasArtist;
+      });
+      
+      console.log('Tracks for artist:', artistTracks.length);
 
       // Transform tracks to ensure they have the correct data
       const transformedTracks = artistTracks.map(track => {
@@ -346,24 +689,31 @@ class DatabaseService {
           || track.album?.artwork_url 
           || track.album?.images?.[0]?.url;
 
+        // Transform artists to ensure they have profile images
+        const transformedArtists = track.artists
+          ?.filter(artist => artist.name !== 'Various Artists')
+          ?.map(artist => ({
+            ...artist,
+            id: artist.id || artist.spotify_id,
+            profile_image: artist.profile_image || artist.images?.[0]?.url,
+            images: artist.images || []
+          })) || [];
+
         return {
           ...track,
-          name: track.name || track.title || 'Untitled',
-          artists: track.artists?.map(artist => ({
-            ...artist,
-            name: artist.name || 'Unknown Artist'
-          })) || [],
-          duration_ms: track.duration_ms || track.duration || 0,
-          release_date: track.release_date || track.releaseDate || track.album?.release_date || track.created_at || new Date().toISOString(),
           artwork_url: artworkUrl,
-          label: track.label
+          duration_ms: track.duration_ms || track.duration || 0,
+          artists: transformedArtists,
+          album: track.album ? {
+            ...track.album,
+            artwork_url: artworkUrl,
+            artists: transformedArtists
+          } : undefined
         };
       });
 
-      // Sort tracks by release date, newest first
-      return transformedTracks.sort((a, b) => 
-        new Date(b.release_date).getTime() - new Date(a.release_date).getTime()
-      );
+      console.log('Sample transformed track:', transformedTracks[0]);
+      return transformedTracks;
     } catch (error) {
       console.error('Error getting tracks by artist:', error);
       return [];

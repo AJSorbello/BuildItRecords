@@ -35,21 +35,34 @@ const ArtistsPage: React.FC = () => {
         const currentLabel = getCurrentLabel();
         let labels = currentLabel ? [currentLabel] : ['buildit-records', 'buildit-tech', 'buildit-deep'];
         
+        console.log('Fetching artists for labels:', labels);
         const artistsPromises = labels.map(labelId => 
           databaseService.getArtistsByLabel(RECORD_LABELS[labelId])
         );
         
         const artistsResults = await Promise.all(artistsPromises);
+        console.log('Artists results:', artistsResults.map(arr => arr.length));
         
-        // Combine and deduplicate artists by ID, then sort alphabetically
-        const uniqueArtists = Array.from(
-          new Map(
-            artistsResults
-              .flat()
-              .map(artist => [artist.id, artist])
-          ).values()
-        ).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+        // Combine and deduplicate artists by ID
+        const artistsMap = new Map<string, Artist>();
+        
+        artistsResults.flat().forEach(artist => {
+          if (artist.name !== 'Various Artists' && (artist.id || artist.spotify_id)) {
+            const artistId = artist.id || artist.spotify_id;
+            artistsMap.set(artistId, {
+              ...artist,
+              id: artistId,
+              profile_image: artist.profile_image || artist.images?.[0]?.url,
+              images: artist.images || []
+            });
+          }
+        });
 
+        // Convert to array and sort alphabetically
+        const uniqueArtists = Array.from(artistsMap.values())
+          .sort((a, b) => a.name.localeCompare(b.name));
+
+        console.log('Total unique artists:', uniqueArtists.length);
         setArtists(uniqueArtists);
       } catch (error) {
         console.error('Error fetching artists:', error);

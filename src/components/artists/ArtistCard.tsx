@@ -16,6 +16,7 @@ interface ArtistCardProps {
 
 const ArtistCard: React.FC<ArtistCardProps> = ({ artist }) => {
   const [modalOpen, setModalOpen] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   const handleOpenModal = () => {
     setModalOpen(true);
@@ -25,6 +26,30 @@ const ArtistCard: React.FC<ArtistCardProps> = ({ artist }) => {
     setModalOpen(false);
   };
 
+  const handleImageError = () => {
+    setImageError(true);
+  };
+
+  // Get the best available image URL
+  const getImageUrl = () => {
+    if (imageError) {
+      return '/assets/images/default-artist.jpg';
+    }
+
+    // Try profile_image first
+    if (artist.profile_image) {
+      return artist.profile_image;
+    }
+
+    // Then try images array
+    if (artist.images && artist.images.length > 0) {
+      return artist.images[0].url;
+    }
+
+    // Default image
+    return '/assets/images/default-artist.jpg';
+  };
+
   return (
     <>
       <Card sx={{ height: '100%' }}>
@@ -32,8 +57,9 @@ const ArtistCard: React.FC<ArtistCardProps> = ({ artist }) => {
           <CardMedia
             component="img"
             height="200"
-            image={artist.profile_image || '/placeholder.png'}
+            image={getImageUrl()}
             alt={artist.name}
+            onError={handleImageError}
             sx={{
               objectFit: 'cover'
             }}

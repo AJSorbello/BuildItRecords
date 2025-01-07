@@ -85,17 +85,21 @@ const ArtistModal: React.FC<ArtistModalProps> = ({ open, onClose, artist }) => {
         <Grid container spacing={3}>
           {/* Artist Info */}
           <Grid item xs={12} md={4}>
-            <Box
-              component="img"
-              src={artist.profile_image || '/placeholder.png'}
-              alt={artist.name}
-              sx={{
-                width: '100%',
-                height: 'auto',
-                borderRadius: 2,
-                mb: 2
-              }}
-            />
+            {artist.profile_image && (
+              <Box
+                component="img"
+                src={artist.profile_image}
+                alt={artist.name}
+                sx={{
+                  width: '100%',
+                  height: 'auto',
+                  borderRadius: 2,
+                  mb: 2,
+                  aspectRatio: '1/1',
+                  objectFit: 'cover'
+                }}
+              />
+            )}
             <Typography variant="h6" gutterBottom>
               About
             </Typography>
