@@ -10,6 +10,7 @@ import {
   Pagination
 } from '@mui/material';
 import { debounce } from 'lodash';
+import { useLocation } from 'react-router-dom';
 import { databaseService } from '../services/DatabaseService';
 import ArtistCard from '../components/ArtistCard';
 import { Artist } from '../types/artist';
@@ -22,15 +23,27 @@ const ArtistsPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const location = useLocation();
+
+  // Determine the label based on the current route
+  const getLabel = () => {
+    const path = location.pathname.toLowerCase();
+    if (path.includes('/records/artists')) return 'Build It Records';
+    if (path.includes('/tech/artists')) return 'Build It Tech';
+    if (path.includes('/deep/artists')) return 'Build It Deep';
+    return undefined;
+  };
 
   const searchArtists = async (query: string) => {
     setLoading(true);
     setError(null);
     try {
-      console.log('Searching artists with query:', query);
-      const fetchedArtists = await databaseService.getArtists(
-        query.trim() ? { search: query.trim() } : {}
-      );
+      const label = getLabel();
+      console.log('Searching artists with query:', query, 'and label:', label);
+      const fetchedArtists = await databaseService.getArtists({
+        search: query.trim(),
+        label
+      });
       console.log('Fetched artists:', fetchedArtists);
       setArtists(fetchedArtists || []);
     } catch (err) {
@@ -53,7 +66,7 @@ const ArtistsPage: React.FC = () => {
     return () => {
       debouncedSearch.cancel();
     };
-  }, []);
+  }, [location.pathname]); // Re-fetch when route changes
 
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const query = event.target.value;
@@ -74,11 +87,14 @@ const ArtistsPage: React.FC = () => {
     currentPage * ITEMS_PER_PAGE
   );
 
+  // Get label name for display
+  const labelName = getLabel()?.toUpperCase() || 'ALL';
+
   return (
     <Container maxWidth="xl">
       <Box sx={{ py: 4 }}>
         <Typography variant="h4" component="h1" gutterBottom>
-          Artists
+          {labelName} Artists
         </Typography>
         
         <Box sx={{ mb: 4 }}>
@@ -118,7 +134,7 @@ const ArtistsPage: React.FC = () => {
             {artists.length === 0 && !loading && (
               <Box sx={{ textAlign: 'center', my: 4 }}>
                 <Typography variant="h6" color="text.secondary">
-                  No artists found
+                  No artists found for {labelName}
                 </Typography>
               </Box>
             )}

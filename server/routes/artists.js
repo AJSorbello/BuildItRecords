@@ -42,92 +42,35 @@ router.get('/search', async (req, res) => {
     });
 
     try {
-        const searchQuery = req.query.q || '';
-        console.log('Searching artists with query:', searchQuery);
+        const searchQuery = req.query.search || '';
+        const label = req.query.label;
+        console.log('Searching artists with query:', searchQuery, 'and label:', label);
 
-        let queryText = 'SELECT * FROM artists';
+        let queryText = 'SELECT * FROM artists WHERE 1=1';
         const queryParams = [];
 
+        // Add search condition if search query exists
         if (searchQuery.trim()) {
-            queryText += ' WHERE name ILIKE $1';
             queryParams.push(`%${searchQuery.trim()}%`);
+            queryText += ` AND name ILIKE $${queryParams.length}`;
         }
 
-        queryText += ' ORDER BY name ASC LIMIT 50';
+        // Add label condition if label exists
+        if (label) {
+            queryParams.push(label);
+            queryText += ` AND label = $${queryParams.length}`;
+        }
+
+        queryText += ' ORDER BY name ASC';
 
         console.log('Executing query:', queryText, 'with params:', queryParams);
-        const { rows } = await pool.query(queryText, queryParams);
-        console.log('Found artists:', rows.length);
+        const result = await pool.query(queryText, queryParams);
+        console.log(`Found ${result.rows.length} artists`);
 
-        // If no results from database and there's a search query, try Spotify
-        if (rows.length === 0 && searchQuery.trim()) {
-            try {
-                console.log('No results from database, trying Spotify');
-                const accessToken = await getSpotifyToken();
-                const spotifyResponse = await axios.get(
-                    `https://api.spotify.com/v1/search?q=${encodeURIComponent(searchQuery.trim())}&type=artist&limit=20`,
-                    {
-                        headers: {
-                            'Authorization': `Bearer ${accessToken}`
-                        }
-                    }
-                );
-
-                console.log('Got Spotify response:', spotifyResponse.data.artists.items.length, 'artists');
-                const artists = spotifyResponse.data.artists.items.map(formatArtistData);
-
-                // Insert artists into database
-                for (const artist of artists) {
-                    await pool.query(
-                        `INSERT INTO artists (
-                            id, 
-                            name, 
-                            external_urls, 
-                            followers, 
-                            images, 
-                            popularity,
-                            type,
-                            uri,
-                            cached_at
-                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
-                        ON CONFLICT (id) DO UPDATE SET
-                            name = EXCLUDED.name,
-                            external_urls = EXCLUDED.external_urls,
-                            followers = EXCLUDED.followers,
-                            images = EXCLUDED.images,
-                            popularity = EXCLUDED.popularity,
-                            type = EXCLUDED.type,
-                            uri = EXCLUDED.uri,
-                            cached_at = EXCLUDED.cached_at`,
-                        [
-                            artist.id,
-                            artist.name,
-                            artist.external_urls,
-                            artist.followers,
-                            artist.images,
-                            artist.popularity,
-                            artist.type,
-                            artist.uri,
-                            artist.cached_at
-                        ]
-                    );
-                }
-
-                res.set('X-Data-Source', 'spotify').json(artists);
-            } catch (spotifyError) {
-                console.error('Error searching Spotify:', spotifyError);
-                // If Spotify fails, just return empty results
-                res.json([]);
-            }
-        } else {
-            res.set('X-Data-Source', 'database').json(rows);
-        }
+        res.json(result.rows);
     } catch (error) {
-        console.error('Error in /search route:', error);
-        res.status(500).json({
-            message: error.message || 'Internal server error',
-            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-        });
+        console.error('Error searching artists:', error);
+        res.status(500).json({ error: 'Failed to search artists' });
     }
 });
 

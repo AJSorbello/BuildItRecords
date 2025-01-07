@@ -59,18 +59,26 @@ class DatabaseService {
   }
 
   // Artists
-  public async getArtists(params: { search?: string } = {}): Promise<Artist[]> {
+  public async getArtists(params: { 
+    search?: string;
+    label?: 'records' | 'tech' | 'deep';
+  } = {}): Promise<Artist[]> {
     console.log('Getting artists with params:', params);
     const endpoint = '/artists/search';
     console.log('Making request to endpoint:', endpoint);
     try {
       const queryParams = new URLSearchParams();
       
-      // Only add search param if it's a non-empty string
+      // Add search param if it exists
       if (params.search?.trim()) {
-        queryParams.append('q', params.search.trim());
+        queryParams.append('search', params.search.trim());
       }
-      
+
+      // Add label param if it exists
+      if (params.label) {
+        queryParams.append('label', params.label);
+      }
+
       const url = `${endpoint}${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
       console.log('Making request to endpoint:', url);
       
@@ -80,7 +88,7 @@ class DatabaseService {
       return response;
     } catch (error) {
       console.error('Error getting artists:', error);
-      throw error; // Let the component handle the error
+      throw error;
     }
   }
 
