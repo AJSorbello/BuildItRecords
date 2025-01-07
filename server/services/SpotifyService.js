@@ -81,29 +81,52 @@ class SpotifyService {
 
       console.log(`Searching for releases from label: ${labelName}`);
       const albums = [];
+      let offset = 0;
+      const limit = 50; // Maximum allowed by Spotify
+      let total = null;
       
-      // Search for albums with the label name
-      const searchResults = await this.spotifyApi.searchAlbums(`label:"${labelName}"`);
-      
-      if (!searchResults.body || !searchResults.body.albums) {
-        console.log('No search results found');
-        return albums;
-      }
-
-      // Process each album from the search results
-      for (const item of searchResults.body.albums.items) {
-        try {
-          // Get full album details
-          const album = await this.getAlbumById(item.id);
-          if (album && album.label === labelName) {
-            albums.push(album);
-          } else if (album) {
-            console.log(`Album ${item.id} has label "${album.label}", expected "${labelName}"`);
-          }
-        } catch (error) {
-          console.error(`Error fetching album ${item.id}:`, error);
+      do {
+        console.log(`Fetching releases from offset ${offset}`);
+        // Search for albums with the label name
+        const searchResults = await this.spotifyApi.searchAlbums(`label:"${labelName}"`, {
+          limit: limit,
+          offset: offset
+        });
+        
+        if (!searchResults.body || !searchResults.body.albums) {
+          console.log('No search results found');
+          break;
         }
-      }
+
+        // Set total on first iteration
+        if (total === null) {
+          total = searchResults.body.albums.total;
+          console.log(`Total releases found: ${total}`);
+        }
+
+        // Process each album from the search results
+        for (const item of searchResults.body.albums.items) {
+          try {
+            // Get full album details
+            const album = await this.getAlbumById(item.id);
+            if (album && album.label === labelName) {
+              albums.push(album);
+              console.log(`Added album: ${album.name}`);
+            } else if (album) {
+              console.log(`Album ${item.id} has label "${album.label}", expected "${labelName}"`);
+            }
+          } catch (error) {
+            console.error(`Error fetching album ${item.id}:`, error);
+          }
+        }
+
+        // Move to next page
+        offset += limit;
+
+        // Add a small delay to avoid rate limiting
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+      } while (offset < total);
 
       console.log(`Found ${albums.length} releases for label: ${labelName}`);
       return albums;

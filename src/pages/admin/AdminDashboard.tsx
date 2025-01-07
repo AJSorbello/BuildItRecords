@@ -92,7 +92,7 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
-  const handlePageChange = (page: number) => {
+  const handlePageChange = (event: React.ChangeEvent<unknown>, page: number) => {
     if (selectedLabel) {
       handleLabelSelect(selectedLabel, page);
     }
@@ -143,78 +143,76 @@ const AdminDashboard: React.FC = () => {
   };
 
   const fetchReleases = async () => {
-    await handleLabelSelect(selectedLabel, currentPage);
+    if (selectedLabel) {
+      await handleLabelSelect(selectedLabel, currentPage);
+    }
   };
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-        <Typography variant="h4" gutterBottom>
-          Admin Dashboard
-        </Typography>
-        <Button variant="outlined" color="primary" onClick={handleLogout}>
-          Logout
-        </Button>
+      <Typography variant="h4" gutterBottom>
+        Admin Dashboard
+      </Typography>
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
+
+      <Box sx={{ display: 'flex', gap: 2, mb: 4 }}>
+        {Object.values(RECORD_LABELS).map((label) => (
+          <Button
+            key={label.id}
+            variant={selectedLabel === label.id ? 'contained' : 'outlined'}
+            onClick={() => handleLabelSelect(label.id, 1)}
+            disabled={loading}
+          >
+            {label.displayName}
+          </Button>
+        ))}
       </Box>
 
-      <Paper elevation={3} sx={{ p: 3 }}>
-        <Typography variant="h5" gutterBottom>
-          Label Management
-        </Typography>
+      {selectedLabel && (
+        <Box sx={{ mb: 4 }}>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => handleImportReleases(selectedLabel)}
+            disabled={loading}
+            sx={{ mb: 2 }}
+          >
+            Import Releases
+          </Button>
 
-        <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
-          {Object.values(RECORD_LABELS).map((label) => (
-            <Button
-              key={label.id}
-              variant={selectedLabel === label.id ? 'contained' : 'outlined'}
-              onClick={() => handleLabelSelect(label.id)}
-              disabled={loading}
-            >
-              {label.displayName}
-            </Button>
-          ))}
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <Box>
+              <TrackManager
+                selectedLabel={selectedLabel}
+                releases={releases}
+                totalReleases={totalReleases}
+                onRefresh={fetchReleases}
+              />
+              {totalReleases > 0 && (
+                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+                  <Pagination 
+                    count={Math.ceil(totalReleases / 10)} 
+                    page={currentPage} 
+                    onChange={handlePageChange}
+                    color="primary"
+                    showFirstButton
+                    showLastButton
+                  />
+                </Box>
+              )}
+            </Box>
+          )}
         </Box>
-
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-        )}
-
-        {selectedLabel && (
-          <Box sx={{ mt: 2 }}>
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={() => handleImportReleases(selectedLabel)}
-              disabled={loading}
-              sx={{ mb: 2 }}
-            >
-              {loading ? <CircularProgress size={24} /> : 'Import Releases'}
-            </Button>
-
-            {releases.length > 0 && (
-              <Box sx={{ mt: 2 }}>
-                <Typography variant="h6" gutterBottom>
-                  {totalReleases} Releases Found
-                </Typography>
-                <TrackManager 
-                  releases={releases}
-                  selectedLabel={selectedLabel}
-                  totalReleases={totalReleases}
-                  onRefresh={fetchReleases}
-                />
-                <Pagination 
-                  count={Math.ceil(totalReleases / 10)} 
-                  page={currentPage} 
-                  onChange={(event, page) => handlePageChange(page)} 
-                  sx={{ mt: 2 }}
-                />
-              </Box>
-            )}
-          </Box>
-        )}
-      </Paper>
+      )}
     </Container>
   );
 };

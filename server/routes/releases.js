@@ -58,6 +58,7 @@ router.get('/:labelId', async (req, res) => {
     const { page = 1, limit = 10, sort = 'release_date', order = 'DESC' } = req.query;
     
     console.log('Fetching releases for label ID:', labelId);
+    console.log('Pagination params:', { page, limit, sort, order });
     
     // Find the label by ID or slug
     const label = await Label.findOne({
@@ -93,7 +94,7 @@ router.get('/:labelId', async (req, res) => {
       order
     });
 
-    // Get releases from database
+    // Get releases from database with pagination
     const { count, rows: releases } = await Release.findAndCountAll({
       where: {
         label_id: label.id
@@ -121,10 +122,11 @@ router.get('/:labelId', async (req, res) => {
       ],
       order: [[sort, order]],
       limit: parseInt(limit),
-      offset: offset
+      offset: offset,
+      distinct: true // This is important for correct count with associations
     });
 
-    console.log(`Found ${count} releases in database`);
+    console.log(`Found ${count} total releases, returning page ${page} with ${releases.length} items`);
 
     // Format the response
     const formattedReleases = releases.map(release => ({
