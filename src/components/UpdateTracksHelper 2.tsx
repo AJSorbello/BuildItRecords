@@ -21,10 +21,10 @@ const UpdateTracksHelper: React.FC = () => {
     // Update tracks that should be under Build It Deep
     const updatedTracks = tracks.map((track: Track) => {
       // If the track was previously imported but not assigned to Deep, update it
-      if (track.spotifyUrl && track.recordLabel !== RECORD_LABELS.DEEP) {
+      if (track.spotifyUrl && track.recordLabel !== RECORD_LABELS['Build It Deep']) {
         return {
           ...track,
-          recordLabel: RECORD_LABELS.DEEP
+          recordLabel: RECORD_LABELS['Build It Deep']
         };
       }
       return track;

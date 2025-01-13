@@ -1,164 +1,65 @@
-import { RecordLabel } from '../constants/labels';
+import type { 
+  Track as SpotifyApiTrack,
+  Artist as SpotifyApiArtist,
+  Album as SpotifyApiAlbum,
+  Image as SpotifyImage
+} from '@spotify/web-api-ts-sdk';
+
+import type { Image, ExternalUrls, ExternalIds } from './models';
+
+export type {
+  SpotifyApiTrack,
+  SpotifyApiArtist,
+  SpotifyApiAlbum,
+  SpotifyImage
+};
 
 // Spotify API Types
-export interface SpotifyApiImage {
-  url: string;
-  height: number | null;
-  width: number | null;
-}
-
-export interface SpotifyApiArtist {
-  id: string;
-  name: string;
-  external_urls: {
-    spotify: string;
-  };
-}
-
-export interface SpotifyApiAlbum {
-  id: string;
-  name: string;
-  images: SpotifyApiImage[];
-  artists: SpotifyApiArtist[];
-  release_date: string;
-  external_urls: {
-    spotify: string;
-  };
-  label?: string;
-}
-
-export interface SpotifyApiTrack {
-  id: string;
-  name: string;
-  artists: SpotifyApiArtist[];
-  album: {
-    name: string;
-    release_date: string;
-    images: SpotifyApiImage[];
-    label?: string;
-  };
-  preview_url: string | null;
-  external_urls: {
-    spotify: string;
-  };
-  duration_ms: number;
-}
-
-// Application Types
-export interface SpotifyImage {
-  url: string;
-  height: number | null;
-  width: number | null;
-}
-
-export interface SpotifyAlbum {
-  name: string;
-  release_date: string;
-  images: SpotifyImage[];
-}
-
 export interface SpotifyArtist {
   id: string;
   name: string;
-  external_urls: {
-    spotify: string;
+  external_urls: ExternalUrls;
+  images?: SpotifyImage[];
+  followers?: {
+    total: number;
+    href: string | null;
   };
+  type: string;
+  uri: string;
+}
+
+export interface SpotifyAlbum {
+  id: string;
+  name: string;
+  type: 'album' | 'single' | 'compilation';
+  external_urls: ExternalUrls;
+  images: SpotifyImage[];
+  release_date?: string;
+  artists: SpotifyArtist[];
+  uri: string;
+  total_tracks: number;
 }
 
 export interface SpotifyTrack {
   id: string;
-  trackTitle: string;
-  artist: string;
-  albumCover: string;
-  album: {
-    name: string;
-    releaseDate: string;
-    images: SpotifyImage[];
-  };
-  recordLabel: RecordLabel;
-  previewUrl: string | null;
-  spotifyUrl: string;
-  releaseDate: string;
-}
-
-export interface SimplifiedTrackOutput {
-  trackTitle: string;
-  artistName: string;
-  recordLabel: RecordLabel;
-  artwork: string;
-}
-
-export interface SpotifyPlaylist {
-  id: string;
   name: string;
-  description: string | null;
-  images: SpotifyImage[];
-  tracks: {
-    items: {
-      track: SpotifyApiTrack;
-      added_at: string;
-    }[];
-  };
-  external_urls: {
-    spotify: string;
-  };
+  artists: SpotifyArtist[];
+  duration_ms: number;
+  preview_url?: string;
+  external_urls: ExternalUrls;
+  external_ids?: ExternalIds;
+  album: SpotifyAlbum;
+  uri: string;
+  type: string;
 }
 
 export interface SpotifyRelease {
   id: string;
   name: string;
-  artists: Array<{ name: string }>;
-  images: Array<{ url: string }>;
-  release_date: string;
-  tracks: {
-    items: Array<{
-      id: string;
-      name: string;
-      artists: Array<{ name: string }>;
-      duration_ms: number;
-      preview_url: string | null;
-    }>;
-  };
-  external_urls: {
-    spotify: string;
-  };
-}
-
-export interface SpotifyAuthResponse {
-  access_token: string;
-  token_type: string;
-  expires_in: number;
-}
-
-export interface SpotifyApiError {
-  statusCode?: number;
-  body?: {
-    error?: {
-      status: number;
-      message: string;
-    };
-  };
-}
-
-// Type Guards
-export function isSpotifyTrack(track: any): track is SpotifyApiTrack {
-  return (
-    track &&
-    typeof track.id === 'string' &&
-    typeof track.name === 'string' &&
-    Array.isArray(track.artists) &&
-    track.album &&
-    typeof track.external_urls?.spotify === 'string'
-  );
-}
-
-export function isSpotifyAlbum(album: any): album is SpotifyApiAlbum {
-  return (
-    album &&
-    typeof album.id === 'string' &&
-    typeof album.name === 'string' &&
-    Array.isArray(album.images) &&
-    Array.isArray(album.artists) &&
-    typeof album.release_date === 'string'
-  );
+  artists: SpotifyArtist[];
+  release_date?: string;
+  album: SpotifyAlbum;
+  tracks: SpotifyTrack[];
+  external_urls: ExternalUrls;
+  uri: string;
 }

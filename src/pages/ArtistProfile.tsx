@@ -13,6 +13,7 @@ import {
 } from '@mui/material';
 import axios from 'axios';
 import { ArtistCard } from '../components/ArtistCard';
+import config from '../config';
 
 interface Artist {
   id: string;
@@ -54,11 +55,11 @@ const ArtistProfile: React.FC = () => {
         setLoading(true);
         
         // Fetch artist details
-        const artistResponse = await axios.get(`/api/artists/${id}`);
+        const artistResponse = await axios.get(`${config.API_URL}/artists/${id}`);
         setArtist(artistResponse.data);
         
         // Fetch releases (including collaborations)
-        const releasesResponse = await axios.get(`/api/artists/${id}/releases`);
+        const releasesResponse = await axios.get(`${config.API_URL}/artists/${id}/releases`);
         setReleases(releasesResponse.data);
         
         setLoading(false);

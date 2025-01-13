@@ -163,11 +163,11 @@ class SymphonicService {
   private determineLabel(labelName: string): RecordLabel {
     const normalizedName = labelName.toLowerCase();
     if (normalizedName.includes('tech')) {
-      return RECORD_LABELS.TECH;
+      return RECORD_LABELS['buildit-tech'];
     } else if (normalizedName.includes('deep')) {
-      return RECORD_LABELS.DEEP;
+      return RECORD_LABELS['buildit-deep'];
     }
-    return RECORD_LABELS.RECORDS;
+    return RECORD_LABELS['buildit-records'];
   }
 
   private delay(ms: number): Promise<void> {

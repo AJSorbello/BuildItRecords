@@ -1,28 +1,24 @@
-import * as React from 'react';
-import { Box, Typography, Grid, Card, CardContent, CardMedia, Link, styled } from '@mui/material';
+import React, { useState } from 'react';
+import { Box, Typography, Card, CardContent, CardMedia, Grid, Link, styled, Container } from '@mui/material';
 import { FaSpotify } from 'react-icons/fa';
-import { LabelKey } from '../types/labels';
+import { labelColors } from '../theme/theme';
+import PageLayout from '../components/PageLayout';
+import PlaylistTrackList from '../components/PlaylistTrackList';
 
-interface Playlist {
-  id: string;
-  title: string;
-  description: string;
-  coverImage: string;
-  spotifyUrl: string;
-  followers?: number;
-  tracks?: number;
-}
-
-interface PlaylistsPageProps {
-  label: LabelKey;
+interface Track {
+  id: string
+  name: string
+  artists?: string[]
+  duration?: number
+  spotifyUrl: string
 }
 
 const PlaylistCard = styled(Card)({
+  backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  transition: 'all 0.3s ease-in-out',
   height: '100%',
   display: 'flex',
   flexDirection: 'column',
-  backgroundColor: 'rgba(255, 255, 255, 0.05)',
-  transition: 'all 0.3s ease-in-out',
   '&:hover': {
     transform: 'translateY(-8px)',
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
@@ -32,7 +28,7 @@ const PlaylistCard = styled(Card)({
   },
 });
 
-const SpotifyLink = styled(Link)({
+const IconLink = styled(Link)({
   color: '#FFFFFF',
   display: 'flex',
   alignItems: 'center',
@@ -44,136 +40,188 @@ const SpotifyLink = styled(Link)({
   },
 });
 
-const getPlaylists = (label: LabelKey): Playlist[] => {
-  switch (label) {
-    case 'TECH':
-      return [
-        {
-          id: '1',
-          title: 'Build It Tech Weekly',
-          description: 'Fresh techno and tech house tracks curated weekly. The best in underground electronic music.',
-          coverImage: 'https://via.placeholder.com/300',
-          spotifyUrl: 'https://open.spotify.com/playlist/yourid',
-          followers: 1500,
-          tracks: 50,
-        },
-        {
-          id: '2',
-          title: 'Tech House Essentials',
-          description: 'Essential tech house tracks that defined the genre. Updated monthly.',
-          coverImage: 'https://via.placeholder.com/300',
-          spotifyUrl: 'https://open.spotify.com/playlist/yourid',
-          followers: 2500,
-          tracks: 100,
-        },
-        {
-          id: '3',
-          title: 'Underground Techno',
-          description: 'Deep, dark, and driving techno tracks from the underground scene.',
-          coverImage: 'https://via.placeholder.com/300',
-          spotifyUrl: 'https://open.spotify.com/playlist/yourid',
-          followers: 3500,
-          tracks: 75,
-        },
-      ];
-    case 'DEEP':
-      return [
-        {
-          id: '1',
-          title: 'Deep House Meditation',
-          description: 'Smooth and melodic deep house tracks for your soul.',
-          coverImage: 'https://via.placeholder.com/300',
-          spotifyUrl: 'https://open.spotify.com/playlist/yourid',
-          followers: 2000,
-          tracks: 80,
-        },
-        {
-          id: '2',
-          title: 'Deep & Atmospheric',
-          description: 'Atmospheric deep house cuts perfect for late night sessions.',
-          coverImage: 'https://via.placeholder.com/300',
-          spotifyUrl: 'https://open.spotify.com/playlist/yourid',
-          followers: 1800,
-          tracks: 60,
-        },
-      ];
-    default:
-      return [
-        {
-          id: '1',
-          title: 'Build It Records Radio',
-          description: 'The sound of Build It Records. Updated weekly with fresh house music.',
-          coverImage: 'https://via.placeholder.com/300',
-          spotifyUrl: 'https://open.spotify.com/playlist/yourid',
-          followers: 5000,
-          tracks: 100,
-        },
-        {
-          id: '2',
-          title: 'House Classics',
-          description: 'Timeless house music classics that shaped the genre.',
-          coverImage: 'https://via.placeholder.com/300',
-          spotifyUrl: 'https://open.spotify.com/playlist/yourid',
-          followers: 3500,
-          tracks: 150,
-        },
-      ];
-  }
+interface Playlist {
+  id: string;
+  title: string;
+  description: string;
+  coverImage: string;
+  spotifyUrl: string;
+  followers?: number;
+  trackCount?: number;  // rename from tracks to trackCount
+  tracks?: Track[];     // add this for the actual tracks array
+}
+
+interface PlaylistPageProps {
+  label: 'records' | 'tech' | 'deep';
+}
+
+const mockPlaylists: Record<string, Playlist[]> = {
+  records: [
+    {
+      id: '1',
+      title: 'House Essentials',
+      description: 'The finest selection of underground house music',
+      coverImage: 'https://via.placeholder.com/300x300?text=House+Essentials',
+      spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZF1DXa8NOEUWPn9W',
+      followers: 5000,
+      trackCount: 100,
+      tracks: [] // initialize with empty array or actual track data
+    },
+    {
+      id: '2',
+      title: 'Deep House Vibes',
+      description: 'Smooth and groovy deep house selections',
+      coverImage: 'https://via.placeholder.com/300x300?text=Deep+House+Vibes',
+      spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZF1DX2TRYkJECvfC',
+      followers: 5000,
+      trackCount: 100,
+      tracks: [] // initialize with empty array or actual track data
+    },
+    {
+      id: '3',
+      title: 'Underground House',
+      description: 'Raw and unfiltered house music from the underground',
+      coverImage: 'https://via.placeholder.com/300x300?text=Underground+House',
+      spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZF1DX8jqZp3XHOt3',
+    },
+  ],
+  tech: [
+    {
+      id: '1',
+      title: 'Techno Warehouse',
+      description: 'Hard-hitting techno selections',
+      coverImage: 'https://via.placeholder.com/300x300?text=Techno+Warehouse',
+      spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZF1DX6J5NfMJS675',
+      followers: 5000,
+      trackCount: 100,
+      tracks: [] // initialize with empty array or actual track data
+    },
+    {
+      id: '2',
+      title: 'Industrial Techno',
+      description: 'Dark and industrial techno cuts',
+      coverImage: 'https://via.placeholder.com/300x300?text=Industrial+Techno',      spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZF1DX1DWK5pyjPIb',
+    },
+  ],
+  deep: [
+    {
+      id: '1',
+      title: 'Deep House Sessions',
+      description: 'Atmospheric deep house selections',
+      coverImage: 'https://via.placeholder.com/300x300?text=Deep+House+Sessions',
+      spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZF1DX2TRYkJECvfC',
+      followers: 5000,
+      trackCount: 100,
+      tracks: [] // initialize with empty array or actual track data
+    },
+    {
+      id: '2',
+      title: 'Melodic Deep',
+      description: 'Emotional and melodic deep house',
+      coverImage: 'https://via.placeholder.com/300x300?text=Melodic+Deep',
+      spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZF1DX2TRYkJECvfC',
+    },
+  ],
 };
 
-const PlaylistsPage: React.FC<PlaylistsPageProps> = ({ label }) => {
-  const playlists = getPlaylists(label);
+const PlaylistPage: React.FC<PlaylistPageProps> = ({ label }) => {
+  const [selectedPlaylist, setSelectedPlaylist] = useState<Playlist | null>(null);
+  const playlists = mockPlaylists[label] || [];
+  const labelColor = labelColors[label];
 
   return (
-    <Box sx={{ maxWidth: 1400, margin: '0 auto', padding: '0 16px' }}>
-      <Typography variant="h4" gutterBottom sx={{ color: 'text.primary', textAlign: 'center' }}>
-        {label === 'TECH' ? 'Build It Tech' : label === 'DEEP' ? 'Build It Deep' : 'Build It Records'}
-      </Typography>
-      <Typography variant="h6" sx={{ color: 'text.secondary', mb: 6, textAlign: 'center' }}>
-        {label === 'TECH' ? 'Techno & Tech House' : label === 'DEEP' ? 'Deep House' : 'House Music'} Playlists
-      </Typography>
+    <PageLayout label={label}>
+      <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Typography variant="h4" gutterBottom sx={{ color: 'text.primary', textAlign: 'center' }}>
+          {label === 'tech' ? 'Build It Tech' : label === 'deep' ? 'Build It Deep' : 'Build It Records'}
+        </Typography>
+        <Typography variant="h6" sx={{ color: 'text.secondary', mb: 6, textAlign: 'center' }}>
+          {label === 'tech' ? 'Techno & Tech House' : label === 'deep' ? 'Deep House' : 'House Music'} Playlists
+        </Typography>
 
-      <Grid container spacing={4}>
-        {playlists.map((playlist) => (
-          <Grid item xs={12} sm={6} md={4} key={playlist.id}>
-            <PlaylistCard>
-              <CardMedia
-                component="img"
-                sx={{
-                  height: 0,
-                  paddingTop: '100%',
-                  objectFit: 'cover',
-                  filter: 'brightness(0.9)',
-                }}
-                image={playlist.coverImage}
-                alt={playlist.title}
-              />
-              <CardContent sx={{ flexGrow: 1 }}>
-                <Typography variant="h6" component="div" sx={{ color: 'text.primary', mb: 1 }}>
-                  {playlist.title}
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2, minHeight: '40px' }}>
-                  {playlist.description}
-                </Typography>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                  <Typography variant="caption" color="text.secondary">
-                    {playlist.followers?.toLocaleString()} followers
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {playlist.tracks} tracks
-                  </Typography>
-                </Box>
-                <SpotifyLink href={playlist.spotifyUrl} target="_blank">
-                  <FaSpotify size={20} className="spotify-icon" />
-                  <Typography variant="body2">Play on Spotify</Typography>
-                </SpotifyLink>
-              </CardContent>
-            </PlaylistCard>
+        <Grid container spacing={4}>
+          {/* Playlists Grid */}
+          <Grid item xs={12} md={4}>
+            <Typography variant="h5" gutterBottom sx={{ mb: 3 }}>
+              Playlists
+            </Typography>
+            <Grid container spacing={2}>
+              {playlists.map((playlist) => (
+                <Grid item xs={12} key={playlist.id}>
+                  <PlaylistCard 
+                    onClick={() => setSelectedPlaylist(playlist)}
+                    sx={{ 
+                      cursor: 'pointer',
+                      border: selectedPlaylist?.id === playlist.id ? `2px solid ${labelColor}` : 'none'
+                    }}
+                  >
+                    <CardMedia
+                      component="img"
+                      sx={{
+                        height: 0,
+                        paddingTop: '100%',
+                        objectFit: 'cover',
+                        filter: 'brightness(0.9)',
+                      }}
+                      image={playlist.coverImage}
+                      alt={playlist.title}
+                    />
+                    <CardContent sx={{ flexGrow: 1 }}>
+                      <Typography variant="h6" component="div" sx={{ color: 'text.primary', mb: 1 }}>
+                        {playlist.title}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2, minHeight: '40px' }}>
+                        {playlist.description}
+                      </Typography>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                        <Typography variant="caption" color="text.secondary">
+                          {playlist.followers?.toLocaleString()} followers
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                        {playlist.trackCount || 0} tracks                        </Typography>
+                      </Box>
+                      <IconLink href={playlist.spotifyUrl} target="_blank" onClick={(e) => e.stopPropagation()}>
+                        <FaSpotify size={20} className="spotify-icon" />
+                        <Typography variant="body2">Play on Spotify</Typography>
+                      </IconLink>
+                    </CardContent>
+                  </PlaylistCard>
+                </Grid>
+              ))}
+            </Grid>
           </Grid>
-        ))}
-      </Grid>
-    </Box>
+
+          {/* Track List */}
+          <Grid item xs={12} md={8}>
+            <Typography variant="h5" gutterBottom sx={{ mb: 3 }}>
+              {selectedPlaylist ? selectedPlaylist.title : 'Select a Playlist'}
+            </Typography>
+            {selectedPlaylist ? (
+              <PlaylistTrackList 
+              playlistId={selectedPlaylist.id} 
+              tracks={selectedPlaylist.tracks || []} 
+            />
+            ) : (
+              <Box 
+                sx={{ 
+                  height: '400px', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                  borderRadius: 1,
+                }}
+              >
+                <Typography variant="body1" color="text.secondary">
+                  Select a playlist to view tracks
+                </Typography>
+              </Box>
+            )}
+          </Grid>
+        </Grid>
+      </Container>
+    </PageLayout>
   );
 };
 
-export default PlaylistsPage;
+export default PlaylistPage;

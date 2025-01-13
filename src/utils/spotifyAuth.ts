@@ -114,3 +114,29 @@ export const refreshAccessToken = async (refresh_token: string): Promise<{
   const data = await response.json();
   return data;
 };
+
+import { SpotifyApi } from '@spotify/web-api-ts-sdk';
+import { SPOTIFY_CONFIG } from '../config/env';
+
+let spotifyApi: SpotifyApi | null = null;
+
+export async function initializeSpotify(): Promise<SpotifyApi> {
+  if (!spotifyApi) {
+    spotifyApi = SpotifyApi.withClientCredentials(
+      SPOTIFY_CONFIG.CLIENT_ID,
+      SPOTIFY_CONFIG.CLIENT_SECRET
+    );
+  }
+  return spotifyApi;
+}
+
+export async function getSpotifyApi(): Promise<SpotifyApi> {
+  if (!spotifyApi) {
+    return initializeSpotify();
+  }
+  return spotifyApi;
+}
+
+export function clearSpotifyApi(): void {
+  spotifyApi = null;
+}

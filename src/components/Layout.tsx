@@ -29,14 +29,17 @@ export const Layout: React.FC = () => {
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const path = location.pathname;
   const currentLabel = (path.split('/')[1] || 'records').toUpperCase();
+  const isAdminRoute = path.startsWith('/admin');
 
-  console.log('Layout rendered:', { path, currentLabel });
+  console.log('Layout rendered:', { path, currentLabel, isAdminRoute });
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
   };
 
   const renderSidebar = () => {
+    if (isAdminRoute) return null;
+
     const drawerVariant = isMobile ? "temporary" as const : "permanent" as const;
     const sidebarProps = {
       variant: drawerVariant,
@@ -55,71 +58,44 @@ export const Layout: React.FC = () => {
   };
 
   return (
-    <Box sx={{ 
-      display: 'flex', 
-      minHeight: '100vh', 
-      bgcolor: '#121212', 
-      flexDirection: 'column',
-      border: 'none'
-    }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
       <CssBaseline />
-      {isMobile && (
-        <IconButton
-          color="inherit"
-          aria-label="open drawer"
-          edge="start"
-          onClick={handleDrawerToggle}
-          sx={{
-            position: 'fixed',
-            top: '12px',
-            left: '12px',
-            zIndex: 1400,
-            color: '#FFFFFF'
-          }}
-        >
-          <MenuIcon />
-        </IconButton>
-      )}
-      <TopNavigation />
-      <Box sx={{ 
-        display: 'flex', 
-        flex: 1, 
-        marginTop: '0px',
-        '& .MuiDrawer-paper': {
-          border: 'none'
-        }
-      }}>
-        {renderSidebar()}
-        <Box component="main" sx={{ 
-          flexGrow: 1, 
-          p: 3,
-          borderLeft: 'none'
-        }}>
-          {!isMobile && (
-            <Box sx={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center',
-              height: '116px', 
-              position: 'fixed', 
-              top: '64px', 
-              left: 0,
-              width: '240px',
-              zIndex: 1200,
-              bgcolor: '#000000'
-            }}>
-              <img src={getLogo(currentLabel)} alt={`${currentLabel} logo`} style={{ 
-                height: '100%', 
-                width: 'auto', 
-                objectFit: 'contain', 
-                filter: 'brightness(0) invert(1)'
-              }} />
-            </Box>
+      
+      {!isAdminRoute && (
+        <>
+          {isMobile && (
+            <IconButton
+              color="inherit"
+              aria-label="open drawer"
+              edge="start"
+              onClick={handleDrawerToggle}
+              sx={{
+                position: 'fixed',
+                top: '1rem',
+                left: '1rem',
+                zIndex: theme.zIndex.drawer + 2,
+                display: { sm: 'none' }
+              }}
+            >
+              <MenuIcon />
+            </IconButton>
           )}
-          <Box sx={{ marginTop: isMobile ? '0px' : '116px' }}>
-            <Outlet />
-          </Box>
-        </Box>
+          <TopNavigation logo={getLogo(currentLabel)} />
+          {renderSidebar()}
+        </>
+      )}
+
+      <Box
+        component="main"
+        sx={{
+          flexGrow: 1,
+          width: { sm: isAdminRoute ? '100%' : `calc(100% - ${240}px)` },
+          ml: { sm: isAdminRoute ? 0 : `${240}px` },
+          mt: isAdminRoute ? 0 : '64px',
+          position: 'relative'
+        }}
+      >
+        <Outlet />
       </Box>
     </Box>
   );

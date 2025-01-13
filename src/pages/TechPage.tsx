@@ -1,96 +1,159 @@
-import React, { useState, useEffect } from 'react';
-import { Box, Typography, Grid, Card, CardContent, CardMedia, Link, styled } from '@mui/material';
-import { FaSpotify, FaSoundcloud } from 'react-icons/fa';
-import { SiBeatport } from 'react-icons/si';
-import PageLayout from '../components/PageLayout';
-import { Track } from '../types/track';
-import { getTracksByLabel } from '../utils/trackUtils';
+import React, { useEffect, useState } from 'react';
+import { Box, Grid, Card, CardMedia, CardContent, Typography, IconButton, CircularProgress, Alert } from '@mui/material';
+import { OpenInNew } from '@mui/icons-material';
 import { RECORD_LABELS } from '../constants/labels';
-import { getArtistsByLabel } from '../utils/artistUtils';
-import { Artist } from '../data/mockData';
-import TrackList from '../components/TrackList';
-
-const IconLink = styled(Link)({
-  color: '#FFFFFF',
-  marginRight: '16px',
-  '&:hover': {
-    color: '#02FF95',
-  },
-});
-
-const ArtistCard = styled(Card)({
-  backgroundColor: 'rgba(255, 255, 255, 0.05)',
-  transition: 'transform 0.2s',
-  height: '100%',
-  display: 'flex',
-  flexDirection: 'column',
-  '&:hover': {
-    transform: 'scale(1.02)',
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-  },
-});
+import { databaseService } from '../services/DatabaseService';
+import { Artist, Release } from '../types';
+import PageLayout from '../components/PageLayout';
+import { useTheme } from '../contexts/ThemeContext';
+import TechSidebar from '../components/TechSidebar';
 
 const TechPage = () => {
-  const [tracks, setTracks] = useState<Track[]>([]);
   const [artists, setArtists] = useState<Artist[]>([]);
+  const [featuredRelease, setFeaturedRelease] = useState<Release | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { colors } = useTheme();
 
   useEffect(() => {
-    setTracks(getTracksByLabel(RECORD_LABELS.TECH));
-    setArtists(getArtistsByLabel(RECORD_LABELS.TECH));
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [techArtists, techReleases] = await Promise.all([
+          databaseService.getArtistsForLabel('buildit-tech'),
+          databaseService.getReleasesForLabel('buildit-tech')
+        ]);
+
+        if (techArtists.length === 0) {
+          setError('No artists found');
+          return;
+        }
+
+        setArtists(techArtists);
+        // Set the most recent release as featured
+        if (techReleases.length > 0) {
+          setFeaturedRelease(techReleases[0]);
+        }
+      } catch (err) {
+        console.error('Error fetching data:', err);
+        setError('Failed to load data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
   }, []);
+
+  if (loading) {
+    return (
+      <PageLayout label="tech">
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
+          <CircularProgress />
+        </Box>
+      </PageLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <PageLayout label="tech">
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
+          <Alert severity="error">{error}</Alert>
+        </Box>
+      </PageLayout>
+    );
+  }
 
   return (
     <PageLayout label="tech">
-      <Box sx={{ maxWidth: 1200, margin: '0 auto', padding: 3 }}>
-        <Typography variant="h4" component="h1" gutterBottom sx={{ color: '#FFFFFF', mb: 4 }}>
-          Tech Releases
-        </Typography>
-        
-        <Box mb={6}>
-          <TrackList tracks={tracks} />
-        </Box>
+      <Box sx={{ display: 'flex' }}>
+        <TechSidebar variant="permanent" />
+        <Box sx={{ flexGrow: 1, p: 3 }}>
+          {featuredRelease && (
+            <Box sx={{ mb: 4 }}>
+              <Typography variant="h4" component="h1" gutterBottom sx={{ color: colors.text }}>
+                Featured Release
+              </Typography>
+              <Card 
+                sx={{ 
+                  display: 'flex',
+                  backgroundColor: colors.card,
+                  borderRadius: 2
+                }}
+              >
+                <CardMedia
+                  component="img"
+                  sx={{ width: 300, height: 300 }}
+                  image={featuredRelease.imageUrl || 'https://via.placeholder.com/300x300?text=No+Image'}
+                  alt={featuredRelease.title}
+                />
+                <CardContent sx={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                  <Typography variant="h5" component="h2" sx={{ color: colors.text }}>
+                    {featuredRelease.title}
+                  </Typography>
+                  <Typography variant="subtitle1" sx={{ color: colors.textSecondary }}>
+                    {featuredRelease.primaryArtist?.name}
+                  </Typography>
+                  {featuredRelease.spotifyUrl && (
+                    <IconButton
+                      component="a"
+                      href={featuredRelease.spotifyUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      sx={{ color: colors.text, mt: 2, width: 'fit-content' }}
+                    >
+                      <OpenInNew />
+                    </IconButton>
+                  )}
+                </CardContent>
+              </Card>
+            </Box>
+          )}
 
-        <Box>
-          <Typography variant="h5" gutterBottom sx={{ textAlign: 'center', mb: 4 }}>
+          <Typography variant="h4" component="h2" gutterBottom sx={{ color: colors.text }}>
             Artists
           </Typography>
-          <Grid container spacing={3} justifyContent="center">
+          <Grid container spacing={4}>
             {artists.map((artist) => (
               <Grid item xs={12} sm={6} md={4} key={artist.id}>
-                <ArtistCard>
+                <Card 
+                  sx={{ 
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    backgroundColor: colors.card,
+                    borderRadius: 2
+                  }}
+                >
                   <CardMedia
                     component="img"
-                    height="200"
-                    image={artist.imageUrl || 'https://via.placeholder.com/300x300.png?text=' + encodeURIComponent(artist.name)}
+                    sx={{ height: 200, objectFit: 'cover' }}
+                    image={artist.imageUrl || 'https://via.placeholder.com/300x300?text=No+Image'}
                     alt={artist.name}
-                    sx={{
-                      objectFit: 'cover',
-                      transition: 'transform 0.2s ease-in-out',
-                      '&:hover': {
-                        transform: 'scale(1.05)'
-                      }
-                    }}
                   />
-                  <CardContent>
-                    <Typography variant="h6" gutterBottom sx={{ color: '#FFFFFF' }}>
+                  <CardContent sx={{ flexGrow: 1 }}>
+                    <Typography gutterBottom variant="h5" component="h2" sx={{ color: colors.text }}>
                       {artist.name}
                     </Typography>
-                    <Typography variant="body2" sx={{ color: '#AAAAAA', mb: 2 }}>
-                      {artist.bio}
-                    </Typography>
-                    <Box sx={{ display: 'flex', gap: 2 }}>
-                      <IconLink href={artist.spotifyUrl} target="_blank" rel="noopener noreferrer">
-                        <FaSpotify size={24} />
-                      </IconLink>
-                      <IconLink href={artist.beatportUrl} target="_blank" rel="noopener noreferrer">
-                        <SiBeatport size={24} />
-                      </IconLink>
-                      <IconLink href={artist.soundcloudUrl} target="_blank" rel="noopener noreferrer">
-                        <FaSoundcloud size={24} />
-                      </IconLink>
-                    </Box>
+                    {artist.genres && artist.genres.length > 0 && (
+                      <Typography variant="body2" sx={{ mb: 2, color: colors.textSecondary }}>
+                        {artist.genres.join(', ')}
+                      </Typography>
+                    )}
+                    {artist.spotifyUrl && (
+                      <IconButton
+                        component="a"
+                        href={artist.spotifyUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        sx={{ color: colors.text }}
+                      >
+                        <OpenInNew />
+                      </IconButton>
+                    )}
                   </CardContent>
-                </ArtistCard>
+                </Card>
               </Grid>
             ))}
           </Grid>

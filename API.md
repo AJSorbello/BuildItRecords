@@ -1,23 +1,58 @@
-# Music Metadata API Documentation
+# Build It Records API Documentation
 
 ## Base URL
 ```
 http://localhost:3001/api
 ```
 
-## Rate Limiting
-- 100 requests per 15 minutes per IP address
-- Cached responses for 1 hour
-
 ## Authentication
-All endpoints require Spotify API credentials configured in the server's environment variables.
+All admin endpoints require authentication via JWT token.
 
-## Common Parameters
-- `fields`: Comma-separated list of fields to include in the response
-- `limit`: Number of items per page (default: 20, max: 50)
-- `offset`: Pagination offset (default: 0)
+## Health Check
+```
+GET /health
+```
+Returns server status and timestamp.
+
+## Label Endpoints
+
+### Get All Labels
+```
+GET /labels
+```
+Returns a list of all record labels.
+
+### Get Label by ID
+```
+GET /labels/:labelId
+```
+Returns details for a specific label.
+
+### Get Label's Tracks
+```
+GET /labels/:labelId/tracks
+```
+Returns all tracks associated with a label.
+
+### Import Label's Tracks
+```
+POST /labels/:labelId/import
+```
+Imports tracks from Spotify for a specific label.
 
 ## Track Endpoints
+
+### Get All Tracks
+```
+GET /tracks
+```
+Returns a list of all tracks.
+
+### Get Track by ID
+```
+GET /tracks/:trackId
+```
+Returns details for a specific track.
 
 ### Search Tracks
 ```
@@ -25,101 +60,80 @@ GET /tracks/search
 ```
 Query Parameters:
 - `q`: Search query (required)
-- `limit`: Number of results (1-50)
-- `offset`: Pagination offset
+- `labelId`: Filter by label ID
 
-### Get Track
+### Update Track
 ```
-GET /tracks/:trackId
+PUT /tracks/:trackId
 ```
-Query Parameters:
-- `fields`: Filter fields (e.g., "name,artists,duration_ms")
+Update track information.
 
-### Get Multiple Tracks
+### Delete Track
 ```
-POST /tracks/batch
+DELETE /tracks/:trackId
 ```
-Body Parameters:
-- `trackIds`: Array of track IDs (max 50)
-- `fields`: Filter fields
-
-### Get Track Recommendations
-```
-GET /tracks/recommendations
-```
-Query Parameters:
-- `seed_tracks`: Comma-separated track IDs
-- `limit`: Number of recommendations (1-100)
+Delete a track (requires authentication).
 
 ## Artist Endpoints
 
-### Get Artist
+### Get All Artists
+```
+GET /artists
+```
+Returns a list of all artists.
+
+### Get Artist by ID
 ```
 GET /artists/:artistId
 ```
-Query Parameters:
-- `fields`: Filter fields
+Returns details for a specific artist.
 
-### Get Artist's Top Tracks
+### Get Artist's Tracks
 ```
-GET /artists/:artistId/top-tracks
+GET /artists/:artistId/tracks
 ```
-Query Parameters:
-- `market`: Market code (default: "US")
+Returns all tracks by an artist.
 
-### Get Artist's Albums
-```
-GET /artists/:artistId/albums
-```
-Query Parameters:
-- `include_groups`: Album types (album,single,compilation)
-- `limit`: Number of albums
-- `offset`: Pagination offset
+## Release Endpoints
 
-### Get Related Artists
+### Get All Releases
 ```
-GET /artists/:artistId/related
+GET /releases
 ```
+Returns a list of all releases.
 
-## Album Endpoints
+### Get Release by ID
+```
+GET /releases/:releaseId
+```
+Returns details for a specific release.
 
-### Get Album
+### Get Release's Tracks
 ```
-GET /albums/:albumId
+GET /releases/:releaseId/tracks
 ```
-Query Parameters:
-- `fields`: Filter fields
+Returns all tracks in a release.
 
-### Get Album Tracks
-```
-GET /albums/:albumId/tracks
-```
-Query Parameters:
-- `limit`: Number of tracks
-- `offset`: Pagination offset
-
-### Get New Releases
-```
-GET /albums/new-releases
-```
-Query Parameters:
-- `limit`: Number of albums
-- `offset`: Pagination offset
-
-## Response Formats
+## Response Objects
 
 ### Track Object
 ```json
 {
-    "artists": [{ "name": string }],
+    "id": string,
     "name": string,
+    "artists": [{
+        "id": string,
+        "name": string,
+        "images": object[]
+    }],
     "album": {
         "name": string,
-        "label": string
+        "images": object[]
     },
     "duration_ms": number,
-    "popularity": number,
-    "preview_url": string
+    "preview_url": string,
+    "spotify_id": string,
+    "label_id": string
 }
 ```
 
@@ -128,30 +142,33 @@ Query Parameters:
 {
     "id": string,
     "name": string,
-    "genres": string[],
-    "popularity": number,
-    "followers": number,
     "images": object[],
-    "external_urls": object
+    "spotify_id": string
 }
 ```
 
-### Album Object
+### Release Object
 ```json
 {
     "id": string,
     "name": string,
-    "type": string,
-    "release_date": string,
-    "total_tracks": number,
     "artists": [{
         "id": string,
         "name": string
     }],
     "images": object[],
-    "external_urls": object,
-    "copyrights": object[],
-    "label": string
+    "release_date": string,
+    "spotify_id": string,
+    "label_id": string
+}
+```
+
+### Label Object
+```json
+{
+    "id": string,
+    "name": string,
+    "spotify_id": string
 }
 ```
 
@@ -167,6 +184,6 @@ All errors follow this format:
 Common HTTP status codes:
 - 400: Bad Request (invalid parameters)
 - 401: Unauthorized (invalid credentials)
+- 403: Forbidden (insufficient permissions)
 - 404: Not Found
-- 429: Too Many Requests
 - 500: Internal Server Error

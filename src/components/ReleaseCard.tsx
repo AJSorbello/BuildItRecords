@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React from 'react';
 import {
   Card,
   CardContent,
@@ -6,346 +6,222 @@ import {
   Typography,
   Box,
   IconButton,
-  Link,
-  Stack,
+  Link
 } from '@mui/material';
-import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-import PauseIcon from '@mui/icons-material/Pause';
-import MusicNoteIcon from '@mui/icons-material/MusicNote';
-import AlbumIcon from '@mui/icons-material/Album';
-import CloudQueueIcon from '@mui/icons-material/CloudQueue';
-import { useTheme } from '../contexts/ThemeContext';
-import { Track } from '../types/track';
-import { Release } from '../types/release';
+import { PlayArrow as PlayIcon } from '@mui/icons-material';
+import type { Track } from '../types/track';
+import type { Release } from '../types/release';
+import { formatDuration } from '../utils/trackUtils';
+import { useTheme } from '@mui/material/styles';
 
 interface ReleaseCardProps {
-  release?: Release;
+  release: Release;
   track?: Track;
-  compact?: boolean;
   featured?: boolean;
   ranking?: number;
-  onPlay?: (track: Track) => void;
+  onClick?: () => void;
 }
 
-const ReleaseCard: React.FC<ReleaseCardProps> = ({ release, track, compact = false, featured = false, ranking, onPlay }) => {
-  const { colors } = useTheme();
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+export const ReleaseCard: React.FC<ReleaseCardProps> = ({
+  release,
+  track,
+  featured = false,
+  ranking,
+  onClick
+}) => {
+  const theme = useTheme();
+  const item = release || track;
 
-  const handlePlayPause = async (track: Track) => {
-    if (!track.previewUrl) return;
+  if (!item) return null;
 
-    if (currentTrack?.id === track.id) {
-      if (isPlaying) {
-        audioRef.current?.pause();
-      } else {
-        audioRef.current?.play();
-      }
-      setIsPlaying(!isPlaying);
-    } else {
-      if (audioRef.current) {
-        audioRef.current.pause();
-      }
-      
-      const audio = new Audio(track.previewUrl);
-      audioRef.current = audio;
-      
-      audio.addEventListener('ended', () => {
-        setIsPlaying(false);
-        setCurrentTrack(null);
+  const formatDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
       });
-      
-      audio.play();
-      setIsPlaying(true);
-      setCurrentTrack(track);
+    } catch (error: unknown) {
+      console.error('Error formatting date:', error);
+      return 'Release date unavailable';
     }
   };
 
-  const handlePlayClick = () => {
-    if (onPlay && track?.previewUrl) {
-      onPlay(track);
-    }
-  };
-
+  // Handle both server response format and client format
   const getTitle = () => {
-    if (track) return track.trackTitle;
-    if (release) return release.title;
-    return '';
+    return release.title || release.name || track?.name || 'Untitled';
   };
 
-  const getArtist = () => {
-    if (track) return track.artist;
-    if (release) return release.artist;
-    return '';
+  const getArtists = () => {
+    if (release.artists) {
+      if (Array.isArray(release.artists)) {
+        return release.artists.map((artist: any) => artist.name || artist).join(', ');
+      }
+      return release.artists;
+    }
+    if (track?.artists) {
+      return Array.isArray(track.artists) 
+        ? track.artists.map(artist => typeof artist === 'string' ? artist : artist.name).join(', ')
+        : track.artists;
+    }
+    return 'Unknown Artist';
   };
 
-  const getArtwork = () => {
-    if (track) return track.albumCover || track.album?.images[0]?.url;
-    if (release) return release.artwork;
+  const getAlbumCover = () => {
+    if (release.artwork_url) return release.artwork_url;
+    if (release.album?.images && release.album.images.length > 0) return release.album.images[0].url;
+    if (release.images && release.images.length > 0) return release.images[0].url;
     return '';
   };
 
   const getSpotifyUrl = () => {
-    if (track) return track.spotifyUrl;
-    if (release) return release.spotifyUrl;
-    return '';
+    if (release.spotifyUrl) return release.spotifyUrl;
+    if (release.external_urls?.spotify) return release.external_urls.spotify;
+    if (track?.external_urls?.spotify) return track.external_urls.spotify;
+    return null;
   };
+
+  const getPreviewUrl = () => {
+    return release.preview_url || track?.preview_url || null;
+  };
+
+  const getReleaseDate = () => {
+    return release.releaseDate || release.release_date || null;
+  };
+
+  const getAlbumName = () => {
+    return release.album?.name || release.album || track?.album?.name || '';
+  };
+
+  const releaseDate = getReleaseDate() ? new Date(getReleaseDate()).toLocaleDateString() : 'Release date not available';
+  const artistNames = getArtists();
 
   return (
     <Card
       sx={{
+        height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        height: '100%',
-        minHeight: '400px',
-        maxHeight: '400px',
-        width: '100%',
-        backgroundColor: colors.card,
-        borderRadius: 2,
-        overflow: 'hidden',
         position: 'relative',
-        ...(featured && {
-          '& .MuiCardMedia-root': {
-            height: '400px',
-          },
-        }),
+        cursor: onClick ? 'pointer' : 'default',
+        '&:hover': onClick ? {
+          transform: 'scale(1.02)',
+          transition: 'transform 0.2s ease-in-out'
+        } : {}
       }}
+      onClick={onClick}
     >
       {ranking && (
         <Box
           sx={{
             position: 'absolute',
-            top: 12,
-            left: 12,
-            backgroundColor: 'rgba(0, 0, 0, 0.7)',
-            color: '#fff',
+            top: 10,
+            left: 10,
+            bgcolor: 'primary.main',
+            color: 'white',
             borderRadius: '50%',
-            width: 32,
-            height: 32,
+            width: 30,
+            height: 30,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            zIndex: 1,
-            fontWeight: 'bold',
+            zIndex: 1
           }}
         >
-          #{ranking}
+          {ranking}
         </Box>
       )}
       <CardMedia
         component="img"
-        image={getArtwork() || `https://via.placeholder.com/300x300.png?text=${encodeURIComponent(getTitle())}`}
-        alt={getTitle()}
         sx={{
-          width: '100%',
-          height: '200px',
-          objectFit: 'cover',
+          height: featured ? 400 : 200,
+          objectFit: 'cover'
         }}
+        image={getAlbumCover()}
+        alt={getTitle()}
       />
-      
-      <CardContent 
-        sx={{ 
-          flexGrow: 1, 
-          p: 2,
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between'
-        }}
-      >
-        <Box>
-          <Typography 
-            variant={featured ? 'h5' : 'h6'} 
-            component="h2" 
-            sx={{ 
-              mb: 1, 
-              color: colors.text,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              lineHeight: 1.2
-            }}
-          >
+      <CardContent sx={{ flexGrow: 1, position: 'relative', p: 2 }}>
+        <Box sx={{ mb: 2 }}>
+          <Typography variant={featured ? 'h5' : 'h6'} component="h2" gutterBottom>
             {getTitle()}
           </Typography>
           <Typography 
             variant="subtitle1" 
-            color="text.secondary" 
-            sx={{ 
-              mb: 1,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap'
-            }}
+            color="text.primary" 
+            sx={{ fontWeight: 500, mb: 1 }}
           >
-            {getArtist()}
-          </Typography>
-          <Typography 
-            variant="body2" 
-            color="text.secondary" 
-            sx={{ mb: 2 }}
-          >
-            {new Date(track?.releaseDate || release?.releaseDate || '').toLocaleDateString(undefined, {
-              year: 'numeric',
-              month: 'short',
-              day: 'numeric'
-            })}
+            {artistNames}
           </Typography>
         </Box>
         
-        {!compact && (
-          <Box sx={{ mt: 2 }}>
-            {release?.tracks.map((track) => (
-              <Box
-                key={track.id}
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  mb: 1,
-                  p: 1,
-                  borderRadius: 1,
-                  '&:hover': {
-                    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                  },
-                }}
-              >
-                <IconButton
-                  size="small"
-                  onClick={() => handlePlayPause(track)}
-                  disabled={!track.previewUrl}
-                  sx={{ mr: 1 }}
-                >
-                  {isPlaying && currentTrack?.id === track.id ? (
-                    <PauseIcon />
-                  ) : (
-                    <PlayArrowIcon />
-                  )}
-                </IconButton>
-                <Typography variant="body2" sx={{ color: colors.text }}>
-                  {track.trackTitle}
-                </Typography>
-              </Box>
-            ))}
-          </Box>
-        )}
-        
-        <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
+        <Box sx={{ mb: 2 }}>
+          {getReleaseDate() && (
+            <Typography 
+              variant="body2" 
+              color="text.secondary"
+              sx={{ 
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0.5,
+                mb: 0.5 
+              }}
+            >
+              Release Date: {releaseDate}
+            </Typography>
+          )}
+          {track?.duration_ms && (
+            <Typography 
+              variant="body2" 
+              color="text.secondary"
+              sx={{ mb: 0.5 }}
+            >
+              Duration: {formatDuration(track.duration_ms)}
+            </Typography>
+          )}
+        </Box>
+
+        <Box sx={{ 
+          position: 'absolute', 
+          bottom: 16, 
+          right: 16,
+          display: 'flex',
+          gap: 1
+        }}>
           {getSpotifyUrl() && (
             <IconButton
               component={Link}
               href={getSpotifyUrl()}
               target="_blank"
               rel="noopener noreferrer"
-              sx={{ color: '#1DB954' }}
-            >
-              <MusicNoteIcon sx={{ fontSize: 24 }} />
-            </IconButton>
-          )}
-          {release?.beatportUrl && (
-            <IconButton
-              component={Link}
-              href={release.beatportUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              sx={{ color: '#FF6B00' }}
-            >
-              <AlbumIcon />
-            </IconButton>
-          )}
-          {release?.soundcloudUrl && (
-            <IconButton
-              component={Link}
-              href={release.soundcloudUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              sx={{ color: '#FF7700' }}
-            >
-              <CloudQueueIcon />
-            </IconButton>
-          )}
-        </Stack>
-      </CardContent>
-    </Card>
-  );
-};
-
-interface TrackCardProps {
-  track: Track;
-  onPlay?: (track: Track) => void;
-}
-
-const TrackCard: React.FC<TrackCardProps> = ({ track, onPlay }) => {
-  const handlePlayClick = () => {
-    if (onPlay && track.previewUrl) {
-      onPlay(track);
-    }
-  };
-
-  return (
-    <Card
-      sx={{
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        backgroundColor: 'rgba(255, 255, 255, 0.05)',
-        '&:hover': {
-          backgroundColor: 'rgba(255, 255, 255, 0.08)',
-        },
-        transition: 'all 0.2s ease-in-out',
-      }}
-    >
-      <Box sx={{ position: 'relative', paddingTop: '100%' }}>
-        <CardMedia
-          component="img"
-          sx={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-          }}
-          image={track.albumCover || track.album?.images[0]?.url || `https://via.placeholder.com/300x300.png?text=${encodeURIComponent(track.trackTitle)}`}
-          alt={track.trackTitle}
-        />
-      </Box>
-      <CardContent>
-        <Typography variant="h6" component="div" sx={{ color: '#FFFFFF', mb: 1 }}>
-          {track.trackTitle}
-        </Typography>
-        <Typography variant="subtitle1" sx={{ color: '#AAAAAA', mb: 2 }}>
-          {track.artist}
-        </Typography>
-        {track.album && (
-          <Typography variant="body2" sx={{ color: '#888888', mb: 1 }}>
-            {track.album.name}
-          </Typography>
-        )}
-        <Box sx={{ display: 'flex', alignItems: 'center', mt: 2 }}>
-          {track.previewUrl && (
-            <IconButton
-              onClick={handlePlayClick}
-              sx={{ color: '#FFFFFF', mr: 1 }}
-            >
-              <PlayArrowIcon />
-            </IconButton>
-          )}
-          {track.spotifyUrl && (
-            <Link
-              href={track.spotifyUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              sx={{
-                color: '#1DB954',
-                display: 'flex',
-                alignItems: 'center',
-                textDecoration: 'none',
+              size="small"
+              sx={{ 
+                color: theme.palette.primary.main,
                 '&:hover': {
-                  color: '#1ed760',
-                },
+                  color: theme.palette.primary.dark
+                }
               }}
             >
-              <MusicNoteIcon sx={{ fontSize: 24 }} />
+              <PlayIcon />
+            </IconButton>
+          )}
+          {getPreviewUrl() && (
+            <Link
+              href={getPreviewUrl()}
+              target="_blank"
+              rel="noopener noreferrer"
+              sx={{ 
+                color: 'primary.main',
+                textDecoration: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                '&:hover': {
+                  color: 'primary.dark',
+                  textDecoration: 'underline'
+                }
+              }}
+            >
+              Preview
             </Link>
           )}
         </Box>

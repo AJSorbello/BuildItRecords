@@ -1,108 +1,141 @@
-import { useState, useEffect } from 'react';
-import { spotifyService } from '../services/SpotifyService';
-import { Release } from '../types/release';
-import { RecordLabel, RECORD_LABELS } from '../constants/labels';
+import { useState, useEffect, useCallback } from 'react';
+import type { Release } from '../types/release';
+import { RECORD_LABELS } from '../constants/labels';
+import { databaseService, ApiError } from '../services/DatabaseService';
+import { Track } from '../types/track';
 
-const SPOTIFY_IDS = {
-  records: 'builditrecords',
-  tech: 'buildittech',
-  deep: 'builditdeep',
-} as const;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 1000; // 1 second
 
-const BEATPORT_URLS = {
-  records: 'https://www.beatport.com/label/build-it-records/89999',
-  tech: 'https://www.beatport.com/label/build-it-tech/90000',
-  deep: 'https://www.beatport.com/label/build-it-deep/90001',
-} as const;
+interface CacheItem {
+  data: Release[];
+  timestamp: number;
+}
 
-const SOUNDCLOUD_URLS = {
-  records: 'https://soundcloud.com/builditrecords',
-  tech: 'https://soundcloud.com/buildittech',
-  deep: 'https://soundcloud.com/builditdeep',
-} as const;
+const releaseCache = new Map<string, CacheItem>();
 
-type LabelId = keyof typeof SPOTIFY_IDS;
+export interface UseReleasesProps {
+  label: string;
+}
 
-const labelIdToRecordLabel = (labelId: LabelId): RecordLabel => {
-  switch (labelId) {
-    case 'records':
-      return RECORD_LABELS.RECORDS;
-    case 'tech':
-      return RECORD_LABELS.TECH;
-    case 'deep':
-      return RECORD_LABELS.DEEP;
-  }
-};
-
-const useReleases = (labelId: LabelId) => {
+export const useReleases = ({ label }: UseReleasesProps) => {
   const [releases, setReleases] = useState<Release[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
-  const convertSpotifyToRelease = (spotifyRelease: any): Release => ({
-    id: spotifyRelease.id,
-    title: spotifyRelease.name,
-    artist: spotifyRelease.artists[0]?.name || 'Unknown Artist',
-    artwork: spotifyRelease.images[0]?.url || '',
-    releaseDate: spotifyRelease.release_date,
-    spotifyUrl: spotifyRelease.external_urls.spotify,
-    beatportUrl: BEATPORT_URLS[labelId],
-    soundcloudUrl: SOUNDCLOUD_URLS[labelId],
-    label: labelIdToRecordLabel(labelId),
-    tracks: spotifyRelease.tracks.items.map((track: {
-      id: string;
-      name: string;
-      artists: Array<{ name: string }>;
-      duration_ms: number;
-      preview_url: string | null;
-    }) => ({
-      id: track.id,
-      title: track.name,
-      artist: track.artists[0]?.name || 'Unknown Artist',
-      duration: track.duration_ms,
-      previewUrl: track.preview_url,
-    })),
-  });
+  const getCachedReleases = (labelId: string): Release[] | null => {
+    const cached = releaseCache.get(labelId);
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      return cached.data;
+    }
+    return null;
+  };
+
+  const setCachedReleases = (labelId: string, data: Release[]) => {
+    releaseCache.set(labelId, {
+      data,
+      timestamp: Date.now(),
+    });
+  };
+
+  const fetchReleasesWithRetry = useCallback(async (
+    labelId: string,
+    attempt: number = 0
+  ): Promise<Release[]> => {
+    try {
+      const releases = await databaseService.getReleasesByLabelId(labelId);
+      setCachedReleases(labelId, releases);
+      return releases;
+    } catch (err) {
+      if (attempt < MAX_RETRIES) {
+        // Exponential backoff
+        const delay = RETRY_DELAY * Math.pow(2, attempt);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return fetchReleasesWithRetry(labelId, attempt + 1);
+      }
+      throw err;
+    }
+  }, []);
+
+  const fetchReleases = useCallback(async () => {
+    if (!label) {
+      setReleases([]);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Check cache first
+      const cachedData = getCachedReleases(label);
+      if (cachedData) {
+        setReleases(cachedData);
+        setLoading(false);
+        return;
+      }
+
+      const fetchedReleases = await fetchReleasesWithRetry(label);
+      setReleases(fetchedReleases);
+      setError(null);
+    } catch (err) {
+      console.error(`Error fetching releases for label ${label}:`, err);
+      if (err instanceof ApiError) {
+        setError(`Failed to load releases: ${err.message}`);
+      } else {
+        setError(`Failed to load releases for label ${label}`);
+      }
+      setReleases([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [label, fetchReleasesWithRetry]);
 
   useEffect(() => {
-    const fetchReleases = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        
-        const allReleases = await spotifyService.getLabelReleases(SPOTIFY_IDS[labelId]);
-        const formattedReleases = allReleases.map(convertSpotifyToRelease);
-        
-        setReleases(formattedReleases);
-      } catch (error) {
-        setError(error as Error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchReleases();
-  }, [labelId]);
+  }, [fetchReleases]);
+
+  const addReleases = useCallback((newTracks: Track[]) => {
+    setReleases(prevReleases => {
+      const releasesFromTracks: Release[] = newTracks.map(track => ({
+        id: track.id,
+        name: track.name,
+        type: 'single',
+        artists: track.artists,
+        artwork_url: track.album?.artwork_url,
+        release_date: track.releaseDate,
+        total_tracks: 1,
+        tracks: [track]
+      }));
+
+      const updatedReleases = [...prevReleases, ...releasesFromTracks];
+      
+      // Update cache with new releases
+      if (label) {
+        setCachedReleases(label, updatedReleases);
+      }
+
+      return updatedReleases;
+    });
+  }, [label]);
+
+  const retryFetch = useCallback(() => {
+    if (retryCount < MAX_RETRIES) {
+      setRetryCount(prev => prev + 1);
+      fetchReleases();
+    }
+  }, [retryCount, fetchReleases]);
 
   return {
     releases,
-    isLoading,
+    loading,
     error,
-    refetch: async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        
-        const allReleases = await spotifyService.getLabelReleases(SPOTIFY_IDS[labelId]);
-        const formattedReleases = allReleases.map(convertSpotifyToRelease);
-        
-        setReleases(formattedReleases);
-      } catch (error) {
-        setError(error as Error);
-      } finally {
-        setIsLoading(false);
-      }
-    },
+    addReleases,
+    retryFetch,
+    canRetry: retryCount < MAX_RETRIES
   };
 };
 

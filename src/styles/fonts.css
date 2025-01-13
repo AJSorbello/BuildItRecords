@@ -1,0 +1,52 @@
+/* Fallback system fonts that look similar to Roboto */
+@font-face {
+  font-family: 'Roboto';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: local(-apple-system),
+       local(BlinkMacSystemFont),
+       local('Segoe UI'),
+       local('Helvetica Neue'),
+       local('Arial'),
+       local('sans-serif');
+}
+
+@font-face {
+  font-family: 'Roboto';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local(-apple-system),
+       local(BlinkMacSystemFont),
+       local('Segoe UI'),
+       local('Helvetica Neue'),
+       local('Arial'),
+       local('sans-serif');
+}
+
+@font-face {
+  font-family: 'Roboto';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: local(-apple-system),
+       local(BlinkMacSystemFont),
+       local('Segoe UI'),
+       local('Helvetica Neue'),
+       local('Arial'),
+       local('sans-serif');
+}
+
+@font-face {
+  font-family: 'Roboto';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local(-apple-system),
+       local(BlinkMacSystemFont),
+       local('Segoe UI'),
+       local('Helvetica Neue'),
+       local('Arial'),
+       local('sans-serif');
+}

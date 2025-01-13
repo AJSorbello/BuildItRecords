@@ -5,146 +5,117 @@ import {
   CardMedia,
   Typography,
   Box,
-  IconButton,
   Link,
+  Skeleton
 } from '@mui/material';
-import SpotifyIcon from '@mui/icons-material/MusicNote';
-import InstagramIcon from '@mui/icons-material/Instagram';
-import SoundcloudIcon from '@mui/icons-material/CloudQueue';
+import { Artist } from '../types/artist';
 
 interface ArtistCardProps {
-  name: string;
-  imageUrl: string;
-  bio: string;
-  spotifyUrl?: string;
-  instagramUrl?: string;
-  soundcloudUrl?: string;
-  label: 'records' | 'tech' | 'deep';
+  artist: Artist;
+  onClick?: () => void;
 }
 
-export const ArtistCard: React.FC<ArtistCardProps> = ({
-  name,
-  imageUrl,
-  bio,
-  spotifyUrl,
-  instagramUrl,
-  soundcloudUrl,
-  label,
-}) => {
-  const labelColors = {
-    records: '#02FF95',
-    tech: '#FF0000',
-    deep: '#00BFFF'
+const ArtistCard: React.FC<ArtistCardProps> = ({ artist, onClick }) => {
+  const [imageLoading, setImageLoading] = React.useState(true);
+
+  // Get image URL from either profile_image or images array
+  const getImageUrl = () => {
+    if (artist.profile_image) {
+      return artist.profile_image;
+    }
+    
+    if (artist.images && artist.images.length > 0) {
+      const sortedImages = [...artist.images].sort((a, b) => {
+        const aSize = (a.width || 0) * (a.height || 0);
+        const bSize = (b.width || 0) * (b.height || 0);
+        return bSize - aSize;
+      });
+      return sortedImages[0].url;
+    }
+
+    return '';
   };
 
-  const color = labelColors[label];
+  const imageUrl = getImageUrl();
+
+  const handleImageLoad = () => {
+    setImageLoading(false);
+  };
 
   return (
-    <Card
-      sx={{
-        maxWidth: 345,
-        bgcolor: 'rgba(255, 255, 255, 0.05)',
-        borderRadius: 2,
-        transition: 'transform 0.2s ease-in-out',
-        '&:hover': {
+    <Card 
+      onClick={onClick}
+      sx={{ 
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        cursor: onClick ? 'pointer' : 'default',
+        '&:hover': onClick ? {
           transform: 'scale(1.02)',
-        },
+          transition: 'transform 0.2s ease-in-out'
+        } : {}
       }}
     >
-      <CardMedia
-        component="img"
-        height="345"
-        image={imageUrl}
-        alt={name}
-        sx={{
-          objectFit: 'cover',
-        }}
-      />
+      <Box sx={{ position: 'relative', paddingTop: '100%' }}>
+        {imageLoading && (
+          <Skeleton 
+            variant="rectangular" 
+            sx={{ 
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%'
+            }} 
+          />
+        )}
+        {imageUrl && (
+          <CardMedia
+            component="img"
+            image={imageUrl}
+            alt={artist.name}
+            onLoad={handleImageLoad}
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              display: imageLoading ? 'none' : 'block'
+            }}
+          />
+        )}
+      </Box>
       <CardContent>
-        <Typography
-          gutterBottom
-          variant="h5"
-          component="div"
-          sx={{
-            color: '#FFFFFF',
-            fontWeight: 'bold',
-          }}
-        >
-          {name}
+        <Typography variant="h6" noWrap>
+          {artist.name}
         </Typography>
-        <Typography
-          variant="body2"
-          sx={{
-            color: 'rgba(255, 255, 255, 0.7)',
-            mb: 2,
-            minHeight: '3em',
-            display: '-webkit-box',
-            WebkitLineClamp: 3,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-          }}
-        >
-          {bio}
-        </Typography>
-
-        <Box
-          sx={{
-            display: 'flex',
-            justifyContent: 'space-around',
-            mt: 2,
-          }}
-        >
-          {spotifyUrl && (
-            <IconButton
-              component={Link}
-              href={spotifyUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              sx={{
-                color: '#FFFFFF',
-                '&:hover': {
-                  color: color,
-                },
-              }}
-            >
-              <SpotifyIcon />
-            </IconButton>
-          )}
-          {instagramUrl && (
-            <IconButton
-              component={Link}
-              href={instagramUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              sx={{
-                color: '#FFFFFF',
-                '&:hover': {
-                  color: color,
-                },
-              }}
-            >
-              <InstagramIcon />
-            </IconButton>
-          )}
-          {soundcloudUrl && (
-            <IconButton
-              component={Link}
-              href={soundcloudUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              sx={{
-                color: '#FFFFFF',
-                '&:hover': {
-                  color: color,
-                },
-              }}
-            >
-              <SoundcloudIcon />
-            </IconButton>
-          )}
-        </Box>
+        {artist.followers && (
+          <Typography variant="body2" color="text.secondary">
+            {artist.followers.total.toLocaleString()} followers
+          </Typography>
+        )}
+        {(artist.spotify_url || artist.external_urls?.spotify) && (
+          <Link
+            href={artist.spotify_url || artist.external_urls?.spotify}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            sx={{ 
+              color: 'primary.main',
+              textDecoration: 'none',
+              '&:hover': {
+                textDecoration: 'underline'
+              }
+            }}
+          >
+            Open in Spotify
+          </Link>
+        )}
       </CardContent>
     </Card>
   );
 };
+
+export default ArtistCard;

@@ -1,77 +1,62 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Typography } from '@mui/material';
+import { Box, Container, Typography, Grid, CircularProgress, Alert } from '@mui/material';
+import ReleaseCard from '../../components/ReleaseCard';
 import { RECORD_LABELS } from '../../constants/labels';
-import { getTracksByLabel } from '../../utils/trackUtils';
-import { Track } from '../../types/track';
-import TrackList from '../../components/TrackList';
-import PageLayout from '../../components/PageLayout';
+import { databaseService } from '../../services/DatabaseService';
+import type { Release } from '../../types';
 
-const TechHome = () => {
-  const [latestTrack, setLatestTrack] = useState<Track[]>([]);
+const TechHome: React.FC = () => {
+  const [releases, setReleases] = useState<Release[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    const tracks = getTracksByLabel(RECORD_LABELS.TECH);
-    // Sort tracks by release date and get the latest one
-    const sortedTracks = tracks.sort((a, b) => 
-      new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime()
-    );
-    setLatestTrack(sortedTracks.slice(0, 1)); // Get only the first track
+    const fetchReleases = async () => {
+      try {
+        setLoading(true);
+        const fetchedReleases = await databaseService.getReleasesForLabel('buildit-tech');
+        setReleases(fetchedReleases);
+      } catch (err) {
+        setError(err instanceof Error ? err : new Error('Failed to fetch releases'));
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchReleases();
   }, []);
 
-  return (
-    <PageLayout label="tech">
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          width: '100%',
-          maxWidth: '900px',
-          mx: 'auto',
-          mt: 2,
-          px: 2
-        }}
-      >
-        <Typography 
-          variant="h3" 
-          component="h1" 
-          gutterBottom 
-          sx={{ 
-            color: '#FFFFFF',
-            mb: 4,
-            fontWeight: 'bold',
-            textAlign: 'center'
-          }}
-        >
-          Build It Tech
-        </Typography>
-        
-        <Typography 
-          variant="h5" 
-          sx={{ 
-            color: '#AAAAAA',
-            mb: 6,
-            textAlign: 'center'
-          }}
-        >
-          Pushing the boundaries of modern techno music.
-        </Typography>
-
-        <Typography 
-          variant="h4" 
-          gutterBottom 
-          sx={{ 
-            color: '#FFFFFF',
-            mb: 4,
-            fontWeight: 'bold'
-          }}
-        >
-          Latest Release
-        </Typography>
-
-        <TrackList tracks={latestTrack} />
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
+        <CircularProgress />
       </Box>
-    </PageLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
+        <Alert severity="error">{error.message}</Alert>
+      </Box>
+    );
+  }
+
+  return (
+    <Container maxWidth="xl">
+      <Box sx={{ py: 4 }}>
+        <Typography variant="h4" component="h1" gutterBottom sx={{ color: '#fff' }}>
+          Latest Releases
+        </Typography>
+        <Grid container spacing={3}>
+          {releases.map((release) => (
+            <Grid item xs={12} sm={6} md={4} lg={3} key={release.id}>
+              <ReleaseCard release={release} />
+            </Grid>
+          ))}
+        </Grid>
+      </Box>
+    </Container>
   );
 };
 

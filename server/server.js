@@ -1,225 +1,163 @@
-require('dotenv').config({ path: './.env' });
+// Load environment variables first
+require('dotenv').config();
 
+// Add environment check logging
+console.log('Environment Check:', {
+    JWT_SECRET: process.env.JWT_SECRET ? 'Set' : 'Not set',
+    NODE_ENV: process.env.NODE_ENV,
+    PORT: process.env.PORT
+});
+
+// Debug: Log environment loading
+console.log('Server starting with environment:', process.env.NODE_ENV);
+console.log('Admin credentials loaded:', {
+  hasUsername: !!process.env.ADMIN_USERNAME,
+  hasPasswordHash: !!process.env.ADMIN_PASSWORD_HASH,
+  hasJwtSecret: !!process.env.JWT_SECRET,
+  actualHash: process.env.ADMIN_PASSWORD_HASH
+});
+
+// Debug: Log Spotify config
+console.log('Spotify config loaded:', {
+  hasClientId: !!process.env.SPOTIFY_CLIENT_ID,
+  hasClientSecret: !!process.env.SPOTIFY_CLIENT_SECRET,
+  redirectUri: process.env.SPOTIFY_REDIRECT_URI
+});
+
+// Debug: Log all env variables
+console.log('Environment variables loaded:', {
+  ADMIN_USERNAME: process.env.ADMIN_USERNAME,
+  ADMIN_PASSWORD_HASH: process.env.ADMIN_PASSWORD_HASH,
+  JWT_SECRET: process.env.JWT_SECRET,
+  SPOTIFY_CLIENT_ID: process.env.SPOTIFY_CLIENT_ID ? '✓' : '✗',
+  SPOTIFY_CLIENT_SECRET: process.env.SPOTIFY_CLIENT_SECRET ? '✓' : '✗',
+  SPOTIFY_REDIRECT_URI: process.env.SPOTIFY_REDIRECT_URI
+});
+
+const config = require('./config/environment');
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
-const Redis = require('ioredis');
-const { validateSpotifyUrl } = require('./utils/validation');
-const { classifyTrack } = require('./utils/trackClassifier');
+const path = require('path');
+const db = require('./models');
+const SpotifyService = require('./services/spotifyService');
+const apiRoutes = require('./routes/api.routes');
+const { seedLabels } = require('./seeders/labelSeeder');
 
-// Initialize Express app
 const app = express();
-app.set('trust proxy', 1); // Trust first proxy
-const port = process.env.PORT || 3001;
 
-// Redis client setup
-const redis = new Redis({
-  host: process.env.REDIS_HOST || 'localhost',
-  port: process.env.REDIS_PORT || 6379,
-});
-
-// Middleware
-app.use(helmet());
-app.use(cors());
-app.use(express.json());
-
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
-});
-app.use(limiter);
-
-// Caching middleware
-const cacheMiddleware = async (req, res, next) => {
+// Initialize services
+const initServices = async () => {
   try {
-    const cacheKey = `spotify:${req.originalUrl}`;
-    const cachedData = await redis.get(cacheKey);
+    await db.sequelize.authenticate();
+    console.log('Database connection established successfully');
     
-    if (cachedData) {
-      return res.json(JSON.parse(cachedData));
+    // Initialize database with labels if in development
+    if (process.env.NODE_ENV === 'development') {
+      try {
+        await db.sequelize.sync({ force: true });
+        console.log('Database synced successfully');
+        await seedLabels();
+        console.log('Labels seeded successfully');
+      } catch (error) {
+        console.error('Error syncing/seeding database:', error);
+      }
     }
     
-    res.sendResponse = res.json;
-    res.json = (body) => {
-      redis.setex(cacheKey, 3600, JSON.stringify(body)); // Cache for 1 hour
-      res.sendResponse(body);
-    };
-    
-    next();
+    // Initialize Spotify service
+    const spotifyService = new SpotifyService(
+      process.env.SPOTIFY_CLIENT_ID,
+      process.env.SPOTIFY_CLIENT_SECRET,
+      process.env.SPOTIFY_REDIRECT_URI
+    );
+    await spotifyService.initialize();
+    console.log('Spotify service initialized successfully');
+
+    return { spotifyService, db, sequelize: db.sequelize };
   } catch (error) {
-    next(error);
+    console.error('Failed to initialize services:', error);
+    throw error;
   }
 };
 
-// Import routes
-const tracksRouter = require('./routes/tracks');
-const artistsRouter = require('./routes/artists');
-const albumsRouter = require('./routes/albums');
-const processRouter = require('./routes/process');
+// Initialize Express routes and middleware
+const initExpress = (spotifyService, db, sequelize) => {
+  // CORS configuration - must be before other middleware
+  app.use(cors({
+    origin: process.env.NODE_ENV === 'production' 
+      ? process.env.FRONTEND_URL 
+      : ['http://localhost:3000', 'http://localhost:3001'],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'Accept'],
+    exposedHeaders: ['Content-Type', 'Authorization'],
+    maxAge: 86400, // 24 hours in seconds
+    preflightContinue: false,
+    optionsSuccessStatus: 204
+  }));
 
-// Use routes
-app.use('/api/tracks', cacheMiddleware, tracksRouter);
-app.use('/api/artists', cacheMiddleware, artistsRouter);
-app.use('/api/albums', cacheMiddleware, albumsRouter);
-app.use('/api/process', processRouter);
+  // Security middleware
+  app.use(helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false
+  }));
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(err.status || 500).json({
-    error: {
-      message: err.message || 'Internal Server Error',
-      status: err.status || 500
-    }
+  // Body parsing middleware
+  app.use(express.json());
+  app.use(express.urlencoded({ extended: true }));
+
+  // API routes
+  app.use('/api', apiRoutes);
+
+  // Debug route to check environment
+  app.get('/api/debug/env', (req, res) => {
+    res.json({
+      nodeEnv: process.env.NODE_ENV,
+      hasSpotifyConfig: {
+        clientId: !!process.env.SPOTIFY_CLIENT_ID,
+        clientSecret: !!process.env.SPOTIFY_CLIENT_SECRET,
+        redirectUri: process.env.SPOTIFY_REDIRECT_URI
+      },
+      hasAdminConfig: {
+        username: !!process.env.ADMIN_USERNAME,
+        passwordHash: !!process.env.ADMIN_PASSWORD_HASH,
+        jwtSecret: !!process.env.JWT_SECRET
+      }
+    });
   });
-});
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.json({ status: 'healthy' });
-});
-
-// Spotify endpoint
-app.get('/api/spotify/track/:trackId', async (req, res) => {
-  console.log('Received request for track:', req.params.trackId);
-  
-  try {
-    const clientId = process.env.REACT_APP_SPOTIFY_CLIENT_ID;
-    const clientSecret = process.env.REACT_APP_SPOTIFY_CLIENT_SECRET;
-    
-    console.log('Environment check:', {
-      hasClientId: !!clientId,
-      hasClientSecret: !!clientSecret,
-      nodeEnv: process.env.NODE_ENV
-    });
-
-    if (!clientId || !clientSecret) {
-      console.error('Missing Spotify credentials');
-      return res.status(500).json({ 
-        error: 'Server configuration error',
-        details: 'Missing Spotify credentials'
-      });
-    }
-
-    // Get access token
-    console.log('Requesting Spotify access token...');
-    let tokenResponse;
-    try {
-      tokenResponse = await axios.post(
-        'https://accounts.spotify.com/api/token',
-        new URLSearchParams({
-          grant_type: 'client_credentials'
-        }).toString(),
-        {
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'Authorization': `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`
-          }
-        }
-      );
-      console.log('Access token received successfully');
-    } catch (tokenError) {
-      console.error('Token request failed:', {
-        status: tokenError.response?.status,
-        data: tokenError.response?.data,
-        message: tokenError.message
-      });
-      return res.status(401).json({
-        error: 'Authentication failed',
-        details: 'Failed to obtain Spotify access token'
-      });
-    }
-
-    if (!tokenResponse.data.access_token) {
-      console.error('No access token in response:', tokenResponse.data);
-      return res.status(500).json({
-        error: 'Authentication failed',
-        details: 'Invalid token response from Spotify'
-      });
-    }
-
-    // Get track details
-    console.log('Fetching track details from Spotify...');
-    let trackResponse;
-    try {
-      trackResponse = await axios.get(
-        `https://api.spotify.com/v1/tracks/${req.params.trackId}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${tokenResponse.data.access_token}`,
-            'Accept': 'application/json'
-          }
-        }
-      );
-      console.log('Track details received successfully');
-    } catch (trackError) {
-      console.error('Track request failed:', {
-        status: trackError.response?.status,
-        data: trackError.response?.data,
-        message: trackError.message
-      });
-
-      if (trackError.response?.status === 404) {
-        return res.status(404).json({
-          error: 'Track not found',
-          details: 'The requested track does not exist'
-        });
-      }
-
-      if (trackError.response?.status === 401) {
-        return res.status(401).json({
-          error: 'Authentication failed',
-          details: 'Invalid or expired access token'
-        });
-      }
-
-      return res.status(trackError.response?.status || 500).json({
-        error: 'Spotify API error',
-        details: trackError.response?.data?.error?.message || 'Failed to fetch track details'
-      });
-    }
-
-    // Validate track data
-    if (!trackResponse.data || !trackResponse.data.id) {
-      console.error('Invalid track data received:', trackResponse.data);
-      return res.status(500).json({
-        error: 'Invalid response',
-        details: 'Received invalid track data from Spotify'
-      });
-    }
-
-    // Send the track data
-    res.json(trackResponse.data);
-
-  } catch (error) {
-    console.error('Unexpected error in Spotify endpoint:', {
-      message: error.message,
-      stack: error.stack
-    });
-
-    res.status(500).json({
-      error: 'Internal server error',
-      details: 'An unexpected error occurred while processing your request'
+  // Serve static files in production
+  if (process.env.NODE_ENV === 'production') {
+    app.use(express.static(path.join(__dirname, '../build')));
+    app.get('*', (req, res) => {
+      res.sendFile(path.join(__dirname, '../build/index.html'));
     });
   }
-});
 
-// Serve static files from the React app in production
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../build')));
-}
-
-// The "catchall" handler: for any request that doesn't
-// match one above, send back React's index.html file.
-if (process.env.NODE_ENV === 'production') {
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../build', 'index.html'));
+  // Error handling middleware
+  app.use((err, req, res, next) => {
+    console.error('Error:', err);
+    res.status(err.status || 500).json({
+      message: err.message || 'Internal server error',
+      ...(process.env.NODE_ENV === 'development' ? { stack: err.stack } : {})
+    });
   });
-}
+};
 
 // Start server
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
-});
+const startServer = async () => {
+  try {
+    const { spotifyService, db, sequelize } = await initServices();
+    initExpress(spotifyService, db, sequelize);
+    
+    const port = process.env.PORT || 3001;
+    app.listen(port, () => {
+      console.log(`Server listening on port ${port}`);
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
+};
+
+startServer();

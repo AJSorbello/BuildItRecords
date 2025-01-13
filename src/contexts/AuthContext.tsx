@@ -3,9 +3,8 @@ import { spotifyService } from '../services/SpotifyService';
 
 interface AuthContextType {
   isAuthenticated: boolean;
-  login: () => void;
+  login: () => Promise<void>;
   logout: () => void;
-  loading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,51 +27,33 @@ const storage = {
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    checkAuthStatus();
-    // Check for Spotify redirect callback
-    const hash = window.location.hash;
-    if (hash) {
-      const success = spotifyService.handleRedirect(hash.substring(1));
-      if (success) {
-        setIsAuthenticated(true);
-        // Clean up the URL
-        window.location.hash = '';
-      }
-    }
+    const initAuth = async () => {
+      const isAuthed = await spotifyService.init();
+      setIsAuthenticated(isAuthed);
+    };
+
+    initAuth();
   }, []);
 
-  const checkAuthStatus = async () => {
+  const login = async () => {
     try {
-      setIsAuthenticated(spotifyService.isAuthenticated());
+      const loginUrl = await spotifyService.getLoginUrl();
+      window.location.href = loginUrl;
     } catch (error) {
-      console.error('Error checking auth status:', error);
-    } finally {
-      setLoading(false);
+      console.error('Login failed:', error);
     }
   };
 
-  const login = () => {
-    // Redirect to Spotify login
-    window.location.href = spotifyService.getLoginUrl();
-  };
-
-  const logout = async () => {
-    try {
-      spotifyService.logout();
-      setIsAuthenticated(false);
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
+  const logout = () => {
+    setIsAuthenticated(false);
   };
 
   const value = {
     isAuthenticated,
     login,
     logout,
-    loading,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

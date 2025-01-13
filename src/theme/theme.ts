@@ -1,4 +1,4 @@
-import { createTheme } from '@mui/material';
+import { createTheme } from '@mui/material/styles';
 
 export const labelColors = {
   records: '#02FF95',
@@ -22,7 +22,7 @@ export const darkTheme = createTheme({
     },
   },
   typography: {
-    fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif',
     h1: {
       fontSize: '2.5rem',
       fontWeight: 700,
