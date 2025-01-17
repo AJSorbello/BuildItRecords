@@ -1,33 +1,71 @@
 const { Sequelize, DataTypes } = require('sequelize');
 const path = require('path');
-const sequelize = require('../config/database');
+require('dotenv').config();
 
-// Import model definitions
-const ArtistModel = require('./artist');
-const LabelModel = require('./label');
-const ReleaseModel = require('./release');
-const TrackModel = require('./track');
-const ImportLogModel = require('./importLog');
-const ReleaseArtistModel = require('./releaseArtist');
+// Create Sequelize instance
+const sequelize = new Sequelize(
+  process.env.DB_NAME || 'builditrecords',
+  process.env.DB_USER || 'postgres',
+  process.env.DB_PASSWORD || 'postgres',
+  {
+    host: process.env.DB_HOST || 'localhost',
+    port: process.env.DB_PORT || 5432,
+    dialect: 'postgres',
+    logging: process.env.NODE_ENV === 'development' ? console.log : false,
+    dialectOptions: {
+      ssl: false,
+      rejectUnauthorized: false,
+      connectTimeout: 60000
+    },
+    define: {
+      underscored: true,
+      underscoredAll: true,
+      createdAt: 'created_at',
+      updatedAt: 'updated_at'
+    },
+    pool: {
+      max: 5,
+      min: 0,
+      acquire: 30000,
+      idle: 10000
+    }
+  }
+);
 
-// Initialize models with sequelize instance
+// Initialize models
+const Artist = require('./artist')(sequelize, DataTypes);
+const Label = require('./label')(sequelize, DataTypes);
+const Release = require('./release')(sequelize, DataTypes);
+const Track = require('./track')(sequelize, DataTypes);
+const ImportLog = require('./importLog')(sequelize, DataTypes);
+const ReleaseArtist = require('./releaseArtist')(sequelize, DataTypes);
+const TrackArtist = require('./trackArtist')(sequelize, DataTypes);
+
+// Set up associations
 const models = {
-  Artist: ArtistModel(sequelize, DataTypes),
-  Label: LabelModel(sequelize, DataTypes),
-  Release: ReleaseModel(sequelize, DataTypes),
-  Track: TrackModel(sequelize, DataTypes),
-  ImportLog: ImportLogModel(sequelize, DataTypes),
-  ReleaseArtist: ReleaseArtistModel(sequelize, DataTypes)
+  Artist,
+  Label,
+  Release,
+  Track,
+  ImportLog,
+  ReleaseArtist,
+  TrackArtist
 };
 
-// Define associations
-Object.keys(models).forEach((modelName) => {
-  if (models[modelName].associate) {
-    models[modelName].associate(models);
-  }
-});
+Object.values(models)
+  .filter(model => typeof model.associate === 'function')
+  .forEach(model => model.associate(models));
 
-// Export models and Sequelize instance
+// Test database connection
+sequelize
+  .authenticate()
+  .then(() => {
+    console.log('Database connection established successfully');
+  })
+  .catch(err => {
+    console.error('Unable to connect to the database:', err);
+  });
+
 module.exports = {
   sequelize,
   Sequelize,

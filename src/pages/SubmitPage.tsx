@@ -182,7 +182,7 @@ const SubmitPage: React.FC<SubmitPageProps> = ({ label }) => {
             appleMusic: artist.appleMusic
           },
           track: {
-            title: track.title,
+            name: track.title,
             genre: track.genre,
             soundCloudPrivateLink: track.soundCloudPrivateLink
           }
@@ -424,7 +424,7 @@ const SubmitPage: React.FC<SubmitPageProps> = ({ label }) => {
             <Grid item xs={12}>
               <TextField
                 fullWidth
-                label="Track Title"
+                label="Track Name"
                 value={track.title}
                 onChange={(e) => handleTrackChange(index, 'title', e.target.value)}
                 required

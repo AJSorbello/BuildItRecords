@@ -1,8 +1,7 @@
 import React from 'react';
 import { Button } from '@mui/material';
-import { Track } from '../../types/track';
-import { RECORD_LABELS } from '../../config';
-import { RecordLabel } from '../../constants/labels';
+import { Track } from '../../types/models';
+import { RECORD_LABELS, RecordLabelId } from '../../types/labels';
 
 interface UpdateTracksHelperProps {
   tracks: Track[];
@@ -13,10 +12,10 @@ export const UpdateTracksHelper: React.FC<UpdateTracksHelperProps> = ({ tracks, 
   const handleUpdateTracks = async () => {
     try {
       const updatedTracks = tracks.map(track => {
-        if (track.spotifyUrl && (!track.label || track.label.id !== 'buildit-deep')) {
+        if (track.external_urls.spotify && (!track.label_id || track.label_id !== RECORD_LABELS.DEEP)) {
           return {
             ...track,
-            label: RECORD_LABELS['buildit-deep']
+            label_id: RECORD_LABELS.DEEP
           };
         }
         return track;

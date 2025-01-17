@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Table,
   TableBody,
@@ -7,198 +7,363 @@ import {
   TableHead,
   TableRow,
   Paper,
-  Avatar,
-  Box,
-  Typography,
   IconButton,
-  Tooltip,
-  Grid,
-  TextField,
-  Button,
-  CircularProgress
+  Typography,
+  Box,
+  Collapse,
+  Chip,
+  List,
+  ListItem,
+  ListItemText,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails
 } from '@mui/material';
-import { PlayArrow, Pause, Search as SearchIcon } from '@mui/icons-material';
-import { Track } from '../../types/models';
-import { databaseService } from '../../services/DatabaseService';
+import { Delete as DeleteIcon, Edit as EditIcon, ExpandMore as ExpandMoreIcon } from '@mui/icons-material';
+import { Track } from '../../types/track';
 
 interface TrackManagerProps {
-  labelId?: string;
-  tracks: Track[];
-  onEdit?: () => Promise<void>;
-  onDelete?: () => Promise<void>;
+  tracks?: Track[];
+  onEdit?: (track: Track) => void;
+  onDelete?: (trackId: string) => void;
 }
 
-const TrackManager: React.FC<TrackManagerProps> = ({ labelId, tracks = [], onEdit, onDelete }) => {
-  const [playingTrackId, setPlayingTrackId] = React.useState<string | null>(null);
-  const audioRef = React.useRef<HTMLAudioElement | null>(null);
-  const [searchQuery, setSearchQuery] = React.useState('');
-  const [loading, setLoading] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
+// Column widths for consistent layout
+const COLUMN_WIDTHS = {
+  artwork: 80,  // Width for artwork column
+  track: '30%', // Track name column
+  artists: '40%', // Artists column
+  duration: 100, // Duration column
+  type: 100,    // Single/Album indicator column
+  date: 120,    // Release date column
+};
 
-  const formatDuration = (ms: number): string => {
+const TrackManager: React.FC<TrackManagerProps> = ({
+  tracks = [],
+  onEdit = () => {},
+  onDelete = () => {},
+}) => {
+  const [expandedTrack, setExpandedTrack] = useState<string | null>(null);
+
+  const getArtistNames = (track: Track): string => {
+    if (!track.artists) return 'Unknown Artist';
+    return track.artists.map(artist => artist.name || 'Unknown Artist').join(', ');
+  };
+
+  const formatDuration = (ms: number | undefined): string => {
+    if (!ms || typeof ms !== 'number') return '0:00';
     const minutes = Math.floor(ms / 60000);
     const seconds = Math.floor((ms % 60000) / 1000);
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  const handlePlayPause = (track: Track) => {
-    if (!track?.preview_url) return;
-    
-    if (playingTrackId === track.id) {
-      audioRef.current?.pause();
-      setPlayingTrackId(null);
-    } else {
-      if (audioRef.current) {
-        audioRef.current.pause();
-      }
-      audioRef.current = new Audio(track.preview_url);
-      audioRef.current.play();
-      setPlayingTrackId(track.id);
-    }
-  };
-
-  const handleSearch = async () => {
-    if (!labelId) return;
+  const formatDate = (date: string | undefined): string => {
+    if (!date) return 'No date';
     
     try {
-      setLoading(true);
-      setError(null);
-      const results = await databaseService.getTracks(labelId);
-      if (onEdit) await onEdit();
-    } catch (err) {
-      console.error('Error searching tracks:', err);
-      setError(err instanceof Error ? err.message : 'Failed to search tracks');
-    } finally {
-      setLoading(false);
+      const dateObj = typeof date === 'number' ? new Date(date) : new Date(date);
+      
+      if (isNaN(dateObj.getTime())) {
+        console.error('Invalid date:', date);
+        return 'Invalid date';
+      }
+      
+      return dateObj.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Error';
     }
   };
 
+  // Group tracks by release and sort by date
+  const tracksByRelease = tracks.reduce((acc, track) => {
+    const releaseId = track.release?.id || 'unknown';
+    if (!acc[releaseId]) {
+      acc[releaseId] = {
+        release: track.release,
+        tracks: []
+      };
+    }
+    acc[releaseId].tracks.push(track);
+    return acc;
+  }, {} as Record<string, { release: Track['release']; tracks: Track[] }>);
+
+  const sortedReleases = Object.entries(tracksByRelease).sort(([, a], [, b]) => {
+    const dateA = a.release?.release_date ? new Date(a.release.release_date).getTime() : 0;
+    const dateB = b.release?.release_date ? new Date(b.release.release_date).getTime() : 0;
+    return dateB - dateA;
+  });
+
+  if (!tracks || !Array.isArray(tracks) || tracks.length === 0) {
+    return (
+      <Box sx={{ p: 3, textAlign: 'center' }}>
+        <Typography variant="body1" color="textSecondary">
+          No tracks available
+        </Typography>
+      </Box>
+    );
+  }
+
   return (
-    <Box sx={{ p: 3 }}>
-      <Grid container spacing={3}>
-        <Grid item xs={12}>
-          <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
-            <TextField
-              fullWidth
-              variant="outlined"
-              placeholder="Search tracks..."
-              value={searchQuery}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
-              onKeyPress={(e: React.KeyboardEvent) => e.key === 'Enter' && handleSearch()}
-              InputProps={{
-                endAdornment: <SearchIcon />
-              }}
-            />
-            <Button
-              variant="contained"
-              onClick={handleSearch}
-              disabled={loading}
-            >
-              Search
-            </Button>
-          </Box>
-        </Grid>
+    <Box>
+      {sortedReleases.map(([releaseId, { release, tracks: releaseTracks }]) => {
+        const isSingle = releaseTracks.length === 1;
+        const track = isSingle ? releaseTracks[0] : null;
 
-        <Grid item xs={12}>
-          {loading && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
-              <CircularProgress />
-            </Box>
-          )}
-
-          {error && (
-            <Typography color="error" sx={{ mb: 2 }}>
-              {error}
-            </Typography>
-          )}
-
-          {!loading && tracks && tracks.length > 0 && (
-            <TableContainer component={Paper}>
-              <Table sx={{ minWidth: 650 }} aria-label="tracks table">
+        if (isSingle) {
+          // Render single track row
+          return (
+            <TableContainer key={releaseId} component={Paper} sx={{ mb: 2 }}>
+              <Table size="small">
                 <TableHead>
                   <TableRow>
-                    <TableCell>Album</TableCell>
-                    <TableCell>Track</TableCell>
-                    <TableCell>Artist</TableCell>
-                    <TableCell align="right">Duration</TableCell>
-                    <TableCell align="right">Preview</TableCell>
+                    <TableCell width={COLUMN_WIDTHS.track}>Track</TableCell>
+                    <TableCell width={COLUMN_WIDTHS.artists}>Artists</TableCell>
+                    <TableCell width={COLUMN_WIDTHS.duration} align="right">Duration</TableCell>
+                    <TableCell width={COLUMN_WIDTHS.type} align="center">Type</TableCell>
+                    <TableCell width={COLUMN_WIDTHS.date} align="right">Release Date</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {tracks.map((track) => track && (
-                    <TableRow
-                      key={track.id}
-                      sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
-                    >
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <Avatar
-                            variant="rounded"
-                            src={track.album?.images?.[0]?.url}
-                            alt={track.album?.name || ''}
-                            sx={{ width: 56, height: 56, marginRight: 2 }}
+                  <TableRow>
+                    <TableCell>
+                      <Box display="flex" alignItems="center" gap={2}>
+                        {release?.artwork_url && (
+                          <img
+                            src={release.artwork_url}
+                            alt={release.name}
+                            style={{
+                              width: COLUMN_WIDTHS.artwork - 20,
+                              height: COLUMN_WIDTHS.artwork - 20,
+                              borderRadius: 4,
+                              objectFit: 'cover'
+                            }}
                           />
-                        </Box>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body1" component="div">
-                          {track.name}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {track.album?.name}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          {track.artists?.map((artist, index) => artist && (
-                            <Box
-                              key={artist.id}
-                              sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                marginRight: 1
-                              }}
-                            >
-                              <Avatar
-                                src={artist.images?.[0]?.url}
-                                alt={artist.name}
-                                sx={{ width: 32, height: 32, marginRight: 1 }}
-                              />
-                              <Typography>
-                                {artist.name}
-                                {index < (track.artists?.length || 0) - 1 ? ', ' : ''}
-                              </Typography>
-                            </Box>
-                          ))}
-                        </Box>
-                      </TableCell>
-                      <TableCell align="right">
-                        {formatDuration(track.duration_ms || 0)}
-                      </TableCell>
-                      <TableCell align="right">
-                        {track.preview_url ? (
-                          <Tooltip title={playingTrackId === track.id ? 'Pause' : 'Play Preview'}>
-                            <IconButton
-                              onClick={() => handlePlayPause(track)}
-                              color={playingTrackId === track.id ? 'primary' : 'default'}
-                            >
-                              {playingTrackId === track.id ? <Pause /> : <PlayArrow />}
-                            </IconButton>
-                          </Tooltip>
-                        ) : (
-                          <Typography variant="caption" color="text.secondary">
-                            No preview
-                          </Typography>
                         )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                        <Box>
+                          <Typography variant="subtitle1">{track?.name || 'Untitled'}</Typography>
+                          {track?.spotify_url && (
+                            <Typography
+                              variant="body2"
+                              color="textSecondary"
+                              component="a"
+                              href={track.spotify_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              sx={{ textDecoration: 'none' }}
+                            >
+                              Open in Spotify
+                            </Typography>
+                          )}
+                        </Box>
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      <Box display="flex" alignItems="center" gap={1}>
+                        {track?.artists?.map((artist) => (
+                          <Box key={artist.id} display="flex" alignItems="center" gap={1}>
+                            {artist.profile_image && (
+                              <img
+                                src={artist.profile_image}
+                                alt={artist.name}
+                                style={{
+                                  width: 32,
+                                  height: 32,
+                                  borderRadius: '50%',
+                                  objectFit: 'cover'
+                                }}
+                              />
+                            )}
+                            <Typography variant="body2">{artist.name}</Typography>
+                          </Box>
+                        ))}
+                      </Box>
+                    </TableCell>
+                    <TableCell align="right">
+                      <Typography variant="body2">
+                        {formatDuration(track?.duration)}
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="center">
+                      <Chip 
+                        label="Single"
+                        color="primary"
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell align="right">
+                      <Typography variant="body2" color="textSecondary" sx={{ whiteSpace: 'nowrap' }}>
+                        {formatDate(release?.release_date)}
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
                 </TableBody>
               </Table>
             </TableContainer>
-          )}
-        </Grid>
-      </Grid>
+          );
+        }
+
+        // Render album with expandable tracks
+        return (
+          <TableContainer key={releaseId} component={Paper} sx={{ mb: 2 }}>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell width={COLUMN_WIDTHS.track}>Track</TableCell>
+                  <TableCell width={COLUMN_WIDTHS.artists}>Artists</TableCell>
+                  <TableCell width={COLUMN_WIDTHS.duration} align="right">Duration</TableCell>
+                  <TableCell width={COLUMN_WIDTHS.type} align="center">Type</TableCell>
+                  <TableCell width={COLUMN_WIDTHS.date} align="right">Release Date</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                <TableRow>
+                  <TableCell>
+                    <Box 
+                      display="flex" 
+                      alignItems="center" 
+                      gap={2}
+                      onClick={() => setExpandedTrack(expandedTrack === releaseId ? null : releaseId)}
+                      sx={{ cursor: 'pointer' }}
+                    >
+                      {release?.artwork_url && (
+                        <img
+                          src={release.artwork_url}
+                          alt={release.name}
+                          style={{
+                            width: COLUMN_WIDTHS.artwork - 20,
+                            height: COLUMN_WIDTHS.artwork - 20,
+                            borderRadius: 4,
+                            objectFit: 'cover'
+                          }}
+                        />
+                      )}
+                      <Box>
+                        <Typography variant="subtitle1">{release?.name || 'Unknown Album'}</Typography>
+                        <Typography variant="body2" color="textSecondary">
+                          {releaseTracks.length} tracks
+                        </Typography>
+                      </Box>
+                      <IconButton size="small">
+                        <ExpandMoreIcon 
+                          sx={{ 
+                            transform: expandedTrack === releaseId ? 'rotate(180deg)' : 'rotate(0)',
+                            transition: 'transform 0.3s'
+                          }} 
+                        />
+                      </IconButton>
+                    </Box>
+                  </TableCell>
+                  <TableCell>
+                    <Box display="flex" alignItems="center" gap={1}>
+                      {releaseTracks[0]?.artists?.map((artist) => (
+                        <Box key={artist.id} display="flex" alignItems="center" gap={1}>
+                          {artist.profile_image && (
+                            <img
+                              src={artist.profile_image}
+                              alt={artist.name}
+                              style={{
+                                width: 32,
+                                height: 32,
+                                borderRadius: '50%',
+                                objectFit: 'cover'
+                              }}
+                            />
+                          )}
+                          <Typography variant="body2">{artist.name}</Typography>
+                        </Box>
+                      ))}
+                    </Box>
+                  </TableCell>
+                  <TableCell align="right">
+                    <Typography variant="body2">
+                      {formatDuration(releaseTracks.reduce((total, track) => total + (track.duration || 0), 0))}
+                    </Typography>
+                  </TableCell>
+                  <TableCell align="center">
+                    <Chip 
+                      label="Album"
+                      color="secondary"
+                      size="small"
+                    />
+                  </TableCell>
+                  <TableCell align="right">
+                    <Typography variant="body2" color="textSecondary" sx={{ whiteSpace: 'nowrap' }}>
+                      {formatDate(release?.release_date)}
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell colSpan={5} sx={{ p: 0, border: 0 }}>
+                    <Collapse in={expandedTrack === releaseId}>
+                      <Box sx={{ py: 2 }}>
+                        <Table size="small">
+                          <TableBody>
+                            {releaseTracks.map((track) => (
+                              <TableRow key={track.id}>
+                                <TableCell width={COLUMN_WIDTHS.track}>
+                                  <Box sx={{ pl: 7 }}>
+                                    <Typography variant="subtitle1">{track.name || 'Untitled'}</Typography>
+                                    {track.spotify_url && (
+                                      <Typography
+                                        variant="body2"
+                                        color="textSecondary"
+                                        component="a"
+                                        href={track.spotify_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        sx={{ textDecoration: 'none' }}
+                                      >
+                                        Open in Spotify
+                                      </Typography>
+                                    )}
+                                  </Box>
+                                </TableCell>
+                                <TableCell width={COLUMN_WIDTHS.artists}>
+                                  <Box display="flex" alignItems="center" gap={1}>
+                                    {track.artists?.map((artist) => (
+                                      <Box key={artist.id} display="flex" alignItems="center" gap={1}>
+                                        {artist.profile_image && (
+                                          <img
+                                            src={artist.profile_image}
+                                            alt={artist.name}
+                                            style={{
+                                              width: 32,
+                                              height: 32,
+                                              borderRadius: '50%',
+                                              objectFit: 'cover'
+                                            }}
+                                          />
+                                        )}
+                                        <Typography variant="body2">{artist.name}</Typography>
+                                      </Box>
+                                    ))}
+                                  </Box>
+                                </TableCell>
+                                <TableCell width={COLUMN_WIDTHS.duration} align="right">
+                                  <Typography variant="body2">
+                                    {formatDuration(track.duration)}
+                                  </Typography>
+                                </TableCell>
+                                <TableCell width={COLUMN_WIDTHS.type} />
+                                <TableCell width={COLUMN_WIDTHS.date} />
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </Box>
+                    </Collapse>
+                  </TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </TableContainer>
+        );
+      })}
     </Box>
   );
 };

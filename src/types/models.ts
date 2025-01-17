@@ -35,7 +35,7 @@ export interface Album {
   images: Image[];
   release_date?: string;
   artists: Artist[];
-  tracks?: Track[];
+  tracks?: any[];
   uri?: string;
   total_tracks?: number;
 }
@@ -45,16 +45,25 @@ export interface Track {
   name: string;
   artists: Artist[];
   duration_ms: number;
-  preview_url?: string;
+  preview_url?: string | null;
   external_urls: ExternalUrls;
   external_ids?: ExternalIds;
   album: Album;
-  release?: Release[];
+  release?: any[];
   type?: 'track';
   spotify_id?: string;
   label_id?: string;
   uri?: string;
   isrc?: string;
+  spotifyUrl?: string;
+  albumCover?: string;
+  label?: {
+    id: string;
+    name: string;
+  };
+  releaseDate?: string;
+  beatportUrl?: string;
+  soundcloudUrl?: string;
 }
 
 export interface Release {
@@ -71,76 +80,81 @@ export interface Release {
 
 // Database models
 export interface BaseModel {
+  id: string;
   createdAt: string;
   updatedAt: string;
 }
 
-export interface ArtistModel extends Artist, BaseModel {
+export interface ArtistModel extends BaseModel {
   labelId?: string;
+  name: string;
+  spotifyId: string;
+  spotifyUrl: string;
+  imageUrl?: string;
+  genres?: string[];
+  followers?: number;
 }
 
-export interface TrackModel extends Track, BaseModel {
+export interface TrackModel extends BaseModel {
   labelId?: string;
   artistIds: string[];
   albumId?: string;
+  name: string;
+  spotifyId: string;
+  spotifyUrl: string;
+  previewUrl?: string;
+  durationMs: number;
+  popularity?: number;
+  explicit: boolean;
+  isrc?: string;
 }
 
-export interface AlbumModel extends Album, BaseModel {
+export interface AlbumModel extends BaseModel {
   labelId?: string;
   artistIds: string[];
   trackIds: string[];
+  name: string;
+  spotifyId: string;
+  spotifyUrl: string;
+  imageUrl?: string;
+  releaseDate: string;
+  albumType: 'album' | 'single' | 'compilation';
+  totalTracks: number;
 }
 
-export interface ReleaseModel extends Release, BaseModel {
+export interface ReleaseModel extends BaseModel {
   labelId?: string;
   artistIds: string[];
   trackIds: string[];
-  release_date: string;
+  name: string;
+  releaseDate: string;
+  imageUrl?: string;
+  spotifyUrl?: string;
 }
 
 export interface LabelModel extends BaseModel {
+  name: string;
   artistIds: string[];
   trackIds: string[];
   releaseIds: string[];
+  imageUrl?: string;
+  description?: string;
+  website?: string;
 }
 
 export interface TokenModel extends BaseModel {
-  id: string;
   userId: string;
   token: string;
   type: 'refresh' | 'access';
   expiresAt: string;
 }
 
-// Type Guards
-export function isArtist(obj: any): obj is Artist {
-  return obj && typeof obj === 'object'
-    && typeof obj.id === 'string'
-    && typeof obj.name === 'string';
-}
-
-export function isTrack(obj: any): obj is Track {
-  return obj && typeof obj === 'object'
-    && typeof obj.id === 'string'
-    && typeof obj.name === 'string'
-    && Array.isArray(obj.artists);
-}
-
-export function isRelease(obj: any): obj is Release {
-  return obj && typeof obj === 'object'
-    && typeof obj.id === 'string'
-    && typeof obj.name === 'string'
-    && Array.isArray(obj.artists)
-    && Array.isArray(obj.tracks);
-}
-
-export interface User {
-  id: string;
+export interface UserModel extends BaseModel {
   username: string;
   email: string;
   role: 'admin' | 'user';
-  createdAt: string;
-  updatedAt: string;
+  hashedPassword: string;
+  lastLoginAt?: string;
 }
 
 export interface PaginatedResponse<T> {
@@ -149,4 +163,46 @@ export interface PaginatedResponse<T> {
   offset: number;
   limit: number;
   hasMore: boolean;
+}
+
+// Type Guards
+export function isArtistModel(obj: any): obj is ArtistModel {
+  return (
+    obj &&
+    typeof obj.id === 'string' &&
+    typeof obj.name === 'string' &&
+    typeof obj.spotifyId === 'string'
+  );
+}
+
+export function isTrackModel(obj: any): obj is TrackModel {
+  return (
+    obj &&
+    typeof obj.id === 'string' &&
+    typeof obj.name === 'string' &&
+    typeof obj.spotifyId === 'string' &&
+    Array.isArray(obj.artistIds)
+  );
+}
+
+export function isReleaseModel(obj: any): obj is ReleaseModel {
+  return (
+    obj &&
+    typeof obj.id === 'string' &&
+    typeof obj.name === 'string' &&
+    typeof obj.releaseDate === 'string' &&
+    Array.isArray(obj.artistIds) &&
+    Array.isArray(obj.trackIds)
+  );
+}
+
+export function isLabelModel(obj: any): obj is LabelModel {
+  return (
+    obj &&
+    typeof obj.id === 'string' &&
+    typeof obj.name === 'string' &&
+    Array.isArray(obj.artistIds) &&
+    Array.isArray(obj.trackIds) &&
+    Array.isArray(obj.releaseIds)
+  );
 }

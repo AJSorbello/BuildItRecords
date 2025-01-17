@@ -1,48 +1,65 @@
 import type { Artist } from './artist';
 import type { Track } from './track';
-import type { RecordLabel } from './label';
-import type { SpotifyImage } from './spotify';
+import type { SpotifyImage, SpotifyExternalUrls } from './spotify';
+import type { RecordLabelId } from './labels';
 
 export interface Release {
   id: string;
   name: string;
+  type: 'album' | 'single' | 'compilation';
+  artists: Artist[];
+  tracks: Track[];
+  images: SpotifyImage[];
+  release_date: string;
+  release_date_precision?: string;
+  external_urls: SpotifyExternalUrls;
+  uri: string;
+  label?: RecordLabelId;
+  total_tracks: number;
+  spotifyUrl?: string;
+}
+
+export interface ReleaseDetails extends Release {
+  popularity: number;
+  genres: string[];
+  copyrights: Array<{
+    text: string;
+    type: string;
+  }>;
+  available_markets: string[];
+}
+
+export interface LocalRelease extends Release {
+  localId: string;
+  createdAt: Date;
+  updatedAt: Date;
+  isActive: boolean;
+  isApproved: boolean;
+  submittedBy?: string;
+  approvedBy?: string;
+  notes?: string;
+}
+
+export interface ReleaseUpdate {
+  name?: string;
   type?: 'album' | 'single' | 'compilation';
   artists?: Artist[];
-  release_date?: string;
-  total_tracks?: number;
-  images?: SpotifyImage[];
-  external_urls?: {
-    spotify?: string;
-  };
-  label?: RecordLabel;
-  featured?: boolean;
-  description?: string;
-  artwork_url?: string;
-  albumCover?: string;
-  album?: {
-    name: string;
-    artwork_url?: string;
-    images?: SpotifyImage[];
-  };
   tracks?: Track[];
+  images?: SpotifyImage[];
+  release_date?: string;
+  release_date_precision?: string;
+  external_urls?: SpotifyExternalUrls;
+  uri?: string;
+  label?: RecordLabelId;
+  total_tracks?: number;
+  spotifyUrl?: string;
 }
 
 export interface PaginatedResponse<T> {
-  releases: T[];
-  totalReleases: number;
-  currentPage: number;
-  totalPages: number;
-}
-
-export type RecordLabelId = 'buildit-deep' | 'buildit-tech' | 'buildit-house';
-
-export interface AlbumResponse {
-  albums: {
-    items: Release[];
-    total: number;
-    limit: number;
-    offset: number;
-  };
+  items: T[];
+  total: number;
+  offset?: number;
+  limit?: number;
 }
 
 export interface ReleaseSearchParams {
@@ -50,7 +67,7 @@ export interface ReleaseSearchParams {
   query?: string;
   limit?: number;
   offset?: number;
-  include_groups?: ('album' | 'single' | 'compilation')[];
+  include_groups?: Array<'album' | 'single' | 'compilation'>;
 }
 
 export interface ReleaseFormData {
@@ -62,30 +79,38 @@ export interface ReleaseFormData {
   featured: boolean;
 }
 
-export function getArtistName(artist: string | { id: string; name: string; uri: string }): string {
+export const getArtistName = (artist: string | { id: string; name: string; uri: string }): string => {
   return typeof artist === 'string' ? artist : artist.name;
-}
+};
 
-export function getArtistId(artist: string | { id: string; name: string; uri: string }): string | undefined {
+export const getArtistId = (artist: string | { id: string; name: string; uri: string }): string | undefined => {
   return typeof artist === 'string' ? undefined : artist.id;
-}
+};
 
-export function createRelease(data: Partial<Release>): Release {
-  return {
-    id: data.id || '',
-    name: data.name || '',
-    type: data.type,
-    artists: data.artists || [],
-    release_date: data.release_date,
-    total_tracks: data.total_tracks,
-    images: data.images || [],
-    external_urls: data.external_urls || {},
-    label: data.label,
-    featured: data.featured || false,
-    description: data.description || '',
-    artwork_url: data.artwork_url || '',
-    albumCover: data.albumCover || '',
-    album: data.album || {},
-    tracks: data.tracks || []
-  };
-}
+export const getReleaseImage = (release: Release): string => {
+  return release.images[0]?.url || '';
+};
+
+export const getReleaseSpotifyUrl = (release: Release): string => {
+  return release.external_urls.spotify || release.spotifyUrl || '';
+};
+
+export const getReleaseArtists = (release: Release): string => {
+  return release.artists.map(artist => artist.name).join(', ');
+};
+
+export const getReleaseDate = (release: Release): string => {
+  return release.release_date || '';
+};
+
+export const getReleaseLabel = (release: Release): string => {
+  return release.label || '';
+};
+
+export const getReleaseType = (release: Release): string => {
+  return release.type || 'album';
+};
+
+export const getReleaseTotalTracks = (release: Release): number => {
+  return release.total_tracks || release.tracks.length;
+};

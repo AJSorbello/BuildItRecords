@@ -1,31 +1,57 @@
+/**
+ * @fileoverview Authentication middleware
+ * @module middleware/auth
+ */
+
 const jwt = require('jsonwebtoken');
+const logger = require('../utils/logger');
 
-const verifyAdminToken = (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) {
-    return res.status(401).json({ error: 'No authorization header' });
-  }
+/**
+ * @typedef {Object} JwtUserPayload
+ * @property {string} username - Username of the authenticated user
+ * @property {boolean} isAdmin - Whether the user is an admin
+ * @property {number} exp - Token expiration timestamp
+ */
 
-  const token = authHeader.split(' ')[1];
-  if (!token) {
-    return res.status(401).json({ error: 'No token provided' });
-  }
-
+/**
+ * Middleware to verify JWT token
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @param {import('express').NextFunction} next
+ */
+const verifyToken = (req, res, next) => {
   try {
-    const secret = process.env.JWT_SECRET;
-    if (!secret) {
-      throw new Error('JWT_SECRET not configured');
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ message: 'No token provided' });
     }
 
-    const decoded = jwt.verify(token, secret);
+    const token = authHeader.split(' ')[1];
+    if (!token) {
+      return res.status(401).json({ message: 'Invalid token format' });
+    }
+
+    /** @type {JwtUserPayload} */
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+    // Check if token is expired
+    if (decoded.exp && Date.now() >= decoded.exp * 1000) {
+      return res.status(401).json({ message: 'Token expired' });
+    }
+
+    // Check if user is admin
+    if (!decoded.isAdmin) {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+
     req.user = decoded;
     next();
   } catch (error) {
-    console.error('Error verifying token:', error);
-    return res.status(401).json({ error: 'Invalid token' });
+    logger.error('Token verification failed:', error);
+    return res.status(401).json({ message: 'Invalid token' });
   }
 };
 
 module.exports = {
-  verifyAdminToken
+  verifyToken
 };

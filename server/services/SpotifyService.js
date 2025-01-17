@@ -1,284 +1,293 @@
 const SpotifyWebApi = require('spotify-web-api-node');
-const { Artist, Release, Track, sequelize } = require('../models');
-const { Op } = require('sequelize');
+const { Label } = require('../models');
+const logger = require('../utils/logger');
 
-// Known Build It Tech release IDs on Spotify
-const BUILD_IT_TECH_RELEASES = [
-  '6h3XmMGEhl4pPqX6ZheNUQ', // City High (Radio Edit)
-  // Add more release IDs here as they are released
-];
-
-// Known Build It Deep release IDs on Spotify
-const BUILD_IT_DEEP_RELEASES = [
-  // Add Build It Deep release IDs here
-];
+let spotifyServiceInstance = null;
 
 class SpotifyService {
   constructor(clientId, clientSecret, redirectUri) {
+    if (!clientId || !clientSecret) {
+      throw new Error('Spotify client ID and client secret are required');
+    }
+    
+    // Use the first redirect URI (http://localhost:19000/--/spotify-auth-callback)
+    const defaultRedirectUri = 'http://localhost:19000/--/spotify-auth-callback';
+    
+    logger.info('Initializing Spotify API with:', {
+      clientId: clientId ? '✓' : '✗',
+      clientSecret: clientSecret ? '✓' : '✗',
+      redirectUri: defaultRedirectUri
+    });
+
     this.spotifyApi = new SpotifyWebApi({
       clientId,
       clientSecret,
-      redirectUri
+      redirectUri: defaultRedirectUri
     });
-    this._initialized = false;
+
+    this._tokenExpiresAt = null;
+    this._rateLimitResetTime = null;
+    this._isRefreshing = false;
   }
 
-  isInitialized() {
-    return this._initialized;
+  async _handleRateLimit(retryAfter) {
+    const waitTimeInSeconds = Math.min(retryAfter, 30); // Cap wait time at 30 seconds
+    this._rateLimitResetTime = Date.now() + (waitTimeInSeconds * 1000);
+    
+    logger.info(`Rate limit hit. Retrying in ${waitTimeInSeconds} seconds...`, {
+      retryAfter,
+      waitTime: waitTimeInSeconds,
+      resetTime: new Date(this._rateLimitResetTime).toISOString()
+    });
+
+    await new Promise(resolve => setTimeout(resolve, waitTimeInSeconds * 1000));
+    this._rateLimitResetTime = null;
+    
+    // Add a small delay between requests after rate limit
+    await new Promise(resolve => setTimeout(resolve, 1000));
+  }
+
+  async _refreshTokenIfNeeded() {
+    // Check if token is expired or will expire in the next 5 minutes
+    const now = Date.now();
+    const tokenNeedsRefresh = !this._tokenExpiresAt || (this._tokenExpiresAt - now) < 300000;
+
+    if (tokenNeedsRefresh && !this._isRefreshing) {
+      this._isRefreshing = true;
+      try {
+        logger.info('Refreshing Spotify access token...');
+        const data = await this.spotifyApi.clientCredentialsGrant();
+        this.spotifyApi.setAccessToken(data.body['access_token']);
+        this._tokenExpiresAt = now + data.body['expires_in'] * 1000;
+        logger.info(`Successfully refreshed Spotify token. Expires in: ${data.body['expires_in']} seconds`);
+      } catch (error) {
+        logger.error('Error refreshing Spotify token:', error);
+        throw error;
+      } finally {
+        this._isRefreshing = false;
+      }
+    }
   }
 
   async initialize() {
     try {
-      const data = await this.spotifyApi.clientCredentialsGrant();
-      console.log('Got Spotify access token:', {
-        token: data.body['access_token'].substring(0, 10) + '...',
-        expiresIn: data.body['expires_in']
-      });
-      this.spotifyApi.setAccessToken(data.body['access_token']);
-      this._initialized = true;
-      console.log('Spotify API initialized successfully');
+      if (!this.spotifyApi.getClientId() || !this.spotifyApi.getClientSecret()) {
+        logger.error('Missing Spotify credentials:', {
+          clientId: this.spotifyApi.getClientId() ? 'present' : 'missing',
+          clientSecret: this.spotifyApi.getClientSecret() ? 'present' : 'missing'
+        });
+        throw new Error('Spotify API credentials not properly configured');
+      }
+
+      await this._refreshTokenIfNeeded();
     } catch (error) {
-      console.error('Failed to initialize Spotify API:', error);
+      logger.error('Failed to initialize Spotify service:', error);
       throw error;
     }
+  }
+
+  async makeRequest(requestFn) {
+    const maxRetries = 3;
+    let retryCount = 0;
+    let lastError = null;
+
+    while (retryCount < maxRetries) {
+      try {
+        // Check if we need to wait for rate limit
+        if (this._rateLimitResetTime) {
+          const waitTime = this._rateLimitResetTime - Date.now();
+          if (waitTime > 0) {
+            logger.info(`Waiting for rate limit reset: ${Math.ceil(waitTime / 1000)}s remaining`);
+            await new Promise(resolve => setTimeout(resolve, waitTime));
+          }
+          this._rateLimitResetTime = null;
+        }
+
+        // Ensure token is fresh
+        await this._refreshTokenIfNeeded();
+
+        // Add a small delay between requests
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        const result = await requestFn();
+        
+        // Reset retry count on successful request
+        retryCount = 0;
+        
+        return result;
+
+      } catch (error) {
+        lastError = error;
+        logger.error('Spotify API request failed:', {
+          error: error.message,
+          statusCode: error.statusCode,
+          headers: error.headers,
+          retryCount,
+          maxRetries
+        });
+
+        if (error.statusCode === 429) {
+          const retryAfter = parseInt(error.headers['retry-after'] || '30');
+          await this._handleRateLimit(retryAfter);
+          retryCount++;
+          continue;
+        }
+
+        if (error.statusCode === 401) {
+          // Token expired or invalid, try refreshing
+          logger.info('Token expired, refreshing...');
+          await this._refreshTokenIfNeeded();
+          retryCount++;
+          continue;
+        }
+
+        // For other errors, increment retry count and try again
+        if (retryCount < maxRetries - 1) {
+          retryCount++;
+          // Exponential backoff
+          const backoffTime = Math.min(1000 * Math.pow(2, retryCount), 10000);
+          logger.info(`Retrying in ${backoffTime/1000} seconds... (attempt ${retryCount + 1}/${maxRetries})`);
+          await new Promise(resolve => setTimeout(resolve, backoffTime));
+          continue;
+        }
+
+        throw error;
+      }
+    }
+
+    logger.error('Max retries exceeded for Spotify API request:', {
+      error: lastError?.message,
+      statusCode: lastError?.statusCode
+    });
+    throw new Error('Max retries exceeded for Spotify API request');
   }
 
   async getAlbumById(albumId) {
     try {
-      if (!this._initialized || !this.spotifyApi.getAccessToken()) {
-        console.log('Spotify API not initialized, initializing now...');
-        await this.initialize();
-      }
-
-      console.log('Fetching album by ID:', albumId);
-      const result = await this.spotifyApi.getAlbum(albumId);
-      
-      if (!result.body) {
-        console.error('No album data in response:', result);
-        return null;
-      }
-
-      console.log('Found album:', {
-        name: result.body.name,
-        label: result.body.label,
-        artists: result.body.artists.map(a => a.name)
-      });
-
-      return result.body;
-    } catch (error) {
-      console.error('Error fetching album by ID:', error);
-      throw error;
-    }
-  }
-
-  async searchAlbumsByLabel(labelName) {
-    try {
-      // Ensure we have a valid token
-      if (!this._initialized || !this.spotifyApi.getAccessToken()) {
-        console.log('Spotify API not initialized, initializing now...');
-        await this.initialize();
-      }
-
-      console.log(`Searching for releases from label: ${labelName}`);
-      const albums = [];
-      let offset = 0;
-      const limit = 50; // Maximum allowed by Spotify
-      let total = null;
-      
-      do {
-        console.log(`Fetching releases from offset ${offset}`);
-        // Search for albums with the label name
-        const searchResults = await this.spotifyApi.searchAlbums(`label:"${labelName}"`, {
-          limit: limit,
-          offset: offset
-        });
+      const requestFn = async () => {
+        logger.info('Fetching album by ID:', albumId);
+        const result = await this.spotifyApi.getAlbum(albumId);
         
-        if (!searchResults.body || !searchResults.body.albums) {
-          console.log('No search results found');
-          break;
+        if (!result.body) {
+          logger.error('No album data in response:', result);
+          return null;
         }
 
-        // Set total on first iteration
-        if (total === null) {
-          total = searchResults.body.albums.total;
-          console.log(`Total releases found: ${total}`);
-        }
+        logger.info('Found album:', {
+          name: result.body.name,
+          label: result.body.label,
+          artists: result.body.artists.map(a => a.name)
+        });
 
-        // Process each album from the search results
-        for (const item of searchResults.body.albums.items) {
-          try {
-            // Get full album details
-            const album = await this.getAlbumById(item.id);
-            if (album && album.label === labelName) {
-              albums.push(album);
-              console.log(`Added album: ${album.name}`);
-            } else if (album) {
-              console.log(`Album ${item.id} has label "${album.label}", expected "${labelName}"`);
-            }
-          } catch (error) {
-            console.error(`Error fetching album ${item.id}:`, error);
-          }
-        }
+        return result.body;
+      };
 
-        // Move to next page
-        offset += limit;
-
-        // Add a small delay to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-      } while (offset < total);
-
-      console.log(`Found ${albums.length} releases for label: ${labelName}`);
-      return albums;
+      return await this.makeRequest(requestFn);
     } catch (error) {
-      console.error('Error searching albums by label:', error);
+      logger.error('Error fetching album by ID:', error);
       throw error;
     }
   }
 
-  async importReleases(label, albums) {
+  async searchReleases(labelId) {
     try {
-      console.log(`Importing ${albums.length} releases for label: ${label.name}`);
-      const importedReleases = [];
+      logger.info('Searching releases for label:', labelId);
+      const releases = new Set();
 
-      for (const albumData of albums) {
-        try {
-          // Get full album details
-          const fullAlbum = await this.spotifyApi.getAlbum(albumData.id);
-          const releaseData = fullAlbum.body;
-
-          console.log('Processing release:', {
-            name: releaseData.name,
-            id: releaseData.id,
-            type: releaseData.album_type,
-            total_tracks: releaseData.total_tracks,
-            artists: releaseData.artists.map(a => a.name),
-            label: releaseData.label
-          });
-
-          // Process artists
-          const artistPromises = releaseData.artists.map(async (artistData) => {
-            try {
-              // Get full artist details including images
-              const artistDetails = await this.spotifyApi.getArtist(artistData.id);
-              const artistImages = artistDetails.body.images || [];
-              const profileImage = artistImages.length > 0 ? artistImages[0].url : null;
-
-              const [artist] = await Artist.findOrCreate({
-                where: { id: artistData.id },
-                defaults: {
-                  id: artistData.id,
-                  name: artistData.name,
-                  spotify_url: artistData.external_urls?.spotify,
-                  profile_image: profileImage,
-                  label_id: label.id
-                }
-              });
-              return artist;
-            } catch (error) {
-              console.error(`Error saving artist ${artistData.name}:`, error);
-              return null;
-            }
-          });
-
-          const savedArtists = (await Promise.all(artistPromises)).filter(a => a !== null);
-          
-          if (savedArtists.length === 0) {
-            console.log(`Skipping release ${releaseData.name} - no artists could be saved`);
-            continue;
-          }
-
-          // Get the primary artist (first artist)
-          const primaryArtist = savedArtists[0];
-
-          // Parse release date with proper precision handling
-          let releaseDate = null;
-          if (releaseData.release_date) {
-            switch (releaseData.release_date_precision) {
-              case 'day':
-                releaseDate = releaseData.release_date;
-                break;
-              case 'month':
-                releaseDate = `${releaseData.release_date}-01`;
-                break;
-              case 'year':
-                releaseDate = `${releaseData.release_date}-01-01`;
-                break;
-            }
-          }
-
-          // Get highest quality artwork
-          const artworkUrl = releaseData.images && releaseData.images.length > 0
-            ? releaseData.images.sort((a, b) => b.width - a.width)[0].url
-            : null;
-
-          // Create the release
-          const [release] = await Release.findOrCreate({
-            where: { id: releaseData.id },
-            defaults: {
-              id: releaseData.id,
-              name: releaseData.name,
-              release_date: releaseDate,
-              spotify_url: releaseData.external_urls.spotify,
-              spotify_uri: releaseData.uri,
-              artwork_url: artworkUrl,
-              label_id: label.id,
-              primary_artist_id: primaryArtist.id,
-              total_tracks: releaseData.total_tracks
-            }
-          });
-
-          console.log('Saved release:', release.name);
-
-          // Associate all artists with the release
-          await release.setArtists(savedArtists.map(a => a.id));
-          
-          // Process tracks
-          if (releaseData.tracks && releaseData.tracks.items) {
-            const trackPromises = releaseData.tracks.items.map(async (trackData) => {
-              try {
-                const [track] = await Track.findOrCreate({
-                  where: { id: trackData.id },
-                  defaults: {
-                    id: trackData.id,
-                    name: trackData.name,
-                    duration: trackData.duration_ms,
-                    preview_url: trackData.preview_url,
-                    spotify_url: trackData.external_urls.spotify,
-                    spotify_uri: trackData.uri,
-                    release_id: release.id,
-                    label_id: label.id,
-                    track_number: trackData.track_number,
-                    disc_number: trackData.disc_number
-                  }
-                });
-
-                // Associate track with release artists
-                await track.setArtists(savedArtists.map(a => a.id));
-                console.log('Saved track:', track.name);
-                return track;
-              } catch (error) {
-                console.error(`Error saving track ${trackData.name}:`, error);
-                return null;
-              }
-            });
-
-            await Promise.all(trackPromises);
-          }
-
-          importedReleases.push(release);
-        } catch (error) {
-          console.error(`Error processing album ${albumData.id}:`, error);
-          continue;
-        }
+      // Get label from database
+      const label = await Label.findByPk(labelId);
+      if (!label) {
+        throw new Error(`Label not found: ${labelId}`);
       }
 
-      return importedReleases;
+      const labelName = label.display_name || label.name;
+      logger.info('Using label name:', labelName);
+
+      // Search with the exact label name
+      const limit = 50;
+      let offset = 0;
+      let hasMore = true;
+
+      while (hasMore) {
+        const requestFn = async () => {
+          const response = await this.spotifyApi.searchAlbums(`label:"${labelName}"`, {
+            limit,
+            offset,
+            market: 'GB'
+          });
+          
+          if (!response.body.albums || !response.body.albums.items) {
+            logger.error('Invalid response from Spotify:', response.body);
+            return;
+          }
+
+          logger.info('Search result:', {
+            query: `label:"${labelName}"`,
+            offset,
+            limit,
+            total: response.body.albums.total,
+            found: response.body.albums.items.length
+          });
+
+          for (const album of response.body.albums.items) {
+            try {
+              const fullAlbum = await this.getAlbumById(album.id);
+              if (!fullAlbum) continue;
+
+              const albumLabel = fullAlbum.label;
+              logger.info('Checking album:', {
+                id: fullAlbum.id,
+                name: fullAlbum.name,
+                label: albumLabel
+              });
+
+              // Check if the album label matches our label name
+              const isMatchingLabel = albumLabel && 
+                albumLabel.toLowerCase().includes(labelName.toLowerCase());
+
+              if (isMatchingLabel) {
+                logger.info('Found matching release:', {
+                  id: fullAlbum.id,
+                  name: fullAlbum.name,
+                  label: albumLabel,
+                });
+                releases.add(fullAlbum);
+              }
+            } catch (error) {
+              logger.error(`Failed to fetch full album details for ${album.name}:`, error.message);
+            }
+
+            // Add a small delay to avoid rate limiting
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+
+          offset += limit;
+          hasMore = response.body.albums.items.length === limit;
+        };
+
+        await this.makeRequest(requestFn);
+      }
+
+      const releasesArray = Array.from(releases);
+      logger.info(`Found ${releasesArray.length} total unique releases`);
+      return releasesArray;
+
     } catch (error) {
-      console.error('Error importing releases:', error);
+      logger.error('Error searching releases:', error);
       throw error;
     }
   }
 }
 
-module.exports = SpotifyService;
+const getSpotifyService = () => {
+  if (!spotifyServiceInstance) {
+    logger.info('Creating new SpotifyService instance');
+    spotifyServiceInstance = new SpotifyService(
+      process.env.SPOTIFY_CLIENT_ID,
+      process.env.SPOTIFY_CLIENT_SECRET
+    );
+  }
+  return spotifyServiceInstance;
+};
+
+module.exports = getSpotifyService;

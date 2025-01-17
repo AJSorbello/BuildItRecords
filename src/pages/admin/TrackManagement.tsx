@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Container,
@@ -6,55 +7,37 @@ import {
   Card,
   CardContent,
   Typography,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
   TextField,
   MenuItem,
   Alert,
   LinearProgress,
-  Avatar
+  Button
 } from '@mui/material';
-import {
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  PlayArrow as PlayIcon
-} from '@mui/icons-material';
+import { Refresh as RefreshIcon } from '@mui/icons-material';
+import TrackManager from '../../components/admin/TrackManager';
 import { ImportStatus } from '../../components/ImportStatus';
-import { useAuth } from '../../hooks/useAuth';
-import { LABELS } from '../../config';
-
-interface Track {
-  id: string;
-  title: string;
-  releaseId: string;
-  releaseName: string;
-  artistName: string;
-  artistImage?: string;
-  duration: number;
-  spotifyUrl: string;
-  labelId: string;
-}
+import { databaseService } from '../../services/DatabaseService';
+import { RECORD_LABELS } from '../../constants/labels';
+import { Track } from '../../types/track';
 
 export const TrackManagement: React.FC = () => {
-  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
   const [tracks, setTracks] = useState<Track[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedLabel, setSelectedLabel] = useState<string>(LABELS[0].id);
+  const [selectedLabel, setSelectedLabel] = useState<string>(Object.keys(RECORD_LABELS)[0]);
   const [searchQuery, setSearchQuery] = useState('');
 
   const fetchTracks = async () => {
     try {
       setLoading(true);
       setError(null);
-      // TODO: Implement API call to fetch tracks
-      // const response = await getTracks(selectedLabel);
-      // setTracks(response);
+      
+      const recordLabel = RECORD_LABELS[selectedLabel];
+      if (recordLabel) {
+        const response = await databaseService.getTracksByLabel(recordLabel, 'created_at');
+        setTracks(response.tracks);
+      }
     } catch (err) {
       setError('Failed to fetch tracks');
       console.error(err);
@@ -64,10 +47,13 @@ export const TrackManagement: React.FC = () => {
   };
 
   useEffect(() => {
-    if (isAuthenticated) {
-      fetchTracks();
+    const token = localStorage.getItem('adminToken');
+    if (!token) {
+      navigate('/admin/login');
+      return;
     }
-  }, [isAuthenticated, selectedLabel]);
+    fetchTracks();
+  }, [selectedLabel]);
 
   const handleLabelChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSelectedLabel(event.target.value);
@@ -77,45 +63,60 @@ export const TrackManagement: React.FC = () => {
     setSearchQuery(event.target.value);
   };
 
-  const formatDuration = (ms: number) => {
-    const minutes = Math.floor(ms / 60000);
-    const seconds = Math.floor((ms % 60000) / 1000);
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  const handleEditTrack = (track: Track) => {
+    navigate(`/admin/tracks/edit/${track.id}`);
   };
 
-  if (!isAuthenticated) {
-    return (
-      <Container>
-        <Alert severity="error">
-          Please log in to access track management.
-        </Alert>
-      </Container>
-    );
-  }
+  const handleDeleteTrack = async (trackId: string) => {
+    try {
+      await databaseService.deleteTrack(trackId);
+      fetchTracks(); // Refresh the list
+    } catch (err) {
+      setError('Failed to delete track');
+      console.error(err);
+    }
+  };
 
   return (
-    <Container maxWidth="lg">
+    <Container maxWidth="xl">
       <Box sx={{ py: 4 }}>
-        <Typography variant="h4" gutterBottom>
+        <Typography variant="h4" gutterBottom sx={{ color: '#FFFFFF' }}>
           Track Management
         </Typography>
 
         <Grid container spacing={3}>
           {/* Filters */}
           <Grid item xs={12}>
-            <Card>
+            <Card sx={{ backgroundColor: '#1E1E1E', color: '#FFFFFF' }}>
               <CardContent>
-                <Grid container spacing={2}>
-                  <Grid item xs={12} md={6}>
+                <Grid container spacing={2} alignItems="center">
+                  <Grid item xs={12} md={4}>
                     <TextField
                       select
                       fullWidth
                       label="Label"
                       value={selectedLabel}
                       onChange={handleLabelChange}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          color: '#FFFFFF',
+                          '& fieldset': {
+                            borderColor: '#FFFFFF',
+                          },
+                          '&:hover fieldset': {
+                            borderColor: '#02FF95',
+                          },
+                        },
+                        '& .MuiInputLabel-root': {
+                          color: '#FFFFFF',
+                        },
+                        '& .MuiSelect-icon': {
+                          color: '#FFFFFF',
+                        },
+                      }}
                     >
-                      {LABELS.map((label) => (
-                        <MenuItem key={label.id} value={label.id}>
+                      {Object.entries(RECORD_LABELS).map(([id, label]) => (
+                        <MenuItem key={id} value={id}>
                           {label.displayName}
                         </MenuItem>
                       ))}
@@ -128,7 +129,38 @@ export const TrackManagement: React.FC = () => {
                       value={searchQuery}
                       onChange={handleSearchChange}
                       placeholder="Search by title, artist, or release..."
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          color: '#FFFFFF',
+                          '& fieldset': {
+                            borderColor: '#FFFFFF',
+                          },
+                          '&:hover fieldset': {
+                            borderColor: '#02FF95',
+                          },
+                        },
+                        '& .MuiInputLabel-root': {
+                          color: '#FFFFFF',
+                        },
+                      }}
                     />
+                  </Grid>
+                  <Grid item xs={12} md={2}>
+                    <Button
+                      fullWidth
+                      variant="contained"
+                      onClick={fetchTracks}
+                      startIcon={<RefreshIcon />}
+                      sx={{
+                        backgroundColor: '#02FF95',
+                        color: '#000000',
+                        '&:hover': {
+                          backgroundColor: '#00CC76',
+                        },
+                      }}
+                    >
+                      Refresh
+                    </Button>
                   </Grid>
                 </Grid>
               </CardContent>
@@ -145,59 +177,22 @@ export const TrackManagement: React.FC = () => {
 
           {/* Tracks Table */}
           <Grid item xs={12}>
-            <Card>
+            <Card sx={{ backgroundColor: '#1E1E1E', color: '#FFFFFF' }}>
               <CardContent>
-                {loading && <LinearProgress />}
-                {error && <Alert severity="error">{error}</Alert>}
+                {loading && <LinearProgress sx={{ mb: 2 }} />}
+                {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-                <TableContainer component={Paper}>
-                  <Table>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Title</TableCell>
-                        <TableCell>Release</TableCell>
-                        <TableCell>Artist</TableCell>
-                        <TableCell>Duration</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {tracks
-                        .filter(track =>
-                          searchQuery
-                            ? track.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                              track.artistName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                              track.releaseName.toLowerCase().includes(searchQuery.toLowerCase())
-                            : true
-                        )
-                        .map((track) => (
-                          <TableRow 
-                            key={track.id}
-                            onClick={() => window.open(track.spotifyUrl, '_blank')}
-                            sx={{ 
-                              cursor: 'pointer',
-                              '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.04)' }
-                            }}
-                          >
-                            <TableCell>{track.title}</TableCell>
-                            <TableCell>{track.releaseName}</TableCell>
-                            <TableCell>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                {track.artistImage && (
-                                  <Avatar
-                                    src={track.artistImage}
-                                    alt={track.artistName}
-                                    sx={{ width: 30, height: 30 }}
-                                  />
-                                )}
-                                {track.artistName}
-                              </Box>
-                            </TableCell>
-                            <TableCell>{formatDuration(track.duration)}</TableCell>
-                          </TableRow>
-                        ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
+                <TrackManager
+                  tracks={tracks.filter(track =>
+                    searchQuery
+                      ? track.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        track.artists.some(artist => artist.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                        track.release.name.toLowerCase().includes(searchQuery.toLowerCase())
+                      : true
+                  )}
+                  onEdit={handleEditTrack}
+                  onDelete={handleDeleteTrack}
+                />
               </CardContent>
             </Card>
           </Grid>
@@ -206,3 +201,5 @@ export const TrackManagement: React.FC = () => {
     </Container>
   );
 };
+
+export default TrackManagement;

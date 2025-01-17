@@ -1,6 +1,6 @@
 import type { Artist } from './artist';
 import type { Track } from './track';
-import type { Album } from './release';
+import type { Album } from './album';
 
 export interface RecordLabel {
   id: string;
@@ -8,10 +8,12 @@ export interface RecordLabel {
   displayName: string;
   description?: string;
   website?: string;
-  logo?: string;
+  imageUrl?: string;
   artists?: Artist[];
   tracks?: Track[];
-  releases?: Album[];
+  albums?: Album[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface LabelSearchParams {
@@ -29,16 +31,34 @@ export interface LabelResponse {
   };
 }
 
-export function createLabel(data: Partial<RecordLabel>): RecordLabel {
+export function formatLabel(label: RecordLabel): RecordLabel {
   return {
-    id: data.id || '',
-    name: data.name || '',
-    displayName: data.displayName || data.name || '',
-    description: data.description || '',
-    website: data.website || '',
-    logo: data.logo || '',
-    artists: data.artists || [],
-    tracks: data.tracks || [],
-    releases: data.releases || []
+    id: label.id,
+    name: label.name,
+    displayName: label.displayName || label.name,
+    description: label.description,
+    website: label.website,
+    imageUrl: label.imageUrl,
+    artists: label.artists || [],
+    tracks: label.tracks || [],
+    albums: label.albums || [],
+    createdAt: label.createdAt,
+    updatedAt: label.updatedAt
   };
+}
+
+export function getLabelImage(label: RecordLabel): string {
+  return label.imageUrl || '';
+}
+
+export function getLabelArtists(label: RecordLabel): Artist[] {
+  return label.artists || [];
+}
+
+export function getLabelTracks(label: RecordLabel): Track[] {
+  return label.tracks || [];
+}
+
+export function getLabelAlbums(label: RecordLabel): Album[] {
+  return label.albums || [];
 }

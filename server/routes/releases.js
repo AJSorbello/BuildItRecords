@@ -3,7 +3,7 @@ const router = express.Router();
 const { Release, Artist, Track, Label } = require('../models');
 const { Op } = require('sequelize');
 const { query, validationResult } = require('express-validator');
-const logger = require('../utils/logger');
+const logger = require('../utils/logger');  
 
 const validateRequest = (req, res, next) => {
     const errors = validationResult(req);
@@ -15,20 +15,21 @@ const validateRequest = (req, res, next) => {
 
 // Get releases by label ID with pagination
 router.get('/', [
-    query('labelId').optional().isString(),
+    query('label').optional().isString(),
     query('offset').optional().isInt({ min: 0 }).toInt(),
     query('limit').optional().isInt({ min: 1, max: 50 }).toInt(),
     validateRequest
 ], async (req, res) => {
     try {
-        const { labelId, offset = 0, limit = 10 } = req.query;
+        const { label, offset = 0, limit = 10 } = req.query;
+        console.log('GET /releases request:', { label, offset, limit });
 
         const where = {};
-        if (labelId) {
-            where.label_id = labelId;
+        if (label) {
+            where.label_id = label;
         }
 
-        const releases = await Release.findAndCountAll({
+        const { count, rows } = await Release.findAndCountAll({
             where,
             include: [
                 {
@@ -50,15 +51,22 @@ router.get('/', [
             limit: parseInt(limit)
         });
 
-        res.json({
-            items: releases.rows,
-            total: releases.count,
-            offset: parseInt(offset),
-            limit: parseInt(limit)
-        });
+        console.log('Releases found:', { count, label });
+        const response = {
+            success: true,
+            releases: rows,
+            totalReleases: count,
+            currentPage: Math.floor(offset / limit) + 1
+        };
+        console.log('Sending response:', response);
+        res.json(response);
     } catch (error) {
-        logger.error('Error fetching releases:', error);
-        res.status(500).json({ error: 'Failed to fetch releases' });
+        console.error('Error fetching releases:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching releases',
+            error: error.message
+        });
     }
 });
 
@@ -96,8 +104,8 @@ router.get('/:id', async (req, res) => {
 
         res.json(release);
     } catch (error) {
-        logger.error('Error fetching release:', error);
-        res.status(500).json({ error: 'Failed to fetch release' });
+        console.error('Error fetching release:', error);
+        res.status(500).json({ error: error.message });
     }
 });
 
@@ -176,6 +184,12 @@ router.post('/:labelId/import', async (req, res) => {
 
   } catch (error) {
     console.error('Error importing releases:', error);
+    console.error('Error stack:', error.stack);
+    console.error('Error details:', {
+      message: error.message,
+      name: error.name,
+      code: error.code
+    });
     handleError(res, error);
   }
 });
@@ -258,6 +272,12 @@ router.get('/:labelId', async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching releases:', error);
+    console.error('Error stack:', error.stack);
+    console.error('Error details:', {
+      message: error.message,
+      name: error.name,
+      code: error.code
+    });
     handleError(res, error);
   }
 });

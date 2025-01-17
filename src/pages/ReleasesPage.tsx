@@ -2,14 +2,15 @@ import React, { useState } from 'react';
 import { Container, Typography, Grid, Box } from '@mui/material';
 import { LoadingSpinner, ErrorMessage, ReleaseCard } from '../components';
 import { useReleases } from '../hooks/useReleases';
-import { useLocation } from 'react-router-dom';
 import { RECORD_LABELS } from '../constants/labels';
 
-const ReleasesPage: React.FC = () => {
+interface ReleasesPageProps {
+  label: keyof typeof RECORD_LABELS;
+}
+
+const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
   // Get label from URL path (e.g., /records/releases -> records)
-  const location = useLocation();
-  const labelId = `buildit-${location.pathname.split('/')[1]}`;
-  const { loading, error, releases } = useReleases({ label: labelId });
+  const { loading, error, releases } = useReleases({ label });
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 12;
 
@@ -25,8 +26,7 @@ const ReleasesPage: React.FC = () => {
     );
   }
 
-  const label = RECORD_LABELS[labelId];
-  const labelDisplayName = label?.displayName || 'Releases';
+  const labelDisplayName = RECORD_LABELS[label]?.displayName || 'Releases';
 
   return (
     <Container maxWidth="xl" sx={{ mt: 8, mb: 4 }}>

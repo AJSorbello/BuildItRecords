@@ -14,10 +14,15 @@ module.exports = (sequelize) => {
       });
 
       Track.belongsToMany(models.Artist, {
-        through: 'track_artists',
+        through: models.TrackArtist,
         foreignKey: 'track_id',
         otherKey: 'artist_id',
         as: 'artists'
+      });
+
+      Track.belongsTo(models.Artist, {
+        foreignKey: 'remixer_id',
+        as: 'remixer'
       });
     }
   }
@@ -90,7 +95,7 @@ module.exports = (sequelize) => {
     },
     release_id: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,
       references: {
         model: 'releases',
         key: 'id'
@@ -112,6 +117,14 @@ module.exports = (sequelize) => {
         key: 'id'
       }
     },
+    status: {
+      type: DataTypes.ENUM('draft', 'scheduled', 'published'),
+      allowNull: false,
+      defaultValue: 'draft',
+      validate: {
+        isIn: [['draft', 'scheduled', 'published']]
+      }
+    },
     created_at: {
       type: DataTypes.DATE,
       allowNull: false,
@@ -129,7 +142,10 @@ module.exports = (sequelize) => {
     timestamps: true,
     createdAt: 'created_at',
     updatedAt: 'updated_at',
-    underscored: true
+    underscored: true,
+    defaultScope: {
+      order: [['created_at', 'DESC']]
+    }
   });
 
   return Track;

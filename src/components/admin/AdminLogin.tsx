@@ -11,8 +11,10 @@ import {
   Paper
 } from '@mui/material';
 import { authService } from '../../services/AuthService';
+import { DatabaseApiError } from '../../services/DatabaseService';
+import { logger } from '../../utils/logger';
 
-const AdminLogin: React.FC = () => {
+export const AdminLogin: React.FC = () => {
   const navigate = useNavigate();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -21,17 +23,26 @@ const AdminLogin: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!username || !password) {
+      setError('Please enter both username and password');
+      return;
+    }
+
     setError(null);
     setIsLoading(true);
 
     try {
-      await authService.login({ username, password });
+      const success = await authService.login({ username, password });
+      if (!success) {
+        throw new DatabaseApiError('Login failed');
+      }
       navigate('/admin/dashboard');
     } catch (err) {
-      if (err instanceof Error) {
+      logger.error('Login error:', err);
+      if (err instanceof DatabaseApiError) {
         setError(err.message);
       } else {
-        setError('Login failed. Please check your credentials and try again.');
+        setError('An unexpected error occurred. Please try again.');
       }
     } finally {
       setIsLoading(false);
@@ -45,38 +56,34 @@ const AdminLogin: React.FC = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#121212'
+        backgroundColor: '#f5f5f5'
       }}
     >
       <Container maxWidth="sm">
         <Paper 
-          elevation={3}
-          sx={{
+          elevation={3} 
+          sx={{ 
             p: 4,
             display: 'flex',
             flexDirection: 'column',
-            alignItems: 'center',
-            backgroundColor: '#1E1E1E'
+            alignItems: 'center'
           }}
         >
-          <Typography 
-            component="h1" 
-            variant="h4" 
-            sx={{ 
-              mb: 3,
-              color: '#fff'
-            }}
-          >
+          <Typography component="h1" variant="h5" gutterBottom>
             Admin Login
           </Typography>
 
           {error && (
-            <Alert severity="error" sx={{ width: '100%', mt: 2 }}>
+            <Alert 
+              severity="error" 
+              sx={{ width: '100%', mb: 2 }}
+              onClose={() => setError(null)}
+            >
               {error}
             </Alert>
           )}
 
-          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1, width: '100%' }}>
+          <Box component="form" onSubmit={handleSubmit} sx={{ width: '100%' }}>
             <TextField
               margin="normal"
               required
@@ -89,22 +96,6 @@ const AdminLogin: React.FC = () => {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               disabled={isLoading}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  '& fieldset': {
-                    borderColor: '#666',
-                  },
-                  '&:hover fieldset': {
-                    borderColor: '#999',
-                  },
-                },
-                '& .MuiInputLabel-root': {
-                  color: '#999',
-                },
-                '& .MuiOutlinedInput-input': {
-                  color: '#fff',
-                },
-              }}
             />
             <TextField
               margin="normal"
@@ -118,22 +109,6 @@ const AdminLogin: React.FC = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={isLoading}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  '& fieldset': {
-                    borderColor: '#666',
-                  },
-                  '&:hover fieldset': {
-                    borderColor: '#999',
-                  },
-                },
-                '& .MuiInputLabel-root': {
-                  color: '#999',
-                },
-                '& .MuiOutlinedInput-input': {
-                  color: '#fff',
-                },
-              }}
             />
             <Button
               type="submit"
@@ -150,5 +125,3 @@ const AdminLogin: React.FC = () => {
     </Box>
   );
 };
-
-export default AdminLogin;

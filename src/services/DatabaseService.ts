@@ -1,28 +1,49 @@
-import axios, { AxiosRequestConfig, AxiosError } from 'axios';
-import { Track, Release, Artist, Album } from '../types/models';
-import { SpotifyTrack, SpotifyRelease, SpotifyArtist, SpotifyAlbum } from '../types/spotify';
-import { API_URL } from '../config';
-import { logger } from '../utils/logger';
-import { RecordLabel } from '../types/label';
-import { PaginatedResponse, ApiError } from '../types/api';
+/**
+ * @fileoverview Service for handling database operations and API calls
+ * @module services/DatabaseService
+ */
 
-export class DatabaseApiError extends Error {
-  constructor(
-    message: string,
-    public status?: number,
-    public code?: string
-  ) {
-    super(message);
-    this.name = 'DatabaseApiError';
-  }
+import type { Track, LocalTrack } from '../types/track';
+import type { Artist } from '../types/artist';
+import type { Release } from '../types/release';
+import type { RecordLabelId } from '../types/labels';
+import { DatabaseError } from '../utils/errors';
+
+interface ApiResponse<T> {
+  success?: boolean;
+  data?: T;
+  message?: string;
+  error?: string;
+  tracks?: Track[];
+  releases?: Release[];
+  total?: number;
+  offset?: number;
+  limit?: number;
+  count?: number;
 }
 
+interface AdminLoginResponse {
+  success: boolean;
+  token?: string;
+  message?: string;
+}
+
+interface TokenVerificationResponse {
+  verified: boolean;
+  message?: string;
+}
+
+/**
+ * Service class for handling database operations through API calls
+ */
 export class DatabaseService {
   private static instance: DatabaseService;
   private baseUrl: string;
 
   private constructor() {
-    this.baseUrl = `${API_URL}/api`;
+    const apiUrl = process.env.REACT_APP_API_URL;
+    this.baseUrl = apiUrl || 'http://localhost:3001/api';
+    console.log('DatabaseService initialized with baseUrl:', this.baseUrl);
   }
 
   public static getInstance(): DatabaseService {
@@ -32,218 +53,147 @@ export class DatabaseService {
     return DatabaseService.instance;
   }
 
-  private async request<T>(options: AxiosRequestConfig): Promise<T> {
+  private async fetchApi<T extends ApiResponse<any>>(endpoint: string, options: RequestInit = {}): Promise<T> {
     try {
-      console.log(`Making ${options.method} request to ${options.url}`);
       const token = localStorage.getItem('adminToken');
-      const response = await axios({
+      const response = await fetch(`${this.baseUrl}${endpoint}`, {
         ...options,
-        baseURL: this.baseUrl,
         headers: {
+          'Content-Type': 'application/json',
+          ...(token && { Authorization: `Bearer ${token}` }),
           ...options.headers,
-          Authorization: token ? `Bearer ${token}` : '',
-        }
+        },
       });
-      return response.data;
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('API Error Response:', errorData);
+        throw new DatabaseError(
+          errorData.message || `HTTP error! status: ${response.status}`,
+          response.status === 404 ? 'not_found' : 'api_error'
+        );
+      }
+
+      const data = await response.json();
+      console.log('API Response:', data);
+      
+      // Some endpoints don't return a success field, so we'll consider them successful if they have data
+      if (data.success === false || (!data.success && !data.tracks && !data.releases && !data.data)) {
+        throw new DatabaseError(data.message || 'API request failed', 'api_error');
+      }
+
+      return data;
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        console.error('Axios error:', error.response?.data || error.message);
-        throw new Error(error.response?.data?.message || error.message);
+      console.error(`API error for ${endpoint}:`, error);
+      if (error instanceof DatabaseError) {
+        throw error;
       }
-      console.error('Unknown error:', error);
-      throw new Error('An unexpected error occurred');
+      throw new DatabaseError(
+        `Failed to fetch from ${endpoint}: ${error}`,
+        'api_error'
+      );
     }
   }
 
-  private handleError(error: unknown): never {
-    if (axios.isAxiosError(error)) {
-      const status = error.response?.status;
-      const message = error.response?.data?.error || error.message;
-      
-      // Handle specific error cases
-      if (status === 401) {
-        throw new DatabaseApiError('Authentication required. Please log in again.', status);
-      } else if (status === 404) {
-        throw new DatabaseApiError('Resource not found.', status);
-      } else if (status === 403) {
-        throw new DatabaseApiError('Access denied. Insufficient permissions.', status);
-      }
-      
-      throw new DatabaseApiError(message, status);
-    }
-    throw new DatabaseApiError('An unexpected error occurred');
+  // Release Methods
+  public async getReleasesByLabelId(labelId: RecordLabelId): Promise<{ releases: Release[]; totalReleases: number; currentPage: number }> {
+    const response = await this.fetchApi<ApiResponse<never>>(`/releases?label=${labelId}`);
+
+    return {
+      releases: response.releases || [],
+      totalReleases: response.total || 0,
+      currentPage: Math.floor((response.offset || 0) / (response.limit || 10)) + 1
+    };
   }
 
-  // Labels
-  async getLabels(): Promise<RecordLabel[]> {
-    return this.request<RecordLabel[]>({
-      method: 'GET',
-      url: '/labels'
-    });
+  // Track Methods
+  public async getTracksByLabel(labelId: RecordLabelId, sortBy?: string): Promise<{ tracks: Track[] }> {
+    const endpoint = sortBy ? `/tracks?label=${labelId}&sort=${sortBy}` : `/tracks?label=${labelId}`;
+    const response = await this.fetchApi<ApiResponse<never>>(endpoint);
+
+    return {
+      tracks: response.tracks || []
+    };
   }
 
-  // Artists
-  async getArtists(params: { search?: string; label?: string } = {}): Promise<Artist[]> {
-    return this.request<Artist[]>({
-      method: 'GET',
-      url: '/artists',
-      params
-    });
-  }
-
-  async getArtistById(id: string): Promise<Artist & { releases: Release[] }> {
-    return this.request<Artist & { releases: Release[] }>({
-      method: 'GET',
-      url: `/artists/${id}`
-    });
-  }
-
-  async getArtistsForLabel(labelId: string): Promise<Artist[]> {
-    return this.request<Artist[]>({
-      method: 'GET',
-      url: `/labels/${labelId}/artists`
-    });
-  }
-
-  // Releases
-  async getReleasesByLabelId(labelId: string, offset: number = 0, limit: number = 10): Promise<PaginatedResponse<Release>> {
+  public async getTrackById(trackId: string): Promise<Track | null> {
     try {
-      const response = await this.request<PaginatedResponse<Release>>({
-        method: 'GET',
-        url: '/releases',
-        params: { labelId, offset, limit }
-      });
-
-      if (!response.items) {
-        logger.warn(`No releases found for label ${labelId}`);
-        return {
-          items: [],
-          total: 0,
-          limit,
-          offset
-        };
-      }
-
-      return response;
+      const response = await this.fetchApi<ApiResponse<Track>>(`/tracks/${trackId}`);
+      return response.data || null;
     } catch (error) {
-      logger.error('Error fetching releases:', error);
-      throw this.handleError(error);
+      if (error instanceof DatabaseError && error.code === 'not_found') {
+        return null;
+      }
+      throw error;
     }
   }
 
-  // Tracks
-  async getTracks(labelId?: string): Promise<Track[]> {
+  /**
+   * Imports tracks from Spotify for a specific label
+   * @param {RecordLabelId} labelId - The ID of the label to import tracks for
+   * @returns {Promise<{ success: boolean; message: string }>} Import result
+   */
+  public async importTracksFromSpotify(labelId: RecordLabelId): Promise<{ success: boolean; message: string }> {
+    const response = await this.fetchApi<ApiResponse<never>>(`/labels/${labelId}/import`, {
+      method: 'POST'
+    });
+
+    return {
+      success: true, // If we got here, it was successful since errors would have thrown
+      message: response.message || 'Import started successfully'
+    };
+  }
+
+  /**
+   * Authenticates an admin user
+   * @param {string} username - Admin username
+   * @param {string} password - Admin password
+   * @returns {Promise<AdminLoginResponse>} Login response with token if successful
+   */
+  public async adminLogin(username: string, password: string): Promise<AdminLoginResponse> {
     try {
-      console.log('Fetching tracks for label:', labelId);
-      const response = await this.request<{ tracks: Track[] }>({
-        method: 'GET',
-        url: labelId ? `/labels/${labelId}/tracks` : '/tracks'
+      const response = await this.fetchApi<ApiResponse<{ token: string }>>('/admin/login', {
+        method: 'POST',
+        body: JSON.stringify({ username, password }),
       });
-      
-      // Validate and clean the response
-      const tracks = response.tracks || [];
-      return tracks.map(track => ({
-        ...track,
-        artists: Array.isArray(track.artists) ? track.artists.filter(a => a && a.id) : [],
-        release: Array.isArray(track.release) ? track.release.filter(r => r && r.id) : []
-      }));
+
+      return {
+        success: true,
+        token: response.data?.token,
+        message: response.message || 'Login successful'
+      };
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        console.error('Error fetching tracks:', error.response?.data || error.message);
-        throw new Error(error.response?.data?.message || 'Failed to fetch tracks');
-      }
-      console.error('Unknown error fetching tracks:', error);
-      throw new Error('An unexpected error occurred while fetching tracks');
+      console.error('Admin login failed:', error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Login failed'
+      };
     }
   }
 
-  async getTrackById(id: string): Promise<Track> {
-    const response = await this.request<{ track: Track }>({
-      method: 'GET',
-      url: `/tracks/${id}`
-    });
-    return response.track;
-  }
+  /**
+   * Verifies the admin token stored in localStorage
+   * @returns {Promise<TokenVerificationResponse>} Verification result
+   */
+  public async verifyAdminToken(): Promise<TokenVerificationResponse> {
+    try {
+      const response = await this.fetchApi<ApiResponse<never>>('/admin/verify');
 
-  async searchTracks(query: string, labelId?: string): Promise<{ tracks: Track[] }> {
-    const response = await this.request<{ tracks: Track[] }>({
-      method: 'GET',
-      url: labelId ? `/labels/${labelId}/tracks/search` : '/tracks/search',
-      params: { query }
-    });
-    return { tracks: response.tracks || [] };
-  }
-
-  async importTracksByLabel(labelId: string): Promise<Track[]> {
-    const response = await this.request<{ tracks: Track[] }>({
-      method: 'POST',
-      url: `/labels/${labelId}/import`
-    });
-    return response.tracks || [];
-  }
-
-  async updateTrack(trackId: string, updates: Partial<Track>): Promise<Track> {
-    return this.request<Track>({
-      method: 'PUT',
-      url: `/tracks/${trackId}`,
-      data: updates
-    });
-  }
-
-  async verifyAdminToken(): Promise<{ verified: boolean }> {
-    return this.request<{ verified: boolean }>({
-      method: 'GET',
-      url: '/admin/verify-admin-token'
-    });
-  }
-
-  // Helper methods
-  private formatArtist(artist: SpotifyArtist): Artist {
-    return {
-      id: artist.id,
-      name: artist.name,
-      images: artist.images,
-      external_urls: artist.external_urls
-    };
-  }
-
-  private formatAlbum(album: SpotifyAlbum, tracks?: SpotifyTrack[]): Album {
-    return {
-      id: album.id,
-      name: album.name,
-      images: album.images,
-      artists: album.artists.map(artist => this.formatArtist(artist)),
-      release_date: album.release_date,
-      tracks: tracks?.map(track => this.formatTrack(track)) || [],
-      external_urls: album.external_urls
-    };
-  }
-
-  private formatTrack(track: SpotifyTrack, albumData?: SpotifyAlbum): Track {
-    return {
-      id: track.id,
-      name: track.name,
-      duration_ms: track.duration_ms,
-      artists: track.artists.map(artist => this.formatArtist(artist)),
-      album: albumData ? this.formatAlbum(albumData) : track.album,
-      preview_url: track.preview_url,
-      external_urls: track.external_urls
-    };
-  }
-
-  private formatRelease(release: SpotifyRelease): Release {
-    return {
-      id: release.id,
-      name: release.name,
-      artists: release.artists.map(artist => this.formatArtist(artist)),
-      album: this.formatAlbum(release.album, release.tracks),
-      tracks: release.tracks.map(track => this.formatTrack(track, release.album)),
-      external_urls: {
-        spotify: release.external_urls.spotify
-      }
-    };
+      return {
+        verified: true, // If we got here, it was successful since errors would have thrown
+        message: response.message
+      };
+    } catch (error) {
+      console.error('Token verification failed:', error);
+      return {
+        verified: false,
+        message: error instanceof Error ? error.message : 'Token verification failed'
+      };
+    }
   }
 }
 
+/**
+ * Singleton instance of DatabaseService
+ */
 export const databaseService = DatabaseService.getInstance();
-export type { RecordLabel, PaginatedResponse };

@@ -1,124 +1,173 @@
-import React from 'react';
-import { Track } from '../types/models';
-import { formatDuration } from '../utils/formatters';
-import { Box, IconButton, Link, List, ListItem, Typography } from '@mui/material';
-import { PlayArrow, Pause } from '@mui/icons-material';
+import React, { useState, useEffect } from 'react';
+import { Box, Typography, Grid, Card, CardMedia, Link, IconButton, styled } from '@mui/material';
+import { FaSpotify, FaPlay, FaPause } from 'react-icons/fa';
+import { spotifyService } from '../services/SpotifyService';
 
-interface TrackListProps {
-  tracks: Track[];
-  currentTrack?: Track | null;
-  isPlaying: boolean;
-  onPlayTrack: (track: Track) => void;
-  onPauseTrack: () => void;
+interface Track {
+  id: string;
+  name: string;
+  artist: string;
+  album: string;
+  albumCover: string;
+  previewUrl: string | null;
+  spotifyUrl: string;
+  duration: string;
 }
 
-const TrackList: React.FC<TrackListProps> = ({
-  tracks,
-  currentTrack,
-  isPlaying,
-  onPlayTrack,
-  onPauseTrack
-}) => {
-  const handlePlayClick = (track: Track) => {
-    if (currentTrack?.id === track.id && isPlaying) {
-      onPauseTrack();
-    } else {
-      onPlayTrack(track);
+const TrackCard = styled(Card)({
+  display: 'flex',
+  backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  transition: 'all 0.2s ease-in-out',
+  '&:hover': {
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    transform: 'scale(1.02)',
+    '& .play-button': {
+      opacity: 1,
+    },
+  },
+});
+
+const PlayButton = styled(IconButton)({
+  opacity: 0,
+  transition: 'opacity 0.2s ease-in-out',
+  color: '#1DB954',
+  backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  padding: '6px',
+  '&:hover': {
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+  },
+});
+
+const SpotifyButton = styled(Link)({
+  color: '#FFFFFF',
+  display: 'flex',
+  alignItems: 'center',
+  width: 'fit-content',
+  textDecoration: 'none',
+  '&:hover': {
+    color: '#1DB954',
+  },
+});
+
+const formatDuration = (ms: number): string => {
+  const minutes = Math.floor(ms / 60000);
+  const seconds = ((ms % 60000) / 1000).toFixed(0);
+  return `${minutes}:${parseInt(seconds) < 10 ? '0' : ''}${seconds}`;
+};
+
+interface PlaylistTrackListProps {
+  playlistId?: string;
+}
+
+const PlaylistTrackList: React.FC<PlaylistTrackListProps> = ({ playlistId }) => {
+  const [tracks, setTracks] = useState<Track[]>([]);
+  const [playingTrackId, setPlayingTrackId] = useState<string | null>(null);
+  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchTracks = async () => {
+      if (!playlistId) return;
+
+      try {
+        const response = await spotifyService.getPlaylist(playlistId);
+        if (!response) {
+          throw new Error('Failed to fetch playlist');
+        }
+        
+        const formattedTracks = response.tracks.items.map((item: any) => ({
+          id: item.track.id,
+          name: item.track.name,
+          artist: item.track.artists.map((artist: any) => artist.name).join(', '),
+          album: item.track.album.name,
+          albumCover: item.track.album.images[0]?.url || '',
+          previewUrl: item.track.preview_url,
+          spotifyUrl: item.track.external_urls.spotify,
+          duration: formatDuration(item.track.duration_ms),
+        }));
+
+        setTracks(formattedTracks);
+        setLoading(false);
+      } catch (error) {
+        console.error('Error fetching tracks:', error);
+      }
+    };
+
+    fetchTracks();
+  }, [playlistId]);
+
+  const handlePlay = (track: Track) => {
+    if (audioElement) {
+      audioElement.pause();
+      if (playingTrackId === track.id) {
+        setPlayingTrackId(null);
+        setAudioElement(null);
+        return;
+      }
+    }
+
+    if (track.previewUrl) {
+      const audio = new Audio(track.previewUrl);
+      audio.play();
+      audio.addEventListener('ended', () => {
+        setPlayingTrackId(null);
+        setAudioElement(null);
+      });
+      setAudioElement(audio);
+      setPlayingTrackId(track.id);
     }
   };
 
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return 'No date';
-    return new Date(dateString).toLocaleDateString(undefined, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
-  };
-
-  const renderTrackItem = (track: Track) => {
-    const isCurrentTrack = currentTrack?.id === track.id;
-    const artistNames = track.artists?.map(artist => artist.name).join(', ') || 'Unknown Artist';
-    const release = track.release;
-
-    return (
-      <ListItem
-        key={track.id}
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-          '&:hover': {
-            backgroundColor: 'rgba(255, 255, 255, 0.05)'
-          }
-        }}
-      >
-        <IconButton
-          onClick={() => handlePlayClick(track)}
-          sx={{ color: isCurrentTrack ? 'primary.main' : 'inherit' }}
-        >
-          {isCurrentTrack && isPlaying ? <Pause /> : <PlayArrow />}
-        </IconButton>
-
-        <Box sx={{ display: 'flex', flexDirection: 'column', flexGrow: 1, ml: 2 }}>
-          <Link
-            href={track.spotify_url || '#'}
-            target="_blank"
-            rel="noopener noreferrer"
-            sx={{
-              color: 'inherit',
-              textDecoration: 'none',
-              '&:hover': {
-                textDecoration: 'underline'
-              }
-            }}
-          >
-            <Typography variant="subtitle1" component="span">
-              {track.name}
-            </Typography>
-          </Link>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography variant="body2" color="text.secondary">
-              {artistNames}
-            </Typography>
-            {release && (
-              <Typography variant="body2" color="text.secondary">
-                • {release.title}
-              </Typography>
-            )}
-          </Box>
-        </Box>
-
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          {release?.artwork_url && (
-            <Box
-              component="img"
-              src={release.artwork_url}
-              alt={release.title}
-              sx={{
-                width: 40,
-                height: 40,
-                objectFit: 'cover',
-                borderRadius: 1
-              }}
-            />
-          )}
-          <Typography variant="body2" color="text.secondary" sx={{ minWidth: '100px', textAlign: 'right' }}>
-            {formatDate(release?.release_date)}
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ minWidth: '60px', textAlign: 'right' }}>
-            {formatDuration(track.duration_ms || 0)}
-          </Typography>
-        </Box>
-      </ListItem>
-    );
-  };
-
   return (
-    <List sx={{ width: '100%', bgcolor: 'transparent' }}>
-      {tracks.map(renderTrackItem)}
-    </List>
+    <Box sx={{ width: '100%' }}>
+      <Grid container spacing={2}>
+        {tracks.map((track) => (
+          <Grid item xs={12} key={track.id}>
+            <TrackCard>
+              <CardMedia
+                component="img"
+                sx={{ width: 60, height: 60 }}
+                image={track.albumCover}
+                alt={`${track.name} cover`}
+              />
+              <Box sx={{ display: 'flex', flexGrow: 1, alignItems: 'center', px: 2 }}>
+                <Box sx={{ flexGrow: 1 }}>
+                  <Typography variant="subtitle1" component="div" sx={{ color: 'text.primary' }}>
+                    {track.name}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {track.artist}
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  {track.previewUrl && (
+                    <PlayButton
+                      className="play-button"
+                      size="small"
+                      onClick={() => handlePlay(track)}
+                    >
+                      {playingTrackId === track.id ? <FaPause /> : <FaPlay />}
+                    </PlayButton>
+                  )}
+                  <Typography variant="body2" color="text.secondary" sx={{ minWidth: 45 }}>
+                    {track.duration}
+                  </Typography>
+                  <SpotifyButton
+                    href={track.spotifyUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+                  >
+                    <FaSpotify size={20} />
+                  </SpotifyButton>
+                </Box>
+              </Box>
+            </TrackCard>
+          </Grid>
+        ))}
+      </Grid>
+    </Box>
   );
 };
 
-export default TrackList;
+export default PlaylistTrackList;

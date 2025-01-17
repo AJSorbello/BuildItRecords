@@ -13,7 +13,7 @@ import {
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
-import { Track } from '../../types/track';
+import { Track } from '../../types/models';
 
 interface AdminTrackListProps {
   tracks: Track[];
@@ -54,24 +54,24 @@ const AdminTrackList: React.FC<AdminTrackListProps> = ({
         <TableBody>
           {tracks.map((track) => (
             <TableRow key={track.id}>
-              <TableCell>{track.title}</TableCell>
+              <TableCell>{track.name}</TableCell>
               <TableCell>
                 {track.artists.map((artist) => artist.name).join(', ')}
               </TableCell>
               <TableCell>{track.album?.name || 'N/A'}</TableCell>
-              <TableCell>{formatDate(track.releaseDate)}</TableCell>
-              <TableCell>{track.label || 'N/A'}</TableCell>
+              <TableCell>{formatDate(track.album?.release_date)}</TableCell>
+              <TableCell>{track.label_id || 'N/A'}</TableCell>
               <TableCell align="right">
                 <IconButton
                   onClick={() => onTrackEdit(track)}
                   size="small"
-                  title="Edit track"
+                  color="primary"
                 >
                   <EditIcon />
                 </IconButton>
-                {track.spotifyUrl && (
+                {track.external_urls?.spotify && (
                   <IconButton
-                    href={track.spotifyUrl}
+                    href={track.external_urls.spotify}
                     target="_blank"
                     rel="noopener noreferrer"
                     size="small"

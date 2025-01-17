@@ -48,6 +48,7 @@ const DeepSidebar: React.FC<DeepSidebarProps> = ({ open = true, onClose, variant
         }
       }}
       sx={{
+        ...sx,
         width: drawerWidth,
         flexShrink: 0,
         '& .MuiDrawer-paper': {
@@ -56,8 +57,7 @@ const DeepSidebar: React.FC<DeepSidebarProps> = ({ open = true, onClose, variant
           backgroundColor: '#000000',
           marginTop: variant === 'temporary' ? 0 : '180px',
           border: 'none'
-        },
-        ...sx
+        }
       }}
     >
       {variant === 'temporary' && (
@@ -77,9 +77,10 @@ const DeepSidebar: React.FC<DeepSidebarProps> = ({ open = true, onClose, variant
               color: '#FFFFFF',
               height: '48px',
               '&:hover': {
-                backgroundColor: 'rgba(0, 191, 255, 0.08)',
+                backgroundColor: `${color}14`,
               },
               '& .MuiListItemIcon-root': {
+                color: color,
                 minWidth: '40px',
                 marginLeft: '12px',
               },
@@ -89,9 +90,7 @@ const DeepSidebar: React.FC<DeepSidebarProps> = ({ open = true, onClose, variant
               },
             }}
           >
-            <ListItemIcon sx={{ color: color }}>
-              {item.icon}
-            </ListItemIcon>
+            <ListItemIcon>{item.icon}</ListItemIcon>
             <ListItemText primary={item.text} />
           </ListItem>
         ))}

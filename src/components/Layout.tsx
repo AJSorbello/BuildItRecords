@@ -22,7 +22,7 @@ const getLogo = (label: string) => {
   }
 };
 
-export const Layout: React.FC = () => {
+const Layout: React.FC = () => {
   const location = useLocation();
   const theme = useTheme();
   const isMobile = useMediaQuery('(max-width:900px)');
@@ -100,3 +100,5 @@ export const Layout: React.FC = () => {
     </Box>
   );
 };
+
+export { Layout };

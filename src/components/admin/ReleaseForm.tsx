@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Box, TextField, Button, CircularProgress } from '@mui/material';
+import { Box, TextField, Button, CircularProgress, Alert } from '@mui/material';
 import { spotifyService } from '../../services/SpotifyService';
-import { Track } from '../../types/track';
+import { Track } from '../../types/models';
+import { DatabaseApiError } from '../../services/DatabaseService';
 
 interface ReleaseFormProps {
   onSubmit: (track: Track) => void;
@@ -45,27 +46,47 @@ const ReleaseForm: React.FC<ReleaseFormProps> = ({ onSubmit, onCancel }) => {
       }
       onSubmit(track);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      console.error('Error fetching track:', err);
+      if (err instanceof DatabaseApiError) {
+        setError(err.message);
+      } else {
+        setError('Failed to fetch track details');
+      }
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Box component="form" onSubmit={handleSubmit} sx={{ width: '100%', mt: 2 }}>
+    <Box
+      component="form"
+      onSubmit={handleSubmit}
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 2,
+        p: 2
+      }}
+    >
+      {error && (
+        <Alert severity="error" onClose={() => setError(null)}>
+          {error}
+        </Alert>
+      )}
+      
       <TextField
         fullWidth
         label="Spotify Track URL"
         value={spotifyUrl}
         onChange={(e) => setSpotifyUrl(e.target.value)}
+        placeholder="https://open.spotify.com/track/..."
         error={!!error}
-        helperText={error || 'Enter the Spotify URL of the track'}
         disabled={loading}
-        sx={{ mb: 2 }}
       />
+      
       <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
         <Button
-          variant="outlined"
+          type="button"
           onClick={onCancel}
           disabled={loading}
         >

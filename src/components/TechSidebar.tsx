@@ -26,6 +26,7 @@ const TechSidebar: React.FC<TechSidebarProps> = ({ open = true, onClose, variant
     { text: 'Home', icon: <HomeIcon />, path: '/tech' },
     { text: 'Releases', icon: <AlbumIcon />, path: '/tech/releases' },
     { text: 'Artists', icon: <PeopleIcon />, path: '/tech/artists' },
+    { text: 'Playlists', icon: <QueueMusicIcon />, path: '/tech/playlists' },
     { text: 'Submit', icon: <SendIcon />, path: '/tech/submit' },
   ];
 
@@ -43,11 +44,7 @@ const TechSidebar: React.FC<TechSidebarProps> = ({ open = true, onClose, variant
       onClose={onClose}
       PaperProps={{
         sx: {
-          border: 'none',
-          backgroundColor: 'rgba(0, 0, 0, 0.9)',
-          marginTop: variant === 'temporary' ? 0 : '64px',
-          height: variant === 'temporary' ? '100%' : 'calc(100% - 64px)',
-          position: 'fixed'
+          border: 'none'
         }
       }}
       sx={{
@@ -57,6 +54,8 @@ const TechSidebar: React.FC<TechSidebarProps> = ({ open = true, onClose, variant
         '& .MuiDrawer-paper': {
           width: drawerWidth,
           boxSizing: 'border-box',
+          backgroundColor: '#000000',
+          marginTop: variant === 'temporary' ? 0 : '180px',
           border: 'none'
         }
       }}
@@ -78,9 +77,10 @@ const TechSidebar: React.FC<TechSidebarProps> = ({ open = true, onClose, variant
               color: '#FFFFFF',
               height: '48px',
               '&:hover': {
-                backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                backgroundColor: `${color}14`,
               },
               '& .MuiListItemIcon-root': {
+                color: color,
                 minWidth: '40px',
                 marginLeft: '12px',
               },
@@ -90,9 +90,7 @@ const TechSidebar: React.FC<TechSidebarProps> = ({ open = true, onClose, variant
               },
             }}
           >
-            <ListItemIcon sx={{ color: color }}>
-              {item.icon}
-            </ListItemIcon>
+            <ListItemIcon>{item.icon}</ListItemIcon>
             <ListItemText primary={item.text} />
           </ListItem>
         ))}

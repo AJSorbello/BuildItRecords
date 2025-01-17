@@ -1,8 +1,9 @@
 import { 
   createBrowserRouter, 
-  createRoutesFromElements,
+  RouterProvider,
   Route,
-  Navigate
+  Navigate,
+  useBlocker
 } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import RecordsHome from '../pages/labels/RecordsHome';
@@ -14,9 +15,11 @@ import PlaylistsPage from '../pages/PlaylistsPage';
 import SubmitPage from '../pages/SubmitPage';
 import NotFoundPage from '../pages/NotFoundPage';
 import LegalPage from '../pages/LegalPage';
-import AdminLogin from '../pages/AdminLogin';
+import AdminLogin from '../pages/admin/AdminLogin';
 import AdminDashboard from '../pages/admin/AdminDashboard';
 import ArtistDetailPage from '../pages/ArtistDetailPage';
+import TrackManager from '../pages/admin/TrackManager';
+import { RECORD_LABELS } from '../constants/labels';
 
 // Protected Route component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -27,71 +30,123 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   return <>{children}</>;
 };
 
-// Router configuration with v7 future flags
-export const router = createBrowserRouter(
-  createRoutesFromElements(
-    <>
-      {/* Default redirect */}
-      <Route path="/" element={<Navigate to="/records" replace />} />
-      
-      {/* Records Routes */}
-      <Route path="/records" element={<Layout />}>
-        <Route index element={<RecordsHome />} />
-        <Route path="releases" element={<ReleasesPage />} />
-        <Route path="artists" element={<ArtistsPage />} />
-        <Route path="artists/:artistName" element={<ArtistDetailPage />} />
-        <Route path="playlists" element={<PlaylistsPage label="records" />} />
-        <Route path="submit" element={<SubmitPage label="records" />} />
-        <Route path="legal" element={<LegalPage />} />
-      </Route>
-
-      {/* Tech Routes */}
-      <Route path="/tech" element={<Layout />}>
-        <Route index element={<TechHome />} />
-        <Route path="releases" element={<ReleasesPage />} />
-        <Route path="artists" element={<ArtistsPage />} />
-        <Route path="artists/:artistName" element={<ArtistDetailPage />} />
-        <Route path="playlists" element={<PlaylistsPage label="tech" />} />
-        <Route path="submit" element={<SubmitPage label="tech" />} />
-        <Route path="legal" element={<LegalPage />} />
-      </Route>
-
-      {/* Deep Routes */}
-      <Route path="/deep" element={<Layout />}>
-        <Route index element={<DeepHome />} />
-        <Route path="releases" element={<ReleasesPage />} />
-        <Route path="artists" element={<ArtistsPage />} />
-        <Route path="artists/:artistName" element={<ArtistDetailPage />} />
-        <Route path="playlists" element={<PlaylistsPage label="deep" />} />
-        <Route path="submit" element={<SubmitPage label="deep" />} />
-        <Route path="legal" element={<LegalPage />} />
-      </Route>
-
-      {/* Admin Routes */}
-      <Route path="/admin">
-        <Route path="login" element={<AdminLogin />} />
-        <Route
-          path="dashboard"
-          element={
-            <ProtectedRoute>
-              <AdminDashboard />
-            </ProtectedRoute>
-          }
-        />
-      </Route>
-
-      {/* 404 Route */}
-      <Route path="*" element={<NotFoundPage />} />
-    </>
-  ),
+// Router configuration
+export const router = createBrowserRouter([
   {
-    // Enable all v7 future flags
-    future: {
-      v7_startTransition: true,
-      v7_fetcherPersist: true,
-      v7_normalizeFormMethod: true,
-      v7_partialHydration: true,
-      v7_skipActionErrorRevalidation: true,
-    }
+    path: '/',
+    element: <Navigate to="/records" replace />,
+  },
+  {
+    path: '/records',
+    element: <Layout />,
+    children: [
+      {
+        path: '/records',
+        element: <RecordsHome />,
+      },
+      {
+        path: '/records/releases',
+        element: <ReleasesPage label={RECORD_LABELS.RECORDS} />,
+      },
+      {
+        path: '/records/artists',
+        element: <ArtistsPage />,
+      },
+      {
+        path: '/records/artists/:id',
+        element: <ArtistDetailPage />,
+      },
+      {
+        path: '/records/playlists',
+        element: <PlaylistsPage />,
+      },
+      {
+        path: '/records/submit',
+        element: <SubmitPage />,
+      },
+      {
+        path: '/records/legal',
+        element: <LegalPage />,
+      }
+    ],
+  },
+  {
+    path: '/deep',
+    element: <Layout />,
+    children: [
+      {
+        path: '/deep',
+        element: <DeepHome />,
+      },
+      {
+        path: '/deep/releases',
+        element: <ReleasesPage label={RECORD_LABELS.DEEP} />,
+      },
+      {
+        path: '/deep/artists',
+        element: <ArtistsPage />,
+      },
+      {
+        path: '/deep/artists/:id',
+        element: <ArtistDetailPage />,
+      },
+      {
+        path: '/deep/playlists',
+        element: <PlaylistsPage />,
+      }
+    ],
+  },
+  {
+    path: '/tech',
+    element: <Layout />,
+    children: [
+      {
+        path: '/tech',
+        element: <TechHome />,
+      },
+      {
+        path: '/tech/releases',
+        element: <ReleasesPage label={RECORD_LABELS.TECH} />,
+      },
+      {
+        path: '/tech/artists',
+        element: <ArtistsPage />,
+      },
+      {
+        path: '/tech/artists/:id',
+        element: <ArtistDetailPage />,
+      },
+      {
+        path: '/tech/playlists',
+        element: <PlaylistsPage />,
+      }
+    ],
+  },
+  {
+    path: '/admin',
+    children: [
+      {
+        path: '/admin/login',
+        element: <AdminLogin />,
+      },
+      {
+        path: '/admin',
+        element: <Navigate to="/admin/dashboard" replace />,
+      },
+      {
+        path: '/admin/dashboard',
+        element: <ProtectedRoute><AdminDashboard /></ProtectedRoute>,
+      },
+      {
+        path: '/admin/tracks',
+        element: <ProtectedRoute><TrackManager /></ProtectedRoute>,
+      }
+    ],
+  },
+  {
+    path: '*',
+    element: <NotFoundPage />,
   }
-);
+]);
+
+export default router;

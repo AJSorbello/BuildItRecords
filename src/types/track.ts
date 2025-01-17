@@ -1,78 +1,146 @@
-import type { SpotifyImage } from './spotify';
-import type { SpotifyArtist } from './artist';
+/**
+ * @fileoverview Track type definitions
+ * @module types/Track
+ */
 
-export interface Album {
-  id?: string;
-  name: string;
-  artwork_url?: string;
-  images?: SpotifyImage[];
-  release_date?: string;
-  external_urls?: {
-    spotify: string;
-  };
-  artists?: SpotifyArtist[];
-}
+import type { SpotifyExternalUrls, SpotifyExternalIds } from './spotify';
 
-export interface Track {
+export type Artist = {
   id: string;
   name: string;
-  uri?: string;
-  type?: string;
-  duration_ms?: number;
-  duration?: number;
-  artists: SpotifyArtist[];
-  album?: Album;
-  preview_url?: string | null;
-  external_urls?: {
-    spotify: string;
-  };
-  external_ids?: {
-    [key: string]: string;
-  };
-  spotify_url?: string;
-  spotifyUrl?: string;
-  artwork_url?: string;
-  artistImage?: string;
-  popularity?: number;
-  explicit?: boolean;
-  track_number?: number;
-  disc_number?: number;
-  is_local?: boolean;
+  spotify_url: string;
+  spotify_uri: string;
+  profile_image?: string;
+  image_url?: string;
   label_id?: string;
-  spotify_uri?: string;
-  cached_at?: number;
-  releaseDate?: string;
-}
+  created_at?: Date;
+  updated_at?: Date;
+};
 
-export interface TrackResponse {
-  tracks: {
-    items: Track[];
-    total: number;
-    limit: number;
-    offset: number;
-  };
-}
-
-export interface TrackSearchParams {
-  artistId?: string;
-  albumId?: string;
-  labelId?: string;
-  search?: string;
-  limit?: number;
-  offset?: number;
-}
-
-export interface SpotifyApiTrack {
+export type Album = {
   id: string;
   name: string;
-  artists: Array<{ name: string }>;
-  album: {
-    name: string;
-    images: Array<{ url: string }>;
-    release_date: string;
-  };
-  external_urls: {
-    spotify: string;
-  };
+  release_date: string;
+  artwork_url?: string;
+  images?: Array<{ url: string; height: number; width: number }>;
+  spotify_url: string;
+  spotify_uri: string;
+  label_id: string;
+  total_tracks: number;
+  status?: string;
+  created_at?: Date;
+  updated_at?: Date;
+  artists?: Artist[];
+  tracks?: Track[];
+};
+
+export type Track = {
+  id: string;
+  name: string;
+  duration: number;
+  track_number: number;
+  disc_number: number;
   preview_url: string | null;
+  spotify_url: string;
+  spotify_uri: string;
+  release_id?: string;
+  label_id?: string;
+  remixer_id?: string;
+  created_at?: Date;
+  updated_at?: Date;
+  artists?: Artist[];
+  release?: Album;
+  isrc?: string;
+  external_urls?: SpotifyExternalUrls;
+  type?: 'track';
+  explicit?: boolean;
+  popularity?: number;
+  available_markets?: string[];
+  is_local?: boolean;
+};
+
+export type RecordLabelId = string;
+
+export type TrackDetails = {
+  id: string;
+  name: string;
+  duration: number;
+  track_number: number;
+  disc_number: number;
+  preview_url: string | null;
+  spotify_url: string;
+  spotify_uri: string;
+  artists: Artist[];
+  remixer?: Artist;
+  release?: Album;
+  isrc?: string;
+};
+
+export type LocalTrack = Track & {
+  localId?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+};
+
+export type LocalAlbum = Album & {
+  type?: 'album' | 'single' | 'compilation';
+};
+
+export type BaseTrack = {
+  id: string;
+  name: string;
+  artists: Artist[];
+  album: Album;
+  duration: number;
+  preview_url: string | null;
+  external_urls: SpotifyExternalUrls;
+  external_ids: SpotifyExternalIds;
+  uri: string;
+  type: 'track';
+  track_number: number;
+  disc_number: number;
+  isrc: string;
+  images?: Array<{ url: string; height: number; width: number }>;
+  artwork_url?: string;
+};
+
+export type TrackSearchResult = {
+  id: string;
+  name: string;
+  artists: Artist[];
+  album: Album;
+  duration_ms: number;
+  preview_url: string | null;
+  external_urls: SpotifyExternalUrls;
+  uri: string;
+  type: 'track';
+  popularity: number;
+};
+
+export function formatSpotifyTrack(track: any): TrackDetails {
+  return {
+    id: track.id,
+    name: track.name,
+    duration: track.duration_ms,
+    track_number: track.track_number,
+    disc_number: track.disc_number || 1,
+    preview_url: track.preview_url,
+    spotify_url: track.external_urls?.spotify || '',
+    spotify_uri: track.uri,
+    artists: track.artists.map((artist: any) => ({
+      id: artist.id,
+      name: artist.name,
+      spotify_url: artist.external_urls?.spotify || '',
+      spotify_uri: artist.uri
+    })),
+    isrc: track.external_ids?.isrc
+  };
+}
+
+export function getTrackAlbumImage(track: Track): string {
+  return track.release?.artwork_url || '';
+}
+
+export function getTrackSpotifyUrl(track: Track): string {
+  return track.external_urls?.spotify || '';
 }

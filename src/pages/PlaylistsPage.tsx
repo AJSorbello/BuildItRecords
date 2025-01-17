@@ -3,7 +3,7 @@ import { Box, Typography, Card, CardContent, CardMedia, Grid, Link, styled, Cont
 import { FaSpotify } from 'react-icons/fa';
 import { labelColors } from '../theme/theme';
 import PageLayout from '../components/PageLayout';
-import PlaylistTrackList from '../components/PlaylistTrackList';
+import PlayableTrackList from '../components/common/PlayableTrackList';
 
 interface Track {
   id: string
@@ -197,7 +197,7 @@ const PlaylistPage: React.FC<PlaylistPageProps> = ({ label }) => {
               {selectedPlaylist ? selectedPlaylist.title : 'Select a Playlist'}
             </Typography>
             {selectedPlaylist ? (
-              <PlaylistTrackList 
+              <PlayableTrackList 
               playlistId={selectedPlaylist.id} 
               tracks={selectedPlaylist.tracks || []} 
             />

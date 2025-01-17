@@ -7,10 +7,11 @@ import {
   TextField,
   Button,
   Box,
-  Alert
+  Alert,
+  CircularProgress
 } from '@mui/material';
-import { API_URL } from '../../config';
 import { databaseService } from '../../services/DatabaseService';
+import { logger } from '../../utils/logger';
 
 const AdminLogin: React.FC = () => {
   const navigate = useNavigate();
@@ -25,50 +26,53 @@ const AdminLogin: React.FC = () => {
     setLoading(true);
 
     try {
-      // Remove /api from API_URL since it's already included
-      const baseUrl = API_URL.replace('/api', '');
-      
-      const response = await fetch(`${baseUrl}/api/admin/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ username, password })
+      logger.info('Attempting login with:', { 
+        username,
+        hasPassword: !!password,
+        apiUrl: process.env.REACT_APP_API_URL 
       });
 
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(data.message || `Login failed with status ${response.status}`);
-      }
-
-      const data = await response.json();
+      // First, try to login
+      const response = await databaseService.adminLogin(username, password);
+      logger.info('Login response:', response);
       
-      if (!data.token) {
-        throw new Error('No token received from server');
+      if (!response.success || !response.token) {
+        setError(response.message || 'Login failed');
+        setLoading(false);
+        return;
       }
 
-      // Store the token
-      localStorage.setItem('adminToken', data.token);
+      // Store token in localStorage
+      localStorage.setItem('adminToken', response.token);
+      localStorage.setItem('adminUsername', username);
 
-      try {
-        // Use DatabaseService for verification to ensure consistent auth header handling
-        const verified = await databaseService.verifyAdminToken();
-        if (!verified.verified) {
-          throw new Error('Token verification failed');
+      // Then verify the token
+      const verified = await databaseService.verifyAdminToken();
+      logger.info('Token verification:', verified);
+      
+      if (!verified.verified) {
+        setError('Token verification failed');
+        setLoading(false);
+        return;
+      }
+      
+      // If we get here, both login and verification succeeded
+      logger.info('Successfully logged in and verified');
+      setLoading(false);
+      navigate('/admin/dashboard', { replace: true });
+    } catch (error) {
+      logger.error('Login error details:', {
+        error: error instanceof Error ? {
+          name: error.name,
+          message: error.message,
+          stack: error.stack
+        } : error,
+        state: {
+          username,
+          hasPassword: !!password
         }
-        
-        // Navigate to dashboard
-        navigate('/admin/dashboard');
-      } catch (verifyError) {
-        console.error('Verification error:', verifyError);
-        localStorage.removeItem('adminToken');
-        throw new Error('Token verification failed');
-      }
-    } catch (err) {
-      console.error('Login error:', err);
-      setError(err instanceof Error ? err.message : 'Login failed');
-      localStorage.removeItem('adminToken');
-    } finally {
+      });
+      setError(error instanceof Error ? error.message : 'An error occurred during login');
       setLoading(false);
     }
   };
@@ -96,6 +100,11 @@ const AdminLogin: React.FC = () => {
             onChange={(e) => setUsername(e.target.value)}
             disabled={loading}
             required
+            autoFocus
+            inputProps={{
+              'aria-label': 'Username',
+              autoComplete: 'username'
+            }}
           />
 
           <TextField
@@ -108,17 +117,26 @@ const AdminLogin: React.FC = () => {
             onChange={(e) => setPassword(e.target.value)}
             disabled={loading}
             required
+            inputProps={{
+              'aria-label': 'Password',
+              autoComplete: 'current-password'
+            }}
           />
 
-          <Box sx={{ mt: 3 }}>
+          <Box sx={{ mt: 3, position: 'relative' }}>
             <Button
               type="submit"
               variant="contained"
               color="primary"
               fullWidth
               disabled={loading}
+              sx={{ height: 48 }}
             >
-              {loading ? 'Logging in...' : 'Login'}
+              {loading ? (
+                <CircularProgress size={24} sx={{ position: 'absolute' }} />
+              ) : (
+                'Login'
+              )}
             </Button>
           </Box>
         </form>

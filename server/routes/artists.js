@@ -1,10 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const axios = require('axios');
 const { query, param, body } = require('express-validator');
 const { validateRequest, isValidSpotifyId } = require('../utils/validation');
-const { getSpotifyToken } = require('../utils/spotify');
-const { pool } = require('../db');
+const spotifyService = require('../services/SpotifyService');
+const { Artist, Release, Track, sequelize } = require('../models');
 
 // Format artist data to match Spotify SDK format
 const formatArtistData = (spotifyData) => {
@@ -64,10 +63,10 @@ router.get('/search', async (req, res) => {
         queryText += ' ORDER BY name ASC';
 
         console.log('Executing query:', queryText, 'with params:', queryParams);
-        const result = await pool.query(queryText, queryParams);
-        console.log(`Found ${result.rows.length} artists`);
+        const result = await sequelize.query(queryText, { replacements: queryParams, type: sequelize.QueryTypes.SELECT });
+        console.log(`Found ${result.length} artists`);
 
-        res.json(result.rows);
+        res.json(result);
     } catch (error) {
         console.error('Error searching artists:', error);
         res.status(500).json({ error: 'Failed to search artists' });
@@ -91,28 +90,16 @@ router.get('/:artistId', [
         const { artistId } = req.params;
         const { fields } = req.query;
         
-        const { rows } = await pool.query(
-            'SELECT * FROM artists WHERE id = $1',
-            [artistId]
-        );
+        const artist = await Artist.findByPk(artistId);
         
-        console.log('Found artist in database:', rows.length);
+        console.log('Found artist in database:', artist);
         
-        if (rows.length === 0) {
+        if (!artist) {
             // If not in database, fetch from Spotify
             console.log('No artist found in database, trying Spotify');
-            const accessToken = await getSpotifyToken();
-            const artistResponse = await axios.get(
-                `https://api.spotify.com/v1/artists/${artistId}`,
-                {
-                    headers: {
-                        'Authorization': `Bearer ${accessToken}`
-                    }
-                }
-            );
+            const spotifyArtist = await spotifyService.getArtist(artistId);
 
-            console.log('Got Spotify response:', artistResponse.data);
-            let formattedArtist = formatArtistData(artistResponse.data);
+            let formattedArtist = formatArtistData(spotifyArtist);
 
             // Apply field filtering if requested
             if (fields) {
@@ -126,57 +113,35 @@ router.get('/:artistId', [
             }
 
             // Insert artist into database
-            await pool.query(
-                `INSERT INTO artists (
-                    id, 
-                    name, 
-                    external_urls, 
-                    followers, 
-                    images, 
-                    popularity,
-                    type,
-                    uri,
-                    cached_at
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
-                ON CONFLICT (id) DO UPDATE SET
-                    name = EXCLUDED.name,
-                    external_urls = EXCLUDED.external_urls,
-                    followers = EXCLUDED.followers,
-                    images = EXCLUDED.images,
-                    popularity = EXCLUDED.popularity,
-                    type = EXCLUDED.type,
-                    uri = EXCLUDED.uri,
-                    cached_at = EXCLUDED.cached_at`,
-                [
-                    formattedArtist.id,
-                    formattedArtist.name,
-                    formattedArtist.external_urls,
-                    formattedArtist.followers,
-                    formattedArtist.images,
-                    formattedArtist.popularity,
-                    formattedArtist.type,
-                    formattedArtist.uri,
-                    formattedArtist.cached_at
-                ]
-            );
+            await Artist.upsert({
+                id: formattedArtist.id,
+                name: formattedArtist.name,
+                external_urls: formattedArtist.external_urls,
+                followers: formattedArtist.followers,
+                images: formattedArtist.images,
+                popularity: formattedArtist.popularity,
+                type: formattedArtist.type,
+                uri: formattedArtist.uri,
+                cached_at: formattedArtist.cached_at
+            });
 
             res.set('X-Data-Source', 'spotify').json(formattedArtist);
         } else {
-            console.log('Found artist in database:', rows[0]);
-            let artist = rows[0];
+            console.log('Found artist in database:', artist);
+            let artistData = artist.dataValues;
             
             // Apply field filtering if requested
             if (fields) {
                 const requestedFields = fields.split(',');
-                artist = requestedFields.reduce((filtered, field) => {
-                    if (field in artist) {
-                        filtered[field] = artist[field];
+                artistData = requestedFields.reduce((filtered, field) => {
+                    if (field in artistData) {
+                        filtered[field] = artistData[field];
                     }
                     return filtered;
                 }, {});
             }
             
-            res.set('X-Data-Source', 'database').json(artist);
+            res.set('X-Data-Source', 'database').json(artistData);
         }
 
     } catch (error) {
@@ -205,29 +170,22 @@ router.get('/:artistId/top-tracks', [
         const { artistId } = req.params;
         const market = req.query.market || 'US';
         
-        const { rows } = await pool.query(
-            'SELECT * FROM top_tracks WHERE artist_id = $1 AND market = $2',
-            [artistId, market]
-        );
+        const topTracks = await Track.findAll({
+            where: {
+                artist_id: artistId,
+                market
+            }
+        });
         
-        console.log('Found top tracks in database:', rows.length);
+        console.log('Found top tracks in database:', topTracks.length);
         
-        if (rows.length === 0) {
+        if (topTracks.length === 0) {
             // If not in database, fetch from Spotify
             console.log('No top tracks found in database, trying Spotify');
-            const accessToken = await getSpotifyToken();
-            const topTracksResponse = await axios.get(
-                `https://api.spotify.com/v1/artists/${artistId}/top-tracks`,
-                {
-                    params: { market },
-                    headers: {
-                        'Authorization': `Bearer ${accessToken}`
-                    }
-                }
-            );
+            const topTracksResponse = await spotifyService.getArtistTopTracks(artistId, market);
 
-            console.log('Got Spotify response:', topTracksResponse.data.tracks.length, 'tracks');
-            const topTracks = topTracksResponse.data.tracks.map(track => ({
+            console.log('Got Spotify response:', topTracksResponse.tracks.length, 'tracks');
+            const formattedTopTracks = topTracksResponse.tracks.map(track => ({
                 id: track.id,
                 name: track.name,
                 popularity: track.popularity,
@@ -242,17 +200,26 @@ router.get('/:artistId/top-tracks', [
             }));
 
             // Insert top tracks into database
-            await Promise.all(topTracks.map(async (track) => {
-                await pool.query(
-                    'INSERT INTO top_tracks (artist_id, market, id, name, popularity, preview_url, duration_ms, album_id, album_name, album_release_date, album_images) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)',
-                    [artistId, market, track.id, track.name, track.popularity, track.preview_url, track.duration_ms, track.album.id, track.album.name, track.album.release_date, track.album.images]
-                );
+            await Promise.all(formattedTopTracks.map(async (track) => {
+                await Track.upsert({
+                    artist_id: artistId,
+                    market,
+                    id: track.id,
+                    name: track.name,
+                    popularity: track.popularity,
+                    preview_url: track.preview_url,
+                    duration_ms: track.duration_ms,
+                    album_id: track.album.id,
+                    album_name: track.album.name,
+                    album_release_date: track.album.release_date,
+                    album_images: track.album.images
+                });
             }));
 
-            res.set('X-Data-Source', 'spotify').json(topTracks);
+            res.set('X-Data-Source', 'spotify').json(formattedTopTracks);
         } else {
-            console.log('Found top tracks in database:', rows);
-            res.set('X-Data-Source', 'database').json(rows);
+            console.log('Found top tracks in database:', topTracks);
+            res.set('X-Data-Source', 'database').json(topTracks);
         }
 
     } catch (error) {
@@ -287,34 +254,24 @@ router.get('/:artistId/albums', [
             offset = 0
         } = req.query;
         
-        const { rows } = await pool.query(
-            'SELECT * FROM albums WHERE artist_id = $1 AND include_groups = $2 LIMIT $3 OFFSET $4',
-            [artistId, include_groups, limit, offset]
-        );
+        const albums = await Release.findAll({
+            where: {
+                artist_id: artistId,
+                include_groups
+            },
+            limit,
+            offset
+        });
         
-        console.log('Found albums in database:', rows.length);
+        console.log('Found albums in database:', albums.length);
         
-        if (rows.length === 0) {
+        if (albums.length === 0) {
             // If not in database, fetch from Spotify
             console.log('No albums found in database, trying Spotify');
-            const accessToken = await getSpotifyToken();
-            const albumsResponse = await axios.get(
-                `https://api.spotify.com/v1/artists/${artistId}/albums`,
-                {
-                    params: {
-                        include_groups,
-                        limit,
-                        offset,
-                        market: 'US'
-                    },
-                    headers: {
-                        'Authorization': `Bearer ${accessToken}`
-                    }
-                }
-            );
+            const albumsResponse = await spotifyService.getArtistAlbums(artistId, include_groups, limit, offset);
 
-            console.log('Got Spotify response:', albumsResponse.data.items.length, 'albums');
-            const albums = albumsResponse.data.items.map(album => ({
+            console.log('Got Spotify response:', albumsResponse.items.length, 'albums');
+            const formattedAlbums = albumsResponse.items.map(album => ({
                 id: album.id,
                 name: album.name,
                 release_date: album.release_date,
@@ -325,24 +282,31 @@ router.get('/:artistId/albums', [
             }));
 
             // Insert albums into database
-            await Promise.all(albums.map(async (album) => {
-                await pool.query(
-                    'INSERT INTO albums (artist_id, include_groups, id, name, release_date, total_tracks, type, images, external_urls) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)',
-                    [artistId, include_groups, album.id, album.name, album.release_date, album.total_tracks, album.type, album.images, album.external_urls]
-                );
+            await Promise.all(formattedAlbums.map(async (album) => {
+                await Release.upsert({
+                    artist_id: artistId,
+                    include_groups,
+                    id: album.id,
+                    name: album.name,
+                    release_date: album.release_date,
+                    total_tracks: album.total_tracks,
+                    type: album.type,
+                    images: album.images,
+                    external_urls: album.external_urls
+                });
             }));
 
             res.set('X-Data-Source', 'spotify').json({
-                albums,
-                total: albumsResponse.data.total,
+                albums: formattedAlbums,
+                total: albumsResponse.total,
                 offset,
                 limit
             });
         } else {
-            console.log('Found albums in database:', rows);
+            console.log('Found albums in database:', albums);
             res.set('X-Data-Source', 'database').json({
-                albums: rows,
-                total: rows.length,
+                albums,
+                total: albums.length,
                 offset,
                 limit
             });
@@ -372,73 +336,41 @@ router.get('/:artistId/related', [
     try {
         const { artistId } = req.params;
         
-        const { rows } = await pool.query(
-            'SELECT * FROM related_artists WHERE artist_id = $1',
-            [artistId]
-        );
+        const relatedArtists = await Artist.findAll({
+            where: {
+                id: artistId
+            }
+        });
         
-        console.log('Found related artists in database:', rows.length);
+        console.log('Found related artists in database:', relatedArtists.length);
         
-        if (rows.length === 0) {
+        if (relatedArtists.length === 0) {
             // If not in database, fetch from Spotify
             console.log('No related artists found in database, trying Spotify');
-            const accessToken = await getSpotifyToken();
-            const relatedResponse = await axios.get(
-                `https://api.spotify.com/v1/artists/${artistId}/related-artists`,
-                {
-                    headers: {
-                        'Authorization': `Bearer ${accessToken}`
-                    }
-                }
-            );
+            const relatedResponse = await spotifyService.getArtistRelatedArtists(artistId);
 
-            console.log('Got Spotify response:', relatedResponse.data.artists.length, 'artists');
-            const relatedArtists = relatedResponse.data.artists.map(formatArtistData);
+            console.log('Got Spotify response:', relatedResponse.artists.length, 'artists');
+            const formattedRelatedArtists = relatedResponse.artists.map(formatArtistData);
 
             // Insert related artists into database
-            await Promise.all(relatedArtists.map(async (artist) => {
-                await pool.query(
-                    `INSERT INTO related_artists (
-                        artist_id, 
-                        id, 
-                        name, 
-                        external_urls, 
-                        followers, 
-                        images, 
-                        popularity,
-                        type,
-                        uri,
-                        cached_at
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) 
-                    ON CONFLICT (id) DO UPDATE SET
-                        artist_id = EXCLUDED.artist_id,
-                        name = EXCLUDED.name,
-                        external_urls = EXCLUDED.external_urls,
-                        followers = EXCLUDED.followers,
-                        images = EXCLUDED.images,
-                        popularity = EXCLUDED.popularity,
-                        type = EXCLUDED.type,
-                        uri = EXCLUDED.uri,
-                        cached_at = EXCLUDED.cached_at`,
-                    [
-                        artistId,
-                        artist.id,
-                        artist.name,
-                        artist.external_urls,
-                        artist.followers,
-                        artist.images,
-                        artist.popularity,
-                        artist.type,
-                        artist.uri,
-                        artist.cached_at
-                    ]
-                );
+            await Promise.all(formattedRelatedArtists.map(async (artist) => {
+                await Artist.upsert({
+                    id: artist.id,
+                    name: artist.name,
+                    external_urls: artist.external_urls,
+                    followers: artist.followers,
+                    images: artist.images,
+                    popularity: artist.popularity,
+                    type: artist.type,
+                    uri: artist.uri,
+                    cached_at: artist.cached_at
+                });
             }));
 
-            res.set('X-Data-Source', 'spotify').json(relatedArtists);
+            res.set('X-Data-Source', 'spotify').json(formattedRelatedArtists);
         } else {
-            console.log('Found related artists in database:', rows);
-            res.set('X-Data-Source', 'database').json(rows);
+            console.log('Found related artists in database:', relatedArtists);
+            res.set('X-Data-Source', 'database').json(relatedArtists);
         }
 
     } catch (error) {
@@ -465,36 +397,22 @@ router.get('/:artistId/releases', [
     try {
         const { artistId } = req.params;
         
-        const { rows } = await pool.query(
-            'SELECT * FROM releases WHERE artist_id = $1',
-            [artistId]
-        );
+        const releases = await Release.findAll({
+            where: {
+                artist_id: artistId
+            }
+        });
         
-        console.log('Found releases in database:', rows.length);
+        console.log('Found releases in database:', releases.length);
         
-        if (rows.length === 0) {
+        if (releases.length === 0) {
             // If not in database, fetch from Spotify
             console.log('No releases found in database, trying Spotify');
-            const accessToken = await getSpotifyToken();
+            const releasesResponse = await spotifyService.getArtistReleases(artistId);
 
-            // Get artist's tracks and singles
-            const tracksResponse = await axios.get(
-                `https://api.spotify.com/v1/artists/${artistId}/albums`,
-                {
-                    params: {
-                        include_groups: 'single,album',
-                        limit: 50,
-                        market: 'US'
-                    },
-                    headers: {
-                        'Authorization': `Bearer ${accessToken}`
-                    }
-                }
-            );
-
-            console.log('Got Spotify response:', tracksResponse.data.items.length, 'releases');
+            console.log('Got Spotify response:', releasesResponse.length, 'releases');
             // Format the releases
-            const releases = tracksResponse.data.items.map(item => ({
+            const formattedReleases = releasesResponse.map(item => ({
                 id: item.id,
                 name: item.name,
                 type: item.type,
@@ -507,17 +425,22 @@ router.get('/:artistId/releases', [
             }));
 
             // Insert releases into database
-            await Promise.all(releases.map(async (release) => {
-                await pool.query(
-                    'INSERT INTO releases (artist_id, id, name, type, release_date, images, artists) VALUES ($1, $2, $3, $4, $5, $6, $7)',
-                    [artistId, release.id, release.name, release.type, release.release_date, release.images, JSON.stringify(release.artists)]
-                );
+            await Promise.all(formattedReleases.map(async (release) => {
+                await Release.upsert({
+                    artist_id: artistId,
+                    id: release.id,
+                    name: release.name,
+                    type: release.type,
+                    release_date: release.release_date,
+                    images: release.images,
+                    artists: JSON.stringify(release.artists)
+                });
             }));
 
-            res.set('X-Data-Source', 'spotify').json(releases);
+            res.set('X-Data-Source', 'spotify').json(formattedReleases);
         } else {
-            console.log('Found releases in database:', rows);
-            res.set('X-Data-Source', 'database').json(rows);
+            console.log('Found releases in database:', releases);
+            res.set('X-Data-Source', 'database').json(releases);
         }
 
     } catch (error) {
@@ -548,18 +471,8 @@ router.post('/batch', [
             artists.map(async (artist) => {
                 try {
                     console.log('Processing artist:', artist.id);
-                    const accessToken = await getSpotifyToken();
-                    const artistResponse = await axios.get(
-                        `https://api.spotify.com/v1/artists/${artist.id}`,
-                        {
-                            headers: {
-                                'Authorization': `Bearer ${accessToken}`
-                            }
-                        }
-                    );
-                    
-                    console.log('Got Spotify response:', artistResponse.data);
-                    return formatArtistData(artistResponse.data);
+                    const spotifyArtist = await spotifyService.getArtist(artist.id);
+                    return formatArtistData(spotifyArtist);
                 } catch (error) {
                     console.error(`Error processing artist ${artist.id}:`, error);
                     return {
@@ -573,39 +486,17 @@ router.post('/batch', [
         
         // Insert artists into database
         await Promise.all(processedArtists.map(async (artist) => {
-            await pool.query(
-                `INSERT INTO artists (
-                    id, 
-                    name, 
-                    external_urls, 
-                    followers, 
-                    images, 
-                    popularity,
-                    type,
-                    uri,
-                    cached_at
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
-                ON CONFLICT (id) DO UPDATE SET
-                    name = EXCLUDED.name,
-                    external_urls = EXCLUDED.external_urls,
-                    followers = EXCLUDED.followers,
-                    images = EXCLUDED.images,
-                    popularity = EXCLUDED.popularity,
-                    type = EXCLUDED.type,
-                    uri = EXCLUDED.uri,
-                    cached_at = EXCLUDED.cached_at`,
-                [
-                    artist.id,
-                    artist.name,
-                    artist.external_urls,
-                    artist.followers,
-                    artist.images,
-                    artist.popularity,
-                    artist.type,
-                    artist.uri,
-                    artist.cached_at
-                ]
-            );
+            await Artist.upsert({
+                id: artist.id,
+                name: artist.name,
+                external_urls: artist.external_urls,
+                followers: artist.followers,
+                images: artist.images,
+                popularity: artist.popularity,
+                type: artist.type,
+                uri: artist.uri,
+                cached_at: artist.cached_at
+            });
         }));
 
         res.json({

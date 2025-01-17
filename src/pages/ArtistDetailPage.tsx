@@ -10,36 +10,48 @@ import {
   CardMedia,
   CardContent,
 } from '@mui/material';
-import { spotifyService } from '../services/SpotifyService';
-import { Artist } from '../types/artist';
-import { Track } from '../types/track';
-import PlaylistTrackList from '../components/PlaylistTrackList';
+import { spotifyService } from '../services/spotify';
+import type { Artist } from '../types/artist';
+import type { Track } from '../types/track';
+import type { Album } from '../types/album';
+import PlayableTrackList from '../components/common/PlayableTrackList';
 
 const ArtistDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [artist, setArtist] = useState<Artist | null>(null);
   const [tracks, setTracks] = useState<Track[]>([]);
+  const [albums, setAlbums] = useState<Album[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchArtistData = async () => {
-      if (!id) return;
+      if (!id) {
+        setError('Artist ID not provided');
+        setLoading(false);
+        return;
+      }
 
       try {
         setLoading(true);
-        const artistData = await spotifyService.getArtist(id);
+        setError(null);
+
+        const [artistData, topTracks, artistAlbums] = await Promise.all([
+          spotifyService.getArtist(id),
+          spotifyService.getArtistTopTracks(id),
+          spotifyService.getArtistAlbums(id)
+        ]);
+
         if (!artistData) {
           throw new Error('Artist not found');
         }
-        setArtist(artistData);
 
-        // Fetch artist's top tracks
-        const results = await spotifyService.searchTracks(`artist:${artistData.name}`);
-        setTracks(results);
+        setArtist(artistData);
+        setTracks(topTracks);
+        setAlbums(artistAlbums);
       } catch (err) {
         console.error('Error fetching artist:', err);
-        setError('Failed to load artist data');
+        setError(err instanceof Error ? err.message : 'Failed to load artist data');
       } finally {
         setLoading(false);
       }
@@ -50,7 +62,7 @@ const ArtistDetailPage: React.FC = () => {
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
         <CircularProgress />
       </Box>
     );
@@ -58,66 +70,82 @@ const ArtistDetailPage: React.FC = () => {
 
   if (error || !artist) {
     return (
-      <Container>
-        <Typography color="error" align="center">
+      <Box sx={{ mt: 8, textAlign: 'center' }}>
+        <Typography variant="h5" color="error">
           {error || 'Artist not found'}
         </Typography>
-      </Container>
+      </Box>
     );
   }
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
+    <Container maxWidth="lg" sx={{ mt: 4, mb: 8 }}>
       <Grid container spacing={4}>
         <Grid item xs={12} md={4}>
           <Card>
-            <CardMedia
-              component="img"
-              image={artist.artworkUrl || artist.images[0]?.url || 'https://via.placeholder.com/300'}
-              alt={artist.name}
-              sx={{ height: 300, objectFit: 'cover' }}
-            />
+            {artist.images?.[0]?.url && (
+              <CardMedia
+                component="img"
+                image={artist.images[0].url}
+                alt={artist.name}
+                sx={{ aspectRatio: '1/1', objectFit: 'cover' }}
+              />
+            )}
             <CardContent>
-              <Typography variant="h4" gutterBottom>
+              <Typography variant="h4" component="h1" gutterBottom>
                 {artist.name}
               </Typography>
-              {artist.genres.length > 0 && (
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle1" color="text.secondary">
-                    Genres
-                  </Typography>
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                    {artist.genres.map((genre) => (
-                      <Typography
-                        key={genre}
-                        variant="body2"
-                        sx={{
-                          backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                          padding: '4px 8px',
-                          borderRadius: '4px',
-                        }}
-                      >
-                        {genre}
-                      </Typography>
-                    ))}
-                  </Box>
-                </Box>
+              {artist.genres?.length > 0 && (
+                <Typography variant="body1" color="text.secondary" gutterBottom>
+                  {artist.genres.join(', ')}
+                </Typography>
               )}
-              <Typography variant="body1" sx={{ mb: 2 }}>
-                {artist.bio || `Artist on ${artist.label}`}
-              </Typography>
-              <Typography variant="subtitle2" color="text.secondary">
-                {artist.followers.total.toLocaleString()} followers
-              </Typography>
+              {artist.followers && (
+                <Typography variant="body2" color="text.secondary">
+                  {artist.followers.total.toLocaleString()} followers
+                </Typography>
+              )}
             </CardContent>
           </Card>
         </Grid>
 
         <Grid item xs={12} md={8}>
-          <Typography variant="h5" gutterBottom>
+          <Typography variant="h5" component="h2" gutterBottom>
             Top Tracks
           </Typography>
-          <PlaylistTrackList tracks={tracks} />
+          <PlayableTrackList tracks={tracks} />
+
+          {albums.length > 0 && (
+            <Box sx={{ mt: 4 }}>
+              <Typography variant="h5" component="h2" gutterBottom>
+                Albums
+              </Typography>
+              <Grid container spacing={2}>
+                {albums.map((album) => (
+                  <Grid item xs={12} sm={6} md={4} key={album.id}>
+                    <Card>
+                      {album.images?.[0]?.url && (
+                        <CardMedia
+                          component="img"
+                          image={album.images[0].url}
+                          alt={album.name}
+                          sx={{ aspectRatio: '1/1', objectFit: 'cover' }}
+                        />
+                      )}
+                      <CardContent>
+                        <Typography variant="subtitle1" noWrap>
+                          {album.name}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {album.release_date?.split('-')[0]}
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
+            </Box>
+          )}
         </Grid>
       </Grid>
     </Container>

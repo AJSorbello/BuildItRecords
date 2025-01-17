@@ -1,8 +1,34 @@
-import type { Image as SpotifyImage } from '@spotify/web-api-ts-sdk';
-
 // Base Types
+export interface Image {
+  url: string;
+  height: number | null;
+  width: number | null;
+}
+
 export interface ExternalUrls {
   spotify: string;
+}
+
+export interface ExternalIds {
+  isrc?: string;
+  ean?: string;
+  upc?: string;
+}
+
+export interface Followers {
+  href: string | null;
+  total: number;
+}
+
+export interface Copyright {
+  text: string;
+  type: string;
+}
+
+export interface ApiResponse<T> {
+  data: T;
+  error?: string;
+  message?: string;
 }
 
 // Spotify API Types
@@ -10,9 +36,10 @@ export interface SpotifyArtist {
   id: string;
   name: string;
   external_urls: ExternalUrls;
-  images?: SpotifyImage[];
+  images?: Image[];
   uri: string;
   type: 'artist';
+  followers?: Followers;
 }
 
 export interface SpotifyTrack {
@@ -20,6 +47,7 @@ export interface SpotifyTrack {
   name: string;
   duration_ms: number;
   external_urls: ExternalUrls;
+  external_ids?: ExternalIds;
   uri: string;
   type: 'track';
   artists: SpotifyArtist[];
@@ -33,7 +61,7 @@ export interface SpotifyAlbum {
   name: string;
   release_date: string;
   release_date_precision: string;
-  images: SpotifyImage[];
+  images: Image[];
   external_urls: ExternalUrls;
   uri: string;
   type: 'album';
@@ -43,6 +71,7 @@ export interface SpotifyAlbum {
     items: SpotifyTrack[];
     total: number;
   };
+  copyrights?: Copyright[];
 }
 
 // App Types
@@ -50,72 +79,66 @@ export interface Artist {
   id: string;
   name: string;
   uri: string;
+  type: 'artist';
   external_urls: ExternalUrls;
   spotify_url: string;
   image_url?: string;
-  label_id?: string;
-  type: 'artist';  
 }
 
 export interface Album {
   id: string;
   name: string;
   artists: Artist[];
-  images: SpotifyImage[];
+  images: Image[];
   release_date: string;
   release_date_precision: string;
   total_tracks: number;
   external_urls: ExternalUrls;
   uri: string;
-  type: 'album';  
+  type: 'album';
   spotifyUrl: string;
 }
 
 export interface Track {
   id: string;
   name: string;
-  title?: string;
   artists: Artist[];
   duration_ms: number;
   preview_url: string | null;
   external_urls: ExternalUrls;
-  external_ids: {
-    [key: string]: string;
-  };
+  external_ids?: ExternalIds;
   uri: string;
   album?: Album;
   popularity?: number;
   releaseDate?: string;
-  spotifyUrl?: string;
-  label?: RecordLabel;
+  spotifyUrl: string;
   artworkUrl?: string;
-  images?: SpotifyImage[];
   recordLabel?: string;
-  type: 'track';  
+  type: 'track';
 }
 
 export interface Release {
   id: string;
-  title: string;
   name: string;
-  primaryArtist: Artist;
-  artist: Artist;
   artists: Artist[];
-  releaseDate: string;
+  album?: Album;
+  tracks: Track[];
+  external_urls: ExternalUrls;
   artworkUrl?: string;
   spotifyUrl: string;
-  tracks: Track[];
-  label?: RecordLabel;
-  images?: SpotifyImage[];
-  external_urls: ExternalUrls;
+  preview_url?: string | null;
   uri: string;
-  type: 'release';  
+  type: 'release';
+  recordLabel?: string;
 }
 
 export interface RecordLabel {
   id: string;
   name: string;
   displayName: string;
+  slug?: string;
+  description?: string;
+  spotify_playlist_id?: string;
 }
 
 // API Response Types
@@ -177,9 +200,7 @@ export const isTrack = (obj: any): obj is Track => {
 export const isRelease = (obj: any): obj is Release => {
   return obj &&
     typeof obj.id === 'string' &&
-    typeof obj.title === 'string' &&
-    isArtist(obj.primaryArtist) &&
-    isArtist(obj.artist) &&
+    typeof obj.name === 'string' &&
     Array.isArray(obj.artists) &&
     obj.artists.every(isArtist) &&
     Array.isArray(obj.tracks) &&
@@ -215,12 +236,11 @@ export const convertSpotifyAlbum = (album: SpotifyAlbum): Album => ({
 export const convertSpotifyTrack = (track: SpotifyTrack): Track => ({
   id: track.id,
   name: track.name,
-  title: track.name,
   artists: track.artists.map(convertSpotifyArtist),
   duration_ms: track.duration_ms,
   preview_url: track.preview_url,
   external_urls: track.external_urls,
-  external_ids: {},
+  external_ids: track.external_ids,
   uri: track.uri,
   album: track.album ? convertSpotifyAlbum(track.album) : undefined,
   popularity: track.popularity,

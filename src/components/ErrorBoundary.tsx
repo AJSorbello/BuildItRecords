@@ -3,11 +3,11 @@
  * @module ErrorBoundary
  */
 
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import React, { FC, ErrorInfo, ReactNode } from 'react';
 import { Box, Typography, Button } from '@mui/material';
 import { styled } from '@mui/material/styles';
 
-interface Props {
+interface ErrorBoundaryProps {
   children: ReactNode;
   fallback?: ReactNode;
 }
@@ -41,51 +41,53 @@ const ErrorButton = styled(Button)(({ theme }) => ({
  * Error Boundary component that catches JavaScript errors anywhere in the child
  * component tree and displays a fallback UI
  */
-export class ErrorBoundary extends Component<Props, State> {
-  public state: State = {
-    hasError: false,
-    error: null,
-  };
+const ErrorBoundary: FC<ErrorBoundaryProps> = ({ children }) => {
+  const [hasError, setError] = React.useState(false);
+  const [error, setErrorState] = React.useState<Error | null>(null);
 
-  public static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error };
-  }
+  React.useEffect(() => {
+    const handleReset = () => {
+      setError(false);
+      setErrorState(null);
+      // Attempt to recover by trying to re-render the segment
+      window.location.reload();
+    };
+  }, []);
 
-  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  const componentDidCatch = (error: Error, errorInfo: ErrorInfo) => {
     console.error('Uncaught error:', error, errorInfo);
     // Here you could send error reports to your error tracking service
-  }
-
-  private handleReset = () => {
-    this.setState({ hasError: false, error: null });
-    // Attempt to recover by trying to re-render the segment
-    window.location.reload();
   };
 
-  public render() {
-    if (this.state.hasError) {
-      if (this.props.fallback) {
-        return this.props.fallback;
-      }
-
-      return (
-        <ErrorContainer>
-          <Typography variant="h4" gutterBottom>
-            Oops! Something went wrong
-          </Typography>
-          <Typography variant="body1" align="center" sx={{ maxWidth: 600, mb: 3 }}>
-            We apologize for the inconvenience. Please try refreshing the page or contact support if the problem persists.
-          </Typography>
-          <ErrorButton
-            variant="contained"
-            onClick={this.handleReset}
-          >
-            Try Again
-          </ErrorButton>
-        </ErrorContainer>
-      );
+  if (hasError) {
+    if (children.fallback) {
+      return children.fallback;
     }
 
-    return this.props.children;
+    return (
+      <ErrorContainer>
+        <Typography variant="h4" gutterBottom>
+          Oops! Something went wrong
+        </Typography>
+        <Typography variant="body1" align="center" sx={{ maxWidth: 600, mb: 3 }}>
+          We apologize for the inconvenience. Please try refreshing the page or contact support if the problem persists.
+        </Typography>
+        <ErrorButton
+          variant="contained"
+          onClick={() => {
+            setError(false);
+            setErrorState(null);
+            // Attempt to recover by trying to re-render the segment
+            window.location.reload();
+          }}
+        >
+          Try Again
+        </ErrorButton>
+      </ErrorContainer>
+    );
   }
-}
+
+  return children;
+};
+
+export { ErrorBoundary };

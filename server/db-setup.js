@@ -1,27 +1,19 @@
-const fs = require('fs');
-const path = require('path');
-const { pool } = require('./db');
+const { models, sequelize } = require('./utils/db');
+const { logger } = require('../src/utils/logger');
 
 async function setupDatabase() {
   try {
-    // Read the migration file
-    const migrationSQL = fs.readFileSync(
-      path.join(__dirname, 'migrations', '001_initial_schema.sql'),
-      'utf8'
-    );
-
-    // Execute the migration
-    await pool.query(migrationSQL);
-    console.log('Database schema created successfully');
-
+    // Sync all models with the database
+    await sequelize.sync({ force: true });
+    logger.info('Database schema created successfully');
   } catch (error) {
-    console.error('Error setting up database:', error);
+    logger.error('Error setting up database:', error);
     process.exit(1);
   }
 }
 
 // Run the setup
 setupDatabase().then(() => {
-  console.log('Database setup complete');
+  logger.info('Database setup complete');
   process.exit(0);
 });

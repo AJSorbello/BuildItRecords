@@ -11,7 +11,7 @@ const config = {
     host: process.env.DB_HOST || 'localhost',
     port: parseInt(process.env.DB_PORT) || 5432,
     username: process.env.DB_USER || 'postgres',
-    password: process.env.DB_PASSWORD || '',
+    password: process.env.DB_PASSWORD,
     name: process.env.DB_NAME || 'builditrecords',
     dialect: 'postgres'
   },
@@ -39,6 +39,7 @@ const validateConfig = (config) => {
   const requiredFields = {
     'database.host': config.database.host,
     'database.name': config.database.name,
+    'database.password': config.database.password,
     'spotify.clientId': config.spotify.clientId,
     'spotify.clientSecret': config.spotify.clientSecret
   };

@@ -1,10 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const axios = require('axios');
 const { query, param } = require('express-validator');
-const { validateRequest, isValidSpotifyId } = require('../utils/validation');
-const { cacheMiddleware } = require('../utils/cache');
-const { getSpotifyToken } = require('../utils/spotify');
+const { validateRequest } = require('../utils/validation');
+const { spotifyService } = require('../../src/services/SpotifyService');
+const { models, sequelize } = require('../utils/db');
 
 // Format album data
 const formatAlbumData = (spotifyData) => ({
@@ -27,24 +26,29 @@ const formatAlbumData = (spotifyData) => ({
 router.get('/:albumId', [
     param('albumId').custom(isValidSpotifyId).withMessage('Invalid Spotify album ID'),
     query('fields').optional().isString(),
-    validateRequest,
-    cacheMiddleware
+    validateRequest
 ], async (req, res) => {
     try {
         const { albumId } = req.params;
         const { fields } = req.query;
         
-        const accessToken = await getSpotifyToken();
-        const albumResponse = await axios.get(
-            `https://api.spotify.com/v1/albums/${albumId}`,
-            {
-                headers: {
-                    'Authorization': `Bearer ${accessToken}`
-                }
-            }
-        );
+        const album = await models.Release.findByPk(albumId, {
+          include: [
+            { model: models.Track },
+            { model: models.Artist, through: models.ReleaseArtist }
+          ]
+        });
+        
+        if (!album) {
+          return res.status(404).json({ error: 'Album not found' });
+        }
 
-        let formattedAlbum = formatAlbumData(albumResponse.data);
+        const spotifyAlbum = await spotifyService.getAlbum(albumId);
+        if (spotifyAlbum) {
+          album.dataValues.spotify_data = spotifyAlbum;
+        }
+
+        let formattedAlbum = formatAlbumData(album.dataValues.spotify_data);
 
         // Apply field filtering if requested
         if (fields) {
@@ -73,29 +77,29 @@ router.get('/:albumId/tracks', [
     param('albumId').custom(isValidSpotifyId).withMessage('Invalid Spotify album ID'),
     query('limit').optional().isInt({ min: 1, max: 50 }).toInt(),
     query('offset').optional().isInt({ min: 0 }).toInt(),
-    validateRequest,
-    cacheMiddleware
+    validateRequest
 ], async (req, res) => {
     try {
         const { albumId } = req.params;
         const { limit = 20, offset = 0 } = req.query;
         
-        const accessToken = await getSpotifyToken();
-        const tracksResponse = await axios.get(
-            `https://api.spotify.com/v1/albums/${albumId}/tracks`,
-            {
-                params: {
-                    limit,
-                    offset,
-                    market: 'US'
-                },
-                headers: {
-                    'Authorization': `Bearer ${accessToken}`
-                }
-            }
-        );
+        const album = await models.Release.findByPk(albumId, {
+          include: [
+            { model: models.Track },
+            { model: models.Artist, through: models.ReleaseArtist }
+          ]
+        });
+        
+        if (!album) {
+          return res.status(404).json({ error: 'Album not found' });
+        }
 
-        const tracks = tracksResponse.data.items.map(track => ({
+        const spotifyAlbum = await spotifyService.getAlbum(albumId);
+        if (spotifyAlbum) {
+          album.dataValues.spotify_data = spotifyAlbum;
+        }
+
+        const tracks = album.dataValues.tracks.map(track => ({
             id: track.id,
             name: track.name,
             track_number: track.track_number,
@@ -109,7 +113,7 @@ router.get('/:albumId/tracks', [
 
         res.json({
             tracks,
-            total: tracksResponse.data.total,
+            total: album.dataValues.tracks.length,
             offset,
             limit
         });
@@ -127,32 +131,17 @@ router.get('/:albumId/tracks', [
 router.get('/new-releases', [
     query('limit').optional().isInt({ min: 1, max: 50 }).toInt(),
     query('offset').optional().isInt({ min: 0 }).toInt(),
-    validateRequest,
-    cacheMiddleware
+    validateRequest
 ], async (req, res) => {
     try {
         const { limit = 20, offset = 0 } = req.query;
         
-        const accessToken = await getSpotifyToken();
-        const newReleasesResponse = await axios.get(
-            'https://api.spotify.com/v1/browse/new-releases',
-            {
-                params: {
-                    limit,
-                    offset,
-                    country: 'US'
-                },
-                headers: {
-                    'Authorization': `Bearer ${accessToken}`
-                }
-            }
-        );
-
-        const albums = newReleasesResponse.data.albums.items.map(formatAlbumData);
+        const newReleases = await spotifyService.getNewReleases(limit, offset);
+        const albums = newReleases.albums.items.map(formatAlbumData);
 
         res.json({
             albums,
-            total: newReleasesResponse.data.albums.total,
+            total: newReleases.albums.total,
             offset,
             limit
         });

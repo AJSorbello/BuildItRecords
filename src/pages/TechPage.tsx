@@ -1,162 +1,67 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Grid, Card, CardMedia, CardContent, Typography, IconButton, CircularProgress, Alert } from '@mui/material';
-import { OpenInNew } from '@mui/icons-material';
-import { RECORD_LABELS } from '../constants/labels';
-import { databaseService } from '../services/DatabaseService';
-import { Artist, Release } from '../types';
+import { Box, Container, Grid, Typography } from '@mui/material';
+import { ReleaseCard, LoadingSpinner, ErrorMessage } from '../components';
+import { spotifyService } from '../services/SpotifyService';
+import { Track } from '../types/track';
+import { RECORD_LABELS } from '../types/labels';
 import PageLayout from '../components/PageLayout';
 import { useTheme } from '../contexts/ThemeContext';
 import TechSidebar from '../components/TechSidebar';
 
 const TechPage = () => {
-  const [artists, setArtists] = useState<Artist[]>([]);
-  const [featuredRelease, setFeaturedRelease] = useState<Release | null>(null);
+  const [releases, setReleases] = useState<Track[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { colors } = useTheme();
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchReleases = async () => {
       try {
         setLoading(true);
-        const [techArtists, techReleases] = await Promise.all([
-          databaseService.getArtistsForLabel('buildit-tech'),
-          databaseService.getReleasesForLabel('buildit-tech')
-        ]);
-
-        if (techArtists.length === 0) {
-          setError('No artists found');
-          return;
-        }
-
-        setArtists(techArtists);
-        // Set the most recent release as featured
-        if (techReleases.length > 0) {
-          setFeaturedRelease(techReleases[0]);
-        }
+        const tracks = await spotifyService.getTracksByLabel(RECORD_LABELS.TECH);
+        setReleases(tracks);
+        setError(null);
       } catch (err) {
-        console.error('Error fetching data:', err);
-        setError('Failed to load data');
+        console.error('Error fetching tech releases:', err);
+        setError('Failed to load releases. Please try again later.');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchData();
+    fetchReleases();
   }, []);
 
-  if (loading) {
-    return (
-      <PageLayout label="tech">
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
-          <CircularProgress />
-        </Box>
-      </PageLayout>
-    );
-  }
-
-  if (error) {
-    return (
-      <PageLayout label="tech">
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
-          <Alert severity="error">{error}</Alert>
-        </Box>
-      </PageLayout>
-    );
-  }
+  if (loading) return <LoadingSpinner />;
+  if (error) return <ErrorMessage message={error} />;
 
   return (
     <PageLayout label="tech">
       <Box sx={{ display: 'flex' }}>
         <TechSidebar variant="permanent" />
         <Box sx={{ flexGrow: 1, p: 3 }}>
-          {featuredRelease && (
-            <Box sx={{ mb: 4 }}>
+          <Container maxWidth="lg">
+            <Box sx={{ py: 4 }}>
               <Typography variant="h4" component="h1" gutterBottom sx={{ color: colors.text }}>
-                Featured Release
+                Build It Tech Releases
               </Typography>
-              <Card 
-                sx={{ 
-                  display: 'flex',
-                  backgroundColor: colors.card,
-                  borderRadius: 2
-                }}
-              >
-                <CardMedia
-                  component="img"
-                  sx={{ width: 300, height: 300 }}
-                  image={featuredRelease.imageUrl || 'https://via.placeholder.com/300x300?text=No+Image'}
-                  alt={featuredRelease.title}
-                />
-                <CardContent sx={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                  <Typography variant="h5" component="h2" sx={{ color: colors.text }}>
-                    {featuredRelease.title}
-                  </Typography>
-                  <Typography variant="subtitle1" sx={{ color: colors.textSecondary }}>
-                    {featuredRelease.primaryArtist?.name}
-                  </Typography>
-                  {featuredRelease.spotifyUrl && (
-                    <IconButton
-                      component="a"
-                      href={featuredRelease.spotifyUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      sx={{ color: colors.text, mt: 2, width: 'fit-content' }}
-                    >
-                      <OpenInNew />
-                    </IconButton>
-                  )}
-                </CardContent>
-              </Card>
-            </Box>
-          )}
 
-          <Typography variant="h4" component="h2" gutterBottom sx={{ color: colors.text }}>
-            Artists
-          </Typography>
-          <Grid container spacing={4}>
-            {artists.map((artist) => (
-              <Grid item xs={12} sm={6} md={4} key={artist.id}>
-                <Card 
-                  sx={{ 
-                    height: '100%',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    backgroundColor: colors.card,
-                    borderRadius: 2
-                  }}
-                >
-                  <CardMedia
-                    component="img"
-                    sx={{ height: 200, objectFit: 'cover' }}
-                    image={artist.imageUrl || 'https://via.placeholder.com/300x300?text=No+Image'}
-                    alt={artist.name}
-                  />
-                  <CardContent sx={{ flexGrow: 1 }}>
-                    <Typography gutterBottom variant="h5" component="h2" sx={{ color: colors.text }}>
-                      {artist.name}
+              <Grid container spacing={3}>
+                {releases.map((track) => (
+                  <Grid item xs={12} sm={6} md={4} key={track.id}>
+                    <ReleaseCard track={track} />
+                  </Grid>
+                ))}
+                {releases.length === 0 && (
+                  <Grid item xs={12}>
+                    <Typography variant="body1" color="text.secondary" align="center">
+                      No releases found.
                     </Typography>
-                    {artist.genres && artist.genres.length > 0 && (
-                      <Typography variant="body2" sx={{ mb: 2, color: colors.textSecondary }}>
-                        {artist.genres.join(', ')}
-                      </Typography>
-                    )}
-                    {artist.spotifyUrl && (
-                      <IconButton
-                        component="a"
-                        href={artist.spotifyUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        sx={{ color: colors.text }}
-                      >
-                        <OpenInNew />
-                      </IconButton>
-                    )}
-                  </CardContent>
-                </Card>
+                  </Grid>
+                )}
               </Grid>
-            ))}
-          </Grid>
+            </Box>
+          </Container>
         </Box>
       </Box>
     </PageLayout>

@@ -49,7 +49,13 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true
     },
     artwork_url: {
-      type: DataTypes.STRING
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    images: {
+      type: DataTypes.JSONB,
+      allowNull: true,
+      defaultValue: []
     },
     spotify_url: {
       type: DataTypes.STRING,

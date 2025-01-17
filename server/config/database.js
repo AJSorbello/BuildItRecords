@@ -1,117 +1,116 @@
+/**
+ * @fileoverview Database configuration and connection management
+ * @module config/database
+ */
+
 const { Sequelize } = require('sequelize');
 require('dotenv').config();
 
-const sequelize = new Sequelize(
-  process.env.DB_NAME || 'builditrecords',
-  process.env.DB_USER || 'postgres',
-  process.env.DB_PASSWORD || 'postgres',
-  {
-    host: process.env.DB_HOST || 'localhost',
-    port: process.env.DB_PORT || 5432,
-    dialect: 'postgres',
-    logging: process.env.NODE_ENV === 'development' ? console.log : false,
-    define: {
-      underscored: true,
-      underscoredAll: true,
-      createdAt: 'created_at',
-      updatedAt: 'updated_at'
-    },
-    pool: {
-      max: 5,
-      min: 0,
-      acquire: 30000,
-      idle: 10000
-    },
-    retry: {
-      max: 3,
-      match: [
-        /SequelizeConnectionError/,
-        /SequelizeConnectionRefusedError/,
-        /SequelizeHostNotFoundError/,
-        /SequelizeHostNotReachableError/,
-        /SequelizeInvalidConnectionError/,
-        /SequelizeConnectionTimedOutError/
-      ]
-    },
-    dialectOptions: {
-      connectTimeout: 60000
+const config = {
+  database: process.env.DB_NAME || 'builditrecords',
+  username: process.env.DB_USER || 'postgres',
+  password: process.env.DB_PASSWORD || 'postgres',
+  host: process.env.DB_HOST || 'localhost',
+  port: parseInt(process.env.DB_PORT || '5432'),
+  dialect: 'postgres',
+  logging: (msg) => {
+    // Add timestamp to logs
+    const timestamp = new Date().toISOString();
+    if (msg.includes('ERROR') || msg.includes('ROLLBACK') || 
+        msg.includes('START TRANSACTION') || msg.includes('COMMIT')) {
+      console.log(`[${timestamp}] ${msg}`);
     }
+  },
+  dialectOptions: {
+    ssl: false,
+    statement_timeout: 10000, // 10 second timeout for queries
+    idle_in_transaction_session_timeout: 10000
+  },
+  define: {
+    underscored: true,
+    createdAt: 'created_at',
+    updatedAt: 'updated_at'
+  },
+  pool: {
+    max: 10,
+    min: 0,
+    acquire: 10000, // Reduced from 30000
+    idle: 5000,    // Reduced from 10000
+    evict: 1000    // Check for idle connections every second
   }
-);
+};
 
+/** @type {import('sequelize').Sequelize | null} */
+let sequelize = null;
+
+/**
+ * Creates and returns a Sequelize connection instance
+ * @returns {import('sequelize').Sequelize} Sequelize instance
+ * @throws {Error} If connection configuration is invalid
+ */
+const createConnection = () => {
+  if (sequelize) return sequelize;
+  sequelize = new Sequelize(config.database, config.username, config.password, config);
+  return sequelize;
+};
+
+/**
+ * Initializes the database connection
+ * @returns {Promise<void>}
+ * @throws {Error} If connection fails
+ */
 const initializeDatabase = async () => {
   try {
-    // Test the connection
-    await sequelize.authenticate();
-    console.log('[Database] Connection has been established successfully.');
-
-    // Only sync in development
-    if (process.env.NODE_ENV === 'development') {
-      try {
-        // Initialize models
-        const models = require('../models');
-        
-        // Force sync to recreate tables
-        await sequelize.sync({ force: true });
-        console.log('[Database] Database schema synchronized successfully');
-
-        // Always seed in development after force sync
-        console.log('[Database] Seeding initial data...');
-        const { seedLabels } = require('../seeders/labelSeeder');
-        const { seedReleases } = require('../seeders/releaseSeeder');
-        
-        await seedLabels();
-        await seedReleases();
-        console.log('[Database] Initial data seeded successfully');
-      } catch (syncError) {
-        console.error('[Database] Error syncing database:', syncError);
-        throw syncError;
-      }
-    }
-
-    return sequelize;
+    const db = createConnection();
+    await db.authenticate();
+    console.log('Database connection has been established successfully.');
   } catch (error) {
-    console.error('[Database] Unable to connect to the database:', error);
-    
-    // Implement exponential backoff for retries
-    if (error.name === 'SequelizeConnectionError') {
-      console.log('[Database] Attempting to reconnect...');
-      for (let i = 0; i < 3; i++) {
-        try {
-          await new Promise(resolve => setTimeout(resolve, Math.pow(2, i) * 1000));
-          await sequelize.authenticate();
-          console.log('[Database] Reconnection successful');
-          return sequelize;
-        } catch (retryError) {
-          console.error(`[Database] Reconnection attempt ${i + 1} failed:`, retryError);
-        }
-      }
-    }
-    
+    console.error('Unable to connect to the database:', error);
     throw error;
   }
 };
 
-// Handle connection events
-sequelize.addHook('beforeConnect', async (config) => {
-  console.log('[Database] Attempting to connect to database...');
-});
-
-sequelize.addHook('afterConnect', async (connection) => {
-  console.log('[Database] Successfully connected to database');
-});
+/**
+ * Closes the database connection safely
+ * @returns {Promise<void>}
+ * @throws {Error} If closing the connection fails
+ */
+const closeConnection = async () => {
+  if (sequelize) {
+    try {
+      await sequelize.close();
+      console.log('Database connection closed.');
+      sequelize = null;
+    } catch (error) {
+      console.error('Error closing database connection:', error);
+      throw error;
+    }
+  }
+};
 
 // Handle process termination
 process.on('SIGINT', async () => {
-  try {
-    await sequelize.close();
-    console.log('[Database] Connection closed.');
-    process.exit(0);
-  } catch (error) {
-    console.error('[Database] Error closing connection:', error);
-    process.exit(1);
-  }
+  await closeConnection();
+  process.exit(0);
 });
 
-module.exports = sequelize;
-module.exports.initializeDatabase = initializeDatabase;
+process.on('SIGTERM', async () => {
+  await closeConnection();
+  process.exit(0);
+});
+
+/**
+ * @typedef {Object} DatabaseModule
+ * @property {import('sequelize').Sequelize} sequelize - The Sequelize instance
+ * @property {() => import('sequelize').Sequelize} createConnection - Function to create a new connection
+ * @property {() => Promise<void>} initializeDatabase - Function to initialize the database
+ * @property {() => Promise<void>} closeConnection - Function to close the database connection
+ */
+
+/** @type {DatabaseModule} */
+module.exports = {
+  sequelize: createConnection(),
+  createConnection,
+  initializeDatabase,
+  closeConnection
+};

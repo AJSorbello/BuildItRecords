@@ -6,16 +6,22 @@ export const RECORD_LABELS: { [key: string]: RecordLabel } = {
     id: 'buildit-records',
     name: 'Records',
     displayName: 'Build It Records',
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z'
   },
   'buildit-tech': {
     id: 'buildit-tech',
     name: 'Tech',
     displayName: 'Build It Tech',
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z'
   },
   'buildit-deep': {
     id: 'buildit-deep',
     name: 'Deep',
     displayName: 'Build It Deep',
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z'
   }
 };
 

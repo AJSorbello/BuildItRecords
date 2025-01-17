@@ -1,144 +1,160 @@
 import React from 'react';
-import {
-  Box,
-  Grid,
-  Typography,
-  CircularProgress,
-  Paper,
-  Chip,
-  Avatar,
-  Divider,
-} from '@mui/material';
-import { useSpotifyArtist } from '../hooks/useSpotifyArtist';
+import { Box, Typography, Grid, Tabs, Tab } from '@mui/material';
 import { ReleaseCard } from './ReleaseCard';
+import { ArtistCard } from './ArtistCard';
+import { useSpotifyArtist } from '../hooks/useSpotifyArtist';
+import { Artist, ArtistDetails } from '../types/artist';
+import { Track } from '../types/track';
+import { Album } from '../types/album';
+import { LoadingSpinner } from './LoadingSpinner';
+import { ErrorMessage } from './ErrorMessage';
+
+interface TabPanelProps {
+  children?: React.ReactNode;
+  index: number;
+  value: number;
+}
+
+function TabPanel(props: TabPanelProps) {
+  const { children, value, index, ...other } = props;
+
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`artist-tabpanel-${index}`}
+      aria-labelledby={`artist-tab-${index}`}
+      {...other}
+    >
+      {value === index && (
+        <Box sx={{ p: 3 }}>
+          {children}
+        </Box>
+      )}
+    </div>
+  );
+}
 
 interface ArtistProfileProps {
   artistId: string;
 }
 
 export const ArtistProfile: React.FC<ArtistProfileProps> = ({ artistId }) => {
-  const { artist, loading, error } = useSpotifyArtist(artistId, {
-    includeRelated: true,
-  });
+  const [tabValue, setTabValue] = React.useState(0);
+  const { artist, isLoading, error } = useSpotifyArtist(artistId);
 
-  if (loading) {
-    return (
-      <Box display="flex" justifyContent="center" p={4}>
-        <CircularProgress />
-      </Box>
-    );
-  }
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    setTabValue(newValue);
+  };
 
-  if (error) {
-    return (
-      <Box p={4}>
-        <Typography color="error">{error}</Typography>
-      </Box>
-    );
-  }
+  if (isLoading) return <LoadingSpinner />;
+  if (error) return <ErrorMessage message={error} />;
+  if (!artist) return <ErrorMessage message="Artist not found" />;
 
-  if (!artist) return null;
+  const artistDetails = artist as ArtistDetails;
 
   return (
     <Box>
-      <Paper elevation={3} sx={{ p: 3, mb: 4 }}>
-        <Grid container spacing={4}>
-          <Grid item xs={12} md={4}>
-            {artist.images?.[0] && (
-              <Avatar
-                src={artist.images[0].url}
-                alt={artist.name}
-                sx={{ width: '100%', height: 'auto', aspectRatio: '1', mb: 2 }}
-                variant="rounded"
-              />
+      <Grid container spacing={4}>
+        <Grid item xs={12} md={4}>
+          <ArtistCard artist={artist} />
+          <Box sx={{ mt: 2 }}>
+            {artist.followers && (
+              <Typography variant="body2" color="text.secondary">
+                {artist.followers.total.toLocaleString()} followers
+              </Typography>
             )}
-          </Grid>
-          <Grid item xs={12} md={8}>
-            <Typography variant="h3" gutterBottom>
-              {artist.name}
-            </Typography>
-            <Typography variant="subtitle1" color="text.secondary" gutterBottom>
-              {artist.followers.total.toLocaleString()} followers
-            </Typography>
-            <Box sx={{ my: 2 }}>
-              {artist.genres.map((genre) => (
-                <Chip
-                  key={genre}
-                  label={genre}
-                  sx={{ mr: 1, mb: 1 }}
-                  size="small"
-                />
-              ))}
-            </Box>
-            <Typography variant="body1" gutterBottom>
-              Popularity: {artist.popularity}/100
-            </Typography>
-          </Grid>
+            {artist.genres && artist.genres.length > 0 && (
+              <Typography variant="body2" color="text.secondary">
+                Genres: {artist.genres.join(', ')}
+              </Typography>
+            )}
+          </Box>
         </Grid>
-      </Paper>
+        <Grid item xs={12} md={8}>
+          <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+            <Tabs value={tabValue} onChange={handleTabChange} aria-label="artist content tabs">
+              <Tab label="Top Tracks" />
+              <Tab label="Albums" />
+              <Tab label="Related Artists" />
+            </Tabs>
+          </Box>
 
-      {artist.topTracks && artist.topTracks.length > 0 && (
-        <Box mb={6}>
-          <Typography variant="h5" gutterBottom>
-            Top Tracks
-          </Typography>
-          <Grid container spacing={3}>
-            {artist.topTracks.slice(0, 6).map((track) => (
-              <Grid item key={track.id} xs={12} sm={6} md={4}>
-                <ReleaseCard track={track} />
+          <TabPanel value={tabValue} index={0}>
+            {artistDetails.topTracks?.items && (
+              <Grid container spacing={2}>
+                {artistDetails.topTracks.items.map((track, index) => (
+                  <Grid item xs={12} sm={6} md={4} key={track.id}>
+                    <ReleaseCard
+                      track={{
+                        ...track,
+                        artists: [artist],
+                        type: 'track',
+                        external_ids: {},
+                        track_number: 0,
+                        disc_number: 0,
+                        isrc: '',
+                        images: track.album.images
+                      }}
+                    />
+                  </Grid>
+                ))}
               </Grid>
-            ))}
-          </Grid>
-        </Box>
-      )}
+            )}
+          </TabPanel>
 
-      {artist.albums && artist.albums.length > 0 && (
-        <Box mb={6}>
-          <Typography variant="h5" gutterBottom>
-            Albums
-          </Typography>
-          <Grid container spacing={3}>
-            {artist.albums.map((album) => (
-              <Grid item key={album.id} xs={12} sm={6} md={4}>
-                <ReleaseCard
-                  release={{
-                    id: album.id,
-                    title: album.name,
-                    type: album.type,
-                    artist: artist.name,
-                    artwork: album.images?.[0]?.url,
-                    spotifyUrl: album.spotifyUrl,
-                  }}
-                />
+          <TabPanel value={tabValue} index={1}>
+            {artistDetails.albums?.items && (
+              <Grid container spacing={2}>
+                {artistDetails.albums.items.map((album, index) => (
+                  <Grid item xs={12} sm={6} md={4} key={album.id}>
+                    <ReleaseCard
+                      track={{
+                        id: album.id,
+                        name: album.name,
+                        artists: [artist],
+                        album: {
+                          id: album.id,
+                          name: album.name,
+                          artists: [artist],
+                          images: album.images,
+                          release_date: album.release_date,
+                          total_tracks: album.total_tracks,
+                          type: album.type,
+                          external_urls: album.external_urls,
+                          uri: ''
+                        },
+                        duration_ms: 0,
+                        preview_url: null,
+                        external_urls: album.external_urls,
+                        uri: '',
+                        type: 'track',
+                        track_number: 0,
+                        disc_number: 0,
+                        isrc: '',
+                        images: album.images,
+                        external_ids: {}
+                      }}
+                    />
+                  </Grid>
+                ))}
               </Grid>
-            ))}
-          </Grid>
-        </Box>
-      )}
+            )}
+          </TabPanel>
 
-      {artist.relatedArtists && artist.relatedArtists.length > 0 && (
-        <Box>
-          <Typography variant="h5" gutterBottom>
-            Related Artists
-          </Typography>
-          <Grid container spacing={3}>
-            {artist.relatedArtists.slice(0, 6).map((relatedArtist) => (
-              <Grid item key={relatedArtist.id} xs={12} sm={6} md={4}>
-                <ReleaseCard
-                  release={{
-                    id: relatedArtist.id,
-                    title: relatedArtist.name,
-                    type: 'artist',
-                    artist: relatedArtist.name,
-                    artwork: relatedArtist.images?.[0]?.url,
-                    spotifyUrl: relatedArtist.spotifyUrl,
-                  }}
-                />
+          <TabPanel value={tabValue} index={2}>
+            {artistDetails.relatedArtists && (
+              <Grid container spacing={2}>
+                {artistDetails.relatedArtists.map((relatedArtist, index) => (
+                  <Grid item xs={12} sm={6} md={4} key={relatedArtist.id}>
+                    <ArtistCard artist={relatedArtist} />
+                  </Grid>
+                ))}
               </Grid>
-            ))}
-          </Grid>
-        </Box>
-      )}
+            )}
+          </TabPanel>
+        </Grid>
+      </Grid>
     </Box>
   );
 };

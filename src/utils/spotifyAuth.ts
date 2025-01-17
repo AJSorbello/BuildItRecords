@@ -26,6 +26,7 @@ export const generateCodeChallenge = async (codeVerifier: string): Promise<strin
 // Spotify authentication configuration
 export const spotifyConfig = {
   clientId: process.env.REACT_APP_SPOTIFY_CLIENT_ID as string,
+  clientSecret: process.env.REACT_APP_SPOTIFY_CLIENT_SECRET as string,
   redirectUri: 'http://localhost:3000/callback',
   authEndpoint: 'https://accounts.spotify.com/authorize',
   tokenEndpoint: 'https://accounts.spotify.com/api/token',
@@ -51,35 +52,44 @@ export const initiateSpotifyLogin = async () => {
     client_id: spotifyConfig.clientId,
     response_type: 'code',
     redirect_uri: spotifyConfig.redirectUri,
-    state: state,
-    scope: spotifyConfig.scopes.join(' '),
     code_challenge_method: 'S256',
-    code_challenge: codeChallenge
+    code_challenge: codeChallenge,
+    state: state,
+    scope: spotifyConfig.scopes.join(' ')
   });
 
   window.location.href = `${spotifyConfig.authEndpoint}?${params.toString()}`;
 };
 
-// Function to exchange code for access token
-export const getAccessToken = async (code: string): Promise<{
+interface SpotifyTokenResponse {
   access_token: string;
   refresh_token: string;
   expires_in: number;
-}> => {
-  const verifier = localStorage.getItem('code_verifier');
-  
-  const params = new URLSearchParams({
-    client_id: spotifyConfig.clientId,
-    grant_type: 'authorization_code',
-    code: code,
-    redirect_uri: spotifyConfig.redirectUri,
-    code_verifier: verifier!
-  });
+  token_type: string;
+}
+
+// Function to exchange code for access token
+export const getAccessToken = async (code: string): Promise<SpotifyTokenResponse> => {
+  const codeVerifier = localStorage.getItem('code_verifier');
+  const state = localStorage.getItem('state');
+
+  if (!codeVerifier || !state) {
+    throw new Error('No code verifier or state found');
+  }
 
   const response = await fetch(spotifyConfig.tokenEndpoint, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: params
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      Authorization: `Basic ${btoa(`${spotifyConfig.clientId}:${spotifyConfig.clientSecret}`)}`,
+    },
+    body: new URLSearchParams({
+      grant_type: 'authorization_code',
+      code,
+      redirect_uri: spotifyConfig.redirectUri,
+      code_verifier: codeVerifier,
+      client_id: spotifyConfig.clientId,
+    }),
   });
 
   if (!response.ok) {
@@ -91,20 +101,18 @@ export const getAccessToken = async (code: string): Promise<{
 };
 
 // Function to refresh access token
-export const refreshAccessToken = async (refresh_token: string): Promise<{
-  access_token: string;
-  expires_in: number;
-}> => {
-  const params = new URLSearchParams({
-    client_id: spotifyConfig.clientId,
-    grant_type: 'refresh_token',
-    refresh_token: refresh_token
-  });
-
+export const refreshAccessToken = async (refresh_token: string): Promise<SpotifyTokenResponse> => {
   const response = await fetch(spotifyConfig.tokenEndpoint, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: params
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      Authorization: `Basic ${btoa(`${spotifyConfig.clientId}:${spotifyConfig.clientSecret}`)}`,
+    },
+    body: new URLSearchParams({
+      grant_type: 'refresh_token',
+      refresh_token,
+      client_id: spotifyConfig.clientId,
+    }),
   });
 
   if (!response.ok) {
@@ -114,29 +122,3 @@ export const refreshAccessToken = async (refresh_token: string): Promise<{
   const data = await response.json();
   return data;
 };
-
-import { SpotifyApi } from '@spotify/web-api-ts-sdk';
-import { SPOTIFY_CONFIG } from '../config/env';
-
-let spotifyApi: SpotifyApi | null = null;
-
-export async function initializeSpotify(): Promise<SpotifyApi> {
-  if (!spotifyApi) {
-    spotifyApi = SpotifyApi.withClientCredentials(
-      SPOTIFY_CONFIG.CLIENT_ID,
-      SPOTIFY_CONFIG.CLIENT_SECRET
-    );
-  }
-  return spotifyApi;
-}
-
-export async function getSpotifyApi(): Promise<SpotifyApi> {
-  if (!spotifyApi) {
-    return initializeSpotify();
-  }
-  return spotifyApi;
-}
-
-export function clearSpotifyApi(): void {
-  spotifyApi = null;
-}

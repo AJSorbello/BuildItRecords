@@ -22,7 +22,7 @@ module.exports = (sequelize, DataTypes) => {
       });
 
       Artist.belongsToMany(models.Track, {
-        through: 'track_artists',
+        through: models.TrackArtist,
         foreignKey: 'artist_id',
         otherKey: 'track_id',
         as: 'tracks'

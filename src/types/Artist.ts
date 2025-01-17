@@ -1,36 +1,73 @@
-import type { Artist as SpotifyApiArtist } from '@spotify/web-api-ts-sdk';
+import type { SpotifyImage, SpotifyExternalUrls, SpotifyFollowers } from './spotify';
 import type { Track } from './track';
-import type { Album } from './release';
-import type { RecordLabel } from './labels';
-import type { SpotifyImage } from './spotify';
-
-export type { SpotifyApiArtist as SpotifyArtist };
+import type { Album } from './album';
+import type { RecordLabelId } from './labels';
 
 export interface Artist {
   id: string;
   name: string;
-  profile_image?: string;
-  spotify_url?: string;
-  spotify_uri?: string | null;
-  external_urls?: {
-    spotify?: string;
-    [key: string]: string | undefined;
-  };
-  followers?: {
+  images: SpotifyImage[];
+  external_urls: SpotifyExternalUrls;
+  uri: string;
+  type: 'artist';
+  followers: SpotifyFollowers;
+  genres: string[];
+  popularity: number;
+  label?: RecordLabelId;
+}
+
+export interface ArtistDetails extends Artist {
+  followers: SpotifyFollowers;
+  genres: string[];
+  popularity: number;
+  topTracks?: {
+    items: Track[];
     total: number;
-    href: string | null;
   };
-  genres?: string[];
-  href?: string;
-  images?: Array<{
-    url: string;
-    height: number | null;
-    width: number | null;
-  }>;
-  popularity?: number;
-  type?: string;
+  albums?: {
+    items: Album[];
+    total: number;
+  };
+  relatedArtists?: Artist[];
+  biography?: string;
+  socialLinks?: {
+    facebook?: string;
+    twitter?: string;
+    instagram?: string;
+    website?: string;
+  };
+}
+
+export interface LocalArtist extends Artist {
+  localId: string;
+  createdAt: Date;
+  updatedAt: Date;
+  isActive: boolean;
+  isApproved: boolean;
+  submittedBy?: string;
+  approvedBy?: string;
+  notes?: string;
+}
+
+export interface ArtistUpdate {
+  name?: string;
+  images?: SpotifyImage[];
+  external_urls?: SpotifyExternalUrls;
   uri?: string;
-  cached_at?: number;
+  followers?: SpotifyFollowers;
+  genres?: string[];
+  popularity?: number;
+  label?: RecordLabelId;
+  biography?: string;
+  socialLinks?: {
+    facebook?: string;
+    twitter?: string;
+    instagram?: string;
+    website?: string;
+  };
+  isActive?: boolean;
+  isApproved?: boolean;
+  notes?: string;
 }
 
 export interface ArtistResponse {
@@ -56,59 +93,32 @@ export interface SimpleArtist {
   external_urls: {
     spotify: string;
   };
-  spotifyUrl: string;
+  href?: string;
 }
 
-export interface SpotifyArtistData {
-  id: string;
-  name: string;
-  images?: {
-    url: string;
-    height: number | null;
-    width: number | null;
-  }[];
-  genres?: string[];
-  followers?: {
-    total: number;
+export function formatSpotifyArtist(artist: any): Artist {
+  return {
+    id: artist.id,
+    name: artist.name,
+    images: artist.images,
+    external_urls: artist.external_urls,
+    uri: artist.uri,
+    type: 'artist',
+    followers: artist.followers,
+    genres: artist.genres,
+    popularity: artist.popularity,
+    label: artist.label,
   };
-  external_urls: {
-    spotify: string;
-  };
-  uri: string;
-  popularity?: number;
 }
 
 export function getArtistImage(artist: Artist): string {
   return artist.images?.[0]?.url || '';
 }
 
-export function getArtistGenres(artist: Artist): string {
-  return artist.genres?.join(', ') || '';
+export function getArtistGenres(artist: Artist): string[] {
+  return artist.genres || [];
 }
 
 export function getArtistFollowers(artist: Artist): number {
-  return artist.followers?.total || 0;
-}
-
-export function createArtist(data: Partial<Artist>): Artist {
-  return {
-    id: data.id || '',
-    name: data.name || '',
-    uri: data.uri || '',
-    type: 'artist',
-    external_urls: data.external_urls || { spotify: '' },
-    spotifyUrl: data.spotifyUrl || '',
-    images: data.images || [],
-    genres: data.genres || [],
-    popularity: data.popularity || 0,
-    followers: data.followers || { href: null, total: 0 },
-    topTracks: data.topTracks || [],
-    albums: data.albums || [],
-    releases: data.releases || [],
-    relatedArtists: data.relatedArtists || [],
-    label: data.label,
-    profile_image: data.profile_image || '',
-    spotify_url: data.spotify_url || '',
-    spotify_uri: data.spotify_uri || null
-  };
+  return artist.followers.total;
 }

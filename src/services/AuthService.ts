@@ -1,92 +1,171 @@
-import axios from 'axios';
-import { API_URL } from '../config';
+import type { User } from '../hooks/useAuth';
 
-export interface LoginCredentials {
-  username: string;
-  password: string;
-}
-
-export interface AuthResponse {
-  token: string;
-  expiresIn: number;
-}
+type AuthChangeCallback = (user: User | null) => void;
 
 class AuthService {
-  private static readonly TOKEN_KEY = 'auth_token';
-  private static readonly TOKEN_EXPIRY_KEY = 'auth_expiry';
+  private static instance: AuthService;
+  private currentUser: User | null = null;
+  private currentToken: string | null = null;
+  private subscribers: Set<AuthChangeCallback> = new Set();
+  private baseUrl: string;
 
-  async login(credentials: LoginCredentials): Promise<boolean> {
-    try {
-      const response = await axios.post<AuthResponse>(`${API_URL}/auth/login`, credentials);
-      const { token, expiresIn } = response.data;
-      
-      // Store token in an HTTP-only cookie (handled by backend)
-      // We only store the expiry time in localStorage for UI purposes
-      localStorage.setItem(AuthService.TOKEN_EXPIRY_KEY, 
-        (Date.now() + expiresIn * 1000).toString()
-      );
-      
-      return true;
-    } catch (error) {
-      console.error('Login failed:', error);
-      throw error;
-    }
-  }
-
-  logout(): void {
-    // Clear local storage
-    localStorage.removeItem(AuthService.TOKEN_EXPIRY_KEY);
-    
-    // Call backend to clear HTTP-only cookie
-    axios.post(`${API_URL}/auth/logout`)
-      .catch(error => console.error('Logout error:', error));
-  }
-
-  isAuthenticated(): boolean {
-    const expiryTime = localStorage.getItem(AuthService.TOKEN_EXPIRY_KEY);
-    if (!expiryTime) return false;
-    
-    return Date.now() < parseInt(expiryTime);
-  }
-
-  async refreshToken(): Promise<void> {
-    try {
-      const response = await axios.post<AuthResponse>(`${API_URL}/auth/refresh`);
-      const { expiresIn } = response.data;
-      
-      localStorage.setItem(AuthService.TOKEN_EXPIRY_KEY, 
-        (Date.now() + expiresIn * 1000).toString()
-      );
-    } catch (error) {
-      console.error('Token refresh failed:', error);
-      this.logout();
-      throw error;
-    }
-  }
-
-  // Setup axios interceptor for automatic token refresh
-  setupAxiosInterceptors(): void {
-    axios.interceptors.response.use(
-      response => response,
-      async error => {
-        const originalRequest = error.config;
-        
-        if (error.response?.status === 401 && !originalRequest._retry) {
-          originalRequest._retry = true;
-          
-          try {
-            await this.refreshToken();
-            return axios(originalRequest);
-          } catch (refreshError) {
-            return Promise.reject(refreshError);
-          }
-        }
-        
-        return Promise.reject(error);
+  private constructor() {
+    this.baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
+    // Try to restore session from localStorage
+    const savedUser = localStorage.getItem('user');
+    const savedToken = localStorage.getItem('token');
+    if (savedUser) {
+      try {
+        this.currentUser = JSON.parse(savedUser);
+        this.currentToken = savedToken;
+        this.notifySubscribers();
+      } catch (error) {
+        console.error('Failed to parse saved user:', error);
+        localStorage.removeItem('user');
+        localStorage.removeItem('token');
       }
-    );
+    }
+  }
+
+  public static getInstance(): AuthService {
+    if (!AuthService.instance) {
+      AuthService.instance = new AuthService();
+    }
+    return AuthService.instance;
+  }
+
+  private notifySubscribers(): void {
+    this.subscribers.forEach(callback => callback(this.currentUser));
+  }
+
+  public async login(email: string, password: string): Promise<User> {
+    try {
+      const response = await fetch(`${this.baseUrl}/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Login failed');
+      }
+
+      const { user, token } = await response.json();
+      this.currentUser = user;
+      this.currentToken = token;
+      localStorage.setItem('user', JSON.stringify(user));
+      localStorage.setItem('token', token);
+      this.notifySubscribers();
+      return user;
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
+    }
+  }
+
+  public async logout(): Promise<void> {
+    try {
+      await fetch(`${this.baseUrl}/auth/logout`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      this.currentUser = null;
+      this.currentToken = null;
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+      this.notifySubscribers();
+    }
+  }
+
+  public async getCurrentUser(): Promise<User | null> {
+    try {
+      const response = await fetch(`${this.baseUrl}/auth/me`, {
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          this.currentUser = null;
+          this.currentToken = null;
+          localStorage.removeItem('user');
+          localStorage.removeItem('token');
+          return null;
+        }
+        throw new Error('Failed to get current user');
+      }
+
+      const { user, token } = await response.json();
+      this.currentUser = user;
+      this.currentToken = token;
+      localStorage.setItem('user', JSON.stringify(user));
+      localStorage.setItem('token', token);
+      return user;
+    } catch (error) {
+      console.error('Get current user error:', error);
+      return null;
+    }
+  }
+
+  public async getToken(): Promise<string | null> {
+    // If we have a token and a user, return the token
+    if (this.currentToken && this.currentUser) {
+      return this.currentToken;
+    }
+
+    // If we have a user but no token, try to get a new token
+    if (this.currentUser) {
+      try {
+        const response = await fetch(`${this.baseUrl}/auth/token`, {
+          credentials: 'include',
+        });
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            this.currentUser = null;
+            this.currentToken = null;
+            localStorage.removeItem('user');
+            localStorage.removeItem('token');
+            return null;
+          }
+          throw new Error('Failed to get token');
+        }
+
+        const { token } = await response.json();
+        this.currentToken = token;
+        localStorage.setItem('token', token);
+        return token;
+      } catch (error) {
+        console.error('Get token error:', error);
+        return null;
+      }
+    }
+
+    return null;
+  }
+
+  public subscribeToAuthChanges(callback: AuthChangeCallback): () => void {
+    this.subscribers.add(callback);
+    // Initial callback with current state
+    callback(this.currentUser);
+    
+    return () => {
+      this.subscribers.delete(callback);
+    };
+  }
+
+  public isAuthenticated(): boolean {
+    return this.currentUser !== null;
+  }
+
+  public isAdmin(): boolean {
+    return this.currentUser?.role === 'admin';
   }
 }
 
-export const authService = new AuthService();
-export default authService;
+export const authService = AuthService.getInstance();

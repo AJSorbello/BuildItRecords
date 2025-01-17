@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Track management routes
+ * @module routes/tracks
+ */
+
 const express = require('express');
 const router = express.Router();
 const axios = require('axios');
@@ -6,7 +11,180 @@ const rateLimit = require('express-rate-limit');
 const { validateRequest, isValidSpotifyId } = require('../utils/validation');
 const { Track, Artist, Release, Label, ImportLog, sequelize } = require('../models');
 const { Op } = require('sequelize');
-const logger = require('../config/logger');
+const logger = require('../utils/logger');
+
+/**
+ * @swagger
+ * components:
+ *   parameters:
+ *     idParam:
+ *       in: path
+ *       name: id
+ *       required: true
+ *       schema:
+ *         type: string
+ *       description: Track ID
+ *     limitParam:
+ *       in: query
+ *       name: limit
+ *       schema:
+ *         type: integer
+ *         minimum: 1
+ *         maximum: 50
+ *       description: Number of tracks to return
+ *     offsetParam:
+ *       in: query
+ *       name: offset
+ *       schema:
+ *         type: integer
+ *         minimum: 0
+ *       description: Offset for pagination
+ *   schemas:
+ *     Track:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: string
+ *           description: Track ID
+ *         name:
+ *           type: string
+ *           description: Track name
+ *         artists:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/Artist'
+ *           description: Track artists
+ *         album:
+ *           type: object
+ *           $ref: '#/components/schemas/Album'
+ *           description: Track album
+ *         duration_ms:
+ *           type: integer
+ *           description: Track duration in milliseconds
+ *         popularity:
+ *           type: integer
+ *           description: Track popularity
+ *         preview_url:
+ *           type: string
+ *           description: Track preview URL
+ *         external_urls:
+ *           type: object
+ *           description: Track external URLs
+ *         cached_at:
+ *           type: integer
+ *           description: Timestamp when track data was cached
+ *     Artist:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: string
+ *           description: Artist ID
+ *         name:
+ *           type: string
+ *           description: Artist name
+ *     Album:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: string
+ *           description: Album ID
+ *         name:
+ *           type: string
+ *           description: Album name
+ *         label:
+ *           type: string
+ *           description: Album label
+ *         images:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/Image'
+ *           description: Album images
+ *     Image:
+ *       type: object
+ *       properties:
+ *         url:
+ *           type: string
+ *           description: Image URL
+ *         width:
+ *           type: integer
+ *           description: Image width
+ *         height:
+ *           type: integer
+ *           description: Image height
+ *     PaginatedResponse:
+ *       type: object
+ *       properties:
+ *         items:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/Track'
+ *           description: Paginated list of tracks
+ *         total:
+ *           type: integer
+ *           description: Total number of tracks
+ *         offset:
+ *           type: integer
+ *           description: Offset for pagination
+ *         limit:
+ *           type: integer
+ *           description: Number of tracks to return
+ *         hasMore:
+ *           type: boolean
+ *           description: Whether there are more tracks available
+ *   responses:
+ *     ValidationError:
+ *       description: Validation error
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               message:
+ *                 type: string
+ *                 description: Error message
+ *               error:
+ *                 type: string
+ *                 description: Error details
+ *     NotFoundError:
+ *       description: Not found error
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               message:
+ *                 type: string
+ *                 description: Error message
+ *               error:
+ *                 type: string
+ *                 description: Error details
+ *     UnauthorizedError:
+ *       description: Unauthorized error
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               message:
+ *                 type: string
+ *                 description: Error message
+ *               error:
+ *                 type: string
+ *                 description: Error details
+ *     Error:
+ *       description: Generic error
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               message:
+ *                 type: string
+ *                 description: Error message
+ *               error:
+ *                 type: string
+ *                 description: Error details
+ */
 
 // Rate limiting configuration
 const limiter = rateLimit({
@@ -44,7 +222,7 @@ async function getSpotifyToken() {
     const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
     
     if (!clientId || !clientSecret) {
-        console.error('Missing Spotify credentials:', { 
+        logger.error('Missing Spotify credentials:', { 
             hasClientId: !!clientId, 
             hasClientSecret: !!clientSecret 
         });
@@ -52,21 +230,24 @@ async function getSpotifyToken() {
     }
 
     try {
-        console.log('Getting Spotify token...');
+        logger.info('Getting Spotify token...');
+        const authString = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
         const response = await makeSpotifyRequest('https://accounts.spotify.com/api/token', {
             method: 'POST',
             headers: {
-                'Authorization': 'Basic ' + Buffer.from(clientId + ':' + clientSecret).toString('base64'),
+                'Authorization': `Basic ${authString}`,
                 'Content-Type': 'application/x-www-form-urlencoded'
             },
             data: 'grant_type=client_credentials'
         });
-        console.log('Got Spotify token successfully');
+        logger.info('Got Spotify token successfully');
         return response.data.access_token;
     } catch (error) {
-        console.error('Error getting Spotify token:', {
+        logger.error('Error getting Spotify token:', {
             message: error.message,
-            response: error.response?.data
+            code: error.code,
+            response: error.response?.data,
+            config: error.config
         });
         throw error;
     }
@@ -77,21 +258,21 @@ async function makeSpotifyRequest(url, options, maxRetries = 3) {
     let lastError;
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-            console.log(`Attempt ${attempt} for ${url}`);
+            logger.info(`Attempt ${attempt} for ${url}`);
             const response = await axios(url, options);
             return response;
         } catch (error) {
             lastError = error;
             if (error.response?.status === 503) {
                 const delay = Math.min(1000 * attempt, 3000); // Exponential backoff, max 3 seconds
-                console.log(`Service unavailable, retrying in ${delay}ms...`);
+                logger.info(`Service unavailable, retrying in ${delay}ms...`);
                 await new Promise(resolve => setTimeout(resolve, delay));
                 continue;
             }
             if (error.response?.status === 429) {
                 const retryAfter = error.response.headers['retry-after'] || 1;
                 const delay = retryAfter * 1000;
-                console.log(`Rate limited, retrying in ${delay}ms...`);
+                logger.info(`Rate limited, retrying in ${delay}ms...`);
                 await new Promise(resolve => setTimeout(resolve, delay));
                 continue;
             }
@@ -141,63 +322,188 @@ async function getTrackWithCache(trackId, redisService) {
     }
 }
 
-// Get all tracks with optional label filter
-router.get('/', [
-  query('labelId').optional().isString(),
-  query('offset').optional().isInt({ min: 0 }).toInt(),
-  query('limit').optional().isInt({ min: 1, max: 50 }).toInt(),
-  validateRequest
-], async (req, res) => {
-  try {
-    const { labelId } = req.query;
-    const offset = parseInt(req.query.offset) || 0;
-    const limit = parseInt(req.query.limit) || 50;
+/**
+ * @swagger
+ * /tracks:
+ *   get:
+ *     summary: Get all tracks
+ *     description: Retrieve a paginated list of tracks
+ *     tags: [Tracks]
+ *     parameters:
+ *       - $ref: '#/components/parameters/limitParam'
+ *       - $ref: '#/components/parameters/offsetParam'
+ *       - name: search
+ *         in: query
+ *         description: Search term for track name
+ *         schema:
+ *           type: string
+ *       - name: artist
+ *         in: query
+ *         description: Filter by artist ID
+ *         schema:
+ *           type: string
+ *       - name: album
+ *         in: query
+ *         description: Filter by album ID
+ *         schema:
+ *           type: string
+ *       - name: label
+ *         in: query
+ *         description: Filter by label ID
+ *         schema:
+ *           type: string
+ *       - name: sort
+ *         in: query
+ *         description: Sort tracks by field
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: A paginated list of tracks
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/PaginatedResponse'
+ *                 - properties:
+ *                     items:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Track'
+ *       400:
+ *         $ref: '#/components/responses/ValidationError'
+ *       500:
+ *         $ref: '#/components/responses/Error'
+ */
+router.get('/', async (req, res) => {
+  const requestStart = Date.now();
+  logger.info('Starting GET /tracks request');
+  
+  // Set a timeout for the response
+  res.setTimeout(10000, () => {
+    logger.error('Request timeout after 10 seconds');
+    res.status(503).json({ error: 'Request timed out' });
+  });
 
-    const where = {};
-    if (labelId) {
-      where.label_id = labelId;
+  try {
+    const { label, sort = 'created_at' } = req.query;
+    logger.info(`[${Date.now() - requestStart}ms] Query params:`, { label, sort });
+
+    // First check if label exists
+    if (label) {
+      logger.info(`[${Date.now() - requestStart}ms] Checking label existence`);
+      const labelExists = await Label.findByPk(label);
+      if (!labelExists) {
+        logger.info(`Label ${label} not found`);
+        return res.status(404).json({ error: 'Label not found' });
+      }
     }
 
-    const { count, rows } = await Track.findAndCountAll({
-      where,
+    // Simple query without associations first
+    logger.info(`[${Date.now() - requestStart}ms] Starting basic track query`);
+    const basicQuery = {
+      where: label ? { label_id: label } : {},
+      order: [['created_at', 'DESC']],
+      limit: 50, // Add pagination to prevent large result sets
+      raw: true // Get raw data for faster query
+    };
+
+    const { count } = await Track.findAndCountAll(basicQuery);
+    logger.info(`[${Date.now() - requestStart}ms] Found ${count} tracks`);
+
+    if (count === 0) {
+      logger.info('No tracks found, returning empty result');
+      return res.json({ tracks: [], total: 0 });
+    }
+
+    // Now get tracks with associations
+    logger.info(`[${Date.now() - requestStart}ms] Fetching tracks with associations`);
+    const tracksWithAssociations = await Track.findAll({
+      where: basicQuery.where,
+      order: basicQuery.order,
+      limit: basicQuery.limit,
       include: [
         {
           model: Artist,
           as: 'artists',
-          through: { attributes: [] }
+          through: { attributes: [] },
+          required: false
         },
         {
           model: Release,
-          as: 'release'
+          as: 'release',
+          required: false
         },
         {
           model: Label,
-          as: 'label'
+          as: 'label',
+          required: false
         }
       ],
-      order: [['created_at', 'DESC']],
-      offset,
-      limit
+      nest: true // Nest the associated models for cleaner output
     });
 
-    res.json({
-      items: rows,
+    logger.info(`[${Date.now() - requestStart}ms] Successfully fetched tracks with associations`);
+    
+    // Send response
+    const response = {
+      tracks: tracksWithAssociations,
       total: count,
-      offset,
-      limit,
-      hasMore: offset + rows.length < count
-    });
+      queryTime: Date.now() - requestStart
+    };
+    
+    logger.info(`[${Date.now() - requestStart}ms] Sending response`);
+    res.json(response);
+
   } catch (error) {
-    console.error('Error fetching tracks:', error);
+    const errorTime = Date.now() - requestStart;
+    logger.error(`[${errorTime}ms] Error fetching tracks:`, {
+      message: error.message,
+      stack: error.stack,
+      sql: error.sql,
+      queryTime: errorTime
+    });
     res.status(500).json({ 
-      success: false, 
-      message: 'Error fetching tracks',
-      error: error.message 
+      error: 'Failed to fetch tracks', 
+      details: error.message,
+      queryTime: errorTime
     });
   }
 });
 
-// Search tracks with optional label filter
+/**
+ * @swagger
+ * /tracks/search:
+ *   get:
+ *     summary: Search tracks
+ *     description: Retrieve a list of tracks matching the search query
+ *     tags: [Tracks]
+ *     parameters:
+ *       - name: query
+ *         in: query
+ *         description: Search query
+ *         schema:
+ *           type: string
+ *         required: true
+ *       - name: labelId
+ *         in: query
+ *         description: Filter by label ID
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: A list of tracks matching the search query
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Track'
+ *       400:
+ *         $ref: '#/components/responses/ValidationError'
+ *       500:
+ *         $ref: '#/components/responses/Error'
+ */
 router.get('/search', [
   query('query').isString().notEmpty(),
   query('labelId').optional().isString(),
@@ -241,7 +547,7 @@ router.get('/search', [
 
     res.json(tracks);
   } catch (error) {
-    console.error('Error searching tracks:', error);
+    logger.error('Error searching tracks:', error);
     res.status(500).json({ 
       success: false, 
       message: 'Error searching tracks',
@@ -250,33 +556,78 @@ router.get('/search', [
   }
 });
 
-// Import tracks from Spotify
-router.post('/import', [
-  body('labelId').isString().notEmpty().withMessage('Label ID is required'),
-  body('spotifyPlaylistId').isString().notEmpty().withMessage('Spotify playlist ID is required'),
-  validateRequest
-], async (req, res) => {
+/**
+ * @swagger
+ * /tracks/import:
+ *   post:
+ *     summary: Import tracks from Spotify
+ *     description: Import tracks from a Spotify playlist
+ *     tags: [Tracks]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               labelId:
+ *                 type: string
+ *                 description: Label ID
+ *     responses:
+ *       201:
+ *         description: Tracks imported successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Track'
+ *       400:
+ *         $ref: '#/components/responses/ValidationError'
+ *       500:
+ *         $ref: '#/components/responses/Error'
+ */
+router.post('/import', async (req, res) => {
   try {
-    const { labelId, spotifyPlaylistId } = req.body;
+    const { labelId } = req.body;
+    if (!labelId) {
+      return res.status(400).json({ success: false, message: 'Label ID is required' });
+    }
 
-    // Get Spotify token
-    const token = await getSpotifyToken();
-    
-    // Import tracks from Spotify
-    const spotifyTracks = await importTracksFromSpotify(token, spotifyPlaylistId);
-    
-    // Save tracks to database
-    const savedTracks = await Promise.all(
-      spotifyTracks.map(track => saveTrackToDatabase(track, labelId))
-    );
-    
-    res.json({ tracks: savedTracks });
+    // Get label name from config
+    const labelConfig = LABEL_CONFIGS[labelId];
+    if (!labelConfig) {
+      return res.status(400).json({ success: false, message: 'Invalid label ID' });
+    }
+
+    try {
+      // Initialize Spotify service and ensure valid token
+      await spotifyService.ensureValidToken();
+
+      // Search for albums by label
+      const albums = await spotifyService.searchAlbumsByLabel(labelConfig.spotifyLabel);
+      
+      // Import the releases
+      await spotifyService.importReleases({ id: labelId, name: labelConfig.spotifyLabel }, albums);
+
+      res.json({ success: true, message: 'Import started successfully' });
+    } catch (error) {
+      if (error.statusCode === 401) {
+        // Try one more time with a fresh token
+        await spotifyService.ensureValidToken();
+        const albums = await spotifyService.searchAlbumsByLabel(labelConfig.spotifyLabel);
+        await spotifyService.importReleases({ id: labelId, name: labelConfig.spotifyLabel }, albums);
+        res.json({ success: true, message: 'Import started successfully (after token refresh)' });
+      } else {
+        throw error;
+      }
+    }
   } catch (error) {
     console.error('Error importing tracks:', error);
     res.status(500).json({ 
       success: false, 
-      message: 'Error importing tracks',
-      error: error.message 
+      message: 'Error importing tracks', 
+      error: error.message || 'Unknown error' 
     });
   }
 });
@@ -322,7 +673,5 @@ async function saveTrackToDatabase(track, labelId) {
 
   return track;
 }
-
-// Other routes...
 
 module.exports = router;

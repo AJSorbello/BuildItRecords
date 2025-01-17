@@ -49,14 +49,19 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     setIsDark(!isDark);
   };
 
-  const value = {
-    colors: defaultColors,
-    isDark,
-    toggleTheme,
+  const colors: ThemeColors = {
+    primary: '#1DB954',
+    background: '#121212',
+    card: '#1e1e1e',
+    text: '#FFFFFF',
+    textSecondary: 'rgba(255, 255, 255, 0.7)',
+    textTertiary: 'rgba(255, 255, 255, 0.5)',
+    border: 'rgba(255, 255, 255, 0.1)',
+    shadow: 'rgba(0, 0, 0, 0.3)',
   };
 
   return (
-    <ThemeContext.Provider value={value}>
+    <ThemeContext.Provider value={{ colors, isDark, toggleTheme }}>
       {children}
     </ThemeContext.Provider>
   );
