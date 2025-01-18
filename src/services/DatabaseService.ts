@@ -99,23 +99,90 @@ export class DatabaseService {
   public async getReleasesByLabelId(labelId: string, page: number = 1, limit: number = 500): Promise<any> {
     try {
       const offset = (page - 1) * limit;
-      const response = await this.fetchApi<ApiResponse<never>>(`/releases?label=${labelId}&offset=${offset}&limit=${limit}`);
+      console.log('Fetching releases for label:', labelId);
+      const response = await this.fetchApi<ApiResponse<Release[]>>(`/releases?label=${labelId}&offset=${offset}&limit=${limit}`);
+      
+      console.log('Raw response from /releases:', response);
+      
+      const releases = response.releases?.map(release => {
+        // Ensure release has required properties
+        if (!release.images && release.artwork_url) {
+          release.images = [{ url: release.artwork_url }];
+        }
+        return release;
+      }) || [];
+
+      console.log('Processed releases:', releases);
+      
+      const total = response.total || 0;
+      const currentPage = Math.floor((response.offset || 0) / limit) + 1;
+      const totalPages = Math.ceil(total / limit);
+      const hasMore = (response.offset || 0) + releases.length < total;
 
       return {
-        releases: response.releases || [],
-        totalReleases: response.total || 0,
-        currentPage: page,
-        totalPages: Math.ceil((response.total || 0) / limit),
-        hasMore: ((offset + (response.releases?.length || 0)) < (response.total || 0))
+        releases,
+        totalReleases: total,
+        currentPage,
+        totalPages,
+        hasMore
       };
     } catch (error) {
-      console.error('Error fetching releases:', error);
-      throw new DatabaseError('Failed to fetch releases');
+      console.error('Error in getReleasesByLabelId:', error);
+      throw error;
+    }
+  }
+
+  // Gets top releases for a label based on Spotify popularity
+  public async getTopReleases(labelId: string): Promise<Release[]> {
+    try {
+      console.log('Fetching top releases for label:', labelId);
+
+      // Map label IDs to their string values
+      const labelIdMap: { [key: string]: string } = {
+        'buildit-records': 'buildit-records',
+        'buildit-tech': 'buildit-tech',
+        'buildit-deep': 'buildit-deep'
+      };
+
+      const dbLabelId = labelIdMap[labelId];
+      if (!dbLabelId) {
+        console.warn(`No label ID found for label: ${labelId}`);
+        return [];
+      }
+
+      // Use the existing /releases endpoint with sort and limit parameters
+      const response = await this.fetchApi<ApiResponse<never>>(`/releases?label=${dbLabelId}&sort=popularity&order=desc&limit=10`);
+      
+      if (!response.releases || !Array.isArray(response.releases)) {
+        console.warn(`No releases found for label: ${labelId}`);
+        return [];
+      }
+
+      const releases = response.releases.map(release => {
+        // Ensure release has required properties
+        if (!release.images && release.artwork_url) {
+          release.images = [{ url: release.artwork_url }];
+        }
+        return {
+          ...release,
+          artwork_url: release.artwork_url || release.images?.[0]?.url || null
+        };
+      });
+
+      console.log('Processed top releases:', releases);
+      return releases;
+    } catch (error) {
+      if (error instanceof DatabaseError && error.message.includes('404')) {
+        console.warn(`Label not found: ${labelId}`);
+        return [];
+      }
+      console.error('Error fetching top releases:', error);
+      throw new DatabaseError('Failed to fetch top releases');
     }
   }
 
   // Track Methods
-  public async getTracksByLabel(labelId: RecordLabelId, sortBy?: string): Promise<{ tracks: Track[], total: number }> {
+  public async getTracksByLabel(labelId: string, sortBy?: string): Promise<{ tracks: Track[], total: number }> {
     try {
       const response = await this.fetchApi<ApiResponse<never>>(`/tracks/all/${labelId}`);
       return {
@@ -142,10 +209,10 @@ export class DatabaseService {
 
   /**
    * Imports tracks from Spotify for a specific label
-   * @param {RecordLabelId} labelId - The ID of the label to import tracks for
+   * @param {string} labelId - The ID of the label to import tracks for
    * @returns {Promise<{ success: boolean; message: string }>} Import result
    */
-  public async importTracksFromSpotify(labelId: RecordLabelId): Promise<{ success: boolean; message: string }> {
+  public async importTracksFromSpotify(labelId: string): Promise<{ success: boolean; message: string }> {
     const response = await this.fetchApi<ApiResponse<never>>(`/labels/${labelId}/import`, {
       method: 'POST'
     });
@@ -154,6 +221,35 @@ export class DatabaseService {
       success: true, // If we got here, it was successful since errors would have thrown
       message: response.message || 'Import started successfully'
     };
+  }
+
+  /**
+   * Gets all artists for a specific label
+   * @param {string} labelId - The ID of the label to get artists for
+   * @returns {Promise<Artist[]>} Array of artists
+   */
+  public async getArtistsForLabel(labelId: string): Promise<Artist[]> {
+    try {
+      if (!labelId || typeof labelId !== 'string') {
+        console.error('Invalid label ID:', labelId);
+        return [];
+      }
+
+      console.log('Fetching artists for label:', labelId);
+      const response = await this.fetchApi<ApiResponse<Artist[]>>(`/artists/search?label=${labelId}`);
+      
+      if (!response.data && !Array.isArray(response)) {
+        console.error('Invalid response from artists search:', response);
+        return [];
+      }
+
+      const artists = Array.isArray(response) ? response : response.data || [];
+      console.log('Found artists:', artists.length);
+      return artists;
+    } catch (error) {
+      console.error('Error fetching artists for label:', error);
+      throw new DatabaseError('Failed to fetch artists');
+    }
   }
 
   /**

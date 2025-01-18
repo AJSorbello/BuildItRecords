@@ -13,10 +13,13 @@ import {
 } from '@mui/material';
 import { debounce } from 'lodash';
 import { useLocation } from 'react-router-dom';
-import { databaseService, DatabaseApiError } from '../services/DatabaseService';
+import { databaseService } from '../services/DatabaseService';
+import { DatabaseError } from '../utils/errors';
 import ArtistCard from '../components/ArtistCard';
+import ErrorBoundary from '../components/ErrorBoundary';
 import { Artist } from '../types/artist';
 import { Refresh as RefreshIcon } from '@mui/icons-material';
+import { RECORD_LABELS } from '../constants/labels';
 
 const ITEMS_PER_PAGE = 12;
 
@@ -25,7 +28,24 @@ interface SearchState {
   page: number;
 }
 
-const ArtistsPage: React.FC = () => {
+interface ArtistsPageProps {
+  label: keyof typeof RECORD_LABELS;
+}
+
+const ArtistSection: React.FC<{ artist: Artist }> = ({ artist }) => {
+  if (!artist || typeof artist !== 'object') {
+    console.error('Invalid artist passed to ArtistSection:', artist);
+    return null;
+  }
+
+  return (
+    <ErrorBoundary>
+      <ArtistCard artist={artist} />
+    </ErrorBoundary>
+  );
+};
+
+const ArtistsPage: React.FC<ArtistsPageProps> = ({ label }) => {
   const [artists, setArtists] = useState<Artist[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,144 +54,170 @@ const ArtistsPage: React.FC = () => {
     total: 0,
     page: 1,
   });
-  const location = useLocation();
 
-  // Determine the label based on the current route
-  const getLabel = useMemo(() => {
-    const path = location.pathname.toLowerCase();
-    if (path.includes('/records/artists')) return 'Build It Records';
-    if (path.includes('/tech/artists')) return 'Build It Tech';
-    if (path.includes('/deep/artists')) return 'Build It Deep';
-    return undefined;
-  }, [location.pathname]);
+  const labelId = RECORD_LABELS[label]?.id;
+  const labelDisplayName = RECORD_LABELS[label]?.displayName || 'Artists';
 
+  const fetchArtists = async () => {
+    if (!labelId) {
+      setError('Invalid label');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      console.log('Fetching artists for label:', labelId);
+      const fetchedArtists = await databaseService.getArtistsForLabel(labelId);
+      
+      // Filter out invalid artists
+      const validArtists = fetchedArtists.filter((artist): artist is Artist => {
+        if (!artist || typeof artist !== 'object') {
+          console.error('Invalid artist object:', artist);
+          return false;
+        }
+        return true;
+      });
+
+      console.log('Found valid artists:', validArtists.length);
+      setArtists(validArtists);
+      setSearchState(prev => ({ ...prev, total: validArtists.length }));
+    } catch (err) {
+      console.error('Error fetching artists:', err);
+      setError(err instanceof DatabaseError ? err.message : 'Failed to fetch artists');
+      setArtists([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Debounced search function
   const debouncedSearch = useMemo(
     () =>
       debounce(async (query: string) => {
         try {
           setLoading(true);
-          const response = await databaseService.getArtists(
-            query.trim(),
-            searchState.page,
-            ITEMS_PER_PAGE
-          );
-          setArtists(response.artists || []);
-          setSearchState({ ...searchState, total: response.total });
           setError(null);
+          const filteredArtists = artists.filter(artist =>
+            artist.name.toLowerCase().includes(query.toLowerCase())
+          );
+          setSearchState(prev => ({
+            ...prev,
+            total: filteredArtists.length,
+            page: 1,
+          }));
         } catch (err) {
-          if (err instanceof DatabaseApiError) {
-            setError(err.message);
-          } else {
-            setError('Failed to load artists');
-          }
-          setArtists([]);
+          console.error('Error searching artists:', err);
+          setError(err instanceof DatabaseError ? err.message : 'Failed to search artists');
         } finally {
           setLoading(false);
         }
-      }, 500),
-    [searchState.page]
+      }, 300),
+    [artists]
   );
 
   useEffect(() => {
-    debouncedSearch(searchQuery);
-    return () => {
-      debouncedSearch.cancel();
-    };
+    fetchArtists();
+  }, [labelId]);
+
+  useEffect(() => {
+    if (searchQuery) {
+      debouncedSearch(searchQuery);
+    } else {
+      setSearchState(prev => ({ ...prev, total: artists.length, page: 1 }));
+    }
+    return () => debouncedSearch.cancel();
   }, [searchQuery, debouncedSearch]);
 
-  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const query = event.target.value;
-    setSearchQuery(query);
-    setSearchState({ ...searchState, page: 1 }); // Reset to first page on new search
-  };
+  if (!labelId) {
+    return (
+      <Box sx={{ mt: 8, textAlign: 'center' }}>
+        <Typography variant="h5" color="text.secondary">
+          Invalid label
+        </Typography>
+      </Box>
+    );
+  }
 
-  const handlePageChange = (_: React.ChangeEvent<unknown>, page: number) => {
-    setSearchState({ ...searchState, page });
-  };
+  const filteredArtists = searchQuery
+    ? artists.filter(artist =>
+        artist.name.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : artists;
 
-  const handleRetry = () => {
-    debouncedSearch(searchQuery);
-  };
-
-  const totalPages = Math.ceil(searchState.total / ITEMS_PER_PAGE);
+  const startIndex = (searchState.page - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const displayedArtists = filteredArtists.slice(startIndex, endIndex);
+  const totalPages = Math.ceil(filteredArtists.length / ITEMS_PER_PAGE);
 
   return (
-    <Container maxWidth="lg">
-      <Box sx={{ py: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Artists {getLabel ? `- ${getLabel}` : ''}
+    <Container maxWidth="xl" sx={{ mt: 8, mb: 4 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+        <Typography variant="h4" component="h1">
+          {labelDisplayName}
         </Typography>
+        <Button
+          startIcon={<RefreshIcon />}
+          onClick={fetchArtists}
+          disabled={loading}
+        >
+          Refresh
+        </Button>
+      </Box>
 
+      <Box sx={{ mb: 4 }}>
         <TextField
           fullWidth
-          label="Search Artists"
           variant="outlined"
+          placeholder="Search artists..."
           value={searchQuery}
-          onChange={handleSearchChange}
+          onChange={(e) => setSearchQuery(e.target.value)}
           disabled={loading}
-          sx={{ mb: 4 }}
         />
+      </Box>
 
-        {error ? (
-          <Alert 
-            severity="error" 
-            sx={{ mb: 2 }}
-            action={
-              <Button
-                color="inherit"
-                size="small"
-                onClick={handleRetry}
-                startIcon={<RefreshIcon />}
-              >
-                Retry
-              </Button>
-            }
-          >
-            {error}
-          </Alert>
-        ) : null}
+      {error && (
+        <Alert severity="error" sx={{ mb: 4 }}>
+          {error}
+        </Alert>
+      )}
 
-        {loading ? (
+      {loading ? (
+        <Grid container spacing={3}>
+          {[...Array(ITEMS_PER_PAGE)].map((_, index) => (
+            <Grid item xs={12} sm={6} md={3} key={index}>
+              <Skeleton variant="rectangular" height={200} />
+            </Grid>
+          ))}
+        </Grid>
+      ) : displayedArtists.length > 0 ? (
+        <>
           <Grid container spacing={3}>
-            {[...Array(ITEMS_PER_PAGE)].map((_, index) => (
-              <Grid item xs={12} sm={6} md={4} lg={3} key={index}>
-                <Skeleton variant="rectangular" height={200} />
-                <Skeleton variant="text" sx={{ mt: 1 }} />
-                <Skeleton variant="text" width="60%" />
+            {displayedArtists.map((artist) => (
+              <Grid item xs={12} sm={6} md={3} key={artist.id}>
+                <ArtistSection artist={artist} />
               </Grid>
             ))}
           </Grid>
-        ) : artists.length > 0 ? (
-          <>
-            <Grid container spacing={3}>
-              {artists.map((artist) => (
-                <Grid item xs={12} sm={6} md={4} lg={3} key={artist.id}>
-                  <ArtistCard artist={artist} />
-                </Grid>
-              ))}
-            </Grid>
-            
-            {totalPages > 1 && (
-              <Box display="flex" justifyContent="center" mt={4}>
-                <Pagination
-                  count={totalPages}
-                  page={searchState.page}
-                  onChange={handlePageChange}
-                  color="primary"
-                />
-              </Box>
-            )}
-          </>
-        ) : (
-          <Box textAlign="center" py={4}>
-            <Typography variant="h6" color="text.secondary">
-              {searchQuery
-                ? 'No artists found matching your search'
-                : 'No artists found'}
-            </Typography>
-          </Box>
-        )}
-      </Box>
+          {totalPages > 1 && (
+            <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
+              <Pagination
+                count={totalPages}
+                page={searchState.page}
+                onChange={(_, page) => setSearchState(prev => ({ ...prev, page }))}
+                color="primary"
+              />
+            </Box>
+          )}
+        </>
+      ) : (
+        <Box sx={{ mt: 8, textAlign: 'center' }}>
+          <Typography variant="h5" color="text.secondary">
+            No artists found
+          </Typography>
+        </Box>
+      )}
     </Container>
   );
 };

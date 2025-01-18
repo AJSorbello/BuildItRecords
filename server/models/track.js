@@ -93,6 +93,15 @@ module.exports = (sequelize) => {
         }
       }
     },
+    popularity: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      defaultValue: 0,
+      validate: {
+        min: 0,
+        max: 100
+      }
+    },
     release_id: {
       type: DataTypes.STRING,
       allowNull: false,

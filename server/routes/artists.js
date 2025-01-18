@@ -33,7 +33,11 @@ const formatArtistData = (spotifyData) => {
 };
 
 // Search artists - this must come before /:artistId routes
-router.get('/search', async (req, res) => {
+router.get('/search', [
+    query('search').optional().isString(),
+    query('label').optional().isString(),
+    validateRequest
+], async (req, res) => {
     console.log('Received search request:', {
         query: req.query,
         headers: req.headers,
@@ -42,8 +46,8 @@ router.get('/search', async (req, res) => {
 
     try {
         const searchQuery = req.query.search || '';
-        const label = req.query.label;
-        console.log('Searching artists with query:', searchQuery, 'and label:', label);
+        const labelId = req.query.label;
+        console.log('Searching artists with query:', searchQuery, 'and labelId:', labelId);
 
         let queryText = 'SELECT * FROM artists WHERE 1=1';
         const queryParams = [];
@@ -55,17 +59,29 @@ router.get('/search', async (req, res) => {
         }
 
         // Add label condition if label exists
-        if (label) {
-            queryParams.push(label);
-            queryText += ` AND label = $${queryParams.length}`;
+        if (labelId && labelId !== '[object Object]') {
+            queryParams.push(labelId);
+            queryText += ` AND label_id = $${queryParams.length}`;
         }
 
         queryText += ' ORDER BY name ASC';
 
         console.log('Executing query:', queryText, 'with params:', queryParams);
-        const result = await sequelize.query(queryText, { replacements: queryParams, type: sequelize.QueryTypes.SELECT });
-        console.log(`Found ${result.length} artists`);
+        const result = await Artist.findAll({
+            where: {
+                ...(searchQuery.trim() && {
+                    name: {
+                        [sequelize.Op.iLike]: `%${searchQuery.trim()}%`
+                    }
+                }),
+                ...(labelId && labelId !== '[object Object]' && {
+                    label_id: labelId
+                })
+            },
+            order: [['name', 'ASC']]
+        });
 
+        console.log(`Found ${result.length} artists`);
         res.json(result);
     } catch (error) {
         console.error('Error searching artists:', error);

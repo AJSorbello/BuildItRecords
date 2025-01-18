@@ -3,91 +3,96 @@
  * @module ErrorBoundary
  */
 
-import React, { FC, ErrorInfo, ReactNode } from 'react';
-import { Box, Typography, Button } from '@mui/material';
-import { styled } from '@mui/material/styles';
+import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { Box, Typography, Button, Paper } from '@mui/material';
+import { Refresh as RefreshIcon } from '@mui/icons-material';
 
-interface ErrorBoundaryProps {
+interface Props {
   children: ReactNode;
-  fallback?: ReactNode;
 }
 
 interface State {
   hasError: boolean;
   error: Error | null;
+  errorInfo: ErrorInfo | null;
 }
 
-const ErrorContainer = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-  justifyContent: 'center',
-  minHeight: '100vh',
-  padding: theme.spacing(3),
-  backgroundColor: '#121212',
-  color: '#FFFFFF',
-}));
-
-const ErrorButton = styled(Button)(({ theme }) => ({
-  marginTop: theme.spacing(2),
-  backgroundColor: '#02FF95',
-  color: '#121212',
-  '&:hover': {
-    backgroundColor: '#00CC76',
-  },
-}));
-
-/**
- * Error Boundary component that catches JavaScript errors anywhere in the child
- * component tree and displays a fallback UI
- */
-const ErrorBoundary: FC<ErrorBoundaryProps> = ({ children }) => {
-  const [hasError, setError] = React.useState(false);
-  const [error, setErrorState] = React.useState<Error | null>(null);
-
-  React.useEffect(() => {
-    const handleReset = () => {
-      setError(false);
-      setErrorState(null);
-      // Attempt to recover by trying to re-render the segment
-      window.location.reload();
-    };
-  }, []);
-
-  const componentDidCatch = (error: Error, errorInfo: ErrorInfo) => {
-    console.error('Uncaught error:', error, errorInfo);
-    // Here you could send error reports to your error tracking service
+class ErrorBoundary extends Component<Props, State> {
+  public state: State = {
+    hasError: false,
+    error: null,
+    errorInfo: null
   };
 
-  if (hasError) {
-    if (children.fallback) {
-      return children.fallback;
-    }
-
-    return (
-      <ErrorContainer>
-        <Typography variant="h4" gutterBottom>
-          Oops! Something went wrong
-        </Typography>
-        <Typography variant="body1" align="center" sx={{ maxWidth: 600, mb: 3 }}>
-          We apologize for the inconvenience. Please try refreshing the page or contact support if the problem persists.
-        </Typography>
-        <ErrorButton
-          variant="contained"
-          onClick={() => {
-            setError(false);
-            setErrorState(null);
-            // Attempt to recover by trying to re-render the segment
-            window.location.reload();
-          }}
-        >
-          Try Again
-        </ErrorButton>
-      </ErrorContainer>
-    );
+  public static getDerivedStateFromError(error: Error): State {
+    return { 
+      hasError: true, 
+      error,
+      errorInfo: null
+    };
   }
 
-  return children;
-};
+  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('ErrorBoundary caught an error:', error, errorInfo);
+    this.setState({
+      error,
+      errorInfo
+    });
+  }
 
-export { ErrorBoundary };
+  private handleReset = () => {
+    this.setState({ 
+      hasError: false, 
+      error: null,
+      errorInfo: null 
+    });
+  };
+
+  public render() {
+    if (this.state.hasError) {
+      return (
+        <Paper 
+          elevation={3}
+          sx={{
+            p: 3,
+            m: 2,
+            bgcolor: 'background.paper',
+            borderRadius: 2
+          }}
+        >
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              textAlign: 'center',
+              gap: 2
+            }}
+          >
+            <Typography variant="h5" color="error" gutterBottom>
+              Something went wrong
+            </Typography>
+            
+            <Typography variant="body1" color="text.secondary">
+              {this.state.error?.message || 'An unexpected error occurred'}
+            </Typography>
+
+            <Button
+              variant="contained"
+              startIcon={<RefreshIcon />}
+              onClick={this.handleReset}
+              sx={{ mt: 2 }}
+            >
+              Try Again
+            </Button>
+          </Box>
+        </Paper>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+export default ErrorBoundary;

@@ -67,7 +67,7 @@ const router = createBrowserRouter([
           },
           {
             path: 'artists',
-            element: <ArtistsPage />
+            element: <ArtistsPage label="buildit-records" />
           },
           {
             path: 'artists/:id',
@@ -100,7 +100,7 @@ const router = createBrowserRouter([
           },
           {
             path: 'artists',
-            element: <ArtistsPage />
+            element: <ArtistsPage label="buildit-tech" />
           },
           {
             path: 'artists/:id',
@@ -133,7 +133,7 @@ const router = createBrowserRouter([
           },
           {
             path: 'artists',
-            element: <ArtistsPage />
+            element: <ArtistsPage label="buildit-deep" />
           },
           {
             path: 'artists/:id',

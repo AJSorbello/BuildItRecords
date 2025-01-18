@@ -5,6 +5,16 @@ const { Op } = require('sequelize');
 const { query, validationResult } = require('express-validator');
 const logger = require('../utils/logger');  
 
+// Error handling helper
+const handleError = (res, error) => {
+  logger.error('Error in releases route:', error);
+  res.status(500).json({
+    success: false,
+    error: error.message || 'Internal server error',
+    details: error.details || error
+  });
+};
+
 const validateRequest = (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -13,91 +23,154 @@ const validateRequest = (req, res, next) => {
     next();
 };
 
-// Get releases by label ID with pagination
+// Get top releases by label
+router.get('/top', [
+  query('label').isString().notEmpty(),
+  validateRequest
+], async (req, res) => {
+  try {
+    const { label } = req.query;
+    const limit = 10;
+
+    logger.info('GET /releases/top request:', { label });
+
+    // First check if label exists
+    const labelExists = await Label.findOne({
+      where: { id: label }
+    });
+
+    if (!labelExists) {
+      return res.status(404).json({
+        success: false,
+        error: 'Label not found'
+      });
+    }
+
+    const releases = await Release.findAll({
+      where: {
+        label_id: label
+      },
+      include: [
+        {
+          model: Artist,
+          as: 'artists',
+          through: { attributes: [] },
+          attributes: ['id', 'name', 'spotify_url', 'spotify_uri', 'image_url']
+        },
+        {
+          model: Track,
+          as: 'tracks',
+          attributes: ['id', 'name', 'popularity', 'preview_url', 'spotify_url', 'spotify_uri']
+        }
+      ],
+      order: [['popularity', 'DESC']],
+      limit
+    });
+
+    res.json({
+      success: true,
+      releases
+    });
+  } catch (error) {
+    handleError(res, error);
+  }
+});
+
+// Get releases by label ID with pagination and sorting
 router.get('/', [
     query('label').optional().isString(),
     query('offset').optional().isInt({ min: 0 }).toInt().default(0),
     query('limit').optional().isInt({ min: 1, max: 500 }).toInt().default(500),
+    query('sort').optional().isString().default('release_date'),
+    query('order').optional().isString().isIn(['asc', 'desc']).default('desc'),
     validateRequest
 ], async (req, res) => {
     try {
-        const { label, offset = 0, limit = 500 } = req.query;
+        const { label, offset = 0, limit = 500, sort = 'release_date', order = 'desc' } = req.query;
         
-        logger.info('GET /releases request:', { label, offset, limit });
+        logger.info('GET /releases request:', { label, offset, limit, sort, order });
 
         let where = {};
         if (label) {
           where.label_id = label;
         }
 
-        const include = [
-          {
-            model: Artist,
-            as: 'artists',
-            through: { attributes: [] },
-            attributes: ['id', 'name', 'spotify_url', 'spotify_uri', 'image_url', 'images', 'label_id']
-          },
-          {
-            model: Track,
-            as: 'tracks',
-            attributes: [
-              'id', 'name', 'duration', 'track_number', 'disc_number', 
-              'isrc', 'preview_url', 'spotify_url', 'spotify_uri', 
-              'label_id', 'status'
-            ]
-          },
-          {
-            model: Label,
-            as: 'label',
-            attributes: ['id', 'name', 'display_name', 'slug', 'description', 'spotifyPlaylistId']
-          }
-        ];
-
-        const totalCount = await Release.count({
-          where,
-          distinct: true,
-          include: [{
-            model: Label,
-            as: 'label',
-            attributes: []
-          }]
-        });
-
+        // Get all releases with their tracks, including track popularity
         const releases = await Release.findAll({
           where,
-          include,
-          order: [['release_date', 'DESC']],
-          limit: parseInt(limit),
-          offset: parseInt(offset),
-          distinct: true,
-          subQuery: false
+          include: [
+            {
+              model: Artist,
+              as: 'artists',
+              through: { attributes: [] },
+              attributes: ['id', 'name', 'spotify_url', 'spotify_uri', 'image_url', 'label_id']
+            },
+            {
+              model: Track,
+              as: 'tracks',
+              attributes: ['id', 'name', 'popularity', 'preview_url', 'spotify_url', 'spotify_uri'],
+              where: {
+                status: 'published'
+              },
+              required: false
+            }
+          ],
+          distinct: true
         });
 
-        logger.info('Releases found:', { 
-          totalCount,
-          returnedCount: releases.length,
-          label,
-          offset,
-          limit
+        // Process releases and calculate total popularity
+        const processedReleases = releases.map(release => {
+          const releaseData = release.toJSON();
+          const tracks = releaseData.tracks || [];
+          
+          // Calculate total popularity from track popularities
+          const totalPopularity = tracks.reduce((sum, track) => {
+            return sum + (track.popularity || 0);
+          }, 0);
+
+          // Calculate average popularity (avoiding division by zero)
+          const avgPopularity = tracks.length > 0 ? totalPopularity / tracks.length : 0;
+
+          return {
+            ...releaseData,
+            popularity: avgPopularity,
+            totalPopularity,
+            trackCount: tracks.length,
+            artwork_url: releaseData.artwork_url || releaseData.images?.[0]?.url,
+            images: releaseData.images || (releaseData.artwork_url ? [{ url: releaseData.artwork_url }] : [])
+          };
         });
+
+        // Sort releases
+        const sortedReleases = processedReleases.sort((a, b) => {
+          if (sort === 'popularity') {
+            // Sort by total popularity for a better representation of overall plays
+            return order === 'desc' ? 
+              b.totalPopularity - a.totalPopularity : 
+              a.totalPopularity - b.totalPopularity;
+          }
+          if (sort === 'release_date') {
+            const dateA = new Date(a.release_date || 0);
+            const dateB = new Date(b.release_date || 0);
+            return order === 'desc' ? dateB - dateA : dateA - dateB;
+          }
+          return 0;
+        });
+
+        // Get exactly 10 releases for top releases endpoint
+        const paginatedReleases = sortedReleases.slice(offset, offset + (limit === 10 ? 10 : limit));
 
         res.json({
           success: true,
-          releases,
-          total: totalCount,
-          offset: parseInt(offset),
-          limit: parseInt(limit),
-          currentPage: Math.floor(offset / limit) + 1,
-          totalPages: Math.ceil(totalCount / limit),
-          hasMore: offset + releases.length < totalCount
+          releases: paginatedReleases,
+          total: releases.length,
+          offset,
+          limit,
+          sort,
+          order
         });
     } catch (error) {
-        logger.error('Error fetching releases:', error);
-        res.status(500).json({ 
-          success: false, 
-          error: 'Failed to fetch releases',
-          details: error.message
-        });
+        handleError(res, error);
     }
 });
 
@@ -109,22 +182,22 @@ router.get('/:id', async (req, res) => {
                 {
                     model: Artist,
                     as: 'artists',
-                    through: { attributes: [] }
+                    through: { attributes: [] },
+                    attributes: ['id', 'name', 'spotify_url', 'spotify_uri', 'image_url', 'label_id']
                 },
                 {
                     model: Track,
                     as: 'tracks',
-                    include: [
-                        {
-                            model: Artist,
-                            as: 'artists',
-                            through: { attributes: [] }
-                        }
+                    attributes: [
+                      'id', 'name', 'duration', 'track_number', 'disc_number', 
+                      'isrc', 'preview_url', 'spotify_url', 'spotify_uri', 
+                      'label_id', 'status'
                     ]
                 },
                 {
                     model: Label,
-                    as: 'label'
+                    as: 'label',
+                    attributes: ['id', 'name', 'display_name', 'slug', 'description', 'spotifyPlaylistId']
                 }
             ]
         });
@@ -136,7 +209,7 @@ router.get('/:id', async (req, res) => {
         res.json(release);
     } catch (error) {
         console.error('Error fetching release:', error);
-        res.status(500).json({ error: error.message });
+        handleError(res, error);
     }
 });
 
@@ -183,7 +256,8 @@ router.post('/:labelId/import', async (req, res) => {
           {
             model: Artist,
             as: 'artists',
-            through: { attributes: [] }
+            through: { attributes: [] },
+            attributes: ['id', 'name', 'spotify_url', 'spotify_uri', 'image_url', 'label_id']
           },
           {
             model: Track,
@@ -192,7 +266,8 @@ router.post('/:labelId/import', async (req, res) => {
               {
                 model: Artist,
                 as: 'artists',
-                through: { attributes: [] }
+                through: { attributes: [] },
+                attributes: ['id', 'name', 'spotify_url', 'spotify_uri', 'image_url', 'label_id']
               }
             ]
           }
@@ -254,7 +329,8 @@ router.get('/:labelId', async (req, res) => {
         {
           model: Artist,
           as: 'artists',
-          through: { attributes: [] }
+          through: { attributes: [] },
+          attributes: ['id', 'name', 'spotify_url']
         },
         {
           model: Track,
@@ -327,14 +403,18 @@ router.get('/:labelId/:releaseId', async (req, res) => {
         {
           model: Artist,
           as: 'artists',
-          through: { attributes: ['role'] },
-          attributes: ['id', 'name', 'spotify_url']
+          through: { 
+            attributes: [] // Don't include any join table attributes
+          },
+          attributes: ['id', 'name', 'spotify_url', 'spotify_uri', 'image_url']
         },
         {
           model: Track,
           as: 'tracks',
-          attributes: ['id', 'name', 'duration', 'preview_url', 'spotify_url', 'track_number'],
-          order: [['track_number', 'ASC']]
+          attributes: [
+            'id', 'name', 'duration', 'preview_url', 'spotify_url', 
+            'spotify_uri', 'track_number', 'popularity'
+          ]
         }
       ]
     });
@@ -348,25 +428,9 @@ router.get('/:labelId/:releaseId', async (req, res) => {
 
     res.json({
       success: true,
-      release: {
-        id: release.id,
-        name: release.name,
-        release_date: release.release_date,
-        artwork_url: release.artwork_url,
-        spotify_url: release.spotify_url,
-        total_tracks: release.total_tracks,
-        artists: release.artists,
-        tracks: release.tracks
-      }
+      release: release
     });
   } catch (error) {
-    console.error('Error in GET /releases/:labelId/:releaseId:', error);
-    console.error('Error stack:', error.stack);
-    console.error('Error details:', {
-      message: error.message,
-      name: error.name,
-      code: error.code
-    });
     handleError(res, error);
   }
 });
@@ -574,11 +638,7 @@ router.get('/', async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching releases:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Error fetching releases',
-      error: error.message 
-    });
+    handleError(res, error);
   }
 });
 
@@ -613,11 +673,7 @@ router.get('/:id', async (req, res) => {
     res.json(release);
   } catch (error) {
     console.error('Error fetching release:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Error fetching release',
-      error: error.message 
-    });
+    handleError(res, error);
   }
 });
 
@@ -641,7 +697,7 @@ router.get('/:releaseId', async (req, res) => {
     res.json(rows[0]);
   } catch (error) {
     console.error('Error fetching release:', error);
-    res.status(500).json({ error: 'Failed to fetch release' });
+    handleError(res, error);
   }
 });
 
@@ -661,7 +717,70 @@ router.get('/:releaseId/tracks', async (req, res) => {
     res.json({ tracks });
   } catch (error) {
     console.error('Error fetching release tracks:', error);
-    res.status(500).json({ error: 'Failed to fetch release tracks' });
+    handleError(res, error);
+  }
+});
+
+// GET /api/releases/top/:labelId
+router.get('/top/:labelId', async (req, res) => {
+  try {
+    const { labelId } = req.params;
+    const limit = 10;
+
+    // Ensure labelId is numeric
+    const numericLabelId = parseInt(labelId, 10);
+    if (isNaN(numericLabelId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid label ID. Must be a number.'
+      });
+    }
+
+    // First check if the label exists
+    const label = await Label.findByPk(numericLabelId);
+    if (!label) {
+      return res.status(404).json({
+        success: false,
+        error: 'Label not found'
+      });
+    }
+
+    const releases = await Release.findAll({
+      where: {
+        label_id: numericLabelId,
+        status: 'published'
+      },
+      include: [
+        {
+          model: Artist,
+          as: 'artists',
+          through: { 
+            attributes: [] // Don't include any join table attributes
+          },
+          attributes: ['id', 'name', 'spotify_url', 'spotify_uri', 'image_url']
+        },
+        {
+          model: Track,
+          as: 'tracks',
+          attributes: ['id', 'name', 'spotify_url', 'spotify_uri', 'preview_url', 'popularity']
+        }
+      ],
+      order: [
+        [{ model: Track, as: 'tracks' }, 'popularity', 'DESC']
+      ],
+      limit
+    });
+
+    // Always return a success response with releases array
+    res.json({
+      success: true,
+      releases: releases.map(release => ({
+        ...release.toJSON(),
+        popularity: Math.max(...(release.tracks?.map(track => track.popularity) || [0]))
+      }))
+    });
+  } catch (error) {
+    handleError(res, error);
   }
 });
 

@@ -68,6 +68,70 @@ router.post('/labels/:labelId/import', authenticateToken, async (req, res) => {
   }
 });
 
+// Get top releases for a label
+router.get('/labels/:labelId/releases/top', async (req, res) => {
+  try {
+    const { labelId } = req.params;
+    const limit = 10;
+
+    // Ensure labelId is numeric
+    const numericLabelId = parseInt(labelId, 10);
+    if (isNaN(numericLabelId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid label ID. Must be a number.'
+      });
+    }
+
+    // First check if the label exists
+    const label = await Label.findByPk(numericLabelId);
+    if (!label) {
+      return res.status(404).json({
+        success: false,
+        error: 'Label not found'
+      });
+    }
+
+    const releases = await Release.findAll({
+      where: {
+        label_id: numericLabelId,
+        status: 'published'
+      },
+      include: [
+        {
+          model: Artist,
+          as: 'artists',
+          through: { attributes: [] },
+          attributes: ['id', 'name', 'spotify_url', 'spotify_uri', 'image_url']
+        },
+        {
+          model: Track,
+          as: 'tracks',
+          attributes: ['id', 'name', 'spotify_url', 'spotify_uri', 'preview_url', 'popularity']
+        }
+      ],
+      order: [
+        [{ model: Track, as: 'tracks' }, 'popularity', 'DESC']
+      ],
+      limit
+    });
+
+    res.json({
+      success: true,
+      releases: releases.map(release => ({
+        ...release.toJSON(),
+        popularity: Math.max(...(release.tracks?.map(track => track.popularity) || [0]))
+      }))
+    });
+  } catch (error) {
+    logger.error('Error getting top releases:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get top releases'
+    });
+  }
+});
+
 // Health check endpoint
 router.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
