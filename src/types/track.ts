@@ -10,8 +10,8 @@ export type Artist = {
   name: string;
   spotify_url: string;
   spotify_uri: string;
-  profile_image?: string;
-  image_url?: string;
+  image_url: string;
+  images?: Array<{ url: string; height: number; width: number }>;
   label_id?: string;
   created_at?: Date;
   updated_at?: Date;

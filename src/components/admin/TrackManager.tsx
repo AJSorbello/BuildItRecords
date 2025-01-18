@@ -171,9 +171,9 @@ const TrackManager: React.FC<TrackManagerProps> = ({
                       <Box display="flex" alignItems="center" gap={1}>
                         {getArtists(track).map((artist) => (
                           <Box key={artist.id} display="flex" alignItems="center" gap={1}>
-                            {artist.profile_image && (
+                            {artist.image_url && (
                               <img
-                                src={artist.profile_image}
+                                src={artist.image_url}
                                 alt={artist.name}
                                 style={{
                                   width: 32,
@@ -267,9 +267,9 @@ const TrackManager: React.FC<TrackManagerProps> = ({
                     <Box display="flex" alignItems="center" gap={1}>
                       {getArtists(releaseTracks[0]).map((artist) => (
                         <Box key={artist.id} display="flex" alignItems="center" gap={1}>
-                          {artist.profile_image && (
+                          {artist.image_url && (
                             <img
-                              src={artist.profile_image}
+                              src={artist.image_url}
                               alt={artist.name}
                               style={{
                                 width: 32,
@@ -333,9 +333,9 @@ const TrackManager: React.FC<TrackManagerProps> = ({
                                   <Box display="flex" alignItems="center" gap={1}>
                                     {getArtists(track).map((artist) => (
                                       <Box key={artist.id} display="flex" alignItems="center" gap={1}>
-                                        {artist.profile_image && (
+                                        {artist.image_url && (
                                           <img
-                                            src={artist.profile_image}
+                                            src={artist.image_url}
                                             alt={artist.name}
                                             style={{
                                               width: 32,

@@ -648,39 +648,49 @@ router.get('/', async (req, res) => {
         totalPages: Math.ceil(total / limit)
       });
 
-      // Log the first track's raw data for debugging
-      if (tracks.length > 0) {
-        const firstTrack = tracks[0].get({ plain: true });
-        logger.info('First track raw data:', JSON.stringify(firstTrack, null, 2));
-      }
-
+      // Format each track using the formatTrackData helper
       const formattedTracks = tracks
         .map(track => {
           try {
             const plainTrack = track.get({ plain: true });
             
-            if (!plainTrack || !plainTrack.id) {
-              logger.error('Invalid track data:', plainTrack);
-              return null;
+            // Debug logging for the first track
+            if (tracks.indexOf(track) === 0) {
+              logger.info('First track raw data:', {
+                trackName: plainTrack.name,
+                hasArtists: !!plainTrack.artists,
+                artistsCount: plainTrack.artists?.length,
+                firstArtist: plainTrack.artists?.[0] ? {
+                  name: plainTrack.artists[0].name,
+                  image_url: plainTrack.artists[0].image_url,
+                  hasImages: !!plainTrack.artists[0].images,
+                  imagesCount: plainTrack.artists[0].images?.length,
+                  firstImage: plainTrack.artists[0].images?.[0]
+                } : null
+              });
             }
 
-            const formattedTrack = formatTrackData(plainTrack);
-            if (!formattedTrack) {
-              logger.error('Failed to format track:', { 
-                id: plainTrack.id, 
-                name: plainTrack.name,
-                hasArtists: !!plainTrack.artists,
-                hasRelease: !!plainTrack.release
+            const formatted = formatTrackData(plainTrack);
+            
+            // Debug logging for the formatted track
+            if (tracks.indexOf(track) === 0) {
+              logger.info('First track formatted data:', {
+                trackName: formatted.name,
+                hasArtists: !!formatted.artists,
+                artistsCount: formatted.artists?.length,
+                firstArtist: formatted.artists?.[0] ? {
+                  name: formatted.artists[0].name,
+                  image_url: formatted.artists[0].image_url,
+                  hasImages: !!formatted.artists[0].images,
+                  imagesCount: formatted.artists[0].images?.length,
+                  firstImage: formatted.artists[0].images?.[0]
+                } : null
               });
-              return null;
             }
-            return formattedTrack;
+            
+            return formatted;
           } catch (err) {
-            logger.error('Error processing track:', err, { 
-              trackId: track?.id,
-              error: err.message,
-              stack: err.stack 
-            });
+            logger.error('Error formatting track:', err, { trackId: track?.id });
             return null;
           }
         })
@@ -723,11 +733,45 @@ router.get('/all/:labelId', async (req, res) => {
         {
           model: Artist,
           as: 'artists',
-          through: { attributes: [] }
+          through: { attributes: [] },
+          attributes: [
+            'id', 
+            'name', 
+            'spotify_url', 
+            'spotify_uri',
+            'image_url',
+            'images',
+            'label_id'
+          ]
         },
         {
           model: Release,
-          as: 'release'
+          as: 'release',
+          attributes: [
+            'id', 
+            'name', 
+            'title', 
+            'release_date', 
+            'artwork_url', 
+            'images', 
+            'spotify_url', 
+            'spotify_uri', 
+            'status'
+          ],
+          include: [{
+            model: Artist,
+            as: 'artists',
+            through: { attributes: [] },
+            attributes: [
+              'id', 
+              'name', 
+              'spotify_url', 
+              'spotify_uri',
+              'image_url',
+              'images',
+              'label_id'
+            ]
+          }]
         }
       ],
       order: [['created_at', 'DESC']]
@@ -735,15 +779,23 @@ router.get('/all/:labelId', async (req, res) => {
 
     logger.info('Found tracks:', {
       labelId,
-      count: tracks.length,
-      tracks: tracks.map(t => ({
-        name: t.name,
-        release: t.release?.name,
-        artists: t.artists?.map(a => a.name).join(', ')
-      }))
+      count: tracks.length
     });
 
-    res.json({ tracks });
+    // Format each track using the formatTrackData helper
+    const formattedTracks = tracks
+      .map(track => {
+        try {
+          const plainTrack = track.get({ plain: true });
+          return formatTrackData(plainTrack);
+        } catch (err) {
+          logger.error('Error formatting track:', err, { trackId: track?.id });
+          return null;
+        }
+      })
+      .filter(track => track !== null);
+
+    res.json({ tracks: formattedTracks });
   } catch (error) {
     logger.error('Error fetching all tracks:', error);
     res.status(500).json({ error: error.message });
