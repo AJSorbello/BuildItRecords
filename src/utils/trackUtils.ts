@@ -168,6 +168,15 @@ export const getTrackImage = (track: Track): string => {
   return release.images?.[0]?.url || PLACEHOLDER_IMAGE;
 };
 
+export const getTrackSpotifyUrl = (track: any): string => {
+  return track?.spotify_url || track?.external_urls?.spotify || '';
+};
+
+export const getTrackReleaseDate = (track: any): string => {
+  if (!track?.release?.release_date) return '';
+  return new Date(track.release.release_date).toLocaleDateString();
+};
+
 export const initializeTrackCache = async (): Promise<void> => {
   try {
     if (trackCache.size === 0) {

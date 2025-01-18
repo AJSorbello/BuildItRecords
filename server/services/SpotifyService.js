@@ -189,6 +189,60 @@ class SpotifyService {
     }
   }
 
+  async searchAlbums(query, options = { limit: 50 }) {
+    try {
+      const requestFn = async () => {
+        logger.info('Searching albums with query:', query);
+        const result = await this.spotifyApi.searchAlbums(query, options);
+        
+        if (!result.body || !result.body.albums) {
+          logger.error('No album data in search response:', result);
+          return { items: [] };
+        }
+
+        logger.info('Found albums:', {
+          total: result.body.albums.total,
+          returned: result.body.albums.items.length,
+          query
+        });
+
+        return result.body.albums;
+      };
+
+      return await this.makeRequest(requestFn);
+    } catch (error) {
+      logger.error('Error searching albums:', error);
+      throw error;
+    }
+  }
+
+  async getAlbum(albumId) {
+    try {
+      const requestFn = async () => {
+        logger.info('Fetching album by ID:', albumId);
+        const result = await this.spotifyApi.getAlbum(albumId);
+        
+        if (!result.body) {
+          logger.error('No album data in response:', result);
+          return null;
+        }
+
+        logger.info('Found album:', {
+          name: result.body.name,
+          label: result.body.label,
+          artists: result.body.artists.map(a => a.name)
+        });
+
+        return result.body;
+      };
+
+      return await this.makeRequest(requestFn);
+    } catch (error) {
+      logger.error('Error fetching album by ID:', error);
+      throw error;
+    }
+  }
+
   async searchReleases(labelId) {
     try {
       logger.info('Searching releases for label:', labelId);

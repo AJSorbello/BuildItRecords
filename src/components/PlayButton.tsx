@@ -9,7 +9,7 @@ interface PlayButtonProps {
   sx?: SxProps<Theme>;
 }
 
-const PlayButton: React.FC<PlayButtonProps> = ({ previewUrl, size = 'medium', sx }) => {
+export const PlayButton: React.FC<PlayButtonProps> = ({ previewUrl, size = 'medium', sx }) => {
   const [audio] = useState(new Audio());
   const [isPlaying, setIsPlaying] = useState(false);
 

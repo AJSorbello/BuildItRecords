@@ -96,13 +96,16 @@ export class DatabaseService {
   }
 
   // Release Methods
-  public async getReleasesByLabelId(labelId: RecordLabelId): Promise<{ releases: Release[]; totalReleases: number; currentPage: number }> {
-    const response = await this.fetchApi<ApiResponse<never>>(`/releases?label=${labelId}`);
+  public async getReleasesByLabelId(labelId: RecordLabelId, page: number = 1, limit: number = 500): Promise<{ releases: Release[]; totalReleases: number; currentPage: number; totalPages: number; hasMore: boolean }> {
+    const offset = (page - 1) * limit;
+    const response = await this.fetchApi<ApiResponse<never>>(`/releases?label=${labelId}&offset=${offset}&limit=${limit}`);
 
     return {
       releases: response.releases || [],
       totalReleases: response.total || 0,
-      currentPage: Math.floor((response.offset || 0) / (response.limit || 10)) + 1
+      currentPage: page,
+      totalPages: Math.ceil((response.total || 0) / limit),
+      hasMore: ((offset + (response.releases?.length || 0)) < (response.total || 0))
     };
   }
 

@@ -223,10 +223,21 @@ const formatTrackData = (data) => {
         const mapArtist = (artist) => {
             if (!artist) return null;
             try {
+                // Get the best available image URL
+                let imageUrl = null;
+                if (artist.image_url) {
+                    imageUrl = artist.image_url;
+                } else if (artist.images && artist.images.length > 0) {
+                    // Sort images by size and get the medium one if available
+                    const sortedImages = [...artist.images].sort((a, b) => (b.width || 0) - (a.width || 0));
+                    const mediumImage = sortedImages.find(img => (img.width || 0) <= 300) || sortedImages[0];
+                    imageUrl = mediumImage.url;
+                }
+
                 return {
                     id: artist.id || 'unknown',
                     name: artist.name || 'Unknown Artist',
-                    image_url: artist.image_url || artist.images?.[0]?.url || null,
+                    image_url: imageUrl,
                     images: artist.images || [],
                     spotify_url: artist.spotify_url || artist.external_urls?.spotify || null,
                     spotify_uri: artist.spotify_uri || artist.uri || null
@@ -250,10 +261,21 @@ const formatTrackData = (data) => {
         const mapRelease = (release) => {
             if (!release) return null;
             try {
+                // Get the best available artwork URL
+                let artworkUrl = null;
+                if (release.artwork_url) {
+                    artworkUrl = release.artwork_url;
+                } else if (release.images && release.images.length > 0) {
+                    // Sort images by size and get the medium one if available
+                    const sortedImages = [...release.images].sort((a, b) => (b.width || 0) - (a.width || 0));
+                    const mediumImage = sortedImages.find(img => (img.width || 0) <= 300) || sortedImages[0];
+                    artworkUrl = mediumImage.url;
+                }
+
                 return {
                     id: release.id || null,
                     name: release.name || release.title || 'Unknown Album',
-                    artwork_url: release.artwork_url || release.images?.[0]?.url || null,
+                    artwork_url: artworkUrl,
                     images: release.images || [],
                     release_date: release.release_date || null,
                     spotify_url: release.spotify_url || release.external_urls?.spotify || null,
@@ -293,6 +315,16 @@ const formatTrackData = (data) => {
         if (!formattedTrack.id || !formattedTrack.name) {
             logger.error('Formatted track missing required fields:', formattedTrack);
             return null;
+        }
+
+        // Log the first artist's image data for debugging
+        if (formattedTrack.artists && formattedTrack.artists.length > 0) {
+            logger.info('First artist image data:', {
+                artistId: formattedTrack.artists[0].id,
+                artistName: formattedTrack.artists[0].name,
+                imageUrl: formattedTrack.artists[0].image_url,
+                hasImages: formattedTrack.artists[0].images?.length > 0
+            });
         }
 
         return formattedTrack;
@@ -443,6 +475,16 @@ async function getTrackWithCache(trackId, redisService) {
  *         description: Sort tracks by field
  *         schema:
  *           type: string
+ *       - name: page
+ *         in: query
+ *         description: Page number for pagination
+ *         schema:
+ *           type: integer
+ *       - name: limit
+ *         in: query
+ *         description: Number of tracks to return per page
+ *         schema:
+ *           type: integer
  *     responses:
  *       200:
  *         description: A paginated list of tracks
@@ -468,8 +510,11 @@ router.get('/', async (req, res) => {
     const albumId = req.query.album;
     const search = req.query.search;
     const sort = req.query.sort || 'created_at';
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 100; // Increased limit to show more tracks
+    const offset = (page - 1) * limit;
 
-    logger.info('GET /tracks request:', { labelId, artistId, albumId, search, sort });
+    logger.info('GET /tracks request:', { labelId, artistId, albumId, search, sort, page, limit });
 
     let where = {};
     let include = [
@@ -477,19 +522,45 @@ router.get('/', async (req, res) => {
         model: Artist,
         as: 'artists',
         required: false,
-        through: { attributes: [] }, // Don't include join table attributes
-        attributes: ['id', 'name', 'spotify_url', 'image_url', 'images']
+        through: { attributes: [] },
+        attributes: [
+          'id', 
+          'name', 
+          'spotify_url', 
+          'spotify_uri',
+          'image_url',
+          'images',
+          'label_id'
+        ]
       },
       {
         model: Release,
         as: 'release',
         required: false,
-        attributes: ['id', 'name', 'title', 'release_date', 'artwork_url', 'images', 'spotify_url', 'spotify_uri', 'status'],
+        attributes: [
+          'id', 
+          'name', 
+          'title', 
+          'release_date', 
+          'artwork_url', 
+          'images', 
+          'spotify_url', 
+          'spotify_uri', 
+          'status'
+        ],
         include: [{
           model: Artist,
           as: 'artists',
-          through: { attributes: [] }, // Don't include join table attributes
-          attributes: ['id', 'name', 'spotify_url', 'image_url', 'images']
+          through: { attributes: [] },
+          attributes: [
+            'id', 
+            'name', 
+            'spotify_url', 
+            'spotify_uri',
+            'image_url',
+            'images',
+            'label_id'
+          ]
         }]
       }
     ];
@@ -549,7 +620,9 @@ router.get('/', async (req, res) => {
           as: inc.as,
           required: inc.required
         })),
-        order: [[sort, 'DESC']]
+        order: [[sort, 'DESC']],
+        limit,
+        offset
       });
 
       const [tracks, total] = await Promise.all([
@@ -557,12 +630,23 @@ router.get('/', async (req, res) => {
           where,
           include,
           order: [[sort, 'DESC']],
-          limit: null
+          limit,
+          offset,
+          distinct: true
         }),
-        Track.count({ where, include, distinct: true })
+        Track.count({ 
+          where, 
+          include, 
+          distinct: true 
+        })
       ]);
 
-      logger.info('Found tracks:', { count: tracks.length, total });
+      logger.info('Found tracks:', { 
+        count: tracks.length, 
+        total,
+        page,
+        totalPages: Math.ceil(total / limit)
+      });
 
       // Log the first track's raw data for debugging
       if (tracks.length > 0) {
@@ -608,7 +692,10 @@ router.get('/', async (req, res) => {
       return res.json({
         tracks: formattedTracks,
         total: total,
-        count: formattedTracks.length
+        count: formattedTracks.length,
+        page: page,
+        totalPages: Math.ceil(total / limit),
+        hasMore: page < Math.ceil(total / limit)
       });
     } catch (queryError) {
       logger.error('Database query error:', queryError);

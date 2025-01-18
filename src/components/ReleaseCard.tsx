@@ -1,6 +1,6 @@
 import React from 'react';
-import { Card, CardContent, CardMedia, Typography, IconButton, Box } from '@mui/material';
-import { Spotify as SpotifyIcon } from '@mui/icons-material';
+import { Card, CardContent, CardMedia, Typography, IconButton, Box, Grid, Link } from '@mui/material';
+import { PlayArrow as SpotifyIcon } from '@mui/icons-material';
 import { Track } from '../types/track';
 import { PlayButton } from './PlayButton';
 import { getTrackImage, getTrackSpotifyUrl, getTrackReleaseDate, getTrackArtists } from '../utils/trackUtils';

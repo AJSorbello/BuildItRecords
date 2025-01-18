@@ -16,56 +16,87 @@ const validateRequest = (req, res, next) => {
 // Get releases by label ID with pagination
 router.get('/', [
     query('label').optional().isString(),
-    query('offset').optional().isInt({ min: 0 }).toInt(),
-    query('limit').optional().isInt({ min: 1, max: 50 }).toInt(),
+    query('offset').optional().isInt({ min: 0 }).toInt().default(0),
+    query('limit').optional().isInt({ min: 1, max: 500 }).toInt().default(500),
     validateRequest
 ], async (req, res) => {
     try {
-        const { label, offset = 0, limit = 10 } = req.query;
-        console.log('GET /releases request:', { label, offset, limit });
+        const { label, offset = 0, limit = 500 } = req.query;
+        
+        logger.info('GET /releases request:', { label, offset, limit });
 
-        const where = {};
+        let where = {};
         if (label) {
-            where.label_id = label;
+          where.label_id = label;
         }
 
-        const { count, rows } = await Release.findAndCountAll({
-            where,
-            include: [
-                {
-                    model: Artist,
-                    as: 'artists',
-                    through: { attributes: [] }
-                },
-                {
-                    model: Track,
-                    as: 'tracks'
-                },
-                {
-                    model: Label,
-                    as: 'label'
-                }
-            ],
-            order: [['release_date', 'DESC']],
-            offset: parseInt(offset),
-            limit: parseInt(limit)
+        const include = [
+          {
+            model: Artist,
+            as: 'artists',
+            through: { attributes: [] },
+            attributes: ['id', 'name', 'spotify_url', 'spotify_uri', 'image_url', 'images', 'label_id']
+          },
+          {
+            model: Track,
+            as: 'tracks',
+            attributes: [
+              'id', 'name', 'duration', 'track_number', 'disc_number', 
+              'isrc', 'preview_url', 'spotify_url', 'spotify_uri', 
+              'label_id', 'status'
+            ]
+          },
+          {
+            model: Label,
+            as: 'label',
+            attributes: ['id', 'name', 'display_name', 'slug', 'description', 'spotifyPlaylistId']
+          }
+        ];
+
+        const totalCount = await Release.count({
+          where,
+          distinct: true,
+          include: [{
+            model: Label,
+            as: 'label',
+            attributes: []
+          }]
         });
 
-        console.log('Releases found:', { count, label });
-        const response = {
-            success: true,
-            releases: rows,
-            totalReleases: count,
-            currentPage: Math.floor(offset / limit) + 1
-        };
-        console.log('Sending response:', response);
-        res.json(response);
+        const releases = await Release.findAll({
+          where,
+          include,
+          order: [['release_date', 'DESC']],
+          limit: parseInt(limit),
+          offset: parseInt(offset),
+          distinct: true,
+          subQuery: false
+        });
+
+        logger.info('Releases found:', { 
+          totalCount,
+          returnedCount: releases.length,
+          label,
+          offset,
+          limit
+        });
+
+        res.json({
+          success: true,
+          releases,
+          total: totalCount,
+          offset: parseInt(offset),
+          limit: parseInt(limit),
+          currentPage: Math.floor(offset / limit) + 1,
+          totalPages: Math.ceil(totalCount / limit),
+          hasMore: offset + releases.length < totalCount
+        });
     } catch (error) {
-        console.error('Error fetching releases:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error fetching releases',
-            error: error.message
+        logger.error('Error fetching releases:', error);
+        res.status(500).json({ 
+          success: false, 
+          error: 'Failed to fetch releases',
+          details: error.message
         });
     }
 });
