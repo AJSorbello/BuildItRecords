@@ -302,6 +302,7 @@ const TrackManager: React.FC<TrackManagerProps> = ({
                     </Typography>
                   </TableCell>
                 </TableRow>
+
                 <TableRow>
                   <TableCell colSpan={5} sx={{ p: 0, border: 0 }}>
                     <Collapse in={expandedTrack === releaseId}>

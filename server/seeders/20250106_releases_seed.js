@@ -15,7 +15,7 @@ module.exports = {
             model: Artist,
             as: 'artists',
             through: { attributes: [] },
-            attributes: ['id', 'name', 'spotify_url', 'profile_image']
+            attributes: ['id', 'name', 'spotify_url', 'image_url', 'images']
           },
           {
             model: Track,
@@ -26,7 +26,7 @@ module.exports = {
                 model: Artist,
                 as: 'artists',
                 through: { attributes: [] },
-                attributes: ['id', 'name', 'spotify_url', 'profile_image']
+                attributes: ['id', 'name', 'spotify_url', 'image_url', 'images']
               }
             ]
           }
@@ -62,7 +62,8 @@ module.exports = {
             id: artist.id,
             name: artist.name,
             spotify_url: artist.spotify_url,
-            profile_image: artist.profile_image,
+            image_url: artist.image_url,
+            images: artist.images,
             created_at: artist.created_at,
             updated_at: artist.updated_at
           }));
@@ -95,7 +96,8 @@ module.exports = {
               id: artist.id,
               name: artist.name,
               spotify_url: artist.spotify_url,
-              profile_image: artist.profile_image,
+              image_url: artist.image_url,
+              images: artist.images,
               created_at: artist.created_at,
               updated_at: artist.updated_at
             }));

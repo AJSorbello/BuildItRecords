@@ -95,11 +95,13 @@ module.exports = (sequelize) => {
     },
     release_id: {
       type: DataTypes.STRING,
-      allowNull: true,
+      allowNull: false,
       references: {
         model: 'releases',
         key: 'id'
-      }
+      },
+      onDelete: 'CASCADE',
+      onUpdate: 'CASCADE'
     },
     label_id: {
       type: DataTypes.STRING,
@@ -107,7 +109,9 @@ module.exports = (sequelize) => {
       references: {
         model: 'labels',
         key: 'id'
-      }
+      },
+      onDelete: 'CASCADE',
+      onUpdate: 'CASCADE'
     },
     remixer_id: {
       type: DataTypes.STRING,

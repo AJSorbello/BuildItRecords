@@ -58,9 +58,9 @@ const logger = require('../utils/logger');
  *           type: object
  *           $ref: '#/components/schemas/Album'
  *           description: Track album
- *         duration_ms:
+ *         duration:
  *           type: integer
- *           description: Track duration in milliseconds
+ *           description: Track duration in seconds
  *         popularity:
  *           type: integer
  *           description: Track popularity
@@ -204,40 +204,103 @@ const limiter = rateLimit({
 router.use(limiter);
 
 // Helper function to format track data
-const formatTrackData = (spotifyData) => ({
-    id: spotifyData.id,
-    artists: spotifyData.artists.map(artist => ({
-        id: artist.id,
-        name: artist.name,
-        profile_image: artist.images?.[0]?.url,
-        spotify_url: artist.external_urls?.spotify,
-        spotify_uri: artist.uri
-    })),
-    name: spotifyData.name,
-    album: {
-        id: spotifyData.album.id,
-        name: spotifyData.album.name,
-        label: spotifyData.album.label || 'Unknown Label',
-        images: spotifyData.album.images?.map(img => ({
-            url: img.url,
-            height: img.height || 0,
-            width: img.width || 0
-        })),
-        release_date: spotifyData.album.release_date,
-        artists: spotifyData.album.artists?.map(artist => ({
-            id: artist.id,
-            name: artist.name,
-            profile_image: artist.images?.[0]?.url,
-            spotify_url: artist.external_urls?.spotify,
-            spotify_uri: artist.uri
-        }))
-    },
-    duration_ms: spotifyData.duration_ms,
-    popularity: spotifyData.popularity,
-    preview_url: spotifyData.preview_url,
-    external_urls: spotifyData.external_urls,
-    cached_at: Date.now()
-});
+const formatTrackData = (data) => {
+    if (!data) {
+        logger.error('Received null or undefined data in formatTrackData');
+        return null;
+    }
+
+    if (!data.id) {
+        logger.error('Track data missing required id field:', data);
+        return null;
+    }
+
+    try {
+        // Check if this is a database record or Spotify data
+        const isSpotifyData = !data.release && data.album;
+        
+        // Helper to safely map artist data
+        const mapArtist = (artist) => {
+            if (!artist) return null;
+            try {
+                return {
+                    id: artist.id || 'unknown',
+                    name: artist.name || 'Unknown Artist',
+                    image_url: artist.image_url || artist.images?.[0]?.url || null,
+                    images: artist.images || [],
+                    spotify_url: artist.spotify_url || artist.external_urls?.spotify || null,
+                    spotify_uri: artist.spotify_uri || artist.uri || null
+                };
+            } catch (err) {
+                logger.error('Error mapping artist:', err, { artist });
+                return null;
+            }
+        };
+
+        // Helper to safely map artists array
+        const mapArtists = (artists) => {
+            if (!Array.isArray(artists)) {
+                logger.warn('Artists is not an array:', artists);
+                return [];
+            }
+            return artists.filter(artist => artist).map(mapArtist).filter(artist => artist);
+        };
+
+        // Helper to safely map release/album data
+        const mapRelease = (release) => {
+            if (!release) return null;
+            try {
+                return {
+                    id: release.id || null,
+                    name: release.name || release.title || 'Unknown Album',
+                    artwork_url: release.artwork_url || release.images?.[0]?.url || null,
+                    images: release.images || [],
+                    release_date: release.release_date || null,
+                    spotify_url: release.spotify_url || release.external_urls?.spotify || null,
+                    spotify_uri: release.spotify_uri || release.uri || null,
+                    artists: mapArtists(release.artists || [])
+                };
+            } catch (err) {
+                logger.error('Error mapping release:', err, { release });
+                return null;
+            }
+        };
+
+        const formattedTrack = {
+            id: data.id,
+            name: data.name || 'Unknown Track',
+            duration: data.duration || 0,
+            track_number: data.track_number || 0,
+            disc_number: data.disc_number || 1,
+            isrc: data.isrc || null,
+            preview_url: data.preview_url || null,
+            spotify_url: data.spotify_url || data.external_urls?.spotify || null,
+            spotify_uri: data.spotify_uri || data.uri || null,
+            release: mapRelease(isSpotifyData ? data.album : data.release),
+            artists: mapArtists(data.artists || []),
+            status: data.status || 'published',
+            external_urls: data.external_urls || {},
+            type: data.type || 'track',
+            explicit: data.explicit || false,
+            popularity: data.popularity || 0,
+            available_markets: data.available_markets || [],
+            is_local: data.is_local || false,
+            created_at: data.created_at || new Date().toISOString(),
+            updated_at: data.updated_at || new Date().toISOString()
+        };
+
+        // Validate the formatted track has required fields
+        if (!formattedTrack.id || !formattedTrack.name) {
+            logger.error('Formatted track missing required fields:', formattedTrack);
+            return null;
+        }
+
+        return formattedTrack;
+    } catch (error) {
+        logger.error('Error in formatTrackData:', error, { data });
+        return null;
+    }
+};
 
 // Helper function to get Spotify access token
 async function getSpotifyToken() {
@@ -399,97 +462,164 @@ async function getTrackWithCache(trackId, redisService) {
  *         $ref: '#/components/responses/Error'
  */
 router.get('/', async (req, res) => {
-  const requestStart = Date.now();
-  logger.info('Starting GET /tracks request');
-  
-  // Set a timeout for the response
-  res.setTimeout(10000, () => {
-    logger.error('Request timeout after 10 seconds');
-    res.status(503).json({ error: 'Request timed out' });
-  });
-
   try {
-    const { label, sort = 'created_at' } = req.query;
-    logger.info(`[${Date.now() - requestStart}ms] Query params:`, { label, sort });
+    const labelId = req.query.label;
+    const artistId = req.query.artist;
+    const albumId = req.query.album;
+    const search = req.query.search;
+    const sort = req.query.sort || 'created_at';
 
-    // First check if label exists
-    if (label) {
-      logger.info(`[${Date.now() - requestStart}ms] Checking label existence`);
-      const labelExists = await Label.findByPk(label);
-      if (!labelExists) {
-        logger.info(`Label ${label} not found`);
-        return res.status(404).json({ error: 'Label not found' });
-      }
-    }
+    logger.info('GET /tracks request:', { labelId, artistId, albumId, search, sort });
 
-    // Simple query without associations first
-    logger.info(`[${Date.now() - requestStart}ms] Starting basic track query`);
-    const basicQuery = {
-      where: label ? { label_id: label } : {},
-      order: [['created_at', 'DESC']],
-      limit: 50, // Add pagination to prevent large result sets
-      raw: true // Get raw data for faster query
-    };
-
-    const { count } = await Track.findAndCountAll(basicQuery);
-    logger.info(`[${Date.now() - requestStart}ms] Found ${count} tracks`);
-
-    if (count === 0) {
-      logger.info('No tracks found, returning empty result');
-      return res.json({ tracks: [], total: 0 });
-    }
-
-    // Now get tracks with associations
-    logger.info(`[${Date.now() - requestStart}ms] Fetching tracks with associations`);
-    const tracksWithAssociations = await Track.findAll({
-      where: basicQuery.where,
-      order: basicQuery.order,
-      limit: basicQuery.limit,
-      include: [
-        {
+    let where = {};
+    let include = [
+      {
+        model: Artist,
+        as: 'artists',
+        required: false,
+        through: { attributes: [] }, // Don't include join table attributes
+        attributes: ['id', 'name', 'spotify_url', 'image_url', 'images']
+      },
+      {
+        model: Release,
+        as: 'release',
+        required: false,
+        attributes: ['id', 'name', 'title', 'release_date', 'artwork_url', 'images', 'spotify_url', 'spotify_uri', 'status'],
+        include: [{
           model: Artist,
           as: 'artists',
-          through: { attributes: [] },
-          required: false
-        },
-        {
-          model: Release,
-          as: 'release',
-          required: false
-        },
-        {
-          model: Label,
-          as: 'label',
-          required: false
+          through: { attributes: [] }, // Don't include join table attributes
+          attributes: ['id', 'name', 'spotify_url', 'image_url', 'images']
+        }]
+      }
+    ];
+    
+    if (labelId) {
+      try {
+        // Get the actual label ID from the database
+        const label = await Label.findOne({ 
+          where: { 
+            [Op.or]: [
+              { id: labelId },
+              { slug: labelId },
+              { name: { [Op.iLike]: labelId } }
+            ]
+          },
+          attributes: ['id', 'name', 'display_name', 'slug']
+        });
+        
+        if (!label) {
+          logger.warn('Label not found:', labelId);
+          return res.status(404).json({ error: 'Label not found', label: labelId });
         }
-      ],
-      nest: true // Nest the associated models for cleaner output
-    });
-
-    logger.info(`[${Date.now() - requestStart}ms] Successfully fetched tracks with associations`);
+        
+        where.label_id = label.id;
+        logger.info('Found label:', { id: label.id, name: label.name, slug: label.slug });
+      } catch (labelError) {
+        logger.error('Error finding label:', labelError);
+        throw labelError;
+      }
+    }
     
-    // Send response
-    const response = {
-      tracks: tracksWithAssociations,
-      total: count,
-      queryTime: Date.now() - requestStart
-    };
-    
-    logger.info(`[${Date.now() - requestStart}ms] Sending response`);
-    res.json(response);
+    if (artistId) {
+      include[0].where = { id: artistId };
+      include[0].required = true;
+      logger.info('Filtering by artist:', artistId);
+    }
+    if (albumId) {
+      include[1].where = { id: albumId };
+      include[1].required = true;
+      logger.info('Filtering by album:', albumId);
+    }
+    if (search) {
+      where[Op.or] = [
+        { name: { [Op.iLike]: `%${search}%` } },
+        { '$artists.name$': { [Op.iLike]: `%${search}%` } }
+      ];
+      logger.info('Searching for:', search);
+    }
 
+    const startTime = Date.now();
+    
+    try {
+      logger.info('Executing track query with:', { 
+        where, 
+        include: include.map(inc => ({
+          model: inc.model.name,
+          as: inc.as,
+          required: inc.required
+        })),
+        order: [[sort, 'DESC']]
+      });
+
+      const [tracks, total] = await Promise.all([
+        Track.findAll({
+          where,
+          include,
+          order: [[sort, 'DESC']],
+          limit: null
+        }),
+        Track.count({ where, include, distinct: true })
+      ]);
+
+      logger.info('Found tracks:', { count: tracks.length, total });
+
+      // Log the first track's raw data for debugging
+      if (tracks.length > 0) {
+        const firstTrack = tracks[0].get({ plain: true });
+        logger.info('First track raw data:', JSON.stringify(firstTrack, null, 2));
+      }
+
+      const formattedTracks = tracks
+        .map(track => {
+          try {
+            const plainTrack = track.get({ plain: true });
+            
+            if (!plainTrack || !plainTrack.id) {
+              logger.error('Invalid track data:', plainTrack);
+              return null;
+            }
+
+            const formattedTrack = formatTrackData(plainTrack);
+            if (!formattedTrack) {
+              logger.error('Failed to format track:', { 
+                id: plainTrack.id, 
+                name: plainTrack.name,
+                hasArtists: !!plainTrack.artists,
+                hasRelease: !!plainTrack.release
+              });
+              return null;
+            }
+            return formattedTrack;
+          } catch (err) {
+            logger.error('Error processing track:', err, { 
+              trackId: track?.id,
+              error: err.message,
+              stack: err.stack 
+            });
+            return null;
+          }
+        })
+        .filter(track => track !== null);
+
+      const endTime = Date.now();
+      logger.info(`Request processed in ${endTime - startTime}ms`);
+
+      return res.json({
+        tracks: formattedTracks,
+        total: total,
+        count: formattedTracks.length
+      });
+    } catch (queryError) {
+      logger.error('Database query error:', queryError);
+      throw queryError;
+    }
   } catch (error) {
-    const errorTime = Date.now() - requestStart;
-    logger.error(`[${errorTime}ms] Error fetching tracks:`, {
-      message: error.message,
-      stack: error.stack,
-      sql: error.sql,
-      queryTime: errorTime
-    });
-    res.status(500).json({ 
+    logger.error('Error fetching tracks:', error);
+    return res.status(500).json({ 
       error: 'Failed to fetch tracks', 
       details: error.message,
-      queryTime: errorTime
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 });
@@ -658,43 +788,59 @@ router.post('/import', async (req, res) => {
 // Helper function to import tracks from Spotify
 async function importTracksFromSpotify(token, spotifyPlaylistId) {
     try {
-        // Get tracks from playlist
-        const playlistResponse = await makeSpotifyRequest(
-            `https://api.spotify.com/v1/playlists/${spotifyPlaylistId}/tracks?limit=100`,
-            { headers: { Authorization: `Bearer ${token}` } }
-        );
-
         const tracks = [];
-        for (const item of playlistResponse.data.items) {
-            if (!item.track) continue;
+        let offset = 0;
+        let hasMore = true;
+        const limit = 100; // Maximum allowed by Spotify API
 
-            // Get full artist details for each track
-            const trackArtists = await Promise.all(
-                item.track.artists.map(async (artist) => {
-                    const artistResponse = await makeSpotifyRequest(
-                        `https://api.spotify.com/v1/artists/${artist.id}`,
-                        { headers: { Authorization: `Bearer ${token}` } }
-                    );
-                    return artistResponse.data;
-                })
-            );
-
-            // Get full album details
-            const albumResponse = await makeSpotifyRequest(
-                `https://api.spotify.com/v1/albums/${item.track.album.id}`,
+        while (hasMore) {
+            // Get tracks from playlist with pagination
+            const playlistResponse = await makeSpotifyRequest(
+                `https://api.spotify.com/v1/playlists/${spotifyPlaylistId}/tracks?limit=${limit}&offset=${offset}`,
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
-            // Combine the data
-            const trackWithFullDetails = {
-                ...item.track,
-                artists: trackArtists,
-                album: albumResponse.data
-            };
+            if (!playlistResponse.data.items || playlistResponse.data.items.length === 0) {
+                hasMore = false;
+                continue;
+            }
 
-            tracks.push(trackWithFullDetails);
+            for (const item of playlistResponse.data.items) {
+                if (!item.track) continue;
+
+                // Get full artist details for each track
+                const trackArtists = await Promise.all(
+                    item.track.artists.map(async (artist) => {
+                        const artistResponse = await makeSpotifyRequest(
+                            `https://api.spotify.com/v1/artists/${artist.id}`,
+                            { headers: { Authorization: `Bearer ${token}` } }
+                        );
+                        return artistResponse.data;
+                    })
+                );
+
+                // Get full album details
+                const albumResponse = await makeSpotifyRequest(
+                    `https://api.spotify.com/v1/albums/${item.track.album.id}`,
+                    { headers: { Authorization: `Bearer ${token}` } }
+                );
+
+                // Combine the data
+                const trackWithFullDetails = {
+                    ...item.track,
+                    artists: trackArtists,
+                    album: albumResponse.data
+                };
+
+                tracks.push(trackWithFullDetails);
+            }
+
+            // Update offset and check if we have more tracks
+            offset += playlistResponse.data.items.length;
+            hasMore = playlistResponse.data.items.length === limit;
         }
 
+        logger.info(`Imported ${tracks.length} tracks from Spotify playlist`);
         return tracks;
     } catch (error) {
         logger.error('Error importing tracks from Spotify:', error);
@@ -703,34 +849,69 @@ async function importTracksFromSpotify(token, spotifyPlaylistId) {
 }
 
 // Helper function to save track to database
-async function saveTrackToDatabase(track, labelId) {
-    const existingTrack = await Track.findByPk(track.id);
-    if (existingTrack) {
-        await existingTrack.update({
-            name: track.name,
-            artists: track.artists,
-            album: track.album,
-            albumCover: track.albumCover || track.artwork_url,
-            releaseDate: track.releaseDate || track.release_date,
-            spotifyUrl: track.spotifyUrl,
-            preview_url: track.preview_url,
-            label_id: labelId
-        });
-    } else {
-        await Track.create({
+async function saveTrackToDatabase(track, labelId, releaseId = null) {
+    try {
+        const existingTrack = await Track.findOne({ where: { id: track.id } });
+        
+        const trackData = {
             id: track.id,
             name: track.name,
-            artists: track.artists,
-            album: track.album,
-            albumCover: track.albumCover || track.artwork_url,
-            releaseDate: track.releaseDate || track.release_date,
-            spotifyUrl: track.spotifyUrl,
+            duration: track.duration_ms,
+            track_number: track.track_number,
+            disc_number: track.disc_number,
+            isrc: track.external_ids?.isrc,
             preview_url: track.preview_url,
-            label_id: labelId
-        });
-    }
+            spotify_url: track.external_urls?.spotify,
+            spotify_uri: track.uri,
+            release_id: releaseId || track.album?.id,
+            label_id: labelId,
+            status: track.status || 'published',  // Default to published
+            type: track.type || 'track',
+            explicit: track.explicit || false,
+            popularity: track.popularity || 0,
+            available_markets: track.available_markets || [],
+            is_local: track.is_local || false,
+            external_urls: track.external_urls || {}
+        };
 
-    return track;
+        if (existingTrack) {
+            await existingTrack.update(trackData);
+            logger.info(`Updated track: ${track.name}`);
+        } else {
+            await Track.create(trackData);
+            logger.info(`Created track: ${track.name}`);
+        }
+
+        // Process artists
+        if (track.artists?.length > 0) {
+            for (const artist of track.artists) {
+                const [artistRecord] = await Artist.findOrCreate({
+                    where: { id: artist.id },
+                    defaults: {
+                        id: artist.id,
+                        name: artist.name,
+                        spotify_url: artist.external_urls?.spotify,
+                        spotify_uri: artist.uri,
+                        image_url: artist.images?.[0]?.url,
+                        images: artist.images || [],
+                        label_id: labelId
+                    }
+                });
+
+                await TrackArtist.findOrCreate({
+                    where: {
+                        track_id: track.id,
+                        artist_id: artistRecord.id
+                    }
+                });
+            }
+        }
+
+        return true;
+    } catch (error) {
+        logger.error('Error saving track to database:', error);
+        throw error;
+    }
 }
 
 /**

@@ -36,13 +36,22 @@ export interface ImportLog {
   importedAt: string;
 }
 
-// Get tracks by label
-export const getTracks = async (token: string, labelId: string): Promise<Track[]> => {
-  const response = await fetch(`${API_URL}/tracks/${labelId}`, {
-    headers: {
-      'Authorization': `Bearer ${token}`
+// Get tracks by label with pagination
+export const getTracks = async (
+  token: string,
+  labelId: string,
+  page: number = 1,
+  limit: number = 50
+): Promise<{ tracks: Track[]; total: number; offset: number; limit: number }> => {
+  const offset = (page - 1) * limit;
+  const response = await fetch(
+    `${API_URL}/tracks?label=${labelId}&offset=${offset}&limit=${limit}`,
+    {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
     }
-  });
+  );
 
   if (!response.ok) {
     throw new Error('Failed to fetch tracks');

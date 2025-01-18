@@ -106,7 +106,7 @@ async function importTracksForLabel(labelId) {
               spotify_uri: release.uri,
               label_id: labelId,
               total_tracks: release.total_tracks,
-              status: 'active'
+              status: 'published'  // Set default status to published for imported releases
             }, { transaction });
             logger.info(`Created new release: ${release.name}`);
           } else {

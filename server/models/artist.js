@@ -50,10 +50,6 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: true,
     },
-    profile_image: {
-      type: DataTypes.STRING,
-      allowNull: true
-    },
     spotify_uri: {
       type: DataTypes.STRING,
       allowNull: true,
@@ -71,6 +67,11 @@ module.exports = (sequelize, DataTypes) => {
       validate: {
         isUrl: true
       }
+    },
+    images: {
+      type: DataTypes.JSONB,
+      allowNull: true,
+      defaultValue: []
     },
     label_id: {
       type: DataTypes.STRING,
