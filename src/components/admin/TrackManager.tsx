@@ -46,8 +46,13 @@ const TrackManager: React.FC<TrackManagerProps> = ({
   const [expandedTrack, setExpandedTrack] = useState<string | null>(null);
 
   const getArtistNames = (track: Track): string => {
-    if (!track.artists) return 'Unknown Artist';
-    return track.artists.map(artist => artist.name || 'Unknown Artist').join(', ');
+    const artists = track.artists?.length ? track.artists : track.release?.artists;
+    if (!artists?.length) return 'Unknown Artist';
+    return artists.map(artist => artist.name || 'Unknown Artist').join(', ');
+  };
+
+  const getArtists = (track: Track) => {
+    return track.artists?.length ? track.artists : track.release?.artists || [];
   };
 
   const formatDuration = (ms: number | undefined): string => {
@@ -164,7 +169,7 @@ const TrackManager: React.FC<TrackManagerProps> = ({
                     </TableCell>
                     <TableCell>
                       <Box display="flex" alignItems="center" gap={1}>
-                        {track?.artists?.map((artist) => (
+                        {getArtists(track).map((artist) => (
                           <Box key={artist.id} display="flex" alignItems="center" gap={1}>
                             {artist.profile_image && (
                               <img
@@ -260,7 +265,7 @@ const TrackManager: React.FC<TrackManagerProps> = ({
                   </TableCell>
                   <TableCell>
                     <Box display="flex" alignItems="center" gap={1}>
-                      {releaseTracks[0]?.artists?.map((artist) => (
+                      {getArtists(releaseTracks[0]).map((artist) => (
                         <Box key={artist.id} display="flex" alignItems="center" gap={1}>
                           {artist.profile_image && (
                             <img
@@ -325,7 +330,7 @@ const TrackManager: React.FC<TrackManagerProps> = ({
                                 </TableCell>
                                 <TableCell width={COLUMN_WIDTHS.artists}>
                                   <Box display="flex" alignItems="center" gap={1}>
-                                    {track.artists?.map((artist) => (
+                                    {getArtists(track).map((artist) => (
                                       <Box key={artist.id} display="flex" alignItems="center" gap={1}>
                                         {artist.profile_image && (
                                           <img

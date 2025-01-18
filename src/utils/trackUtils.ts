@@ -1,7 +1,7 @@
-import type { Track, TrackDetails } from '../types/track';
+import type { Track, TrackDetails, Artist as TrackArtist } from '../types/track';
 import type { Artist } from '../types/artist';
 import type { Album } from '../types/album';
-import type { SpotifyTrack, SpotifyArtist, SpotifyAlbum, SpotifyImage, SpotifyExternalUrls, SpotifyExternalIds } from '../types/spotify';
+import type { SpotifyTrack, SpotifyArtist, SpotifyAlbum } from '../types/spotify';
 import type { RecordLabelId } from '../types/labels';
 import { RECORD_LABELS } from '../constants/labels';
 import { spotifyService } from '../services/SpotifyService';
@@ -25,90 +25,85 @@ export const isTrack = (obj: any): obj is Track => {
 };
 
 export const formatDuration = (ms: number): string => {
+  if (ms <= 0) return '0:00';
   const minutes = Math.floor(ms / 60000);
   const seconds = Math.floor((ms % 60000) / 1000);
   return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 };
 
-const convertSpotifyTrackToTrackDetails = (spotifyTrack: SpotifyTrack): TrackDetails => {
+const convertSpotifyTrackToTrack = (spotifyTrack: SpotifyTrack): Track => {
   return {
     id: spotifyTrack.id,
     name: spotifyTrack.name,
     artists: spotifyTrack.artists.map(artist => ({
       id: artist.id,
       name: artist.name,
-      uri: artist.uri
+      external_urls: artist.external_urls,
+      uri: artist.uri,
+      type: 'artist',
+      images: artist.images || [],
+      followers: artist.followers || { href: null, total: 0 },
+      genres: artist.genres || [],
+      popularity: artist.popularity || 0
     })),
-    album: {
+    duration: spotifyTrack.duration_ms,
+    track_number: spotifyTrack.track_number,
+    disc_number: spotifyTrack.disc_number,
+    preview_url: spotifyTrack.preview_url,
+    spotify_url: spotifyTrack.external_urls.spotify,
+    spotify_uri: spotifyTrack.uri,
+    release: {
       id: spotifyTrack.album.id,
       name: spotifyTrack.album.name,
       release_date: spotifyTrack.album.release_date,
-      images: spotifyTrack.album.images,
-      uri: spotifyTrack.album.uri
+      images: spotifyTrack.album.images?.map(img => ({
+        url: img.url,
+        height: img.height || 0,
+        width: img.width || 0
+      })) || [],
+      external_urls: spotifyTrack.album.external_urls,
+      uri: spotifyTrack.album.uri,
+      artists: spotifyTrack.album.artists.map(artist => ({
+        id: artist.id,
+        name: artist.name,
+        external_urls: artist.external_urls,
+        uri: artist.uri,
+        type: 'artist',
+        images: artist.images || [],
+        followers: artist.followers || { href: null, total: 0 },
+        genres: artist.genres || [],
+        popularity: artist.popularity || 0
+      })),
+      total_tracks: spotifyTrack.album.total_tracks,
+      label_id: 'buildit-records' // Default to main label
     },
-    duration_ms: spotifyTrack.duration_ms,
-    uri: spotifyTrack.uri,
-    preview_url: spotifyTrack.preview_url
+    created_at: new Date(),
+    updated_at: new Date()
   };
 };
-
-export const formatSpotifyTrack = (spotifyTrack: SpotifyTrack): TrackDetails => ({
-  id: spotifyTrack.id,
-  name: spotifyTrack.name,
-  artists: spotifyTrack.artists.map(formatSpotifyArtist),
-  album: formatSpotifyAlbum(spotifyTrack.album),
-  duration_ms: spotifyTrack.duration_ms,
-  preview_url: spotifyTrack.preview_url,
-  external_urls: spotifyTrack.external_urls,
-  external_ids: spotifyTrack.external_ids,
-  uri: spotifyTrack.uri,
-  type: 'track',
-  track_number: spotifyTrack.track_number,
-  disc_number: spotifyTrack.disc_number,
-  isrc: spotifyTrack.external_ids.isrc || '',
-  images: spotifyTrack.album.images,
-  explicit: spotifyTrack.explicit,
-  popularity: spotifyTrack.popularity,
-  available_markets: spotifyTrack.available_markets || [],
-  is_local: spotifyTrack.is_local || false
-});
 
 export const formatSpotifyArtist = (artist: SpotifyArtist): Artist => ({
   id: artist.id,
   name: artist.name,
-  images: artist.images,
   external_urls: artist.external_urls,
   uri: artist.uri,
-  type: artist.type,
-  followers: artist.followers,
-  genres: artist.genres,
-  popularity: artist.popularity
-});
-
-export const formatSpotifyAlbum = (album: SpotifyAlbum): Album => ({
-  id: album.id,
-  name: album.name,
-  artists: album.artists.map(formatSpotifyArtist),
-  images: album.images,
-  release_date: album.release_date,
-  release_date_precision: album.release_date_precision,
-  total_tracks: album.total_tracks,
-  type: album.type,
-  external_urls: album.external_urls,
-  external_ids: album.external_ids,
-  uri: album.uri
+  type: 'artist',
+  images: artist.images || [],
+  followers: artist.followers || { href: null, total: 0 },
+  genres: artist.genres || [],
+  popularity: artist.popularity || 0
 });
 
 export const getTrackLabel = (track: Track): RecordLabelId | undefined => {
-  return track.label;
+  return track.release?.label_id as RecordLabelId;
 };
 
-export const getTracksByLabel = async (label: RecordLabelId): Promise<Track[]> => {
+export const getTracksByLabel = async (labelId: RecordLabelId): Promise<Track[]> => {
   try {
-    const tracks = await spotifyService.getPlaylistTracks(label);
-    return tracks.map(track => convertSpotifyTrackToTrackDetails(track));
+    const tracks = await spotifyService.getPlaylistTracks(labelId);
+    return tracks.map(track => convertSpotifyTrackToTrack(track));
   } catch (error) {
-    console.error(`Error getting tracks for label ${label}:`, error);
+    console.error(`Error getting tracks for label ${labelId}:`, error);
     return [];
   }
 };
@@ -123,13 +118,10 @@ export const clearTrackCache = () => {
 
 export const refreshTrackCache = async (): Promise<void> => {
   try {
-    const labels = RECORD_LABELS;
     await Promise.all(
-      labels.map(async (label) => {
-        const labelId = label.id || label.name;
-        const spotifyTracks = await spotifyService.getTracksByLabel(labelId);
-        const tracks = spotifyTracks.map(formatSpotifyTrack);
-        trackCache.set(labelId, tracks);
+      Object.values(RECORD_LABELS).map(async (label: RecordLabel) => {
+        const tracks = await getTracksByLabel(label.id as RecordLabelId);
+        trackCache.set(label.id as RecordLabelId, tracks);
       })
     );
   } catch (error) {
@@ -142,33 +134,38 @@ export const getAllTracks = (): Track[] => {
 };
 
 export const searchTracks = (query: string): Track[] => {
-  const normalizedQuery = query.toLowerCase();
-  return getAllTracks().filter(track => 
-    track.name.toLowerCase().includes(normalizedQuery) ||
-    track.artists.some(artist => artist.name.toLowerCase().includes(normalizedQuery))
+  const tracks = getAllTracks();
+  const lowerQuery = query.toLowerCase();
+  return tracks.filter(track =>
+    track.name.toLowerCase().includes(lowerQuery) ||
+    track.artists?.some(artist => artist.name.toLowerCase().includes(lowerQuery))
   );
 };
 
 export const getTrackById = (id: string): Track | undefined => {
-  return getAllTracks().find(track => track.id === id);
+  const tracks = getAllTracks();
+  return tracks.find(track => track.id === id);
 };
 
 export const getTracksByArtist = (artistId: string): Track[] => {
-  return getAllTracks().filter(track => 
-    track.artists.some(artist => artist.id === artistId)
+  const tracks = getAllTracks();
+  return tracks.filter(track =>
+    track.artists?.some(artist => artist.id === artistId)
   );
 };
 
-export const getTracksByAlbum = (albumId: string): Track[] => {
-  return getAllTracks().filter(track => track.album && track.album.id === albumId);
+export const getTracksByAlbumId = (releaseId: string): Track[] => {
+  return getAllTracks().filter(track => track.release?.id === releaseId);
 };
 
 export const getTrackArtists = (track: Track): string => {
-  return track.artists.map(artist => artist.name).join(', ');
+  return track.artists?.map(artist => artist.name).join(', ') || 'Unknown Artist';
 };
 
-export const getTrackReleaseDate = (track: Track): string => {
-  return track.album.release_date || 'N/A';
+export const getTrackImage = (track: Track): string => {
+  if (!track.release) return PLACEHOLDER_IMAGE;
+  const release = track.release;
+  return release.images?.[0]?.url || PLACEHOLDER_IMAGE;
 };
 
 export const initializeTrackCache = async (): Promise<void> => {

@@ -154,16 +154,84 @@ class SpotifyService {
 
   public async getPlaylistTracks(playlistId: string): Promise<SpotifyTrack[]> {
     try {
-      interface PlaylistTracksResponse {
-        items: Array<{
-          track: SpotifyTrack;
-        }>;
+      const allTracks: SpotifyTrack[] = [];
+      let offset = 0;
+      const limit = 100; // Maximum allowed by Spotify API
+      
+      while (true) {
+        const response = await this.fetchFromSpotify<SpotifyPaging<{ track: SpotifyTrack }>>(
+          `/playlists/${playlistId}/tracks?offset=${offset}&limit=${limit}`
+        );
+
+        const tracks = response.items
+          .filter(item => item.track) // Filter out null tracks
+          .map(item => item.track);
+        
+        // Get full artist details for each track
+        const tracksWithArtistDetails = await Promise.all(
+          tracks.map(async (track) => {
+            const artistPromises = track.artists.map(artist => 
+              this.fetchFromSpotify<SpotifyArtist>(`/artists/${artist.id}`)
+            );
+            const fullArtists = await Promise.all(artistPromises);
+            return {
+              ...track,
+              artists: fullArtists
+            };
+          })
+        );
+        
+        allTracks.push(...tracksWithArtistDetails);
+
+        if (!response.next) break; // No more tracks to fetch
+        offset += limit;
       }
 
-      const data = await this.fetchFromSpotify<PlaylistTracksResponse>(`/playlists/${playlistId}/tracks`);
-      return data.items.map(item => item.track);
+      return allTracks;
     } catch (error) {
       console.error('Error getting playlist tracks:', error);
+      return [];
+    }
+  }
+
+  public async getAlbumTracks(albumId: string): Promise<SpotifyTrack[]> {
+    try {
+      const allTracks: SpotifyTrack[] = [];
+      let offset = 0;
+      const limit = 50;
+
+      // First get the full album details to get artist images
+      const albumDetails = await this.fetchFromSpotify<SpotifyAlbum>(`/albums/${albumId}`);
+      
+      while (true) {
+        const response = await this.fetchFromSpotify<SpotifyPaging<SpotifyTrack>>(
+          `/albums/${albumId}/tracks?offset=${offset}&limit=${limit}`
+        );
+
+        // Get full artist details for each track
+        const tracksWithArtistDetails = await Promise.all(
+          response.items.map(async (track) => {
+            const artistPromises = track.artists.map(artist => 
+              this.fetchFromSpotify<SpotifyArtist>(`/artists/${artist.id}`)
+            );
+            const fullArtists = await Promise.all(artistPromises);
+            return {
+              ...track,
+              album: albumDetails, // Include full album details with each track
+              artists: fullArtists
+            };
+          })
+        );
+        
+        allTracks.push(...tracksWithArtistDetails);
+
+        if (!response.next) break;
+        offset += limit;
+      }
+
+      return allTracks;
+    } catch (error) {
+      console.error('Error getting album tracks:', error);
       return [];
     }
   }

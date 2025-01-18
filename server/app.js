@@ -65,9 +65,8 @@ app.get('/callback', async (req, res) => {
 });
 
 // API Routes
-app.use('/api', apiRoutes); // Mount the main API router first
+app.use('/api', apiRoutes); // Mount all routes through the main API router
 app.use('/api/admin', adminRoutes);
-app.use('/api/tracks', trackRoutes);
 
 // Log all requests
 app.use((req, res, next) => {

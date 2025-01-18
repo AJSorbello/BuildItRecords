@@ -99,6 +99,14 @@ const logger = require('../utils/logger');
  *           items:
  *             $ref: '#/components/schemas/Image'
  *           description: Album images
+ *         release_date:
+ *           type: string
+ *           description: Album release date
+ *         artists:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/Artist'
+ *           description: Album artists
  *     Image:
  *       type: object
  *       properties:
@@ -200,14 +208,29 @@ const formatTrackData = (spotifyData) => ({
     id: spotifyData.id,
     artists: spotifyData.artists.map(artist => ({
         id: artist.id,
-        name: artist.name
+        name: artist.name,
+        profile_image: artist.images?.[0]?.url,
+        spotify_url: artist.external_urls?.spotify,
+        spotify_uri: artist.uri
     })),
     name: spotifyData.name,
     album: {
         id: spotifyData.album.id,
         name: spotifyData.album.name,
         label: spotifyData.album.label || 'Unknown Label',
-        images: spotifyData.album.images
+        images: spotifyData.album.images?.map(img => ({
+            url: img.url,
+            height: img.height || 0,
+            width: img.width || 0
+        })),
+        release_date: spotifyData.album.release_date,
+        artists: spotifyData.album.artists?.map(artist => ({
+            id: artist.id,
+            name: artist.name,
+            profile_image: artist.images?.[0]?.url,
+            spotify_url: artist.external_urls?.spotify,
+            spotify_uri: artist.uri
+        }))
     },
     duration_ms: spotifyData.duration_ms,
     popularity: spotifyData.popularity,
@@ -634,44 +657,105 @@ router.post('/import', async (req, res) => {
 
 // Helper function to import tracks from Spotify
 async function importTracksFromSpotify(token, spotifyPlaylistId) {
-  const response = await makeSpotifyRequest(`https://api.spotify.com/v1/playlists/${spotifyPlaylistId}/tracks`, {
-    method: 'GET',
-    headers: { 'Authorization': `Bearer ${token}` }
-  });
+    try {
+        // Get tracks from playlist
+        const playlistResponse = await makeSpotifyRequest(
+            `https://api.spotify.com/v1/playlists/${spotifyPlaylistId}/tracks?limit=100`,
+            { headers: { Authorization: `Bearer ${token}` } }
+        );
 
-  const tracks = response.data.items.map(item => item.track);
-  return tracks;
+        const tracks = [];
+        for (const item of playlistResponse.data.items) {
+            if (!item.track) continue;
+
+            // Get full artist details for each track
+            const trackArtists = await Promise.all(
+                item.track.artists.map(async (artist) => {
+                    const artistResponse = await makeSpotifyRequest(
+                        `https://api.spotify.com/v1/artists/${artist.id}`,
+                        { headers: { Authorization: `Bearer ${token}` } }
+                    );
+                    return artistResponse.data;
+                })
+            );
+
+            // Get full album details
+            const albumResponse = await makeSpotifyRequest(
+                `https://api.spotify.com/v1/albums/${item.track.album.id}`,
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            // Combine the data
+            const trackWithFullDetails = {
+                ...item.track,
+                artists: trackArtists,
+                album: albumResponse.data
+            };
+
+            tracks.push(trackWithFullDetails);
+        }
+
+        return tracks;
+    } catch (error) {
+        logger.error('Error importing tracks from Spotify:', error);
+        throw error;
+    }
 }
 
 // Helper function to save track to database
 async function saveTrackToDatabase(track, labelId) {
-  const existingTrack = await Track.findByPk(track.id);
-  if (existingTrack) {
-    await existingTrack.update({
-      name: track.name,
-      artists: track.artists,
-      album: track.album,
-      albumCover: track.albumCover || track.artwork_url,
-      releaseDate: track.releaseDate || track.release_date,
-      spotifyUrl: track.spotifyUrl,
-      preview_url: track.preview_url,
-      label_id: labelId
-    });
-  } else {
-    await Track.create({
-      id: track.id,
-      name: track.name,
-      artists: track.artists,
-      album: track.album,
-      albumCover: track.albumCover || track.artwork_url,
-      releaseDate: track.releaseDate || track.release_date,
-      spotifyUrl: track.spotifyUrl,
-      preview_url: track.preview_url,
-      label_id: labelId
-    });
-  }
+    const existingTrack = await Track.findByPk(track.id);
+    if (existingTrack) {
+        await existingTrack.update({
+            name: track.name,
+            artists: track.artists,
+            album: track.album,
+            albumCover: track.albumCover || track.artwork_url,
+            releaseDate: track.releaseDate || track.release_date,
+            spotifyUrl: track.spotifyUrl,
+            preview_url: track.preview_url,
+            label_id: labelId
+        });
+    } else {
+        await Track.create({
+            id: track.id,
+            name: track.name,
+            artists: track.artists,
+            album: track.album,
+            albumCover: track.albumCover || track.artwork_url,
+            releaseDate: track.releaseDate || track.release_date,
+            spotifyUrl: track.spotifyUrl,
+            preview_url: track.preview_url,
+            label_id: labelId
+        });
+    }
 
-  return track;
+    return track;
 }
+
+/**
+ * @swagger
+ * /tracks/cache:
+ *   delete:
+ *     summary: Clear track cache
+ *     tags: [Tracks]
+ *     responses:
+ *       200:
+ *         description: Cache cleared successfully
+ *       500:
+ *         $ref: '#/components/responses/Error'
+ */
+router.delete('/cache', async (req, res) => {
+    try {
+        // Clear all tracks from the database
+        await Track.destroy({ where: {} });
+        
+        logger.info('Track cache cleared successfully');
+        res.json({ message: 'Track cache cleared successfully' });
+    } catch (error) {
+        logger.error('Error clearing track cache:', error);
+        res.status(500).json({ error: 'Internal server error', details: error.message });
+    }
+});
 
 module.exports = router;
