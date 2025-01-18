@@ -2087,3 +2087,744 @@
 {"artistId":"5iD9mn2inFzm1u3jvr9egi","artistName":"Sloth","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebe159d550bb96ec697230d1ba","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:15:41.033Z"}
 {"artistId":"27wbFRzciZbJdFxvax9WcS","artistName":"Gruv1","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb3b0e90ad0a59492f08a93ef5","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:15:41.034Z"}
 {"level":"info","message":"Request processed in 52ms","timestamp":"2025-01-18T05:15:41.034Z"}
+{"label":"buildit-deep","level":"info","limit":500,"message":"GET /releases request:","offset":0,"timestamp":"2025-01-18T05:18:40.483Z"}
+{"label":"buildit-deep","level":"info","limit":500,"message":"GET /releases request:","offset":0,"timestamp":"2025-01-18T05:18:40.492Z"}
+{"label":"buildit-deep","level":"info","limit":500,"message":"Releases found:","offset":0,"returnedCount":15,"timestamp":"2025-01-18T05:18:40.663Z","totalCount":15}
+{"label":"buildit-deep","level":"info","limit":500,"message":"Releases found:","offset":0,"returnedCount":15,"timestamp":"2025-01-18T05:18:40.668Z","totalCount":15}
+{"labelId":"buildit-deep","level":"info","limit":100,"message":"GET /tracks request:","page":1,"sort":"created_at","timestamp":"2025-01-18T05:18:41.023Z"}
+{"labelId":"buildit-deep","level":"info","limit":100,"message":"GET /tracks request:","page":1,"sort":"created_at","timestamp":"2025-01-18T05:18:41.033Z"}
+{"id":"buildit-deep","level":"info","message":"Found label:","name":"Build It Deep","slug":"buildit-deep","timestamp":"2025-01-18T05:18:41.079Z"}
+{"include":[{"as":"artists","model":"Artist","required":false},{"as":"release","model":"Release","required":false}],"level":"info","limit":100,"message":"Executing track query with:","offset":0,"order":[["created_at","DESC"]],"timestamp":"2025-01-18T05:18:41.079Z","where":{"label_id":"buildit-deep"}}
+{"id":"buildit-deep","level":"info","message":"Found label:","name":"Build It Deep","slug":"buildit-deep","timestamp":"2025-01-18T05:18:41.089Z"}
+{"include":[{"as":"artists","model":"Artist","required":false},{"as":"release","model":"Release","required":false}],"level":"info","limit":100,"message":"Executing track query with:","offset":0,"order":[["created_at","DESC"]],"timestamp":"2025-01-18T05:18:41.090Z","where":{"label_id":"buildit-deep"}}
+{"count":20,"level":"info","message":"Found tracks:","page":1,"timestamp":"2025-01-18T05:18:41.166Z","total":20,"totalPages":1}
+{"level":"info","message":"First track raw data:","timestamp":"2025-01-18T05:18:41.166Z"}
+{"artistId":"0jI2Kfa17d4JoMdLerNpSx","artistName":"Chris Gresswell","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb93f28c21afa7520666129b97","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:41.166Z"}
+{"artistId":"5hKQVA377hopQ9HWPOseXF","artistName":"Aaron Jackson","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebabb02768bf1a2ca3e58994c0","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:41.167Z"}
+{"artistId":"4LRSqGtcsX0OUvT49pgz0d","artistName":"Frederique","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb7fc690f0328ec46f219e4763","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:41.167Z"}
+{"artistId":"5oznV9DBpgEcgx0UgKKbLk","artistName":"POSYDON","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebc5adcb4634c5450ccf7ded82","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:41.167Z"}
+{"artistId":"5oznV9DBpgEcgx0UgKKbLk","artistName":"POSYDON","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebc5adcb4634c5450ccf7ded82","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:41.167Z"}
+{"artistId":"4XKm2kHUPp6EixvzcoqjAe","artistName":"Helder Simz","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb8e12d0a45cc92e38d3223766","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:41.167Z"}
+{"artistId":"5oznV9DBpgEcgx0UgKKbLk","artistName":"POSYDON","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebc5adcb4634c5450ccf7ded82","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:41.167Z"}
+{"artistId":"5oznV9DBpgEcgx0UgKKbLk","artistName":"POSYDON","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebc5adcb4634c5450ccf7ded82","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:41.168Z"}
+{"artistId":"5sobBegrP0b7zmE5Edc8C6","artistName":"BELLO","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebb55187639322530b231271fa","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:41.168Z"}
+{"artistId":"2vp2B6RPA9twgYPKbPaffz","artistName":"im kyle","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebcf39085c4e9a83b38ce1beb4","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:41.168Z"}
+{"artistId":"04MM8XFEOwzjlytvJyYqOV","artistName":"Haelix","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb20d0a29a215520dacdd8a476","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:41.168Z"}
+{"artistId":"6ymXZSd6Qsf3snMm2CKxk4","artistName":"MarQ","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab67616d0000b2736c1d982efc5d03440d3bbde2","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:41.168Z"}
+{"artistId":"6ymXZSd6Qsf3snMm2CKxk4","artistName":"MarQ","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab67616d0000b2736c1d982efc5d03440d3bbde2","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:41.169Z"}
+{"artistId":"7tFPiRyBXpG4rLbwhRjO0b","artistName":"MARQ","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab67616d0000b27365d2b300439cd28847c7e37d","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:41.169Z"}
+{"artistId":"2SyuXmouzHiUSjNLNxRNiL","artistName":"Oxymoron","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab67616d0000b273ed9fabeb0a9de51d79011226","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:41.169Z"}
+{"artistId":"1e6Slp9egbeuYW1dXXZdHH","artistName":"Anmol Jhanb","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb6dbb1a3a18119d6d7ef848f3","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:41.169Z"}
+{"artistId":"6ZJASbg0cD5tdvQgqH5HLf","artistName":"Rance & Maff","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab67616d0000b2732a82ddfeadef084f080d40f8","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:41.169Z"}
+{"artistId":"5ze5OzM2pqb5HQyBqZBXq4","artistName":"Arky","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb4115f992e11606744734fe76","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:41.169Z"}
+{"artistId":"4iSvYDaOQy8BwojPxf8P6V","artistName":"Absintheminded","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebb5999fc08ae8fda79a60b8c2","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:41.170Z"}
+{"artistId":"7CsGIfqoq13hyMuyEcz7jR","artistName":"Hot Keys","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb3b44841ab2ff9faca274fe30","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:41.170Z"}
+{"level":"info","message":"Request processed in 91ms","timestamp":"2025-01-18T05:18:41.170Z"}
+{"count":20,"level":"info","message":"Found tracks:","page":1,"timestamp":"2025-01-18T05:18:41.179Z","total":20,"totalPages":1}
+{"level":"info","message":"First track raw data:","timestamp":"2025-01-18T05:18:41.179Z"}
+{"artistId":"0jI2Kfa17d4JoMdLerNpSx","artistName":"Chris Gresswell","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb93f28c21afa7520666129b97","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:41.179Z"}
+{"artistId":"5hKQVA377hopQ9HWPOseXF","artistName":"Aaron Jackson","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebabb02768bf1a2ca3e58994c0","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:41.179Z"}
+{"artistId":"4LRSqGtcsX0OUvT49pgz0d","artistName":"Frederique","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb7fc690f0328ec46f219e4763","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:41.179Z"}
+{"artistId":"5oznV9DBpgEcgx0UgKKbLk","artistName":"POSYDON","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebc5adcb4634c5450ccf7ded82","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:41.180Z"}
+{"artistId":"5oznV9DBpgEcgx0UgKKbLk","artistName":"POSYDON","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebc5adcb4634c5450ccf7ded82","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:41.180Z"}
+{"artistId":"4XKm2kHUPp6EixvzcoqjAe","artistName":"Helder Simz","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb8e12d0a45cc92e38d3223766","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:41.180Z"}
+{"artistId":"5oznV9DBpgEcgx0UgKKbLk","artistName":"POSYDON","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebc5adcb4634c5450ccf7ded82","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:41.180Z"}
+{"artistId":"5oznV9DBpgEcgx0UgKKbLk","artistName":"POSYDON","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebc5adcb4634c5450ccf7ded82","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:41.180Z"}
+{"artistId":"5sobBegrP0b7zmE5Edc8C6","artistName":"BELLO","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebb55187639322530b231271fa","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:41.180Z"}
+{"artistId":"2vp2B6RPA9twgYPKbPaffz","artistName":"im kyle","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebcf39085c4e9a83b38ce1beb4","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:41.180Z"}
+{"artistId":"04MM8XFEOwzjlytvJyYqOV","artistName":"Haelix","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb20d0a29a215520dacdd8a476","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:41.180Z"}
+{"artistId":"6ymXZSd6Qsf3snMm2CKxk4","artistName":"MarQ","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab67616d0000b2736c1d982efc5d03440d3bbde2","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:41.180Z"}
+{"artistId":"6ymXZSd6Qsf3snMm2CKxk4","artistName":"MarQ","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab67616d0000b2736c1d982efc5d03440d3bbde2","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:41.180Z"}
+{"artistId":"7tFPiRyBXpG4rLbwhRjO0b","artistName":"MARQ","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab67616d0000b27365d2b300439cd28847c7e37d","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:41.181Z"}
+{"artistId":"2SyuXmouzHiUSjNLNxRNiL","artistName":"Oxymoron","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab67616d0000b273ed9fabeb0a9de51d79011226","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:41.181Z"}
+{"artistId":"1e6Slp9egbeuYW1dXXZdHH","artistName":"Anmol Jhanb","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb6dbb1a3a18119d6d7ef848f3","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:41.181Z"}
+{"artistId":"6ZJASbg0cD5tdvQgqH5HLf","artistName":"Rance & Maff","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab67616d0000b2732a82ddfeadef084f080d40f8","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:41.181Z"}
+{"artistId":"5ze5OzM2pqb5HQyBqZBXq4","artistName":"Arky","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb4115f992e11606744734fe76","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:41.181Z"}
+{"artistId":"4iSvYDaOQy8BwojPxf8P6V","artistName":"Absintheminded","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebb5999fc08ae8fda79a60b8c2","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:41.181Z"}
+{"artistId":"7CsGIfqoq13hyMuyEcz7jR","artistName":"Hot Keys","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb3b44841ab2ff9faca274fe30","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:41.181Z"}
+{"level":"info","message":"Request processed in 92ms","timestamp":"2025-01-18T05:18:41.182Z"}
+{"label":"buildit-tech","level":"info","limit":500,"message":"GET /releases request:","offset":0,"timestamp":"2025-01-18T05:18:52.213Z"}
+{"label":"buildit-tech","level":"info","limit":500,"message":"Releases found:","offset":0,"returnedCount":55,"timestamp":"2025-01-18T05:18:52.315Z","totalCount":55}
+{"labelId":"buildit-tech","level":"info","limit":100,"message":"GET /tracks request:","page":1,"sort":"created_at","timestamp":"2025-01-18T05:18:52.395Z"}
+{"id":"buildit-tech","level":"info","message":"Found label:","name":"Build It Tech","slug":"buildit-tech","timestamp":"2025-01-18T05:18:52.411Z"}
+{"include":[{"as":"artists","model":"Artist","required":false},{"as":"release","model":"Release","required":false}],"level":"info","limit":100,"message":"Executing track query with:","offset":0,"order":[["created_at","DESC"]],"timestamp":"2025-01-18T05:18:52.412Z","where":{"label_id":"buildit-tech"}}
+{"count":75,"level":"info","message":"Found tracks:","page":1,"timestamp":"2025-01-18T05:18:52.484Z","total":75,"totalPages":1}
+{"level":"info","message":"First track raw data:","timestamp":"2025-01-18T05:18:52.485Z"}
+{"artistId":"5vMnh9zUMuyulSXf3xZ9T9","artistName":"Jay Peeki","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebbe70e93183bec497eea30648","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.489Z"}
+{"artistId":"5vMnh9zUMuyulSXf3xZ9T9","artistName":"Jay Peeki","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebbe70e93183bec497eea30648","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.490Z"}
+{"artistId":"66iu65cpuC4OTiT4fEItm6","artistName":"John Okins","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb5aba41e0b4d5dbbb3efb568a","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.490Z"}
+{"artistId":"5QHsjivcnbrjLu77fB8TZD","artistName":"Fatt Mox","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebda6b82f071dad29f9ffbe6b1","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.490Z"}
+{"artistId":"78CGbie7iFakO4pJaj6XRS","artistName":"Chango","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb1e66e456a27cc9ca24a4de58","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.490Z"}
+{"artistId":"7mXyW5kPIUrSRGkV0I9Ilo","artistName":"FeelGood","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb77dbde523925f73c8860f3e5","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.490Z"}
+{"artistId":"7B38d0XXdEY3vC5eddO6r6","artistName":"N1MA","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb4aca1b3563ab9ec6ac8ec975","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.490Z"}
+{"artistId":"5NCIFb4JfQobJI1V6tndrR","artistName":"Kelvin Richard","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb0f503b915e3ee062a2da3bd6","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.490Z"}
+{"artistId":"4dcyj8fp2rkzVxvXgvFAKV","artistName":"Colin Thomas","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebc22e97e2356a2d033692ee24","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.491Z"}
+{"artistId":"6yjsvVut7MsLmMiAfyNL5m","artistName":"Fatty","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb3fd91bd5e20766e8155fc088","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.491Z"}
+{"artistId":"6yjsvVut7MsLmMiAfyNL5m","artistName":"Fatty","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb3fd91bd5e20766e8155fc088","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.491Z"}
+{"artistId":"0gIwYJ6XYry8I7aK73eK3d","artistName":"Gouzy","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb9f6ecc553349d71b9e9276a2","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.491Z"}
+{"artistId":"0gIwYJ6XYry8I7aK73eK3d","artistName":"Gouzy","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb9f6ecc553349d71b9e9276a2","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.491Z"}
+{"artistId":"6nxRINEXiBbSs6TgTZZ4ae","artistName":"No Messin","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb002cf57243b3db4978addee3","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.491Z"}
+{"artistId":"6nxRINEXiBbSs6TgTZZ4ae","artistName":"No Messin","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb002cf57243b3db4978addee3","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.493Z"}
+{"artistId":"0Mu5RMSse8xbWBS54MLRoj","artistName":"Ruddek","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb40a30fb5b0a8cee1098dbf4d","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.493Z"}
+{"artistId":"0xhXLXPVNbgslNtqcjFLPp","artistName":"TUKKO","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab67616d0000b273f0d492be7ab5956e0e2da652","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.494Z"}
+{"artistId":"3sq5Tp1iuMLLoOyuve0lv9","artistName":"Ben Grime","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebbb265c8dd2a046e254957ebd","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.494Z"}
+{"artistId":"1ktwah2wyErs1Fon4eVgdm","artistName":"BARC","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb7ed4e66a90781d19cf5ee47f","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.494Z"}
+{"artistId":"5fU2v3rxLJ7GEI41LXiu0I","artistName":"Law Mark","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebe4ca854cbeea1b763cf66fcb","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.495Z"}
+{"artistId":"1FBSojGveT9qgrTyA948NX","artistName":"Vianna","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb7babc47f27262694de117e79","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.495Z"}
+{"artistId":"3rAjfCFCzit3Z6fvjobseY","artistName":"Jazzam","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebfc0681546fec29d69b5fd03c","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.495Z"}
+{"artistId":"0jpftZv0U3bs9msuaIMvQo","artistName":"MID LOW","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebdcc01f21ecada2dae661076c","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.495Z"}
+{"artistId":"0gIwYJ6XYry8I7aK73eK3d","artistName":"Gouzy","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb9f6ecc553349d71b9e9276a2","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.495Z"}
+{"artistId":"0GBjmaQp0SZZOqcJs370fp","artistName":"Low Control","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb849f4209d19ae22b23bbbbd8","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.496Z"}
+{"artistId":"0GBjmaQp0SZZOqcJs370fp","artistName":"Low Control","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb849f4209d19ae22b23bbbbd8","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.496Z"}
+{"artistId":"3lzArCKfwedfl9eQ6SZF90","artistName":"Cesar Green","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebd1d146520337791cc1a22dd8","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.496Z"}
+{"artistId":"3rAjfCFCzit3Z6fvjobseY","artistName":"Jazzam","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebfc0681546fec29d69b5fd03c","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.496Z"}
+{"artistId":"1e6Slp9egbeuYW1dXXZdHH","artistName":"Anmol Jhanb","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb6dbb1a3a18119d6d7ef848f3","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.496Z"}
+{"artistId":"1e6Slp9egbeuYW1dXXZdHH","artistName":"Anmol Jhanb","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb6dbb1a3a18119d6d7ef848f3","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.497Z"}
+{"artistId":"3if5MiqQs3F7rN98VuTKmk","artistName":"Misto Clean","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb84c3ca3a2c1ffe237b426bfb","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.497Z"}
+{"artistId":"6QSpwoXNHKuyxV43biHlYV","artistName":"Flo.Von","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb19ce52ea0892e3ddeae61a77","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.497Z"}
+{"artistId":"6QSpwoXNHKuyxV43biHlYV","artistName":"Flo.Von","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb19ce52ea0892e3ddeae61a77","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.497Z"}
+{"artistId":"5iFEvlgMAoGmUX1j7WEKbw","artistName":"VOILLA","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab67616d0000b273929338c8366001f21bda82f0","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.497Z"}
+{"artistId":"7ygRUv7YWkIbg8Ke3kYT27","artistName":"Tony H","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb3abfb4102cb04b7bbbef4d5d","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.498Z"}
+{"artistId":"3OuO8QdobGEBCj3CHLUbh1","artistName":"Lennon (BR)","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.498Z"}
+{"artistId":"4U56v6lNB6yTjBGsDOCtOa","artistName":"Frontside (BR)","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eba2549945bfc5419282e55a07","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.498Z"}
+{"artistId":"7lDZhKkcXxWZ9Wc7KhNkAr","artistName":"Resonant","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb16341ebf979593d5204815a7","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.499Z"}
+{"artistId":"34GLnyhEW9BVMfopBv6qkw","artistName":"Ravok","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb0e6168ddef60595c2a2f2e73","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.500Z"}
+{"artistId":"7sRMzxFQRRzFtOjAMFHjxY","artistName":"Litty Ritty","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebd496d23c73c32ffb1b41fda5","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.500Z"}
+{"artistId":"7sRMzxFQRRzFtOjAMFHjxY","artistName":"Litty Ritty","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebd496d23c73c32ffb1b41fda5","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.500Z"}
+{"artistId":"7EroDVPELCYcB8zyB2XN9F","artistName":"Sillaz","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb30a2861ca7ac827b926ae1d7","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.500Z"}
+{"artistId":"7EroDVPELCYcB8zyB2XN9F","artistName":"Sillaz","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb30a2861ca7ac827b926ae1d7","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.500Z"}
+{"artistId":"2cgkzW8bpOiL2JrndJYX0H","artistName":"BRST","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb96fd58732b8a3a2aa8d89da0","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.500Z"}
+{"artistId":"3LaTRYUZsXIhgwdfpQNHb8","artistName":"Zebob","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebf26bc80b79c1e267bb28a927","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.500Z"}
+{"artistId":"2l9bjRfEhr9BleTsYAJ4kc","artistName":"BURNTECH","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebaf79eebc91fff842bc64b517","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.500Z"}
+{"artistId":"2l9bjRfEhr9BleTsYAJ4kc","artistName":"BURNTECH","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebaf79eebc91fff842bc64b517","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.501Z"}
+{"artistId":"2Ygebw1ybw5wMSAb0ken6I","artistName":"THATSOUND","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebcbca2c2c822a7a337b2a77c7","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.501Z"}
+{"artistId":"4WDygc5eolM4SoNReygt0L","artistName":"Callum Mcintosh","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab67616d0000b273ca6810dc72e78f21dd4d5afb","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.501Z"}
+{"artistId":"7uU0VNTeJ6DUiLPQ3M0cRX","artistName":"Bess Maze","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebfd0f4d2bc8cc211b0f73fdb0","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.501Z"}
+{"artistId":"7uU0VNTeJ6DUiLPQ3M0cRX","artistName":"Bess Maze","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebfd0f4d2bc8cc211b0f73fdb0","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.501Z"}
+{"artistId":"21T0dUcy5Bgr2LUrJ8BNd9","artistName":"Danny Samaei","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb9aa49337b4e93f129df6251f","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.501Z"}
+{"artistId":"7r4vyumTIutC0JhYWnCswO","artistName":"Nick Siarom","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb4a7a359361eb8d578ef063d0","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.501Z"}
+{"artistId":"2qgl5yiniO2qykrPxMkCPz","artistName":"Lux Esto","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebbc6fecc946f08348cc13c5a4","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.501Z"}
+{"artistId":"5iD9mn2inFzm1u3jvr9egi","artistName":"Sloth","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebe159d550bb96ec697230d1ba","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.501Z"}
+{"artistId":"5iD9mn2inFzm1u3jvr9egi","artistName":"Sloth","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebe159d550bb96ec697230d1ba","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.501Z"}
+{"artistId":"4hCHGNjlHun0P8KOL4Qiww","artistName":"Tv_tv","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb2a779b2886e5ef5f8ec7374d","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.502Z"}
+{"artistId":"66iu65cpuC4OTiT4fEItm6","artistName":"John Okins","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb5aba41e0b4d5dbbb3efb568a","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.502Z"}
+{"artistId":"66iu65cpuC4OTiT4fEItm6","artistName":"John Okins","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb5aba41e0b4d5dbbb3efb568a","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.502Z"}
+{"artistId":"66iu65cpuC4OTiT4fEItm6","artistName":"John Okins","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb5aba41e0b4d5dbbb3efb568a","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.502Z"}
+{"artistId":"66iu65cpuC4OTiT4fEItm6","artistName":"John Okins","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb5aba41e0b4d5dbbb3efb568a","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.502Z"}
+{"artistId":"0xQr33cktuO31pKCEnau0I","artistName":"F-LIMA","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebca0f07f01cc0e10ac2637b36","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.502Z"}
+{"artistId":"3sq5Tp1iuMLLoOyuve0lv9","artistName":"Ben Grime","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebbb265c8dd2a046e254957ebd","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.502Z"}
+{"artistId":"5fU2v3rxLJ7GEI41LXiu0I","artistName":"Law Mark","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebe4ca854cbeea1b763cf66fcb","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.502Z"}
+{"artistId":"45D867pQvoG6qOU0Tbj97a","artistName":"Damn Square","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebeedbf5650624512ce239cccf","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.502Z"}
+{"artistId":"7dzgzs35v1uZo6FOFn1uxf","artistName":"Stackhouse (DJ)","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebea0b598cb51189e93904118e","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.503Z"}
+{"artistId":"5s7VM2QEv0CSEE1RwPAaBi","artistName":"CLAASSEN","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebf7fec9dacae138fe875e83da","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.503Z"}
+{"artistId":"5s7VM2QEv0CSEE1RwPAaBi","artistName":"CLAASSEN","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebf7fec9dacae138fe875e83da","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.503Z"}
+{"artistId":"1W5bUhcxwysNo9bUOHVEwy","artistName":"Loüis Pleîn","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebca419bfe321ab8bbb965bcad","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.503Z"}
+{"artistId":"1W9pJsla05m0YLC25BaPzW","artistName":"Caique Carvalho","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb9e424522d4c107a311574351","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.504Z"}
+{"artistId":"6QSpwoXNHKuyxV43biHlYV","artistName":"Flo.Von","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb19ce52ea0892e3ddeae61a77","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.506Z"}
+{"artistId":"6QSpwoXNHKuyxV43biHlYV","artistName":"Flo.Von","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb19ce52ea0892e3ddeae61a77","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.507Z"}
+{"artistId":"6QSpwoXNHKuyxV43biHlYV","artistName":"Flo.Von","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb19ce52ea0892e3ddeae61a77","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.507Z"}
+{"artistId":"5iD9mn2inFzm1u3jvr9egi","artistName":"Sloth","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebe159d550bb96ec697230d1ba","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.507Z"}
+{"artistId":"27wbFRzciZbJdFxvax9WcS","artistName":"Gruv1","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb3b0e90ad0a59492f08a93ef5","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:18:52.507Z"}
+{"level":"info","message":"Request processed in 96ms","timestamp":"2025-01-18T05:18:52.508Z"}
+{"level":"info","message":"Starting import for label:","timestamp":"2025-01-18T05:18:58.935Z"}
+{"level":"info","message":"Creating new SpotifyService instance","timestamp":"2025-01-18T05:18:58.935Z"}
+{"clientId":"✓","clientSecret":"✓","level":"info","message":"Initializing Spotify API with:","redirectUri":"http://localhost:19000/--/spotify-auth-callback","timestamp":"2025-01-18T05:18:58.936Z"}
+{"id":"buildit-tech","level":"info","message":"Found label:","name":"Build It Tech","timestamp":"2025-01-18T05:18:59.037Z"}
+{"level":"info","message":"Searching Spotify with query:","timestamp":"2025-01-18T05:18:59.046Z"}
+{"level":"info","message":"Refreshing Spotify access token...","timestamp":"2025-01-18T05:18:59.046Z"}
+{"level":"info","message":"Successfully refreshed Spotify token. Expires in: 3600 seconds","timestamp":"2025-01-18T05:18:59.389Z"}
+{"level":"info","message":"Searching albums with query:","timestamp":"2025-01-18T05:18:59.890Z"}
+{"level":"info","message":"Found albums:","query":"label:\"Build It Tech\"","returned":50,"timestamp":"2025-01-18T05:19:00.488Z","total":56}
+{"level":"info","message":"Found 50 potential releases","timestamp":"2025-01-18T05:19:00.488Z"}
+{"level":"info","message":"Fetching album by ID:","timestamp":"2025-01-18T05:19:00.989Z"}
+{"artists":["Bravery"],"label":"Build It Tech","level":"info","message":"Found album:","name":"Black Hole","timestamp":"2025-01-18T05:19:01.117Z"}
+{"id":"01wvvuj4LTCok4IldKvBkq","label":"Build It Tech","level":"info","message":"Found matching release:","name":"Black Hole","timestamp":"2025-01-18T05:19:01.117Z"}
+{"level":"info","message":"Fetching album by ID:","timestamp":"2025-01-18T05:19:01.618Z"}
+{"artists":["Sloth"],"label":"Build It Tech","level":"info","message":"Found album:","name":"Booty Clap","timestamp":"2025-01-18T05:19:01.741Z"}
+{"id":"0bgpOnS82nKL2pZBhwjaTc","label":"Build It Tech","level":"info","message":"Found matching release:","name":"Booty Clap","timestamp":"2025-01-18T05:19:01.741Z"}
+{"level":"info","message":"Fetching album by ID:","timestamp":"2025-01-18T05:19:02.242Z"}
+{"artists":["Caique Carvalho"],"label":"Build It Tech","level":"info","message":"Found album:","name":"Every day","timestamp":"2025-01-18T05:19:02.365Z"}
+{"id":"5B6t2F6IMIrN9fQAd5i76A","label":"Build It Tech","level":"info","message":"Found matching release:","name":"Every day","timestamp":"2025-01-18T05:19:02.365Z"}
+{"level":"info","message":"Fetching album by ID:","timestamp":"2025-01-18T05:19:02.866Z"}
+{"artists":["Loüis Pleîn"],"label":"Build It Tech","level":"info","message":"Found album:","name":"Que No Pare","timestamp":"2025-01-18T05:19:03.041Z"}
+{"id":"1TLmPyu0A2c1S9OAn0QYXz","label":"Build It Tech","level":"info","message":"Found matching release:","name":"Que No Pare","timestamp":"2025-01-18T05:19:03.041Z"}
+{"level":"info","message":"Fetching album by ID:","timestamp":"2025-01-18T05:19:03.542Z"}
+{"artists":["Flo.Von","Atty G"],"label":"Build It Tech","level":"info","message":"Found album:","name":"Let's Get It / Days EP","timestamp":"2025-01-18T05:19:03.672Z"}
+{"id":"1akiKWvuyDJqNqA8x9gooI","label":"Build It Tech","level":"info","message":"Found matching release:","name":"Let's Get It / Days EP","timestamp":"2025-01-18T05:19:03.672Z"}
+{"level":"info","message":"Fetching album by ID:","timestamp":"2025-01-18T05:19:04.173Z"}
+{"artists":["CLAASSEN"],"label":"Build It Tech","level":"info","message":"Found album:","name":"Handle It","timestamp":"2025-01-18T05:19:04.309Z"}
+{"id":"1VAZRQgwypSbcOnIBphrr1","label":"Build It Tech","level":"info","message":"Found matching release:","name":"Handle It","timestamp":"2025-01-18T05:19:04.309Z"}
+{"level":"info","message":"Fetching album by ID:","timestamp":"2025-01-18T05:19:04.810Z"}
+{"artists":["Stackhouse (DJ)"],"label":"Build It Tech","level":"info","message":"Found album:","name":"Sweat","timestamp":"2025-01-18T05:19:04.933Z"}
+{"id":"2iFhPV3i33kOfqQXuuX0XC","label":"Build It Tech","level":"info","message":"Found matching release:","name":"Sweat","timestamp":"2025-01-18T05:19:04.933Z"}
+{"level":"info","message":"Fetching album by ID:","timestamp":"2025-01-18T05:19:05.434Z"}
+{"artists":["Law Mark"],"label":"Build It Tech","level":"info","message":"Found album:","name":"Lonely","timestamp":"2025-01-18T05:19:05.561Z"}
+{"id":"36YPNTkO9YRXdtpHAOlkln","label":"Build It Tech","level":"info","message":"Found matching release:","name":"Lonely","timestamp":"2025-01-18T05:19:05.561Z"}
+{"level":"info","message":"Fetching album by ID:","timestamp":"2025-01-18T05:19:06.062Z"}
+{"artists":["Ben Grime"],"label":"Build It Tech","level":"info","message":"Found album:","name":"Feel It","timestamp":"2025-01-18T05:19:06.182Z"}
+{"id":"6eKpp5mstuSWwsQoLrVanF","label":"Build It Tech","level":"info","message":"Found matching release:","name":"Feel It","timestamp":"2025-01-18T05:19:06.183Z"}
+{"level":"info","message":"Fetching album by ID:","timestamp":"2025-01-18T05:19:06.726Z"}
+{"artists":["Bruno Mattos","F-LIMA"],"label":"Build It Tech","level":"info","message":"Found album:","name":"Bugatti","timestamp":"2025-01-18T05:19:06.875Z"}
+{"id":"0lOGY55VNTm62zdIp2njxu","label":"Build It Tech","level":"info","message":"Found matching release:","name":"Bugatti","timestamp":"2025-01-18T05:19:06.875Z"}
+{"level":"info","message":"Fetching album by ID:","timestamp":"2025-01-18T05:19:07.377Z"}
+{"artists":["Damn Square"],"label":"Build It Tech","level":"info","message":"Found album:","name":"Action & Reaction","timestamp":"2025-01-18T05:19:07.540Z"}
+{"id":"1r2qF832vB0ElxlNdLZ0lY","label":"Build It Tech","level":"info","message":"Found matching release:","name":"Action & Reaction","timestamp":"2025-01-18T05:19:07.540Z"}
+{"level":"info","message":"Fetching album by ID:","timestamp":"2025-01-18T05:19:08.041Z"}
+{"artists":["John Okins"],"label":"Build It Tech","level":"info","message":"Found album:","name":"COOL OFF | SPARE ME","timestamp":"2025-01-18T05:19:08.182Z"}
+{"id":"4hktQMPU8HoqCT4wfJJESP","label":"Build It Tech","level":"info","message":"Found matching release:","name":"COOL OFF | SPARE ME","timestamp":"2025-01-18T05:19:08.183Z"}
+{"level":"info","message":"Fetching album by ID:","timestamp":"2025-01-18T05:19:08.683Z"}
+{"artists":["Tv_tv"],"label":"Build It Tech","level":"info","message":"Found album:","name":"WhoDATBe","timestamp":"2025-01-18T05:19:08.800Z"}
+{"id":"0PJiI5AEg0uPcRXgu7YjKp","label":"Build It Tech","level":"info","message":"Found matching release:","name":"WhoDATBe","timestamp":"2025-01-18T05:19:08.800Z"}
+{"level":"info","message":"Fetching album by ID:","timestamp":"2025-01-18T05:19:09.301Z"}
+{"artists":["BARC"],"label":"Build It Tech","level":"info","message":"Found album:","name":"Shake That","timestamp":"2025-01-18T05:19:09.432Z"}
+{"id":"4rUFvkD2T2TcoAtTAFUmyt","label":"Build It Tech","level":"info","message":"Found matching release:","name":"Shake That","timestamp":"2025-01-18T05:19:09.433Z"}
+{"level":"info","message":"Fetching album by ID:","timestamp":"2025-01-18T05:19:09.933Z"}
+{"artists":["Danny Samaei"],"label":"Build It Tech","level":"info","message":"Found album:","name":"Wheaties","timestamp":"2025-01-18T05:19:10.077Z"}
+{"id":"5rHaHYrC7wYcanXLL72SDb","label":"Build It Tech","level":"info","message":"Found matching release:","name":"Wheaties","timestamp":"2025-01-18T05:19:10.077Z"}
+{"level":"info","message":"Fetching album by ID:","timestamp":"2025-01-18T05:19:10.579Z"}
+{"artists":["Bess Maze"],"label":"Build It Tech","level":"info","message":"Found album:","name":"Mozy Maze EP","timestamp":"2025-01-18T05:19:10.700Z"}
+{"id":"5NYpXqoxXp8s8sqtGwdE4W","label":"Build It Tech","level":"info","message":"Found matching release:","name":"Mozy Maze EP","timestamp":"2025-01-18T05:19:10.700Z"}
+{"level":"info","message":"Fetching album by ID:","timestamp":"2025-01-18T05:19:11.201Z"}
+{"artists":["THATSOUND"],"label":"Build It Tech","level":"info","message":"Found album:","name":"Flava In Ya Ear","timestamp":"2025-01-18T05:19:11.351Z"}
+{"id":"6rIqbGLczyRTjssOlCIPPE","label":"Build It Tech","level":"info","message":"Found matching release:","name":"Flava In Ya Ear","timestamp":"2025-01-18T05:19:11.351Z"}
+{"level":"info","message":"Fetching album by ID:","timestamp":"2025-01-18T05:19:11.852Z"}
+{"artists":["No Messin"],"label":"Build It Tech","level":"info","message":"Found album:","name":"Out There EP","timestamp":"2025-01-18T05:19:11.966Z"}
+{"id":"01RNrvVQVu0V3Vke58Q9XT","label":"Build It Tech","level":"info","message":"Found matching release:","name":"Out There EP","timestamp":"2025-01-18T05:19:11.966Z"}
+{"level":"info","message":"Fetching album by ID:","timestamp":"2025-01-18T05:19:12.467Z"}
+{"artists":["Gouzy"],"label":"Build It Tech","level":"info","message":"Found album:","name":"Mwere","timestamp":"2025-01-18T05:19:12.635Z"}
+{"id":"6Z9isrmhdgmP340pPtJjOW","label":"Build It Tech","level":"info","message":"Found matching release:","name":"Mwere","timestamp":"2025-01-18T05:19:12.635Z"}
+{"level":"info","message":"Fetching album by ID:","timestamp":"2025-01-18T05:19:13.136Z"}
+{"artists":["Zebob"],"label":"Build It Tech","level":"info","message":"Found album:","name":"Control","timestamp":"2025-01-18T05:19:13.337Z"}
+{"id":"3fYoguEcCgRzhSIGYHfyeI","label":"Build It Tech","level":"info","message":"Found matching release:","name":"Control","timestamp":"2025-01-18T05:19:13.337Z"}
+{"level":"info","message":"Fetching album by ID:","timestamp":"2025-01-18T05:19:13.838Z"}
+{"artists":["Fatty"],"label":"Build It Tech","level":"info","message":"Found album:","name":"Talk / No Matter","timestamp":"2025-01-18T05:19:13.965Z"}
+{"id":"5Sku7XP8JZ2wCOpHUo7s04","label":"Build It Tech","level":"info","message":"Found matching release:","name":"Talk / No Matter","timestamp":"2025-01-18T05:19:13.965Z"}
+{"level":"info","message":"Fetching album by ID:","timestamp":"2025-01-18T05:19:14.466Z"}
+{"artists":["Sillaz"],"label":"Build It Tech","level":"info","message":"Found album:","name":"Bring 'Em Out","timestamp":"2025-01-18T05:19:14.613Z"}
+{"id":"3MHB3PbEEozdXNfY0tBg9I","label":"Build It Tech","level":"info","message":"Found matching release:","name":"Bring 'Em Out","timestamp":"2025-01-18T05:19:14.613Z"}
+{"level":"info","message":"Fetching album by ID:","timestamp":"2025-01-18T05:19:15.115Z"}
+{"artists":["Colin Thomas"],"label":"Build It Tech","level":"info","message":"Found album:","name":"Chicago","timestamp":"2025-01-18T05:19:15.243Z"}
+{"id":"3fPic8dfnQ9laIRYVzrUc0","label":"Build It Tech","level":"info","message":"Found matching release:","name":"Chicago","timestamp":"2025-01-18T05:19:15.243Z"}
+{"level":"info","message":"Fetching album by ID:","timestamp":"2025-01-18T05:19:15.746Z"}
+{"artists":["N1MA","Justin Lawson"],"label":"Build It Tech","level":"info","message":"Found album:","name":"Take Your Mind (Radio Edit)","timestamp":"2025-01-18T05:19:15.866Z"}
+{"id":"1ToxJ1uxNzCCMD9Tc4EvHD","label":"Build It Tech","level":"info","message":"Found matching release:","name":"Take Your Mind (Radio Edit)","timestamp":"2025-01-18T05:19:15.866Z"}
+{"level":"info","message":"Fetching album by ID:","timestamp":"2025-01-18T05:19:16.367Z"}
+{"artists":["Litty Ritty"],"label":"Build It Tech","level":"info","message":"Found album:","name":"Make It Sound","timestamp":"2025-01-18T05:19:16.495Z"}
+{"id":"4ttBCkXxDio7ckddBra7zg","label":"Build It Tech","level":"info","message":"Found matching release:","name":"Make It Sound","timestamp":"2025-01-18T05:19:16.496Z"}
+{"level":"info","message":"Fetching album by ID:","timestamp":"2025-01-18T05:19:16.997Z"}
+{"artists":["FeelGood"],"label":"Build It Tech","level":"info","message":"Found album:","name":"I Do Not Know","timestamp":"2025-01-18T05:19:17.127Z"}
+{"id":"6Jxj8WUrzAV23GPwQcY0zL","label":"Build It Tech","level":"info","message":"Found matching release:","name":"I Do Not Know","timestamp":"2025-01-18T05:19:17.128Z"}
+{"level":"info","message":"Fetching album by ID:","timestamp":"2025-01-18T05:19:17.630Z"}
+{"artists":["Houkes","Ravok"],"label":"Build It Tech","level":"info","message":"Found album:","name":"My Life","timestamp":"2025-01-18T05:19:17.752Z"}
+{"id":"3735GvRYkJhuOHBhgzvT1y","label":"Build It Tech","level":"info","message":"Found matching release:","name":"My Life","timestamp":"2025-01-18T05:19:17.753Z"}
+{"level":"info","message":"Fetching album by ID:","timestamp":"2025-01-18T05:19:18.254Z"}
+{"artists":["Frontside (BR)"],"label":"Build It Tech","level":"info","message":"Found album:","name":"Turn The Light","timestamp":"2025-01-18T05:19:18.410Z"}
+{"id":"0Dn3QvzNKABabANBmlaBT3","label":"Build It Tech","level":"info","message":"Found matching release:","name":"Turn The Light","timestamp":"2025-01-18T05:19:18.410Z"}
+{"level":"info","message":"Fetching album by ID:","timestamp":"2025-01-18T05:19:18.912Z"}
+{"artists":["Tony H"],"label":"Build It Tech","level":"info","message":"Found album:","name":"Doin My Thang","timestamp":"2025-01-18T05:19:19.043Z"}
+{"id":"0n1jvLy8Xm7ivSi4jaM8CT","label":"Build It Tech","level":"info","message":"Found matching release:","name":"Doin My Thang","timestamp":"2025-01-18T05:19:19.044Z"}
+{"level":"info","message":"Fetching album by ID:","timestamp":"2025-01-18T05:19:19.545Z"}
+{"artists":["Anmol Jhanb"],"label":"Build It Tech","level":"info","message":"Found album:","name":"Querido Papá","timestamp":"2025-01-18T05:19:19.662Z"}
+{"id":"4BAuMVJEtZ0BUQxJ8EiELE","label":"Build It Tech","level":"info","message":"Found matching release:","name":"Querido Papá","timestamp":"2025-01-18T05:19:19.662Z"}
+{"level":"info","message":"Fetching album by ID:","timestamp":"2025-01-18T05:19:20.163Z"}
+{"artists":["Jay Peeki"],"label":"Build It Tech","level":"info","message":"Found album:","name":"Iced Out EP","timestamp":"2025-01-18T05:19:20.284Z"}
+{"id":"4BBE9m9mdldR8eEBS1jhv4","label":"Build It Tech","level":"info","message":"Found matching release:","name":"Iced Out EP","timestamp":"2025-01-18T05:19:20.285Z"}
+{"level":"info","message":"Fetching album by ID:","timestamp":"2025-01-18T05:19:20.786Z"}
+{"artists":["Low Control"],"label":"Build It Tech","level":"info","message":"Found album:","name":"Get Down | Be Yourself","timestamp":"2025-01-18T05:19:20.946Z"}
+{"id":"2jRmnNUh2FINO6DjsNehoD","label":"Build It Tech","level":"info","message":"Found matching release:","name":"Get Down | Be Yourself","timestamp":"2025-01-18T05:19:20.946Z"}
+{"level":"info","message":"Fetching album by ID:","timestamp":"2025-01-18T05:19:21.447Z"}
+{"artists":["Gouzy"],"label":"Build It Tech","level":"info","message":"Found album:","name":"Maxima (Radio Mix)","timestamp":"2025-01-18T05:19:21.574Z"}
+{"id":"5KcdWr3CQC7MYUJxvQjorz","label":"Build It Tech","level":"info","message":"Found matching release:","name":"Maxima (Radio Mix)","timestamp":"2025-01-18T05:19:21.574Z"}
+{"level":"info","message":"Fetching album by ID:","timestamp":"2025-01-18T05:19:22.075Z"}
+{"artists":["MID LOW"],"label":"Build It Tech","level":"info","message":"Found album:","name":"Blind Dance","timestamp":"2025-01-18T05:19:22.198Z"}
+{"id":"3QO7yjlCoShoipZsf8byYm","label":"Build It Tech","level":"info","message":"Found matching release:","name":"Blind Dance","timestamp":"2025-01-18T05:19:22.198Z"}
+{"level":"info","message":"Fetching album by ID:","timestamp":"2025-01-18T05:19:22.701Z"}
+{"artists":["Cesar Green","Jazzam"],"label":"Build It Tech","level":"info","message":"Found album:","name":"Anytime","timestamp":"2025-01-18T05:19:22.829Z"}
+{"id":"2Xx35Qjm8F22kXhlabH6D4","label":"Build It Tech","level":"info","message":"Found matching release:","name":"Anytime","timestamp":"2025-01-18T05:19:22.830Z"}
+{"level":"info","message":"Fetching album by ID:","timestamp":"2025-01-18T05:19:23.330Z"}
+{"artists":["Anmol Jhanb","Gruv1"],"label":"Build It Tech","level":"info","message":"Found album:","name":"City High (Radio Edit)","timestamp":"2025-01-18T05:19:23.453Z"}
+{"id":"6h3XmMGEhl4pPqX6ZheNUQ","label":"Build It Tech","level":"info","message":"Found matching release:","name":"City High (Radio Edit)","timestamp":"2025-01-18T05:19:23.453Z"}
+{"level":"info","message":"Fetching album by ID:","timestamp":"2025-01-18T05:19:23.955Z"}
+{"artists":["Vianna"],"label":"Build It Tech","level":"info","message":"Found album:","name":"Let Me Catch My Breath","timestamp":"2025-01-18T05:19:24.078Z"}
+{"id":"0WOwAkMXG7cd0tR7NLcmuH","label":"Build It Tech","level":"info","message":"Found matching release:","name":"Let Me Catch My Breath","timestamp":"2025-01-18T05:19:24.078Z"}
+{"level":"info","message":"Fetching album by ID:","timestamp":"2025-01-18T05:19:24.579Z"}
+{"artists":["Law Mark"],"label":"Build It Tech","level":"info","message":"Found album:","name":"How I Do It","timestamp":"2025-01-18T05:19:24.701Z"}
+{"id":"5uM8MhSTov9t3jEJu965ei","label":"Build It Tech","level":"info","message":"Found matching release:","name":"How I Do It","timestamp":"2025-01-18T05:19:24.701Z"}
+{"level":"info","message":"Fetching album by ID:","timestamp":"2025-01-18T05:19:25.202Z"}
+{"artists":["Sloth"],"label":"Build It Tech","level":"info","message":"Found album:","name":"Lose Kontrol","timestamp":"2025-01-18T05:19:25.325Z"}
+{"id":"14FUlOSGcpTkwOyM16mUya","label":"Build It Tech","level":"info","message":"Found matching release:","name":"Lose Kontrol","timestamp":"2025-01-18T05:19:25.325Z"}
+{"level":"info","message":"Fetching album by ID:","timestamp":"2025-01-18T05:19:25.827Z"}
+{"artists":["Lux Esto"],"label":"Build It Tech","level":"info","message":"Found album:","name":"I See","timestamp":"2025-01-18T05:19:25.956Z"}
+{"id":"45FovzfroEFtAW0siXNV2U","label":"Build It Tech","level":"info","message":"Found matching release:","name":"I See","timestamp":"2025-01-18T05:19:25.957Z"}
+{"level":"info","message":"Fetching album by ID:","timestamp":"2025-01-18T05:19:26.461Z"}
+{"artists":["Nick Siarom","BARC"],"label":"Build It Tech","level":"info","message":"Found album:","name":"You","timestamp":"2025-01-18T05:19:26.605Z"}
+{"id":"45FqLCyRkOV3KWeGQJUVxf","label":"Build It Tech","level":"info","message":"Found matching release:","name":"You","timestamp":"2025-01-18T05:19:26.606Z"}
+{"level":"info","message":"Fetching album by ID:","timestamp":"2025-01-18T05:19:27.105Z"}
+{"artists":["Ben Grime"],"label":"Build It Tech","level":"info","message":"Found album:","name":"Give You Up","timestamp":"2025-01-18T05:19:27.246Z"}
+{"id":"2Og9oOW0sgQ9c7qFH3K1Hx","label":"Build It Tech","level":"info","message":"Found matching release:","name":"Give You Up","timestamp":"2025-01-18T05:19:27.246Z"}
+{"level":"info","message":"Fetching album by ID:","timestamp":"2025-01-18T05:19:27.747Z"}
+{"artists":["Callum Mcintosh"],"label":"Build It Tech","level":"info","message":"Found album:","name":"Krunk","timestamp":"2025-01-18T05:19:27.871Z"}
+{"id":"1iGnXUMbvTLTjncIyoY0y2","label":"Build It Tech","level":"info","message":"Found matching release:","name":"Krunk","timestamp":"2025-01-18T05:19:27.871Z"}
+{"level":"info","message":"Fetching album by ID:","timestamp":"2025-01-18T05:19:28.372Z"}
+{"artists":["BURNTECH"],"label":"Build It Tech","level":"info","message":"Found album:","name":"I Can't Stop","timestamp":"2025-01-18T05:19:28.533Z"}
+{"id":"2xAdmbxZvWwY9qPy2BFUvF","label":"Build It Tech","level":"info","message":"Found matching release:","name":"I Can't Stop","timestamp":"2025-01-18T05:19:28.533Z"}
+{"level":"info","message":"Fetching album by ID:","timestamp":"2025-01-18T05:19:29.034Z"}
+{"artists":["TUKKO"],"label":"Build It Tech","level":"info","message":"Found album:","name":"Hands Up","timestamp":"2025-01-18T05:19:29.233Z"}
+{"id":"2mzSjvVmgl8oUWe6MjE3yO","label":"Build It Tech","level":"info","message":"Found matching release:","name":"Hands Up","timestamp":"2025-01-18T05:19:29.233Z"}
+{"level":"info","message":"Fetching album by ID:","timestamp":"2025-01-18T05:19:29.734Z"}
+{"artists":["Ruddek"],"label":"Build It Tech","level":"info","message":"Found album:","name":"Like That","timestamp":"2025-01-18T05:19:29.900Z"}
+{"id":"4oMgq8PfyRwLoZJPWVNg46","label":"Build It Tech","level":"info","message":"Found matching release:","name":"Like That","timestamp":"2025-01-18T05:19:29.900Z"}
+{"level":"info","message":"Fetching album by ID:","timestamp":"2025-01-18T05:19:30.402Z"}
+{"artists":["BRST"],"label":"Build It Tech","level":"info","message":"Found album:","name":"Blox","timestamp":"2025-01-18T05:19:30.543Z"}
+{"id":"1ZxIePlYKvpSUu5PNJG81X","label":"Build It Tech","level":"info","message":"Found matching release:","name":"Blox","timestamp":"2025-01-18T05:19:30.543Z"}
+{"level":"info","message":"Fetching album by ID:","timestamp":"2025-01-18T05:19:31.044Z"}
+{"artists":["Kelvin Richard"],"label":"Build It Tech","level":"info","message":"Found album:","name":"Blink","timestamp":"2025-01-18T05:19:31.178Z"}
+{"id":"7k0JPGTStoRSfXS2s8tuhi","label":"Build It Tech","level":"info","message":"Found matching release:","name":"Blink","timestamp":"2025-01-18T05:19:31.179Z"}
+{"level":"info","message":"Fetching album by ID:","timestamp":"2025-01-18T05:19:31.680Z"}
+{"artists":["Chango"],"label":"Build It Tech","level":"info","message":"Found album:","name":"Bringin It Back","timestamp":"2025-01-18T05:19:31.825Z"}
+{"id":"5RFE7Rod5FWs2xuCB7QvTP","label":"Build It Tech","level":"info","message":"Found matching release:","name":"Bringin It Back","timestamp":"2025-01-18T05:19:31.825Z"}
+{"level":"info","message":"Fetching album by ID:","timestamp":"2025-01-18T05:19:32.326Z"}
+{"artists":["Catz N Hood","Fatt Mox"],"label":"Build It Tech","level":"info","message":"Found album:","name":"Get Down","timestamp":"2025-01-18T05:19:32.466Z"}
+{"id":"65dgYaOJn7EkfE7oEC7Aj7","label":"Build It Tech","level":"info","message":"Found matching release:","name":"Get Down","timestamp":"2025-01-18T05:19:32.467Z"}
+{"level":"info","message":"Found releases from Spotify:","timestamp":"2025-01-18T05:19:32.467Z","totalArtists":58,"totalReleases":50,"totalTracks":71}
+{"existingArtistAssociations":79,"existingTracks":67,"level":"info","message":"Current database state:","timestamp":"2025-01-18T05:19:32.504Z"}
+{"level":"info","message":"Starting release processing...","timestamp":"2025-01-18T05:19:32.504Z"}
+{"level":"info","message":"Processing release: Black Hole","timestamp":"2025-01-18T05:19:32.506Z"}
+{"id":"01wvvuj4LTCok4IldKvBkq","label":"Build It Tech","level":"info","message":"Creating new release:","name":"Black Hole","timestamp":"2025-01-18T05:19:32.510Z"}
+{"level":"info","message":"Processing release: Booty Clap","timestamp":"2025-01-18T05:19:32.775Z"}
+{"id":"0bgpOnS82nKL2pZBhwjaTc","level":"info","message":"Release already exists:","name":"Booty Clap","timestamp":"2025-01-18T05:19:32.780Z"}
+{"level":"info","message":"Processing release: Every day","timestamp":"2025-01-18T05:19:32.795Z"}
+{"id":"5B6t2F6IMIrN9fQAd5i76A","level":"info","message":"Release already exists:","name":"Every day","timestamp":"2025-01-18T05:19:32.797Z"}
+{"level":"info","message":"Processing release: Que No Pare","timestamp":"2025-01-18T05:19:32.806Z"}
+{"id":"1TLmPyu0A2c1S9OAn0QYXz","level":"info","message":"Release already exists:","name":"Que No Pare","timestamp":"2025-01-18T05:19:32.808Z"}
+{"level":"info","message":"Processing release: Let's Get It / Days EP","timestamp":"2025-01-18T05:19:32.817Z"}
+{"id":"1akiKWvuyDJqNqA8x9gooI","level":"info","message":"Release already exists:","name":"Let's Get It / Days EP","timestamp":"2025-01-18T05:19:32.821Z"}
+{"level":"info","message":"Processing release: Handle It","timestamp":"2025-01-18T05:19:32.939Z"}
+{"id":"1VAZRQgwypSbcOnIBphrr1","level":"info","message":"Release already exists:","name":"Handle It","timestamp":"2025-01-18T05:19:32.940Z"}
+{"level":"info","message":"Processing release: Sweat","timestamp":"2025-01-18T05:19:32.973Z"}
+{"id":"2iFhPV3i33kOfqQXuuX0XC","level":"info","message":"Release already exists:","name":"Sweat","timestamp":"2025-01-18T05:19:32.982Z"}
+{"level":"info","message":"Processing release: Lonely","timestamp":"2025-01-18T05:19:33.007Z"}
+{"id":"36YPNTkO9YRXdtpHAOlkln","level":"info","message":"Release already exists:","name":"Lonely","timestamp":"2025-01-18T05:19:33.011Z"}
+{"level":"info","message":"Processing release: Feel It","timestamp":"2025-01-18T05:19:33.017Z"}
+{"id":"6eKpp5mstuSWwsQoLrVanF","level":"info","message":"Release already exists:","name":"Feel It","timestamp":"2025-01-18T05:19:33.019Z"}
+{"level":"info","message":"Processing release: Bugatti","timestamp":"2025-01-18T05:19:33.029Z"}
+{"id":"0lOGY55VNTm62zdIp2njxu","level":"info","message":"Release already exists:","name":"Bugatti","timestamp":"2025-01-18T05:19:33.033Z"}
+{"level":"info","message":"Processing release: Action & Reaction","timestamp":"2025-01-18T05:19:33.050Z"}
+{"id":"1r2qF832vB0ElxlNdLZ0lY","level":"info","message":"Release already exists:","name":"Action & Reaction","timestamp":"2025-01-18T05:19:33.051Z"}
+{"level":"info","message":"Processing release: COOL OFF | SPARE ME","timestamp":"2025-01-18T05:19:33.057Z"}
+{"id":"4hktQMPU8HoqCT4wfJJESP","level":"info","message":"Release already exists:","name":"COOL OFF | SPARE ME","timestamp":"2025-01-18T05:19:33.059Z"}
+{"level":"info","message":"Processing release: WhoDATBe","timestamp":"2025-01-18T05:19:33.097Z"}
+{"id":"0PJiI5AEg0uPcRXgu7YjKp","level":"info","message":"Release already exists:","name":"WhoDATBe","timestamp":"2025-01-18T05:19:33.100Z"}
+{"level":"info","message":"Processing release: Shake That","timestamp":"2025-01-18T05:19:33.121Z"}
+{"id":"4rUFvkD2T2TcoAtTAFUmyt","level":"info","message":"Release already exists:","name":"Shake That","timestamp":"2025-01-18T05:19:33.132Z"}
+{"level":"info","message":"Processing release: Wheaties","timestamp":"2025-01-18T05:19:33.148Z"}
+{"id":"5rHaHYrC7wYcanXLL72SDb","level":"info","message":"Release already exists:","name":"Wheaties","timestamp":"2025-01-18T05:19:33.149Z"}
+{"level":"info","message":"Processing release: Mozy Maze EP","timestamp":"2025-01-18T05:19:33.155Z"}
+{"id":"5NYpXqoxXp8s8sqtGwdE4W","level":"info","message":"Release already exists:","name":"Mozy Maze EP","timestamp":"2025-01-18T05:19:33.157Z"}
+{"level":"info","message":"Processing release: Flava In Ya Ear","timestamp":"2025-01-18T05:19:33.181Z"}
+{"id":"6rIqbGLczyRTjssOlCIPPE","level":"info","message":"Release already exists:","name":"Flava In Ya Ear","timestamp":"2025-01-18T05:19:33.182Z"}
+{"level":"info","message":"Processing release: Out There EP","timestamp":"2025-01-18T05:19:33.188Z"}
+{"id":"01RNrvVQVu0V3Vke58Q9XT","level":"info","message":"Release already exists:","name":"Out There EP","timestamp":"2025-01-18T05:19:33.189Z"}
+{"level":"info","message":"Processing release: Mwere","timestamp":"2025-01-18T05:19:33.224Z"}
+{"id":"6Z9isrmhdgmP340pPtJjOW","level":"info","message":"Release already exists:","name":"Mwere","timestamp":"2025-01-18T05:19:33.233Z"}
+{"level":"info","message":"Processing release: Control","timestamp":"2025-01-18T05:19:33.282Z"}
+{"id":"3fYoguEcCgRzhSIGYHfyeI","level":"info","message":"Release already exists:","name":"Control","timestamp":"2025-01-18T05:19:33.284Z"}
+{"level":"info","message":"Processing release: Talk / No Matter","timestamp":"2025-01-18T05:19:33.306Z"}
+{"id":"5Sku7XP8JZ2wCOpHUo7s04","level":"info","message":"Release already exists:","name":"Talk / No Matter","timestamp":"2025-01-18T05:19:33.316Z"}
+{"level":"info","message":"Processing release: Bring 'Em Out","timestamp":"2025-01-18T05:19:33.354Z"}
+{"id":"3MHB3PbEEozdXNfY0tBg9I","level":"info","message":"Release already exists:","name":"Bring 'Em Out","timestamp":"2025-01-18T05:19:33.357Z"}
+{"level":"info","message":"Processing release: Chicago","timestamp":"2025-01-18T05:19:33.389Z"}
+{"id":"3fPic8dfnQ9laIRYVzrUc0","level":"info","message":"Release already exists:","name":"Chicago","timestamp":"2025-01-18T05:19:33.391Z"}
+{"level":"info","message":"Processing release: Take Your Mind (Radio Edit)","timestamp":"2025-01-18T05:19:33.399Z"}
+{"id":"1ToxJ1uxNzCCMD9Tc4EvHD","level":"info","message":"Release already exists:","name":"Take Your Mind (Radio Edit)","timestamp":"2025-01-18T05:19:33.400Z"}
+{"level":"info","message":"Processing release: Make It Sound","timestamp":"2025-01-18T05:19:33.411Z"}
+{"id":"4ttBCkXxDio7ckddBra7zg","level":"info","message":"Release already exists:","name":"Make It Sound","timestamp":"2025-01-18T05:19:33.414Z"}
+{"level":"info","message":"Processing release: I Do Not Know","timestamp":"2025-01-18T05:19:33.447Z"}
+{"id":"6Jxj8WUrzAV23GPwQcY0zL","level":"info","message":"Release already exists:","name":"I Do Not Know","timestamp":"2025-01-18T05:19:33.450Z"}
+{"level":"info","message":"Processing release: My Life","timestamp":"2025-01-18T05:19:33.498Z"}
+{"id":"3735GvRYkJhuOHBhgzvT1y","level":"info","message":"Release already exists:","name":"My Life","timestamp":"2025-01-18T05:19:33.501Z"}
+{"level":"info","message":"Processing release: Turn The Light","timestamp":"2025-01-18T05:19:33.531Z"}
+{"id":"0Dn3QvzNKABabANBmlaBT3","level":"info","message":"Release already exists:","name":"Turn The Light","timestamp":"2025-01-18T05:19:33.532Z"}
+{"level":"info","message":"Processing release: Doin My Thang","timestamp":"2025-01-18T05:19:33.563Z"}
+{"id":"0n1jvLy8Xm7ivSi4jaM8CT","level":"info","message":"Release already exists:","name":"Doin My Thang","timestamp":"2025-01-18T05:19:33.565Z"}
+{"level":"info","message":"Processing release: Querido Papá","timestamp":"2025-01-18T05:19:33.573Z"}
+{"id":"4BAuMVJEtZ0BUQxJ8EiELE","level":"info","message":"Release already exists:","name":"Querido Papá","timestamp":"2025-01-18T05:19:33.574Z"}
+{"level":"info","message":"Processing release: Iced Out EP","timestamp":"2025-01-18T05:19:33.583Z"}
+{"id":"4BBE9m9mdldR8eEBS1jhv4","level":"info","message":"Release already exists:","name":"Iced Out EP","timestamp":"2025-01-18T05:19:33.584Z"}
+{"level":"info","message":"Processing release: Get Down | Be Yourself","timestamp":"2025-01-18T05:19:33.632Z"}
+{"id":"2jRmnNUh2FINO6DjsNehoD","level":"info","message":"Release already exists:","name":"Get Down | Be Yourself","timestamp":"2025-01-18T05:19:33.645Z"}
+{"level":"info","message":"Processing release: Maxima (Radio Mix)","timestamp":"2025-01-18T05:19:33.664Z"}
+{"id":"5KcdWr3CQC7MYUJxvQjorz","level":"info","message":"Release already exists:","name":"Maxima (Radio Mix)","timestamp":"2025-01-18T05:19:33.665Z"}
+{"level":"info","message":"Processing release: Blind Dance","timestamp":"2025-01-18T05:19:33.672Z"}
+{"id":"3QO7yjlCoShoipZsf8byYm","level":"info","message":"Release already exists:","name":"Blind Dance","timestamp":"2025-01-18T05:19:33.673Z"}
+{"level":"info","message":"Processing release: Anytime","timestamp":"2025-01-18T05:19:33.688Z"}
+{"id":"2Xx35Qjm8F22kXhlabH6D4","level":"info","message":"Release already exists:","name":"Anytime","timestamp":"2025-01-18T05:19:33.689Z"}
+{"level":"info","message":"Processing release: City High (Radio Edit)","timestamp":"2025-01-18T05:19:33.698Z"}
+{"id":"6h3XmMGEhl4pPqX6ZheNUQ","level":"info","message":"Release already exists:","name":"City High (Radio Edit)","timestamp":"2025-01-18T05:19:33.699Z"}
+{"level":"info","message":"Processing release: Let Me Catch My Breath","timestamp":"2025-01-18T05:19:33.715Z"}
+{"id":"0WOwAkMXG7cd0tR7NLcmuH","level":"info","message":"Release already exists:","name":"Let Me Catch My Breath","timestamp":"2025-01-18T05:19:33.717Z"}
+{"level":"info","message":"Processing release: How I Do It","timestamp":"2025-01-18T05:19:33.737Z"}
+{"id":"5uM8MhSTov9t3jEJu965ei","level":"info","message":"Release already exists:","name":"How I Do It","timestamp":"2025-01-18T05:19:33.744Z"}
+{"level":"info","message":"Processing release: Lose Kontrol","timestamp":"2025-01-18T05:19:33.751Z"}
+{"id":"14FUlOSGcpTkwOyM16mUya","level":"info","message":"Release already exists:","name":"Lose Kontrol","timestamp":"2025-01-18T05:19:33.752Z"}
+{"level":"info","message":"Processing release: I See","timestamp":"2025-01-18T05:19:33.783Z"}
+{"id":"45FovzfroEFtAW0siXNV2U","level":"info","message":"Release already exists:","name":"I See","timestamp":"2025-01-18T05:19:33.785Z"}
+{"level":"info","message":"Processing release: You","timestamp":"2025-01-18T05:19:33.792Z"}
+{"id":"45FqLCyRkOV3KWeGQJUVxf","level":"info","message":"Release already exists:","name":"You","timestamp":"2025-01-18T05:19:33.795Z"}
+{"level":"info","message":"Processing release: Give You Up","timestamp":"2025-01-18T05:19:33.804Z"}
+{"id":"2Og9oOW0sgQ9c7qFH3K1Hx","level":"info","message":"Release already exists:","name":"Give You Up","timestamp":"2025-01-18T05:19:33.806Z"}
+{"level":"info","message":"Processing release: Krunk","timestamp":"2025-01-18T05:19:33.822Z"}
+{"id":"1iGnXUMbvTLTjncIyoY0y2","level":"info","message":"Release already exists:","name":"Krunk","timestamp":"2025-01-18T05:19:33.824Z"}
+{"level":"info","message":"Processing release: I Can't Stop","timestamp":"2025-01-18T05:19:33.833Z"}
+{"id":"2xAdmbxZvWwY9qPy2BFUvF","level":"info","message":"Release already exists:","name":"I Can't Stop","timestamp":"2025-01-18T05:19:33.834Z"}
+{"level":"info","message":"Processing release: Hands Up","timestamp":"2025-01-18T05:19:33.902Z"}
+{"id":"2mzSjvVmgl8oUWe6MjE3yO","level":"info","message":"Release already exists:","name":"Hands Up","timestamp":"2025-01-18T05:19:33.906Z"}
+{"level":"info","message":"Processing release: Like That","timestamp":"2025-01-18T05:19:33.923Z"}
+{"id":"4oMgq8PfyRwLoZJPWVNg46","level":"info","message":"Release already exists:","name":"Like That","timestamp":"2025-01-18T05:19:33.924Z"}
+{"level":"info","message":"Processing release: Blox","timestamp":"2025-01-18T05:19:33.948Z"}
+{"id":"1ZxIePlYKvpSUu5PNJG81X","level":"info","message":"Release already exists:","name":"Blox","timestamp":"2025-01-18T05:19:33.949Z"}
+{"level":"info","message":"Processing release: Blink","timestamp":"2025-01-18T05:19:33.966Z"}
+{"id":"7k0JPGTStoRSfXS2s8tuhi","level":"info","message":"Release already exists:","name":"Blink","timestamp":"2025-01-18T05:19:33.971Z"}
+{"level":"info","message":"Processing release: Bringin It Back","timestamp":"2025-01-18T05:19:33.998Z"}
+{"id":"5RFE7Rod5FWs2xuCB7QvTP","level":"info","message":"Release already exists:","name":"Bringin It Back","timestamp":"2025-01-18T05:19:34.001Z"}
+{"level":"info","message":"Processing release: Get Down","timestamp":"2025-01-18T05:19:34.041Z"}
+{"id":"65dgYaOJn7EkfE7oEC7Aj7","level":"info","message":"Release already exists:","name":"Get Down","timestamp":"2025-01-18T05:19:34.049Z"}
+{"failedReleases":0,"finalCounts":{"releases":56,"tracks":79},"level":"info","message":"Import completed successfully:","newArtistAssociations":83,"newTracks":71,"processedReleases":1,"skippedReleases":49,"timestamp":"2025-01-18T05:19:34.300Z","totalReleasesFound":50}
+{"label":"buildit-deep","level":"info","limit":500,"message":"GET /releases request:","offset":0,"timestamp":"2025-01-18T05:23:39.321Z"}
+{"label":"buildit-deep","level":"info","limit":500,"message":"GET /releases request:","offset":0,"timestamp":"2025-01-18T05:23:39.325Z"}
+{"label":"buildit-deep","level":"info","limit":500,"message":"Releases found:","offset":0,"returnedCount":15,"timestamp":"2025-01-18T05:23:39.869Z","totalCount":15}
+{"label":"buildit-deep","level":"info","limit":500,"message":"Releases found:","offset":0,"returnedCount":15,"timestamp":"2025-01-18T05:23:39.877Z","totalCount":15}
+{"labelId":"buildit-deep","level":"info","limit":100,"message":"GET /tracks request:","page":1,"sort":"created_at","timestamp":"2025-01-18T05:23:41.212Z"}
+{"id":"buildit-deep","level":"info","message":"Found label:","name":"Build It Deep","slug":"buildit-deep","timestamp":"2025-01-18T05:23:41.217Z"}
+{"include":[{"as":"artists","model":"Artist","required":false},{"as":"release","model":"Release","required":false}],"level":"info","limit":100,"message":"Executing track query with:","offset":0,"order":[["created_at","DESC"]],"timestamp":"2025-01-18T05:23:41.218Z","where":{"label_id":"buildit-deep"}}
+{"labelId":"buildit-deep","level":"info","limit":100,"message":"GET /tracks request:","page":1,"sort":"created_at","timestamp":"2025-01-18T05:23:41.224Z"}
+{"id":"buildit-deep","level":"info","message":"Found label:","name":"Build It Deep","slug":"buildit-deep","timestamp":"2025-01-18T05:23:41.249Z"}
+{"include":[{"as":"artists","model":"Artist","required":false},{"as":"release","model":"Release","required":false}],"level":"info","limit":100,"message":"Executing track query with:","offset":0,"order":[["created_at","DESC"]],"timestamp":"2025-01-18T05:23:41.249Z","where":{"label_id":"buildit-deep"}}
+{"count":20,"level":"info","message":"Found tracks:","page":1,"timestamp":"2025-01-18T05:23:41.261Z","total":20,"totalPages":1}
+{"level":"info","message":"First track raw data:","timestamp":"2025-01-18T05:23:41.261Z"}
+{"artistId":"0jI2Kfa17d4JoMdLerNpSx","artistName":"Chris Gresswell","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb93f28c21afa7520666129b97","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:41.261Z"}
+{"artistId":"5hKQVA377hopQ9HWPOseXF","artistName":"Aaron Jackson","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebabb02768bf1a2ca3e58994c0","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:41.261Z"}
+{"artistId":"4LRSqGtcsX0OUvT49pgz0d","artistName":"Frederique","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb7fc690f0328ec46f219e4763","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:41.262Z"}
+{"artistId":"5oznV9DBpgEcgx0UgKKbLk","artistName":"POSYDON","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebc5adcb4634c5450ccf7ded82","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:41.262Z"}
+{"artistId":"5oznV9DBpgEcgx0UgKKbLk","artistName":"POSYDON","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebc5adcb4634c5450ccf7ded82","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:41.262Z"}
+{"artistId":"4XKm2kHUPp6EixvzcoqjAe","artistName":"Helder Simz","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb8e12d0a45cc92e38d3223766","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:41.262Z"}
+{"artistId":"5oznV9DBpgEcgx0UgKKbLk","artistName":"POSYDON","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebc5adcb4634c5450ccf7ded82","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:41.262Z"}
+{"artistId":"5oznV9DBpgEcgx0UgKKbLk","artistName":"POSYDON","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebc5adcb4634c5450ccf7ded82","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:41.262Z"}
+{"artistId":"5sobBegrP0b7zmE5Edc8C6","artistName":"BELLO","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebb55187639322530b231271fa","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:41.262Z"}
+{"artistId":"2vp2B6RPA9twgYPKbPaffz","artistName":"im kyle","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebcf39085c4e9a83b38ce1beb4","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:41.262Z"}
+{"artistId":"04MM8XFEOwzjlytvJyYqOV","artistName":"Haelix","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb20d0a29a215520dacdd8a476","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:41.263Z"}
+{"artistId":"6ymXZSd6Qsf3snMm2CKxk4","artistName":"MarQ","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab67616d0000b2736c1d982efc5d03440d3bbde2","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:41.263Z"}
+{"artistId":"6ymXZSd6Qsf3snMm2CKxk4","artistName":"MarQ","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab67616d0000b2736c1d982efc5d03440d3bbde2","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:41.263Z"}
+{"artistId":"7tFPiRyBXpG4rLbwhRjO0b","artistName":"MARQ","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab67616d0000b27365d2b300439cd28847c7e37d","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:41.263Z"}
+{"artistId":"2SyuXmouzHiUSjNLNxRNiL","artistName":"Oxymoron","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab67616d0000b273ed9fabeb0a9de51d79011226","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:41.263Z"}
+{"artistId":"1e6Slp9egbeuYW1dXXZdHH","artistName":"Anmol Jhanb","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb6dbb1a3a18119d6d7ef848f3","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:41.263Z"}
+{"artistId":"6ZJASbg0cD5tdvQgqH5HLf","artistName":"Rance & Maff","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab67616d0000b2732a82ddfeadef084f080d40f8","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:41.263Z"}
+{"artistId":"5ze5OzM2pqb5HQyBqZBXq4","artistName":"Arky","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb4115f992e11606744734fe76","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:41.264Z"}
+{"artistId":"4iSvYDaOQy8BwojPxf8P6V","artistName":"Absintheminded","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebb5999fc08ae8fda79a60b8c2","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:41.264Z"}
+{"artistId":"7CsGIfqoq13hyMuyEcz7jR","artistName":"Hot Keys","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb3b44841ab2ff9faca274fe30","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:41.264Z"}
+{"level":"info","message":"Request processed in 46ms","timestamp":"2025-01-18T05:23:41.264Z"}
+{"count":20,"level":"info","message":"Found tracks:","page":1,"timestamp":"2025-01-18T05:23:41.374Z","total":20,"totalPages":1}
+{"level":"info","message":"First track raw data:","timestamp":"2025-01-18T05:23:41.374Z"}
+{"artistId":"0jI2Kfa17d4JoMdLerNpSx","artistName":"Chris Gresswell","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb93f28c21afa7520666129b97","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:41.375Z"}
+{"artistId":"5hKQVA377hopQ9HWPOseXF","artistName":"Aaron Jackson","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebabb02768bf1a2ca3e58994c0","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:41.375Z"}
+{"artistId":"4LRSqGtcsX0OUvT49pgz0d","artistName":"Frederique","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb7fc690f0328ec46f219e4763","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:41.375Z"}
+{"artistId":"5oznV9DBpgEcgx0UgKKbLk","artistName":"POSYDON","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebc5adcb4634c5450ccf7ded82","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:41.375Z"}
+{"artistId":"5oznV9DBpgEcgx0UgKKbLk","artistName":"POSYDON","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebc5adcb4634c5450ccf7ded82","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:41.375Z"}
+{"artistId":"4XKm2kHUPp6EixvzcoqjAe","artistName":"Helder Simz","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb8e12d0a45cc92e38d3223766","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:41.375Z"}
+{"artistId":"5oznV9DBpgEcgx0UgKKbLk","artistName":"POSYDON","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebc5adcb4634c5450ccf7ded82","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:41.375Z"}
+{"artistId":"5oznV9DBpgEcgx0UgKKbLk","artistName":"POSYDON","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebc5adcb4634c5450ccf7ded82","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:41.376Z"}
+{"artistId":"5sobBegrP0b7zmE5Edc8C6","artistName":"BELLO","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebb55187639322530b231271fa","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:41.377Z"}
+{"artistId":"2vp2B6RPA9twgYPKbPaffz","artistName":"im kyle","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebcf39085c4e9a83b38ce1beb4","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:41.377Z"}
+{"artistId":"04MM8XFEOwzjlytvJyYqOV","artistName":"Haelix","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb20d0a29a215520dacdd8a476","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:41.377Z"}
+{"artistId":"6ymXZSd6Qsf3snMm2CKxk4","artistName":"MarQ","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab67616d0000b2736c1d982efc5d03440d3bbde2","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:41.377Z"}
+{"artistId":"6ymXZSd6Qsf3snMm2CKxk4","artistName":"MarQ","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab67616d0000b2736c1d982efc5d03440d3bbde2","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:41.377Z"}
+{"artistId":"7tFPiRyBXpG4rLbwhRjO0b","artistName":"MARQ","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab67616d0000b27365d2b300439cd28847c7e37d","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:41.377Z"}
+{"artistId":"2SyuXmouzHiUSjNLNxRNiL","artistName":"Oxymoron","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab67616d0000b273ed9fabeb0a9de51d79011226","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:41.377Z"}
+{"artistId":"1e6Slp9egbeuYW1dXXZdHH","artistName":"Anmol Jhanb","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb6dbb1a3a18119d6d7ef848f3","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:41.378Z"}
+{"artistId":"6ZJASbg0cD5tdvQgqH5HLf","artistName":"Rance & Maff","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab67616d0000b2732a82ddfeadef084f080d40f8","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:41.378Z"}
+{"artistId":"5ze5OzM2pqb5HQyBqZBXq4","artistName":"Arky","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb4115f992e11606744734fe76","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:41.378Z"}
+{"artistId":"4iSvYDaOQy8BwojPxf8P6V","artistName":"Absintheminded","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebb5999fc08ae8fda79a60b8c2","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:41.378Z"}
+{"artistId":"7CsGIfqoq13hyMuyEcz7jR","artistName":"Hot Keys","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb3b44841ab2ff9faca274fe30","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:41.378Z"}
+{"level":"info","message":"Request processed in 129ms","timestamp":"2025-01-18T05:23:41.378Z"}
+{"label":"buildit-tech","level":"info","limit":500,"message":"GET /releases request:","offset":0,"timestamp":"2025-01-18T05:23:45.690Z"}
+{"label":"buildit-tech","level":"info","limit":500,"message":"Releases found:","offset":0,"returnedCount":56,"timestamp":"2025-01-18T05:23:45.787Z","totalCount":56}
+{"labelId":"buildit-tech","level":"info","limit":100,"message":"GET /tracks request:","page":1,"sort":"created_at","timestamp":"2025-01-18T05:23:45.946Z"}
+{"id":"buildit-tech","level":"info","message":"Found label:","name":"Build It Tech","slug":"buildit-tech","timestamp":"2025-01-18T05:23:45.973Z"}
+{"include":[{"as":"artists","model":"Artist","required":false},{"as":"release","model":"Release","required":false}],"level":"info","limit":100,"message":"Executing track query with:","offset":0,"order":[["created_at","DESC"]],"timestamp":"2025-01-18T05:23:45.973Z","where":{"label_id":"buildit-tech"}}
+{"count":79,"level":"info","message":"Found tracks:","page":1,"timestamp":"2025-01-18T05:23:46.057Z","total":79,"totalPages":1}
+{"level":"info","message":"First track raw data:","timestamp":"2025-01-18T05:23:46.058Z"}
+{"artistId":"7l2w73f38C8M8Z1WXIzARp","artistName":"Bravery","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.058Z"}
+{"artistId":"7l2w73f38C8M8Z1WXIzARp","artistName":"Bravery","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.059Z"}
+{"artistId":"7l2w73f38C8M8Z1WXIzARp","artistName":"Bravery","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.059Z"}
+{"artistId":"7l2w73f38C8M8Z1WXIzARp","artistName":"Bravery","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.059Z"}
+{"artistId":"5vMnh9zUMuyulSXf3xZ9T9","artistName":"Jay Peeki","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebbe70e93183bec497eea30648","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.059Z"}
+{"artistId":"5vMnh9zUMuyulSXf3xZ9T9","artistName":"Jay Peeki","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebbe70e93183bec497eea30648","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.059Z"}
+{"artistId":"66iu65cpuC4OTiT4fEItm6","artistName":"John Okins","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb5aba41e0b4d5dbbb3efb568a","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.060Z"}
+{"artistId":"3W6zi9pEjpuF61IoKrP5c6","artistName":"Catz N Hood","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb4d8de8cd1fb0aebb48022564","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.060Z"}
+{"artistId":"78CGbie7iFakO4pJaj6XRS","artistName":"Chango","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb1e66e456a27cc9ca24a4de58","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.060Z"}
+{"artistId":"7mXyW5kPIUrSRGkV0I9Ilo","artistName":"FeelGood","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb77dbde523925f73c8860f3e5","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.060Z"}
+{"artistId":"7DREdfV4mKhlrQiiOPNiIa","artistName":"Justin Lawson","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebd7fbdd400145fc2c7977c81f","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.060Z"}
+{"artistId":"5NCIFb4JfQobJI1V6tndrR","artistName":"Kelvin Richard","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb0f503b915e3ee062a2da3bd6","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.060Z"}
+{"artistId":"4dcyj8fp2rkzVxvXgvFAKV","artistName":"Colin Thomas","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebc22e97e2356a2d033692ee24","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.060Z"}
+{"artistId":"6yjsvVut7MsLmMiAfyNL5m","artistName":"Fatty","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb3fd91bd5e20766e8155fc088","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.063Z"}
+{"artistId":"6yjsvVut7MsLmMiAfyNL5m","artistName":"Fatty","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb3fd91bd5e20766e8155fc088","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.064Z"}
+{"artistId":"0gIwYJ6XYry8I7aK73eK3d","artistName":"Gouzy","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb9f6ecc553349d71b9e9276a2","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.065Z"}
+{"artistId":"0gIwYJ6XYry8I7aK73eK3d","artistName":"Gouzy","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb9f6ecc553349d71b9e9276a2","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.065Z"}
+{"artistId":"6nxRINEXiBbSs6TgTZZ4ae","artistName":"No Messin","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb002cf57243b3db4978addee3","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.065Z"}
+{"artistId":"6nxRINEXiBbSs6TgTZZ4ae","artistName":"No Messin","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb002cf57243b3db4978addee3","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.065Z"}
+{"artistId":"0Mu5RMSse8xbWBS54MLRoj","artistName":"Ruddek","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb40a30fb5b0a8cee1098dbf4d","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.065Z"}
+{"artistId":"0xhXLXPVNbgslNtqcjFLPp","artistName":"TUKKO","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab67616d0000b273f0d492be7ab5956e0e2da652","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.065Z"}
+{"artistId":"3sq5Tp1iuMLLoOyuve0lv9","artistName":"Ben Grime","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebbb265c8dd2a046e254957ebd","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.065Z"}
+{"artistId":"1ktwah2wyErs1Fon4eVgdm","artistName":"BARC","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb7ed4e66a90781d19cf5ee47f","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.066Z"}
+{"artistId":"5fU2v3rxLJ7GEI41LXiu0I","artistName":"Law Mark","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebe4ca854cbeea1b763cf66fcb","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.066Z"}
+{"artistId":"1FBSojGveT9qgrTyA948NX","artistName":"Vianna","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb7babc47f27262694de117e79","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.066Z"}
+{"artistId":"3rAjfCFCzit3Z6fvjobseY","artistName":"Jazzam","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebfc0681546fec29d69b5fd03c","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.066Z"}
+{"artistId":"0jpftZv0U3bs9msuaIMvQo","artistName":"MID LOW","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebdcc01f21ecada2dae661076c","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.066Z"}
+{"artistId":"0gIwYJ6XYry8I7aK73eK3d","artistName":"Gouzy","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb9f6ecc553349d71b9e9276a2","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.066Z"}
+{"artistId":"0GBjmaQp0SZZOqcJs370fp","artistName":"Low Control","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb849f4209d19ae22b23bbbbd8","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.067Z"}
+{"artistId":"0GBjmaQp0SZZOqcJs370fp","artistName":"Low Control","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb849f4209d19ae22b23bbbbd8","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.067Z"}
+{"artistId":"3lzArCKfwedfl9eQ6SZF90","artistName":"Cesar Green","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebd1d146520337791cc1a22dd8","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.068Z"}
+{"artistId":"3rAjfCFCzit3Z6fvjobseY","artistName":"Jazzam","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebfc0681546fec29d69b5fd03c","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.068Z"}
+{"artistId":"1e6Slp9egbeuYW1dXXZdHH","artistName":"Anmol Jhanb","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb6dbb1a3a18119d6d7ef848f3","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.069Z"}
+{"artistId":"1e6Slp9egbeuYW1dXXZdHH","artistName":"Anmol Jhanb","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb6dbb1a3a18119d6d7ef848f3","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.070Z"}
+{"artistId":"3if5MiqQs3F7rN98VuTKmk","artistName":"Misto Clean","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb84c3ca3a2c1ffe237b426bfb","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.070Z"}
+{"artistId":"6QSpwoXNHKuyxV43biHlYV","artistName":"Flo.Von","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb19ce52ea0892e3ddeae61a77","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.070Z"}
+{"artistId":"6QSpwoXNHKuyxV43biHlYV","artistName":"Flo.Von","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb19ce52ea0892e3ddeae61a77","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.070Z"}
+{"artistId":"5iFEvlgMAoGmUX1j7WEKbw","artistName":"VOILLA","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab67616d0000b273929338c8366001f21bda82f0","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.071Z"}
+{"artistId":"7ygRUv7YWkIbg8Ke3kYT27","artistName":"Tony H","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb3abfb4102cb04b7bbbef4d5d","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.071Z"}
+{"artistId":"4U56v6lNB6yTjBGsDOCtOa","artistName":"Frontside (BR)","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eba2549945bfc5419282e55a07","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.071Z"}
+{"artistId":"4U56v6lNB6yTjBGsDOCtOa","artistName":"Frontside (BR)","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eba2549945bfc5419282e55a07","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.071Z"}
+{"artistId":"7lDZhKkcXxWZ9Wc7KhNkAr","artistName":"Resonant","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb16341ebf979593d5204815a7","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.071Z"}
+{"artistId":"0EQbJHFSgUdpgMZTR4GbEN","artistName":"Houkes","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb7870f2f2e24ab988983ec027","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.071Z"}
+{"artistId":"7sRMzxFQRRzFtOjAMFHjxY","artistName":"Litty Ritty","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebd496d23c73c32ffb1b41fda5","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.071Z"}
+{"artistId":"7sRMzxFQRRzFtOjAMFHjxY","artistName":"Litty Ritty","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebd496d23c73c32ffb1b41fda5","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.072Z"}
+{"artistId":"7EroDVPELCYcB8zyB2XN9F","artistName":"Sillaz","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb30a2861ca7ac827b926ae1d7","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.072Z"}
+{"artistId":"7EroDVPELCYcB8zyB2XN9F","artistName":"Sillaz","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb30a2861ca7ac827b926ae1d7","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.072Z"}
+{"artistId":"2cgkzW8bpOiL2JrndJYX0H","artistName":"BRST","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb96fd58732b8a3a2aa8d89da0","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.072Z"}
+{"artistId":"3LaTRYUZsXIhgwdfpQNHb8","artistName":"Zebob","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebf26bc80b79c1e267bb28a927","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.072Z"}
+{"artistId":"2l9bjRfEhr9BleTsYAJ4kc","artistName":"BURNTECH","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebaf79eebc91fff842bc64b517","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.073Z"}
+{"artistId":"2l9bjRfEhr9BleTsYAJ4kc","artistName":"BURNTECH","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebaf79eebc91fff842bc64b517","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.073Z"}
+{"artistId":"2Ygebw1ybw5wMSAb0ken6I","artistName":"THATSOUND","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebcbca2c2c822a7a337b2a77c7","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.073Z"}
+{"artistId":"4WDygc5eolM4SoNReygt0L","artistName":"Callum Mcintosh","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab67616d0000b273ca6810dc72e78f21dd4d5afb","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.073Z"}
+{"artistId":"7uU0VNTeJ6DUiLPQ3M0cRX","artistName":"Bess Maze","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebfd0f4d2bc8cc211b0f73fdb0","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.073Z"}
+{"artistId":"7uU0VNTeJ6DUiLPQ3M0cRX","artistName":"Bess Maze","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebfd0f4d2bc8cc211b0f73fdb0","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.073Z"}
+{"artistId":"21T0dUcy5Bgr2LUrJ8BNd9","artistName":"Danny Samaei","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb9aa49337b4e93f129df6251f","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.073Z"}
+{"artistId":"7r4vyumTIutC0JhYWnCswO","artistName":"Nick Siarom","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb4a7a359361eb8d578ef063d0","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.073Z"}
+{"artistId":"2qgl5yiniO2qykrPxMkCPz","artistName":"Lux Esto","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebbc6fecc946f08348cc13c5a4","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.073Z"}
+{"artistId":"5iD9mn2inFzm1u3jvr9egi","artistName":"Sloth","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebe159d550bb96ec697230d1ba","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.073Z"}
+{"artistId":"5iD9mn2inFzm1u3jvr9egi","artistName":"Sloth","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebe159d550bb96ec697230d1ba","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.073Z"}
+{"artistId":"4hCHGNjlHun0P8KOL4Qiww","artistName":"Tv_tv","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb2a779b2886e5ef5f8ec7374d","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.073Z"}
+{"artistId":"66iu65cpuC4OTiT4fEItm6","artistName":"John Okins","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb5aba41e0b4d5dbbb3efb568a","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.073Z"}
+{"artistId":"66iu65cpuC4OTiT4fEItm6","artistName":"John Okins","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb5aba41e0b4d5dbbb3efb568a","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.074Z"}
+{"artistId":"66iu65cpuC4OTiT4fEItm6","artistName":"John Okins","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb5aba41e0b4d5dbbb3efb568a","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.074Z"}
+{"artistId":"66iu65cpuC4OTiT4fEItm6","artistName":"John Okins","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb5aba41e0b4d5dbbb3efb568a","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.074Z"}
+{"artistId":"0xQr33cktuO31pKCEnau0I","artistName":"F-LIMA","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebca0f07f01cc0e10ac2637b36","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.074Z"}
+{"artistId":"3sq5Tp1iuMLLoOyuve0lv9","artistName":"Ben Grime","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebbb265c8dd2a046e254957ebd","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.074Z"}
+{"artistId":"5fU2v3rxLJ7GEI41LXiu0I","artistName":"Law Mark","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebe4ca854cbeea1b763cf66fcb","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.074Z"}
+{"artistId":"45D867pQvoG6qOU0Tbj97a","artistName":"Damn Square","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebeedbf5650624512ce239cccf","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.075Z"}
+{"artistId":"7dzgzs35v1uZo6FOFn1uxf","artistName":"Stackhouse (DJ)","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebea0b598cb51189e93904118e","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.075Z"}
+{"artistId":"5s7VM2QEv0CSEE1RwPAaBi","artistName":"CLAASSEN","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebf7fec9dacae138fe875e83da","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.075Z"}
+{"artistId":"5s7VM2QEv0CSEE1RwPAaBi","artistName":"CLAASSEN","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebf7fec9dacae138fe875e83da","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.075Z"}
+{"artistId":"1W5bUhcxwysNo9bUOHVEwy","artistName":"Loüis Pleîn","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebca419bfe321ab8bbb965bcad","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.076Z"}
+{"artistId":"1W9pJsla05m0YLC25BaPzW","artistName":"Caique Carvalho","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb9e424522d4c107a311574351","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.076Z"}
+{"artistId":"6QSpwoXNHKuyxV43biHlYV","artistName":"Flo.Von","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb19ce52ea0892e3ddeae61a77","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.076Z"}
+{"artistId":"6QSpwoXNHKuyxV43biHlYV","artistName":"Flo.Von","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb19ce52ea0892e3ddeae61a77","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.076Z"}
+{"artistId":"6QSpwoXNHKuyxV43biHlYV","artistName":"Flo.Von","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb19ce52ea0892e3ddeae61a77","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.076Z"}
+{"artistId":"5iD9mn2inFzm1u3jvr9egi","artistName":"Sloth","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebe159d550bb96ec697230d1ba","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.076Z"}
+{"artistId":"1e6Slp9egbeuYW1dXXZdHH","artistName":"Anmol Jhanb","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb6dbb1a3a18119d6d7ef848f3","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:46.076Z"}
+{"level":"info","message":"Request processed in 103ms","timestamp":"2025-01-18T05:23:46.077Z"}
+{"label":"buildit-records","level":"info","limit":500,"message":"GET /releases request:","offset":0,"timestamp":"2025-01-18T05:23:53.324Z"}
+{"label":"buildit-records","level":"info","limit":500,"message":"Releases found:","offset":0,"returnedCount":99,"timestamp":"2025-01-18T05:23:53.425Z","totalCount":99}
+{"labelId":"buildit-records","level":"info","limit":100,"message":"GET /tracks request:","page":1,"sort":"created_at","timestamp":"2025-01-18T05:23:53.702Z"}
+{"id":"buildit-records","level":"info","message":"Found label:","name":"Build It Records","slug":"buildit-records","timestamp":"2025-01-18T05:23:53.704Z"}
+{"include":[{"as":"artists","model":"Artist","required":false},{"as":"release","model":"Release","required":false}],"level":"info","limit":100,"message":"Executing track query with:","offset":0,"order":[["created_at","DESC"]],"timestamp":"2025-01-18T05:23:53.705Z","where":{"label_id":"buildit-records"}}
+{"count":100,"level":"info","message":"Found tracks:","page":1,"timestamp":"2025-01-18T05:23:53.737Z","total":215,"totalPages":3}
+{"level":"info","message":"First track raw data:","timestamp":"2025-01-18T05:23:53.738Z"}
+{"artistId":"1PfFjfGpiL18ubihWak73A","artistName":"Diskode","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.738Z"}
+{"artistId":"4lK6PWpYGdcT3N8cf1roZD","artistName":"Alex Willson","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.738Z"}
+{"artistId":"4lK6PWpYGdcT3N8cf1roZD","artistName":"Alex Willson","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.738Z"}
+{"artistId":"6eRIttlGmlWB7UC3UQGWnC","artistName":"Space Jump Salute","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.738Z"}
+{"artistId":"6eRIttlGmlWB7UC3UQGWnC","artistName":"Space Jump Salute","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.738Z"}
+{"artistId":"2Invsp3HSrAeJy4u7Retry","artistName":"Kolter","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.738Z"}
+{"artistId":"0yeBm9tePHPfFsBibArox4","artistName":"Lenny Warn","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.739Z"}
+{"artistId":"4wZfmHy2oMJINXYb4Ui3Ps","artistName":"Cam Northwest","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.739Z"}
+{"artistId":"3TZrbaIt80Q00mbXHtG4SE","artistName":"Lunoize","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.739Z"}
+{"artistId":"4gq1OUkNP170UZc6OwWYvl","artistName":"The Seconds","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.739Z"}
+{"artistId":"0yeBm9tePHPfFsBibArox4","artistName":"Lenny Warn","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.739Z"}
+{"artistId":"0yeBm9tePHPfFsBibArox4","artistName":"Lenny Warn","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.739Z"}
+{"artistId":"4fjB3uoisF1KRzCWN4o2JN","artistName":"Discover (BR)","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.739Z"}
+{"artistId":"0CNyacW4B30MKOqqDwuvIG","artistName":"Arcane","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.739Z"}
+{"artistId":"0CNyacW4B30MKOqqDwuvIG","artistName":"Arcane","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.739Z"}
+{"artistId":"2IUfrxRBDHnpAErCXsbHcJ","artistName":"Ronald Bass","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.739Z"}
+{"artistId":"2IUfrxRBDHnpAErCXsbHcJ","artistName":"Ronald Bass","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.739Z"}
+{"artistId":"2TmhY6YNml1fHhuyZNuxDG","artistName":"Vandek","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.740Z"}
+{"artistId":"6Q4pEcHHXhHLKc6fDS4Qim","artistName":"Justus Jakob","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.740Z"}
+{"artistId":"0A1wu73Im00lBOBgUM7Ati","artistName":"Transcode","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.740Z"}
+{"artistId":"6gP4RmrqSAXfek1JtVjPYB","artistName":"Rob Me","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.740Z"}
+{"artistId":"6gP4RmrqSAXfek1JtVjPYB","artistName":"Rob Me","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.740Z"}
+{"artistId":"4LRSqGtcsX0OUvT49pgz0d","artistName":"Frederique","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb7fc690f0328ec46f219e4763","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.740Z"}
+{"artistId":"4LZdwir6piRWAz76JqQ0Vk","artistName":"Roman Anthony","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.740Z"}
+{"artistId":"5hEExJgwx7NVIhwmPxsXcW","artistName":"Daniels Jack","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.741Z"}
+{"artistId":"1JkbF1nnHscJZcmc4Ve5tz","artistName":"Jon Lee","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.741Z"}
+{"artistId":"1JkbF1nnHscJZcmc4Ve5tz","artistName":"Jon Lee","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.741Z"}
+{"artistId":"4wZfmHy2oMJINXYb4Ui3Ps","artistName":"Cam Northwest","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.741Z"}
+{"artistId":"1bn0UcIaEKHWx15s0GyH55","artistName":"Jamie Brennan","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.741Z"}
+{"artistId":"40vGNEPfFybJbwyfnId4vq","artistName":"Hoodrat","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.741Z"}
+{"artistId":"6bcwGm2uFzv4AKC2Yn381O","artistName":"JOE MACC","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.741Z"}
+{"artistId":"0xZGCkVUlfWMOymFznYXau","artistName":"KusKa","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.741Z"}
+{"artistId":"7JfFxpAunmJgEbO8I5GBh3","artistName":"Den5ity","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.741Z"}
+{"artistId":"1e6Slp9egbeuYW1dXXZdHH","artistName":"Anmol Jhanb","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb6dbb1a3a18119d6d7ef848f3","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.741Z"}
+{"artistId":"5hEExJgwx7NVIhwmPxsXcW","artistName":"Daniels Jack","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.742Z"}
+{"artistId":"5hEExJgwx7NVIhwmPxsXcW","artistName":"Daniels Jack","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.742Z"}
+{"artistId":"5hEExJgwx7NVIhwmPxsXcW","artistName":"Daniels Jack","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.742Z"}
+{"artistId":"6lglbOveCSoKJZpqXRydoc","artistName":"Surrealist","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.742Z"}
+{"artistId":"4td48QeJ7pss1XiMEOPLHn","artistName":"ZOI","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.743Z"}
+{"artistId":"7rEEG39ELD8TuQDaFo5a38","artistName":"Joshrox","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.743Z"}
+{"artistId":"7rEEG39ELD8TuQDaFo5a38","artistName":"Joshrox","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.743Z"}
+{"artistId":"1V9J5mpIUtIWMtWe9k5xaU","artistName":"Justin Novak","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.743Z"}
+{"artistId":"2AjgtuA1gpfrZd0P9DIOJ1","artistName":"MARKUZ","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.743Z"}
+{"artistId":"2AjgtuA1gpfrZd0P9DIOJ1","artistName":"MARKUZ","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.743Z"}
+{"artistId":"2AjgtuA1gpfrZd0P9DIOJ1","artistName":"MARKUZ","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.743Z"}
+{"artistId":"2AjgtuA1gpfrZd0P9DIOJ1","artistName":"MARKUZ","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.743Z"}
+{"artistId":"4wZfmHy2oMJINXYb4Ui3Ps","artistName":"Cam Northwest","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.743Z"}
+{"artistId":"1GA6ypSdiAiyoizLhHw6ZI","artistName":"Bacosaurus","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.744Z"}
+{"artistId":"7CsGIfqoq13hyMuyEcz7jR","artistName":"Hot Keys","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb3b44841ab2ff9faca274fe30","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.745Z"}
+{"artistId":"4tTZs2DdpDJGr0D3eozeVP","artistName":"Smith & Anthony","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.745Z"}
+{"artistId":"1mTLc7oyqBOo61SxRcPfBe","artistName":"DopekidJay","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.745Z"}
+{"artistId":"6JFspbPYcL5Lwr3iaOriYo","artistName":"Sadkiel","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.745Z"}
+{"artistId":"6bcwGm2uFzv4AKC2Yn381O","artistName":"JOE MACC","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.746Z"}
+{"artistId":"6bcwGm2uFzv4AKC2Yn381O","artistName":"JOE MACC","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.746Z"}
+{"artistId":"6bcwGm2uFzv4AKC2Yn381O","artistName":"JOE MACC","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.746Z"}
+{"artistId":"6bcwGm2uFzv4AKC2Yn381O","artistName":"JOE MACC","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.746Z"}
+{"artistId":"2oKmXbAcxH34dS26Ek7NkG","artistName":"JLZK","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.746Z"}
+{"artistId":"1sVQUHMvHE8X3N9IsfQtdv","artistName":"Mij Mack","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.746Z"}
+{"artistId":"1sVQUHMvHE8X3N9IsfQtdv","artistName":"Mij Mack","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.746Z"}
+{"artistId":"1sVQUHMvHE8X3N9IsfQtdv","artistName":"Mij Mack","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.746Z"}
+{"artistId":"3ythKjPqgCKhy9g73pwPwn","artistName":"Raw Underground","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.746Z"}
+{"artistId":"3ythKjPqgCKhy9g73pwPwn","artistName":"Raw Underground","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.747Z"}
+{"artistId":"5MgkJgCYsozS2jp0Z5HWsy","artistName":"Udachi","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.747Z"}
+{"artistId":"7CsGIfqoq13hyMuyEcz7jR","artistName":"Hot Keys","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb3b44841ab2ff9faca274fe30","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.747Z"}
+{"artistId":"1vFGvmhvZYBc0XpgpoAzUf","artistName":"FKLS","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.747Z"}
+{"artistId":"3MOuoaEORVBSF3cjDzObb9","artistName":"Rich Pinder","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.747Z"}
+{"artistId":"7LSqqLI9WU96MwgODdZLLq","artistName":"Yung Stanza","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.747Z"}
+{"artistId":"7gEp2a62iZCO0ov8MqBZsO","artistName":"Leraxe","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.747Z"}
+{"artistId":"3og3v8mHrJVInbLtJSuxXt","artistName":"Lim Bom","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.747Z"}
+{"artistId":"237jViwUtYWobFMMhadK93","artistName":"YCHTCLB","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.747Z"}
+{"artistId":"5R4pRI4MSJnDLJDOSvfJMG","artistName":"Atty G","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb956e97b43091162f357b0e4b","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.747Z"}
+{"artistId":"1O1KSL8MigYkNx3p2PXjA9","artistName":"Gray Matter","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.748Z"}
+{"artistId":"7rF3f4HuDpSrmox92qbAO6","artistName":"Chic Iverson","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.748Z"}
+{"artistId":"0InppnBMt6IV72mah6QJ5R","artistName":"Tim Trip","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.748Z"}
+{"artistId":"27wbFRzciZbJdFxvax9WcS","artistName":"Gruv1","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb3b0e90ad0a59492f08a93ef5","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.748Z"}
+{"artistId":"27wbFRzciZbJdFxvax9WcS","artistName":"Gruv1","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb3b0e90ad0a59492f08a93ef5","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.748Z"}
+{"artistId":"1XrH962P4m9qarMwaveb6H","artistName":"Rocksted","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.748Z"}
+{"artistId":"1XrH962P4m9qarMwaveb6H","artistName":"Rocksted","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.748Z"}
+{"artistId":"7JfFxpAunmJgEbO8I5GBh3","artistName":"Den5ity","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.748Z"}
+{"artistId":"5hEExJgwx7NVIhwmPxsXcW","artistName":"Daniels Jack","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.748Z"}
+{"artistId":"5hEExJgwx7NVIhwmPxsXcW","artistName":"Daniels Jack","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.748Z"}
+{"artistId":"5JboY0uq4p1XOKcgLGcupg","artistName":"Dene Antony","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.748Z"}
+{"artistId":"6tp2g3p0Jc4xwttoKacGnk","artistName":"Pirro","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.748Z"}
+{"artistId":"6mVxjfvV0y0deUmJBslnuI","artistName":"Mltd","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.748Z"}
+{"artistId":"0WPDhtsx9EfxnkwohLwhUb","artistName":"Diseace","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.749Z"}
+{"artistId":"1KiSpGrzs4IkIUb83atLVr","artistName":"Double Drop","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.749Z"}
+{"artistId":"5sobBegrP0b7zmE5Edc8C6","artistName":"BELLO","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebb55187639322530b231271fa","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.749Z"}
+{"artistId":"6uuUmaH6yzvpnPgDcdl0y4","artistName":"Alfonso Tan","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.749Z"}
+{"artistId":"5kjLSnLC92rIy7B5knTIH3","artistName":"Kwal","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.749Z"}
+{"artistId":"5kjLSnLC92rIy7B5knTIH3","artistName":"Kwal","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.749Z"}
+{"artistId":"4LRSqGtcsX0OUvT49pgz0d","artistName":"Frederique","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb7fc690f0328ec46f219e4763","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.749Z"}
+{"artistId":"4LRSqGtcsX0OUvT49pgz0d","artistName":"Frederique","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb7fc690f0328ec46f219e4763","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.749Z"}
+{"artistId":"2p5Z7GbBkN6aJdg6JYV4rP","artistName":"DJ Jayms","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.749Z"}
+{"artistId":"2p5Z7GbBkN6aJdg6JYV4rP","artistName":"DJ Jayms","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.749Z"}
+{"artistId":"2SyuXmouzHiUSjNLNxRNiL","artistName":"Oxymoron","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab67616d0000b273ed9fabeb0a9de51d79011226","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.749Z"}
+{"artistId":"07arIK3JPmCv0nZWpP6mUm","artistName":"Defunct!","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.749Z"}
+{"artistId":"07arIK3JPmCv0nZWpP6mUm","artistName":"Defunct!","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.749Z"}
+{"artistId":"07arIK3JPmCv0nZWpP6mUm","artistName":"Defunct!","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.749Z"}
+{"artistId":"1W9pJsla05m0YLC25BaPzW","artistName":"Caique Carvalho","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb9e424522d4c107a311574351","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.750Z"}
+{"artistId":"1W9pJsla05m0YLC25BaPzW","artistName":"Caique Carvalho","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb9e424522d4c107a311574351","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:23:53.750Z"}
+{"level":"info","message":"Request processed in 45ms","timestamp":"2025-01-18T05:23:53.750Z"}
+{"label":"buildit-tech","level":"info","limit":500,"message":"GET /releases request:","offset":0,"timestamp":"2025-01-18T05:24:00.236Z"}
+{"label":"buildit-tech","level":"info","limit":500,"message":"Releases found:","offset":0,"returnedCount":56,"timestamp":"2025-01-18T05:24:00.275Z","totalCount":56}
+{"labelId":"buildit-tech","level":"info","limit":100,"message":"GET /tracks request:","page":1,"sort":"created_at","timestamp":"2025-01-18T05:24:00.701Z"}
+{"id":"buildit-tech","level":"info","message":"Found label:","name":"Build It Tech","slug":"buildit-tech","timestamp":"2025-01-18T05:24:00.719Z"}
+{"include":[{"as":"artists","model":"Artist","required":false},{"as":"release","model":"Release","required":false}],"level":"info","limit":100,"message":"Executing track query with:","offset":0,"order":[["created_at","DESC"]],"timestamp":"2025-01-18T05:24:00.719Z","where":{"label_id":"buildit-tech"}}
+{"count":79,"level":"info","message":"Found tracks:","page":1,"timestamp":"2025-01-18T05:24:00.762Z","total":79,"totalPages":1}
+{"level":"info","message":"First track raw data:","timestamp":"2025-01-18T05:24:00.763Z"}
+{"artistId":"7l2w73f38C8M8Z1WXIzARp","artistName":"Bravery","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.763Z"}
+{"artistId":"7l2w73f38C8M8Z1WXIzARp","artistName":"Bravery","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.763Z"}
+{"artistId":"7l2w73f38C8M8Z1WXIzARp","artistName":"Bravery","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.764Z"}
+{"artistId":"7l2w73f38C8M8Z1WXIzARp","artistName":"Bravery","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.764Z"}
+{"artistId":"5vMnh9zUMuyulSXf3xZ9T9","artistName":"Jay Peeki","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebbe70e93183bec497eea30648","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.764Z"}
+{"artistId":"5vMnh9zUMuyulSXf3xZ9T9","artistName":"Jay Peeki","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebbe70e93183bec497eea30648","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.764Z"}
+{"artistId":"66iu65cpuC4OTiT4fEItm6","artistName":"John Okins","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb5aba41e0b4d5dbbb3efb568a","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.764Z"}
+{"artistId":"3W6zi9pEjpuF61IoKrP5c6","artistName":"Catz N Hood","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb4d8de8cd1fb0aebb48022564","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.764Z"}
+{"artistId":"78CGbie7iFakO4pJaj6XRS","artistName":"Chango","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb1e66e456a27cc9ca24a4de58","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.764Z"}
+{"artistId":"7mXyW5kPIUrSRGkV0I9Ilo","artistName":"FeelGood","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb77dbde523925f73c8860f3e5","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.764Z"}
+{"artistId":"7DREdfV4mKhlrQiiOPNiIa","artistName":"Justin Lawson","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebd7fbdd400145fc2c7977c81f","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.765Z"}
+{"artistId":"5NCIFb4JfQobJI1V6tndrR","artistName":"Kelvin Richard","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb0f503b915e3ee062a2da3bd6","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.765Z"}
+{"artistId":"4dcyj8fp2rkzVxvXgvFAKV","artistName":"Colin Thomas","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebc22e97e2356a2d033692ee24","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.765Z"}
+{"artistId":"6yjsvVut7MsLmMiAfyNL5m","artistName":"Fatty","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb3fd91bd5e20766e8155fc088","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.765Z"}
+{"artistId":"6yjsvVut7MsLmMiAfyNL5m","artistName":"Fatty","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb3fd91bd5e20766e8155fc088","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.766Z"}
+{"artistId":"0gIwYJ6XYry8I7aK73eK3d","artistName":"Gouzy","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb9f6ecc553349d71b9e9276a2","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.766Z"}
+{"artistId":"0gIwYJ6XYry8I7aK73eK3d","artistName":"Gouzy","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb9f6ecc553349d71b9e9276a2","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.766Z"}
+{"artistId":"6nxRINEXiBbSs6TgTZZ4ae","artistName":"No Messin","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb002cf57243b3db4978addee3","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.766Z"}
+{"artistId":"6nxRINEXiBbSs6TgTZZ4ae","artistName":"No Messin","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb002cf57243b3db4978addee3","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.766Z"}
+{"artistId":"0Mu5RMSse8xbWBS54MLRoj","artistName":"Ruddek","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb40a30fb5b0a8cee1098dbf4d","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.766Z"}
+{"artistId":"0xhXLXPVNbgslNtqcjFLPp","artistName":"TUKKO","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab67616d0000b273f0d492be7ab5956e0e2da652","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.766Z"}
+{"artistId":"3sq5Tp1iuMLLoOyuve0lv9","artistName":"Ben Grime","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebbb265c8dd2a046e254957ebd","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.766Z"}
+{"artistId":"1ktwah2wyErs1Fon4eVgdm","artistName":"BARC","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb7ed4e66a90781d19cf5ee47f","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.766Z"}
+{"artistId":"5fU2v3rxLJ7GEI41LXiu0I","artistName":"Law Mark","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebe4ca854cbeea1b763cf66fcb","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.767Z"}
+{"artistId":"1FBSojGveT9qgrTyA948NX","artistName":"Vianna","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb7babc47f27262694de117e79","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.767Z"}
+{"artistId":"3rAjfCFCzit3Z6fvjobseY","artistName":"Jazzam","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebfc0681546fec29d69b5fd03c","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.767Z"}
+{"artistId":"0jpftZv0U3bs9msuaIMvQo","artistName":"MID LOW","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebdcc01f21ecada2dae661076c","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.767Z"}
+{"artistId":"0gIwYJ6XYry8I7aK73eK3d","artistName":"Gouzy","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb9f6ecc553349d71b9e9276a2","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.767Z"}
+{"artistId":"0GBjmaQp0SZZOqcJs370fp","artistName":"Low Control","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb849f4209d19ae22b23bbbbd8","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.767Z"}
+{"artistId":"0GBjmaQp0SZZOqcJs370fp","artistName":"Low Control","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb849f4209d19ae22b23bbbbd8","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.767Z"}
+{"artistId":"3lzArCKfwedfl9eQ6SZF90","artistName":"Cesar Green","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebd1d146520337791cc1a22dd8","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.767Z"}
+{"artistId":"3rAjfCFCzit3Z6fvjobseY","artistName":"Jazzam","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebfc0681546fec29d69b5fd03c","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.767Z"}
+{"artistId":"1e6Slp9egbeuYW1dXXZdHH","artistName":"Anmol Jhanb","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb6dbb1a3a18119d6d7ef848f3","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.767Z"}
+{"artistId":"1e6Slp9egbeuYW1dXXZdHH","artistName":"Anmol Jhanb","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb6dbb1a3a18119d6d7ef848f3","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.767Z"}
+{"artistId":"3if5MiqQs3F7rN98VuTKmk","artistName":"Misto Clean","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb84c3ca3a2c1ffe237b426bfb","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.768Z"}
+{"artistId":"6QSpwoXNHKuyxV43biHlYV","artistName":"Flo.Von","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb19ce52ea0892e3ddeae61a77","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.768Z"}
+{"artistId":"6QSpwoXNHKuyxV43biHlYV","artistName":"Flo.Von","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb19ce52ea0892e3ddeae61a77","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.768Z"}
+{"artistId":"5iFEvlgMAoGmUX1j7WEKbw","artistName":"VOILLA","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab67616d0000b273929338c8366001f21bda82f0","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.768Z"}
+{"artistId":"7ygRUv7YWkIbg8Ke3kYT27","artistName":"Tony H","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb3abfb4102cb04b7bbbef4d5d","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.768Z"}
+{"artistId":"4U56v6lNB6yTjBGsDOCtOa","artistName":"Frontside (BR)","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eba2549945bfc5419282e55a07","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.770Z"}
+{"artistId":"4U56v6lNB6yTjBGsDOCtOa","artistName":"Frontside (BR)","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eba2549945bfc5419282e55a07","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.770Z"}
+{"artistId":"7lDZhKkcXxWZ9Wc7KhNkAr","artistName":"Resonant","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb16341ebf979593d5204815a7","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.770Z"}
+{"artistId":"0EQbJHFSgUdpgMZTR4GbEN","artistName":"Houkes","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb7870f2f2e24ab988983ec027","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.771Z"}
+{"artistId":"7sRMzxFQRRzFtOjAMFHjxY","artistName":"Litty Ritty","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebd496d23c73c32ffb1b41fda5","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.771Z"}
+{"artistId":"7sRMzxFQRRzFtOjAMFHjxY","artistName":"Litty Ritty","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebd496d23c73c32ffb1b41fda5","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.771Z"}
+{"artistId":"7EroDVPELCYcB8zyB2XN9F","artistName":"Sillaz","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb30a2861ca7ac827b926ae1d7","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.771Z"}
+{"artistId":"7EroDVPELCYcB8zyB2XN9F","artistName":"Sillaz","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb30a2861ca7ac827b926ae1d7","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.771Z"}
+{"artistId":"2cgkzW8bpOiL2JrndJYX0H","artistName":"BRST","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb96fd58732b8a3a2aa8d89da0","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.771Z"}
+{"artistId":"3LaTRYUZsXIhgwdfpQNHb8","artistName":"Zebob","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebf26bc80b79c1e267bb28a927","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.771Z"}
+{"artistId":"2l9bjRfEhr9BleTsYAJ4kc","artistName":"BURNTECH","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebaf79eebc91fff842bc64b517","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.771Z"}
+{"artistId":"2l9bjRfEhr9BleTsYAJ4kc","artistName":"BURNTECH","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebaf79eebc91fff842bc64b517","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.771Z"}
+{"artistId":"2Ygebw1ybw5wMSAb0ken6I","artistName":"THATSOUND","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebcbca2c2c822a7a337b2a77c7","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.771Z"}
+{"artistId":"4WDygc5eolM4SoNReygt0L","artistName":"Callum Mcintosh","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab67616d0000b273ca6810dc72e78f21dd4d5afb","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.771Z"}
+{"artistId":"7uU0VNTeJ6DUiLPQ3M0cRX","artistName":"Bess Maze","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebfd0f4d2bc8cc211b0f73fdb0","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.771Z"}
+{"artistId":"7uU0VNTeJ6DUiLPQ3M0cRX","artistName":"Bess Maze","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebfd0f4d2bc8cc211b0f73fdb0","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.772Z"}
+{"artistId":"21T0dUcy5Bgr2LUrJ8BNd9","artistName":"Danny Samaei","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb9aa49337b4e93f129df6251f","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.773Z"}
+{"artistId":"7r4vyumTIutC0JhYWnCswO","artistName":"Nick Siarom","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb4a7a359361eb8d578ef063d0","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.773Z"}
+{"artistId":"2qgl5yiniO2qykrPxMkCPz","artistName":"Lux Esto","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebbc6fecc946f08348cc13c5a4","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.773Z"}
+{"artistId":"5iD9mn2inFzm1u3jvr9egi","artistName":"Sloth","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebe159d550bb96ec697230d1ba","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.773Z"}
+{"artistId":"5iD9mn2inFzm1u3jvr9egi","artistName":"Sloth","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebe159d550bb96ec697230d1ba","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.773Z"}
+{"artistId":"4hCHGNjlHun0P8KOL4Qiww","artistName":"Tv_tv","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb2a779b2886e5ef5f8ec7374d","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.774Z"}
+{"artistId":"66iu65cpuC4OTiT4fEItm6","artistName":"John Okins","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb5aba41e0b4d5dbbb3efb568a","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.774Z"}
+{"artistId":"66iu65cpuC4OTiT4fEItm6","artistName":"John Okins","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb5aba41e0b4d5dbbb3efb568a","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.774Z"}
+{"artistId":"66iu65cpuC4OTiT4fEItm6","artistName":"John Okins","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb5aba41e0b4d5dbbb3efb568a","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.774Z"}
+{"artistId":"66iu65cpuC4OTiT4fEItm6","artistName":"John Okins","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb5aba41e0b4d5dbbb3efb568a","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.774Z"}
+{"artistId":"0xQr33cktuO31pKCEnau0I","artistName":"F-LIMA","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebca0f07f01cc0e10ac2637b36","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.774Z"}
+{"artistId":"3sq5Tp1iuMLLoOyuve0lv9","artistName":"Ben Grime","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebbb265c8dd2a046e254957ebd","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.774Z"}
+{"artistId":"5fU2v3rxLJ7GEI41LXiu0I","artistName":"Law Mark","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebe4ca854cbeea1b763cf66fcb","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.774Z"}
+{"artistId":"45D867pQvoG6qOU0Tbj97a","artistName":"Damn Square","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebeedbf5650624512ce239cccf","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.774Z"}
+{"artistId":"7dzgzs35v1uZo6FOFn1uxf","artistName":"Stackhouse (DJ)","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebea0b598cb51189e93904118e","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.774Z"}
+{"artistId":"5s7VM2QEv0CSEE1RwPAaBi","artistName":"CLAASSEN","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebf7fec9dacae138fe875e83da","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.775Z"}
+{"artistId":"5s7VM2QEv0CSEE1RwPAaBi","artistName":"CLAASSEN","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebf7fec9dacae138fe875e83da","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.776Z"}
+{"artistId":"1W5bUhcxwysNo9bUOHVEwy","artistName":"Loüis Pleîn","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebca419bfe321ab8bbb965bcad","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.776Z"}
+{"artistId":"1W9pJsla05m0YLC25BaPzW","artistName":"Caique Carvalho","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb9e424522d4c107a311574351","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.778Z"}
+{"artistId":"6QSpwoXNHKuyxV43biHlYV","artistName":"Flo.Von","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb19ce52ea0892e3ddeae61a77","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.778Z"}
+{"artistId":"6QSpwoXNHKuyxV43biHlYV","artistName":"Flo.Von","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb19ce52ea0892e3ddeae61a77","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.778Z"}
+{"artistId":"6QSpwoXNHKuyxV43biHlYV","artistName":"Flo.Von","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb19ce52ea0892e3ddeae61a77","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.778Z"}
+{"artistId":"5iD9mn2inFzm1u3jvr9egi","artistName":"Sloth","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5ebe159d550bb96ec697230d1ba","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.778Z"}
+{"artistId":"1e6Slp9egbeuYW1dXXZdHH","artistName":"Anmol Jhanb","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb6dbb1a3a18119d6d7ef848f3","level":"info","message":"First artist image data:","timestamp":"2025-01-18T05:24:00.779Z"}
+{"level":"info","message":"Request processed in 60ms","timestamp":"2025-01-18T05:24:00.779Z"}

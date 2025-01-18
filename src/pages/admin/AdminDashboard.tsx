@@ -57,23 +57,20 @@ const AdminDashboard: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      // Fetch regular releases
-      const response = await databaseService.getReleasesByLabelId(selectedLabel);
+      // Fetch all releases with pagination
+      const response = await databaseService.getReleasesByLabelId(selectedLabel, 1, 500);
       console.log('Got releases:', response);
       
       if (response?.releases) {
         setReleases(response.releases);
-        setTotalReleases(response.totalReleases || response.releases.length);
+        setTotalReleases(response.totalReleases);
         setCurrentPage(response.currentPage);
       }
 
-      // Fetch regular tracks sorted by created_at
+      // Fetch all tracks sorted by created_at
       const allTracksResponse = await databaseService.getTracksByLabel(selectedLabel, 'created_at');
       console.log('Got all tracks:', allTracksResponse);
       
-      // Group tracks by release to get unique release count
-      const uniqueReleases = new Set(allTracksResponse.tracks.map(track => track.release?.id).filter(Boolean));
-      setTotalReleases(uniqueReleases.size);
       setTracks(allTracksResponse.tracks);
       console.log('Set tracks state:', allTracksResponse.tracks.length, 'tracks');
 

@@ -96,17 +96,22 @@ export class DatabaseService {
   }
 
   // Release Methods
-  public async getReleasesByLabelId(labelId: RecordLabelId, page: number = 1, limit: number = 500): Promise<{ releases: Release[]; totalReleases: number; currentPage: number; totalPages: number; hasMore: boolean }> {
-    const offset = (page - 1) * limit;
-    const response = await this.fetchApi<ApiResponse<never>>(`/releases?label=${labelId}&offset=${offset}&limit=${limit}`);
+  public async getReleasesByLabelId(labelId: string, page: number = 1, limit: number = 500): Promise<any> {
+    try {
+      const offset = (page - 1) * limit;
+      const response = await this.fetchApi<ApiResponse<never>>(`/releases?label=${labelId}&offset=${offset}&limit=${limit}`);
 
-    return {
-      releases: response.releases || [],
-      totalReleases: response.total || 0,
-      currentPage: page,
-      totalPages: Math.ceil((response.total || 0) / limit),
-      hasMore: ((offset + (response.releases?.length || 0)) < (response.total || 0))
-    };
+      return {
+        releases: response.releases || [],
+        totalReleases: response.total || 0,
+        currentPage: page,
+        totalPages: Math.ceil((response.total || 0) / limit),
+        hasMore: ((offset + (response.releases?.length || 0)) < (response.total || 0))
+      };
+    } catch (error) {
+      console.error('Error fetching releases:', error);
+      throw new DatabaseError('Failed to fetch releases');
+    }
   }
 
   // Track Methods
