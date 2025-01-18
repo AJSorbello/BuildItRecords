@@ -7,6 +7,7 @@ interface Artist {
   label_id: string;
   spotify_url: string;
   images: any[];
+  image_url: string | null;
 }
 
 interface Release {
@@ -133,20 +134,22 @@ class ReleaseService {
       
       // Insert or update artist
       const artistResult = await client.query(
-        `INSERT INTO artists (id, name, label_id, spotify_url, images)
-         VALUES ($1, $2, $3, $4, $5)
+        `INSERT INTO artists (id, name, label_id, spotify_url, images, image_url)
+         VALUES ($1, $2, $3, $4, $5, $6)
          ON CONFLICT (id) DO UPDATE SET
            name = EXCLUDED.name,
            label_id = EXCLUDED.label_id,
            spotify_url = EXCLUDED.spotify_url,
-           images = EXCLUDED.images
+           images = EXCLUDED.images,
+           image_url = EXCLUDED.image_url
          RETURNING id`,
         [
           artistData.id,
           artistData.name,
           labelId,
           artistData.external_urls.spotify,
-          JSON.stringify(artistData.images)
+          JSON.stringify(artistData.images),
+          artistData.images[0]?.url || null
         ]
       );
 

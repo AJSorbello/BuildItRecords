@@ -243,6 +243,76 @@ class SpotifyService {
     }
   }
 
+  async getArtist(artistId) {
+    try {
+      const requestFn = async () => {
+        logger.info('Fetching artist by ID:', artistId);
+        const result = await this.spotifyApi.getArtist(artistId);
+        
+        if (!result.body) {
+          logger.error('No artist data in response:', result);
+          return null;
+        }
+
+        logger.info('Found artist:', {
+          id: result.body.id,
+          name: result.body.name,
+          hasImages: result.body.images && result.body.images.length > 0
+        });
+
+        return result.body;
+      };
+
+      return await this.makeRequest(requestFn);
+    } catch (error) {
+      logger.error('Error fetching artist by ID:', error);
+      throw error;
+    }
+  }
+
+  async updateArtistImages(artistId) {
+    try {
+      // Fetch full artist data from Spotify
+      const artistInfo = await this.getArtist(artistId);
+      
+      if (!artistInfo) {
+        logger.error('Could not fetch artist info from Spotify:', artistId);
+        return null;
+      }
+
+      // Find the artist in our database
+      const artist = await Artist.findByPk(artistId);
+      if (!artist) {
+        logger.error('Artist not found in database:', artistId);
+        return null;
+      }
+
+      // Update the artist with new image data
+      if (artistInfo.images && artistInfo.images.length > 0) {
+        await artist.update({
+          image_url: artistInfo.images[0].url,
+          images: artistInfo.images
+        });
+        logger.info('Updated artist images:', {
+          artistId,
+          artistName: artist.name,
+          imageUrl: artistInfo.images[0].url,
+          imageCount: artistInfo.images.length
+        });
+        return artist;
+      } else {
+        logger.warn('No images available for artist:', {
+          artistId,
+          artistName: artist.name
+        });
+        return artist;
+      }
+    } catch (error) {
+      logger.error('Error updating artist images:', error);
+      throw error;
+    }
+  }
+
   async searchReleases(labelId) {
     try {
       logger.info('Searching releases for label:', labelId);

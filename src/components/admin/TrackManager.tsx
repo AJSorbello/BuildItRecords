@@ -58,6 +58,24 @@ const TrackManager: React.FC<TrackManagerProps> = ({
   };
 
   const getArtists = (track: Track, isHeader: boolean = false) => {
+    // Log track and artist data
+    console.log('Track:', {
+      name: track.name,
+      label: track.release?.label?.name,
+      artists: track.artists?.map(a => ({
+        name: a.name,
+        id: a.id,
+        image_url: a.image_url,
+        images: a.images
+      })),
+      releaseArtists: track.release?.artists?.map(a => ({
+        name: a.name,
+        id: a.id,
+        image_url: a.image_url,
+        images: a.images
+      }))
+    });
+
     // For album/release headers, always show the original artists
     if (isHeader) {
       return track.release?.artists || track.artists || [];

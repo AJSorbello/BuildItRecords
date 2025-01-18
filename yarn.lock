@@ -3367,6 +3367,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@spotify/web-api-ts-sdk@npm:^1.2.0":
+  version: 1.2.0
+  resolution: "@spotify/web-api-ts-sdk@npm:1.2.0"
+  checksum: 10c0/05c794fbc81bd22ed33f48e495dafb58712e2f25bfed92179f4ce352fb6bb50646b5c4f1a71c60676b76268033ecf57cc210e22638e2e423052f582391e40de3
+  languageName: node
+  linkType: hard
+
 "@surma/rollup-plugin-off-main-thread@npm:^2.2.3":
   version: 2.2.3
   resolution: "@surma/rollup-plugin-off-main-thread@npm:2.2.3"
@@ -5565,6 +5572,7 @@ __metadata:
     "@mui/x-date-pickers": "npm:^6.18.6"
     "@sentry/react": "npm:^7.91.0"
     "@sentry/tracing": "npm:^7.91.0"
+    "@spotify/web-api-ts-sdk": "npm:^1.2.0"
     "@testing-library/dom": "npm:^10.4.0"
     "@testing-library/jest-dom": "npm:^6.1.6"
     "@testing-library/react": "npm:^14.1.2"
