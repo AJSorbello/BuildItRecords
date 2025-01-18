@@ -99,9 +99,7 @@ module.exports = (sequelize) => {
       references: {
         model: 'releases',
         key: 'id'
-      },
-      onDelete: 'CASCADE',
-      onUpdate: 'CASCADE'
+      }
     },
     label_id: {
       type: DataTypes.STRING,
@@ -109,9 +107,7 @@ module.exports = (sequelize) => {
       references: {
         model: 'labels',
         key: 'id'
-      },
-      onDelete: 'CASCADE',
-      onUpdate: 'CASCADE'
+      }
     },
     remixer_id: {
       type: DataTypes.STRING,
@@ -143,10 +139,10 @@ module.exports = (sequelize) => {
     sequelize,
     modelName: 'Track',
     tableName: 'tracks',
+    underscored: true,
     timestamps: true,
     createdAt: 'created_at',
     updatedAt: 'updated_at',
-    underscored: true,
     defaultScope: {
       order: [['created_at', 'DESC']]
     }

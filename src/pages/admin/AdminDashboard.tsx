@@ -35,6 +35,7 @@ const AdminDashboard: React.FC = () => {
   const [releases, setReleases] = useState<Release[]>([]);
   const [tracks, setTracks] = useState<Track[]>([]);
   const [totalReleases, setTotalReleases] = useState<number>(0);
+  const [totalTracks, setTotalTracks] = useState<number>(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -72,6 +73,7 @@ const AdminDashboard: React.FC = () => {
       console.log('Got all tracks:', allTracksResponse);
       
       setTracks(allTracksResponse.tracks);
+      setTotalTracks(allTracksResponse.total);
       console.log('Set tracks state:', allTracksResponse.tracks.length, 'tracks');
 
     } catch (error) {
@@ -197,7 +199,7 @@ const AdminDashboard: React.FC = () => {
                       Total Tracks
                     </Typography>
                     <Typography variant="h3">
-                      {tracks.length}
+                      {totalTracks}
                     </Typography>
                   </CardContent>
                 </Card>

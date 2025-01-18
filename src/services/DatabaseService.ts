@@ -115,13 +115,17 @@ export class DatabaseService {
   }
 
   // Track Methods
-  public async getTracksByLabel(labelId: RecordLabelId, sortBy?: string): Promise<{ tracks: Track[] }> {
-    const endpoint = sortBy ? `/tracks?label=${labelId}&sort=${sortBy}` : `/tracks?label=${labelId}`;
-    const response = await this.fetchApi<ApiResponse<never>>(endpoint);
-
-    return {
-      tracks: response.tracks || []
-    };
+  public async getTracksByLabel(labelId: RecordLabelId, sortBy?: string): Promise<{ tracks: Track[], total: number }> {
+    try {
+      const response = await this.fetchApi<ApiResponse<never>>(`/tracks/all/${labelId}`);
+      return {
+        tracks: response.tracks || [],
+        total: response.tracks?.length || 0
+      };
+    } catch (error) {
+      console.error('Error fetching all tracks:', error);
+      throw new DatabaseError('Failed to fetch all tracks');
+    }
   }
 
   public async getTrackById(trackId: string): Promise<Track | null> {

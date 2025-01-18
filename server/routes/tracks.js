@@ -711,6 +711,45 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Get all tracks for a label with no pagination (for debugging)
+router.get('/all/:labelId', async (req, res) => {
+  try {
+    const { labelId } = req.params;
+    logger.info('Getting all tracks for label:', labelId);
+
+    const tracks = await Track.findAll({
+      where: { label_id: labelId },
+      include: [
+        {
+          model: Artist,
+          as: 'artists',
+          through: { attributes: [] }
+        },
+        {
+          model: Release,
+          as: 'release'
+        }
+      ],
+      order: [['created_at', 'DESC']]
+    });
+
+    logger.info('Found tracks:', {
+      labelId,
+      count: tracks.length,
+      tracks: tracks.map(t => ({
+        name: t.name,
+        release: t.release?.name,
+        artists: t.artists?.map(a => a.name).join(', ')
+      }))
+    });
+
+    res.json({ tracks });
+  } catch (error) {
+    logger.error('Error fetching all tracks:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 /**
  * @swagger
  * /tracks/search:
