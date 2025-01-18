@@ -61,3 +61,4 @@ const ArtistCard: React.FC<ArtistCardProps> = ({ artist, onClick }) => {
 };
 
 export { ArtistCard };
+export default ArtistCard;

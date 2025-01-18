@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Box, TextField, Button, CircularProgress, Alert } from '@mui/material';
 import { spotifyService } from '../../services/SpotifyService';
 import { Track } from '../../types/models';
-import { DatabaseApiError } from '../../services/DatabaseService';
+import { DatabaseError } from '../../utils/errors';
 
 interface ReleaseFormProps {
   onSubmit: (track: Track) => void;
@@ -47,7 +47,7 @@ const ReleaseForm: React.FC<ReleaseFormProps> = ({ onSubmit, onCancel }) => {
       onSubmit(track);
     } catch (err) {
       console.error('Error fetching track:', err);
-      if (err instanceof DatabaseApiError) {
+      if (err instanceof DatabaseError) {
         setError(err.message);
       } else {
         setError('Failed to fetch track details');

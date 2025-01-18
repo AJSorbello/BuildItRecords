@@ -82,6 +82,8 @@ const convertSpotifyTrackToTrack = (spotifyTrack: SpotifyTrack): Track => {
   };
 };
 
+export const formatSpotifyTrack = convertSpotifyTrackToTrack;
+
 export const formatSpotifyArtist = (artist: SpotifyArtist): Artist => ({
   id: artist.id,
   name: artist.name,
@@ -92,6 +94,22 @@ export const formatSpotifyArtist = (artist: SpotifyArtist): Artist => ({
   followers: artist.followers || { href: null, total: 0 },
   genres: artist.genres || [],
   popularity: artist.popularity || 0
+});
+
+export const formatSpotifyAlbum = (album: SpotifyAlbum): Album => ({
+  id: album.id,
+  name: album.name,
+  release_date: album.release_date,
+  images: album.images?.map(img => ({
+    url: img.url,
+    height: img.height || 0,
+    width: img.width || 0
+  })) || [],
+  external_urls: album.external_urls,
+  uri: album.uri,
+  artists: album.artists.map(formatSpotifyArtist),
+  total_tracks: album.total_tracks,
+  label_id: 'buildit-records' // Default to main label
 });
 
 export const getTrackLabel = (track: Track): RecordLabelId | undefined => {

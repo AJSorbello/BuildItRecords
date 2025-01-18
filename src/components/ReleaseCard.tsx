@@ -88,3 +88,5 @@ export const ReleaseCard: React.FC<ReleaseCardProps> = ({ track, onClick, rankin
     </Card>
   );
 };
+
+export default ReleaseCard;

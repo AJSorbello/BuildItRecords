@@ -51,7 +51,40 @@ const TrackManager: React.FC<TrackManagerProps> = ({
     return artists.map(artist => artist.name || 'Unknown Artist').join(', ');
   };
 
-  const getArtists = (track: Track) => {
+  const extractRemixerFromTitle = (trackName: string): string | null => {
+    // Match pattern: "- Name Remix" or "Name Remix"
+    const remixMatch = trackName.match(/[-\s]([^-]+)\s+Remix/i);
+    return remixMatch ? remixMatch[1].trim() : null;
+  };
+
+  const getArtists = (track: Track, isHeader: boolean = false) => {
+    // For album/release headers, always show the original artists
+    if (isHeader) {
+      return track.release?.artists || track.artists || [];
+    }
+
+    // For track rows, handle remixes specially
+    const isRemix = track.name.toLowerCase().includes('remix');
+    if (isRemix) {
+      // Try to get remixer name from track title
+      const remixerName = extractRemixerFromTitle(track.name);
+      if (remixerName) {
+        // Find the artist whose name matches the remixer name
+        const remixer = track.artists?.find(artist => 
+          artist.name.toLowerCase().includes(remixerName.toLowerCase())
+        );
+        if (remixer) {
+          return [remixer];
+        }
+      }
+      // Fallback to using remixer_id if available
+      if (track.remixer_id) {
+        return track.artists?.filter(artist => artist.id === track.remixer_id) || [];
+      }
+      // Last resort: show the last artist
+      return track.artists?.slice(-1) || [];
+    }
+    // For regular tracks, show all artists
     return track.artists?.length ? track.artists : track.release?.artists || [];
   };
 
@@ -265,7 +298,7 @@ const TrackManager: React.FC<TrackManagerProps> = ({
                   </TableCell>
                   <TableCell>
                     <Box display="flex" alignItems="center" gap={1}>
-                      {getArtists(releaseTracks[0]).map((artist) => (
+                      {getArtists(releaseTracks[0], true).map((artist) => (
                         <Box key={artist.id} display="flex" alignItems="center" gap={1}>
                           {artist.image_url && (
                             <img

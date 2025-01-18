@@ -51,3 +51,5 @@ export const PlayableTrackList: React.FC<PlayableTrackListProps> = ({
     />
   );
 };
+
+export default PlayableTrackList;

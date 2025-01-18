@@ -3,9 +3,10 @@ export { TrackList } from './common/TrackList';
 
 // Admin Components
 import ReleaseFormComponent from './admin/ReleaseForm';
-export { TrackManager } from './admin/TrackManager';
+import TrackManagerComponent from './admin/TrackManager';
 export { UpdateTracksHelper } from './admin/UpdateTracksHelper';
 export const ReleaseForm = ReleaseFormComponent;
+export const TrackManager = TrackManagerComponent;
 
 // Dialog Components
 import EditTrackDialogComponent from './dialogs/EditTrackDialog';
