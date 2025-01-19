@@ -111,6 +111,12 @@ const ReleaseModal: React.FC<ReleaseModalProps> = ({ open, onClose, release }) =
               }}
             />
             <Typography variant="h6" gutterBottom>
+              {release.name}
+            </Typography>
+            <Typography variant="subtitle1" color="text.secondary" gutterBottom>
+              {release.artists?.map(artist => artist.name).join(', ')}
+            </Typography>
+            <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
               Artists
             </Typography>
             <Box>
@@ -154,49 +160,95 @@ const ReleaseModal: React.FC<ReleaseModalProps> = ({ open, onClose, release }) =
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {release.tracks?.map((track, index) => (
-                    <TableRow key={track.id} hover>
-                      <TableCell>{index + 1}</TableCell>
-                      <TableCell>{track.name}</TableCell>
-                      <TableCell>
-                        <Box>
-                          {track.artists?.map((artist, artistIndex) => (
-                            <React.Fragment key={artist.id}>
-                              <Button
-                                onClick={() => handleArtistClick(artist)}
-                                sx={{ p: 0, minWidth: 0, textTransform: 'none' }}
-                                color="primary"
-                              >
-                                {artist.name}
-                              </Button>
-                              {artistIndex < (track.artists?.length || 0) - 1 ? ', ' : ''}
-                            </React.Fragment>
-                          ))}
-                        </Box>
-                      </TableCell>
-                      <TableCell>{formatDuration(track.duration)}</TableCell>
-                      <TableCell>
-                        {track.preview_url && (
-                          <audio controls>
-                            <source src={track.preview_url} type="audio/mpeg" />
-                            Your browser does not support the audio element.
-                          </audio>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {track.spotify_url && (
-                          <Link
-                            href={track.spotify_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            underline="hover"
-                          >
-                            Spotify
-                          </Link>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {release.tracks?.map((track, index) => {
+                    // Get original artists from the track or release
+                    const originalArtists = track.artists || release.artists || [];
+                    
+                    // Check if track name contains " - " and ends with "Remix"
+                    const isRemix = track.name.includes(' - ') && track.name.toLowerCase().endsWith('remix');
+                    let remixerName = '';
+                    
+                    if (isRemix) {
+                      // Extract remixer name from track name (e.g., "Track - Artist Remix" -> "Artist")
+                      const parts = track.name.split(' - ');
+                      if (parts.length > 1) {
+                        remixerName = parts[1].replace(/ Remix$/i, '');
+                      }
+                    }
+
+                    return (
+                      <TableRow key={track.id} hover>
+                        <TableCell>{index + 1}</TableCell>
+                        <TableCell>{track.name}</TableCell>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                            {/* Show original artists only if not a remix */}
+                            {!isRemix && (
+                              <Box>
+                                {originalArtists.map((artist, artistIndex) => (
+                                  <React.Fragment key={artist.id || artistIndex}>
+                                    <Button
+                                      onClick={() => handleArtistClick(artist)}
+                                      sx={{ p: 0, minWidth: 0, textTransform: 'none' }}
+                                      color="primary"
+                                    >
+                                      {artist.name}
+                                    </Button>
+                                    {artistIndex < originalArtists.length - 1 ? ', ' : ''}
+                                  </React.Fragment>
+                                ))}
+                              </Box>
+                            )}
+                            
+                            {/* Show remixer if it's a remix */}
+                            {isRemix && (
+                              <Box sx={{ color: 'text.secondary' }}>
+                                <Typography variant="body2" component="span">
+                                  Remix by{' '}
+                                </Typography>
+                                {track.remixer ? (
+                                  <Button
+                                    onClick={() => handleArtistClick(track.remixer)}
+                                    sx={{ p: 0, minWidth: 0, textTransform: 'none' }}
+                                    color="primary"
+                                  >
+                                    {track.remixer.name}
+                                  </Button>
+                                ) : (
+                                  <Typography variant="body2" component="span" sx={{ color: 'primary.main' }}>
+                                    {remixerName}
+                                  </Typography>
+                                )}
+                              </Box>
+                            )}
+                          </Box>
+                        </TableCell>
+                        <TableCell>
+                          {track.duration ? formatDuration(track.duration) : '--:--'}
+                        </TableCell>
+                        <TableCell>
+                          {track.preview_url && (
+                            <audio controls>
+                              <source src={track.preview_url} type="audio/mpeg" />
+                              Your browser does not support the audio element.
+                            </audio>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {track.spotify_url && (
+                            <Link
+                              href={track.spotify_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              underline="hover"
+                            >
+                              Spotify
+                            </Link>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </TableContainer>

@@ -4,6 +4,7 @@
  */
 
 import type { SpotifyExternalUrls, SpotifyExternalIds } from './spotify';
+import { Artist } from './artist';
 
 export type Artist = {
   id: string;
@@ -38,11 +39,11 @@ export type Track = {
   id: string;
   name: string;
   duration: number;
-  track_number: number;
-  disc_number: number;
-  preview_url: string | null;
-  spotify_url: string;
-  spotify_uri: string;
+  track_number?: number;
+  disc_number?: number;
+  preview_url?: string;
+  spotify_url?: string;
+  spotify_uri?: string;
   release_id?: string;
   label_id?: string;
   remixer_id?: string;
@@ -57,6 +58,8 @@ export type Track = {
   popularity?: number;
   available_markets?: string[];
   is_local?: boolean;
+  remixer?: Artist;
+  remixers?: Artist[];  // Array of remixers for tracks with multiple remixers
 };
 
 export type RecordLabelId = string;
