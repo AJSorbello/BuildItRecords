@@ -43,7 +43,7 @@ interface SpotifyTrack {
 // Convert a Spotify track to our Track type
 export const transformSpotifyTrack = (track: SpotifyTrack): Track => ({
   id: track.id,
-  name: track.name,
+  title: track.title,  // Changed from name to title
   uri: track.uri,
   type: 'track',
   artists: track.artists.map(artist => ({
@@ -56,7 +56,7 @@ export const transformSpotifyTrack = (track: SpotifyTrack): Track => ({
   })),
   album: {
     id: track.album.id,
-    name: track.album.name,
+    title: track.album.name,
     images: track.album.images,
     release_date: track.album.release_date,
     artists: track.album.artists.map(artist => ({

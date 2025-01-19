@@ -80,7 +80,7 @@ CREATE INDEX idx_releases_created_at ON releases(created_at);
 -- Create tracks table
 CREATE TABLE tracks (
   id VARCHAR(255) PRIMARY KEY,
-  name VARCHAR(255) NOT NULL,
+  title VARCHAR(255) NOT NULL,
   duration INTEGER NOT NULL,
   track_number INTEGER,
   disc_number INTEGER,
@@ -93,7 +93,7 @@ CREATE TABLE tracks (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_tracks_name ON tracks(name);
+CREATE INDEX idx_tracks_title ON tracks(title);
 CREATE INDEX idx_tracks_release_id ON tracks(release_id);
 CREATE INDEX idx_tracks_label_id ON tracks(label_id);
 CREATE INDEX idx_tracks_created_at ON tracks(created_at);

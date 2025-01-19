@@ -10,7 +10,7 @@ describe('SpotifyService', () => {
   it('should fetch track by id', async () => {
     const mockTrackResponse = {
       id: '3z8h0TU7ReDPLIbEnYhWZb',
-      name: 'Bohemian Rhapsody',
+      title: 'Bohemian Rhapsody',
       artists: [
         {
           id: '1',
@@ -65,7 +65,7 @@ describe('SpotifyService', () => {
 
     expect(track).toBeDefined();
     expect(track.id).toBe(trackId);
-    expect(track.name).toBe('Bohemian Rhapsody');
+    expect(track.title).toBe('Bohemian Rhapsody');
     expect(track.artists).toBeDefined();
     expect(track.artists?.length).toBe(1);
     expect(track.artists?.[0].name).toBe('Queen');

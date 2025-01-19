@@ -49,11 +49,12 @@ export const TrackDetails: React.FC<TrackDetailsProps> = ({
             <Box
               component="img"
               src={track.album.images[0].url}
-              alt={track.name}
+              alt={track.title}
               sx={{
                 width: '100%',
                 height: 'auto',
-                borderRadius: 1,
+                maxWidth: 300,
+                borderRadius: 2,
               }}
             />
           )}
@@ -61,7 +62,7 @@ export const TrackDetails: React.FC<TrackDetailsProps> = ({
         <Grid item xs={12} md={8}>
           <Box display="flex" justifyContent="space-between" alignItems="center">
             <Typography variant="h4" gutterBottom>
-              {track.name}
+              {track.title}
             </Typography>
             {track.external_urls?.spotify && (
               <IconButton

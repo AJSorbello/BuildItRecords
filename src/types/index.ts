@@ -101,8 +101,7 @@ export interface Album {
 
 export interface Track {
   id: string;
-  name: string;
-  artists: Artist[];
+  title: string;
   duration_ms: number;
   preview_url: string | null;
   external_urls: ExternalUrls;
@@ -115,6 +114,7 @@ export interface Track {
   artworkUrl?: string;
   recordLabel?: string;
   type: 'track';
+  artists: Artist[];
 }
 
 export interface Release {
@@ -191,7 +191,7 @@ export const isArtist = (obj: any): obj is Artist => {
 export const isTrack = (obj: any): obj is Track => {
   return obj &&
     typeof obj.id === 'string' &&
-    typeof obj.name === 'string' &&
+    typeof obj.title === 'string' &&
     Array.isArray(obj.artists) &&
     obj.artists.every(isArtist) &&
     obj.type === 'track';
@@ -235,7 +235,7 @@ export const convertSpotifyAlbum = (album: SpotifyAlbum): Album => ({
 
 export const convertSpotifyTrack = (track: SpotifyTrack): Track => ({
   id: track.id,
-  name: track.name,
+  title: track.name,
   artists: track.artists.map(convertSpotifyArtist),
   duration_ms: track.duration_ms,
   preview_url: track.preview_url,

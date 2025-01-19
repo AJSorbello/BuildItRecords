@@ -1,5 +1,5 @@
 import React from 'react';
-import { List, Avatar, Spin } from 'antd';
+import { List, Avatar, Spin, Space, Tag } from 'antd';
 import type { Track } from '../../types/track';
 import { formatDuration } from '../../utils/trackUtils';
 import './TrackList.css';
@@ -34,14 +34,16 @@ export const TrackList: React.FC<TrackListProps> = ({
                   <Avatar
                     shape="square"
                     size={64}
-                    src={track.images[0]?.url}
-                    alt={track.album.name}
+                    src={track.images[0]?.url || '/default-album-art.png'}
+                    alt={track.title}
                   />
                 }
                 title={
                   <div className="track-list__item-title">
-                    <span>{track.name}</span>
-                    {track.explicit && <span className="track-list__explicit-tag">E</span>}
+                    <Space>
+                      <span>{track.title}</span>
+                      {track.explicit && <Tag color="red">Explicit</Tag>}
+                    </Space>
                   </div>
                 }
                 description={

@@ -19,7 +19,7 @@ export const PLACEHOLDER_IMAGE = '/placeholder-track.png';
 export const isTrack = (obj: any): obj is Track => {
   return obj && typeof obj === 'object' && 
     'id' in obj && 
-    'name' in obj && 
+    'title' in obj && 
     'artists' in obj && 
     Array.isArray(obj.artists);
 };
@@ -34,7 +34,7 @@ export const formatDuration = (ms: number): string => {
 const convertSpotifyTrackToTrack = (spotifyTrack: SpotifyTrack): Track => {
   return {
     id: spotifyTrack.id,
-    name: spotifyTrack.name,
+    title: spotifyTrack.name,
     artists: spotifyTrack.artists.map(artist => ({
       id: artist.id,
       name: artist.name,
@@ -54,7 +54,7 @@ const convertSpotifyTrackToTrack = (spotifyTrack: SpotifyTrack): Track => {
     spotify_uri: spotifyTrack.uri,
     release: {
       id: spotifyTrack.album.id,
-      name: spotifyTrack.album.name,
+      title: spotifyTrack.album.name,
       release_date: spotifyTrack.album.release_date,
       images: spotifyTrack.album.images?.map(img => ({
         url: img.url,
@@ -98,7 +98,7 @@ export const formatSpotifyArtist = (artist: SpotifyArtist): Artist => ({
 
 export const formatSpotifyAlbum = (album: SpotifyAlbum): Album => ({
   id: album.id,
-  name: album.name,
+  title: album.name,
   release_date: album.release_date,
   images: album.images?.map(img => ({
     url: img.url,
@@ -151,11 +151,10 @@ export const getAllTracks = (): Track[] => {
   return Array.from(trackCache.values()).flat();
 };
 
-export const searchTracks = (query: string): Track[] => {
-  const tracks = getAllTracks();
+export const searchTracks = (query: string, tracks: Track[]): Track[] => {
   const lowerQuery = query.toLowerCase();
   return tracks.filter(track =>
-    track.name.toLowerCase().includes(lowerQuery) ||
+    track.title.toLowerCase().includes(lowerQuery) ||
     track.artists?.some(artist => artist.name.toLowerCase().includes(lowerQuery))
   );
 };

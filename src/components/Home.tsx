@@ -14,7 +14,7 @@ import { API_URL } from '../config'; // assuming config file is in the parent di
 
 interface Track {
   id: string;
-  name: string;
+  title: string;
   artist: string;
   album: string;
   albumArt: string;
@@ -114,11 +114,11 @@ const Home: React.FC = () => {
                   objectFit: 'cover',
                 }}
                 image={track.albumArt || 'https://via.placeholder.com/300'}
-                alt={track.name}
+                alt={track.title}
               />
               <CardContent sx={{ flexGrow: 1 }}>
                 <Typography gutterBottom variant="h6" component="h2" sx={{ color: '#FFFFFF' }}>
-                  {track.name}
+                  {track.title}
                 </Typography>
                 <Typography sx={{ color: '#B3B3B3' }}>
                   {track.artist}

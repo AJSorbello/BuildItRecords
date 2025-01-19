@@ -36,7 +36,7 @@ module.exports = (sequelize) => {
         notEmpty: true
       }
     },
-    name: {
+    title: {
       type: DataTypes.STRING,
       allowNull: false,
       validate: {
@@ -153,6 +153,7 @@ module.exports = (sequelize) => {
     createdAt: 'created_at',
     updatedAt: 'updated_at',
     defaultScope: {
+      attributes: ['id', 'title', 'duration', 'preview_url', 'spotify_url', 'spotify_uri', 'popularity', 'remixer_id'],
       order: [['created_at', 'DESC']]
     }
   });

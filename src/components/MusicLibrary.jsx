@@ -283,7 +283,7 @@ const MusicLibrary = () => {
     if (filter) {
       const searchTerm = filter.toLowerCase();
       filtered = labelTracks.filter(track => 
-        track.name.toLowerCase().includes(searchTerm) ||
+        track.title.toLowerCase().includes(searchTerm) ||
         track.artists.some(artist => 
           artist.name.toLowerCase().includes(searchTerm)
         )
@@ -297,7 +297,7 @@ const MusicLibrary = () => {
         case 'popularity':
           return b.popularity - a.popularity;
         case 'name':
-          return a.name.localeCompare(b.name);
+          return a.title.localeCompare(b.title);
         case 'duration':
           return a.duration_ms - b.duration_ms;
         default:
@@ -379,11 +379,11 @@ const MusicLibrary = () => {
                       >
                         <AlbumArt
                           src={track.album.images[0]?.url}
-                          alt={track.album.name}
+                          alt={track.title}
                         />
                         <TrackInfo>
                           <TrackName explicit={track.explicit}>
-                            {track.name}
+                            {track.title}
                             {track.explicit && (
                               <ExplicitBadge>E</ExplicitBadge>
                             )}

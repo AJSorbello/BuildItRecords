@@ -27,11 +27,11 @@ export const TrackDetails: React.FC<TrackDetailsProps> = ({ track }) => {
       <div className="track-details__header">
         <img
           src={track.images[0]?.url}
-          alt={track.name}
+          alt={track.title}
           className="track-details__image"
         />
         <div className="track-details__info">
-          <Title level={3}>{track.name}</Title>
+          <Title level={3}>{track.title}</Title>
           <Space direction="vertical" size="small">
             <Text>
               By {track.artists.map(artist => artist.name).join(', ')}

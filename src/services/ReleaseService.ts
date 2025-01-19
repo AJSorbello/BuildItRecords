@@ -207,7 +207,7 @@ class ReleaseService {
               uri = EXCLUDED.uri`,
             [
               track.id,
-              track.name,
+              track.title,  // Changed from name to title
               artistData.id,
               album.id,
               labelId,

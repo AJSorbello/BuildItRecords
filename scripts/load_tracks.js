@@ -92,7 +92,7 @@ async function loadTracks() {
         try {
           const trackData = {
             id: track.id,
-            name: track.name,
+            title: track.name,
             artists: track.artists.map(artist => ({
               id: artist.id,
               name: artist.name

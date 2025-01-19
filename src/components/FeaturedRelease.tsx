@@ -36,12 +36,12 @@ const FeaturedRelease: React.FC<FeaturedReleaseProps> = ({ track }) => {
           objectFit: 'cover',
         }}
         image={track.artworkUrl || '/default-album-art.png'}
-        alt={track.name}
+        alt={track.title}
       />
       <Box sx={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
         <CardContent sx={{ flex: '1 0 auto', p: 4, position: 'relative', zIndex: 1 }}>
           <Typography variant="h4" component="div" gutterBottom sx={{ color: colors.text }}>
-            {track.name}
+            {track.title}
           </Typography>
           <Typography variant="h6" color="textSecondary" gutterBottom sx={{ color: colors.textSecondary }}>
             {track.artists.map(artist => artist.name).join(', ')}

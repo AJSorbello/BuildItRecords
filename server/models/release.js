@@ -5,21 +5,23 @@ module.exports = (sequelize, DataTypes) => {
   class Release extends Model {
     static associate(models) {
       // associations can be defined here
+      Release.belongsToMany(models.Artist, {
+        through: 'release_artists',
+        foreignKey: 'release_id',
+        as: 'artists'
+      });
+
       Release.belongsTo(models.Label, {
         foreignKey: 'label_id',
         as: 'label'
       });
 
-      Release.belongsToMany(models.Artist, {
-        through: 'release_artists',
-        foreignKey: 'release_id',
-        otherKey: 'artist_id',
-        as: 'artists'
-      });
-
       Release.hasMany(models.Track, {
         foreignKey: 'release_id',
-        as: 'tracks'
+        as: 'tracks',
+        scope: {
+          attributes: ['id', 'title', 'duration', 'preview_url', 'spotify_url', 'spotify_uri', 'popularity', 'remixer_id']
+        }
       });
     }
   }
@@ -33,16 +35,12 @@ module.exports = (sequelize, DataTypes) => {
         notEmpty: true
       }
     },
-    name: {
+    title: {
       type: DataTypes.STRING,
       allowNull: false,
       validate: {
         notEmpty: true
       }
-    },
-    title: {
-      type: DataTypes.STRING,
-      allowNull: true
     },
     release_date: {
       type: DataTypes.DATE,

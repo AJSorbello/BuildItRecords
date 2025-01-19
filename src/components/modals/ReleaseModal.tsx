@@ -86,7 +86,7 @@ const ReleaseModal: React.FC<ReleaseModalProps> = ({ open, onClose, release }) =
       <DialogTitle>
         <Box display="flex" alignItems="center" justifyContent="space-between">
           <Typography variant="h5" component="div">
-            {release.name}
+            {release.title}
           </Typography>
           <IconButton onClick={onClose} size="small">
             <CloseIcon />
@@ -100,7 +100,7 @@ const ReleaseModal: React.FC<ReleaseModalProps> = ({ open, onClose, release }) =
             <Box
               component="img"
               src={release.artwork_url || '/default-album.png'}
-              alt={release.name}
+              alt={release.title}
               sx={{
                 width: '100%',
                 height: 'auto',
@@ -111,7 +111,7 @@ const ReleaseModal: React.FC<ReleaseModalProps> = ({ open, onClose, release }) =
               }}
             />
             <Typography variant="h6" gutterBottom>
-              {release.name}
+              {release.title}
             </Typography>
             <Typography variant="subtitle1" color="text.secondary" gutterBottom>
               {release.artists?.map(artist => artist.name).join(', ')}
@@ -161,71 +161,24 @@ const ReleaseModal: React.FC<ReleaseModalProps> = ({ open, onClose, release }) =
                 </TableHead>
                 <TableBody>
                   {release.tracks?.map((track, index) => {
-                    // Get original artists from the track or release
-                    const originalArtists = track.artists || release.artists || [];
-                    
-                    // Check if track name contains " - " and ends with "Remix"
-                    const isRemix = track.name.includes(' - ') && track.name.toLowerCase().endsWith('remix');
-                    let remixerName = '';
-                    
+                    // Check if the track is a remix
+                    const isRemix = track.title.includes(' - ') && track.title.toLowerCase().endsWith('remix');
+                    let remixArtist = '';
+
                     if (isRemix) {
-                      // Extract remixer name from track name (e.g., "Track - Artist Remix" -> "Artist")
-                      const parts = track.name.split(' - ');
-                      if (parts.length > 1) {
-                        remixerName = parts[1].replace(/ Remix$/i, '');
-                      }
+                      const parts = track.title.split(' - ');
+                      remixArtist = parts[parts.length - 1].replace(' Remix', '');
                     }
 
                     return (
                       <TableRow key={track.id} hover>
                         <TableCell>{index + 1}</TableCell>
-                        <TableCell>{track.name}</TableCell>
+                        <TableCell>{track.title}</TableCell>
                         <TableCell>
-                          <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                            {/* Show original artists only if not a remix */}
-                            {!isRemix && (
-                              <Box>
-                                {originalArtists.map((artist, artistIndex) => (
-                                  <React.Fragment key={artist.id || artistIndex}>
-                                    <Button
-                                      onClick={() => handleArtistClick(artist)}
-                                      sx={{ p: 0, minWidth: 0, textTransform: 'none' }}
-                                      color="primary"
-                                    >
-                                      {artist.name}
-                                    </Button>
-                                    {artistIndex < originalArtists.length - 1 ? ', ' : ''}
-                                  </React.Fragment>
-                                ))}
-                              </Box>
-                            )}
-                            
-                            {/* Show remixer if it's a remix */}
-                            {isRemix && (
-                              <Box sx={{ color: 'text.secondary' }}>
-                                <Typography variant="body2" component="span">
-                                  Remix by{' '}
-                                </Typography>
-                                {track.remixer ? (
-                                  <Button
-                                    onClick={() => handleArtistClick(track.remixer)}
-                                    sx={{ p: 0, minWidth: 0, textTransform: 'none' }}
-                                    color="primary"
-                                  >
-                                    {track.remixer.name}
-                                  </Button>
-                                ) : (
-                                  <Typography variant="body2" component="span" sx={{ color: 'primary.main' }}>
-                                    {remixerName}
-                                  </Typography>
-                                )}
-                              </Box>
-                            )}
-                          </Box>
+                          {track.artists.map(artist => artist.name).join(', ')}
+                          {isRemix && remixArtist && ` (${remixArtist} Remix)`}
                         </TableCell>
-                        <TableCell>
-                          {track.duration ? formatDuration(track.duration) : '--:--'}
-                        </TableCell>
+                        <TableCell>{track.duration ? formatDuration(track.duration) : '--:--'}</TableCell>
                         <TableCell>
                           {track.preview_url && (
                             <audio controls>

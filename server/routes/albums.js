@@ -101,7 +101,7 @@ router.get('/:albumId/tracks', [
 
         const tracks = album.dataValues.tracks.map(track => ({
             id: track.id,
-            name: track.name,
+            title: track.title,
             track_number: track.track_number,
             duration_ms: track.duration_ms,
             preview_url: track.preview_url,

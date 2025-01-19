@@ -22,12 +22,6 @@ const StyledListItem = styled(ListItem)(({ theme }) => ({
   padding: theme.spacing(1),
 }));
 
-const PlayCount = styled(Typography)(({ theme }) => ({
-  color: theme.palette.text.secondary,
-  fontSize: '0.875rem',
-  marginLeft: theme.spacing(2),
-}));
-
 const AlbumArt = styled(Avatar)(({ theme }) => ({
   width: 48,
   height: 48,
@@ -46,21 +40,6 @@ const getTopReleasesTitle = (labelId: string) => {
     default:
       return `Top ${TOP_RELEASES_LIMIT} Releases`;
   }
-};
-
-const formatPlayCount = (tracks: any[]) => {
-  if (!tracks || !tracks.length) return '0 plays';
-  
-  // Sum up all track popularities and multiply by 1000 for a more realistic number
-  const totalPlays = tracks.reduce((sum, track) => sum + ((track.popularity || 0) * 1000), 0);
-  
-  if (totalPlays >= 1000000) {
-    return `${(totalPlays / 1000000).toFixed(1)}M plays`;
-  }
-  if (totalPlays >= 1000) {
-    return `${(totalPlays / 1000).toFixed(1)}K plays`;
-  }
-  return `${totalPlays} plays`;
 };
 
 const TopReleases: React.FC<TopReleasesProps> = ({ label }) => {
@@ -162,9 +141,6 @@ const TopReleases: React.FC<TopReleasesProps> = ({ label }) => {
             key={release.id}
             secondaryAction={
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <PlayCount>
-                  {formatPlayCount(release.tracks)}
-                </PlayCount>
                 <IconButton edge="end" aria-label="play" size="small" sx={{ ml: 1 }}>
                   <PlayArrow />
                 </IconButton>

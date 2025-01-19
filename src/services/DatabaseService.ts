@@ -53,7 +53,7 @@ export class DatabaseService {
     return DatabaseService.instance;
   }
 
-  private async fetchApi<T extends ApiResponse<any>>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  private async fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     try {
       const token = localStorage.getItem('adminToken');
       const response = await fetch(`${this.baseUrl}${endpoint}`, {
@@ -77,8 +77,15 @@ export class DatabaseService {
       const data = await response.json();
       console.log('API Response:', data);
       
-      // Some endpoints don't return a success field, so we'll consider them successful if they have data
-      if (data.success === false || (!data.success && !data.tracks && !data.releases && !data.data)) {
+      // Return data if it's an array or has valid data
+      if (Array.isArray(data) || 
+          (typeof data === 'object' && 
+           (data.data || data.tracks || data.releases || !('success' in data)))) {
+        return data as T;
+      }
+      
+      // Only throw error if success is explicitly false
+      if (data.success === false) {
         throw new DatabaseError(data.message || 'API request failed', 'api_error');
       }
 
@@ -187,7 +194,7 @@ export class DatabaseService {
       const response = await this.fetchApi<ApiResponse<never>>(`/tracks/all/${labelId}`);
       return {
         tracks: response.tracks || [],
-        total: response.tracks?.length || 0
+        total: response.total || response.tracks?.length || 0
       };
     } catch (error) {
       console.error('Error fetching all tracks:', error);
@@ -236,13 +243,9 @@ export class DatabaseService {
       }
 
       console.log('Fetching artists for label:', labelId);
-      const response = await this.fetchApi<ApiResponse<Artist[]>>(`/artists/search?label=${labelId}`);
+      const response = await this.fetchApi<Artist[] | ApiResponse<Artist[]>>(`/artists/search?label=${labelId}`);
       
-      if (!response.data && !Array.isArray(response)) {
-        console.error('Invalid response from artists search:', response);
-        return [];
-      }
-
+      // Handle both array and object responses
       const artists = Array.isArray(response) ? response : response.data || [];
       console.log('Found artists:', artists.length);
       return artists;
@@ -297,6 +300,18 @@ export class DatabaseService {
         verified: false,
         message: error instanceof Error ? error.message : 'Token verification failed'
       };
+    }
+  }
+
+  public async getTracksByArtist(artistId: string): Promise<Track[]> {
+    try {
+      console.log('Fetching tracks for artist:', artistId);
+      const response = await this.fetchApi<{ success: boolean; data: Track[]; total: number }>(`/tracks/search?artist=${artistId}`);
+      console.log('Track response:', response);
+      return response.data || [];
+    } catch (error) {
+      console.error('Error fetching tracks for artist:', error);
+      throw new DatabaseError('Failed to fetch artist tracks');
     }
   }
 }

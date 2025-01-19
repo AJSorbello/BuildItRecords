@@ -122,7 +122,7 @@ router.get('/labels/:labelId/tracks/search', async (req, res) => {
       LEFT JOIN releases r ON t.release_id = r.id
       WHERE t.label_id = $1
         AND (
-          t.name ILIKE $2
+          t.title ILIKE $2
           OR a.name ILIKE $2
           OR r.name ILIKE $2
         )
@@ -150,7 +150,7 @@ router.get('/tracks/search', async (req, res) => {
       LEFT JOIN track_artists ta ON t.id = ta.track_id
       LEFT JOIN artists a ON ta.artist_id = a.id
       LEFT JOIN releases r ON t.release_id = r.id
-      WHERE t.name ILIKE $1
+      WHERE t.title ILIKE $1
         OR a.name ILIKE $1
         OR r.name ILIKE $1
       GROUP BY t.id
@@ -227,8 +227,8 @@ router.post('/labels/:labelId/import', verifyAdminToken, async (req, res) => {
       
       // Insert track
       await pool.query(
-        'INSERT INTO tracks (name, spotify_id, release_id, label_id) VALUES ($1, $2, $3, $4) ON CONFLICT (spotify_id) DO UPDATE SET name = $1',
-        [track.name, track.id, releaseResult.rows[0].id, labelId]
+        'INSERT INTO tracks (title, id, release_id, label_id) VALUES ($1, $2, $3, $4) ON CONFLICT (id) DO UPDATE SET title = $1',
+        [track.title, track.id, releaseResult.rows[0].id, labelId]
       );
     }
     

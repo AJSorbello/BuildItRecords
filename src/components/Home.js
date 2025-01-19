@@ -95,11 +95,11 @@ const Home = () => {
                   objectFit: 'cover',
                 }}
                 image={track.albumArt || 'https://via.placeholder.com/300'}
-                alt={track.name}
+                alt={track.title}
               />
               <CardContent sx={{ flexGrow: 1 }}>
                 <Typography gutterBottom variant="h6" component="h2">
-                  {track.name}
+                  {track.title}
                 </Typography>
                 <Typography>
                   {track.artist}

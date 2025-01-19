@@ -1,7 +1,12 @@
-import { Pool } from 'pg';
-import { RECORD_LABELS, RecordLabel } from '../src/constants/labels';
+#!/usr/bin/env node
+
+import pg from 'pg';
+import { RECORD_LABELS } from '../src/constants/labels.js';
+import type { RecordLabel } from '../src/types/labels.js';
 import dotenv from 'dotenv';
 import SpotifyWebApi from 'spotify-web-api-node';
+
+const { Pool } = pg;
 
 // Load environment variables
 dotenv.config();
@@ -10,7 +15,7 @@ dotenv.config();
 const pool = new Pool({
   user: process.env.POSTGRES_USER || 'postgres',
   host: process.env.POSTGRES_HOST || 'localhost',
-  database: process.env.POSTGRES_DB || 'buildit_records',
+  database: process.env.POSTGRES_DB || 'builditrecords',
   password: process.env.POSTGRES_PASSWORD || 'postgres',
   port: parseInt(process.env.POSTGRES_PORT || '5432'),
 });
@@ -33,74 +38,71 @@ async function getSpotifyToken() {
   }
 }
 
-async function insertLabel(label: RecordLabel): Promise<number> {
-  const slug = label.toLowerCase().replace(/\s+/g, '-');
+async function insertLabel(labelId: string, label: RecordLabel): Promise<string> {
   const now = new Date().toISOString();
-  const result = await pool.query(
-    'INSERT INTO labels (name, slug, "createdAt", "updatedAt") VALUES ($1, $2, $3, $3) RETURNING id',
-    [label, slug, now]
+  await pool.query(
+    `INSERT INTO labels (
+      id, name, display_name, slug, created_at, updated_at
+    ) VALUES ($1, $2, $3, $4, $5, $5) 
+    ON CONFLICT (id) DO NOTHING`,
+    [labelId, label.name, label.displayName, labelId.toLowerCase(), now]
   );
-  return result.rows[0].id;
+  return labelId;
 }
 
-async function insertArtist(artist: any, labelId: number): Promise<void> {
+async function insertArtist(artist: any, labelId: string): Promise<void> {
   const now = new Date().toISOString();
   await pool.query(
     `INSERT INTO artists (
-      id, name, image_url, bio, spotify_url, monthly_listeners, label_id, "createdAt", "updatedAt"
+      id, name, image_url, bio, spotify_url, monthly_listeners, label_id, created_at, updated_at
     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8)
     ON CONFLICT (id) DO UPDATE SET
       name = EXCLUDED.name,
       image_url = EXCLUDED.image_url,
-      bio = EXCLUDED.bio,
       spotify_url = EXCLUDED.spotify_url,
       monthly_listeners = EXCLUDED.monthly_listeners,
-      label_id = EXCLUDED.label_id,
-      "updatedAt" = $8`,
+      updated_at = EXCLUDED.updated_at`,
     [
       artist.id,
       artist.name,
-      artist.imageUrl,
-      artist.bio,
-      artist.spotifyUrl,
-      artist.monthlyListeners,
+      artist.images?.[0]?.url || '',
+      '',
+      artist.external_urls?.spotify || '',
+      artist.followers?.total || 0,
       labelId,
       now
     ]
   );
 }
 
-async function insertRelease(release: any, artistId: string, labelId: number): Promise<void> {
+async function insertRelease(release: any, artistId: string, labelId: string): Promise<void> {
   const now = new Date().toISOString();
   await pool.query(
     `INSERT INTO releases (
-      id, title, artist_id, artwork_url, release_date, genre,
-      label_id, spotify_url, beatport_url, soundcloud_url, "createdAt", "updatedAt"
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $11)
+      id, name, artwork_url, release_date, spotify_url, label_id, created_at, updated_at
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $7)
     ON CONFLICT (id) DO UPDATE SET
-      title = EXCLUDED.title,
-      artist_id = EXCLUDED.artist_id,
+      name = EXCLUDED.name,
       artwork_url = EXCLUDED.artwork_url,
-      release_date = EXCLUDED.release_date,
-      genre = EXCLUDED.genre,
-      label_id = EXCLUDED.label_id,
       spotify_url = EXCLUDED.spotify_url,
-      beatport_url = EXCLUDED.beatport_url,
-      soundcloud_url = EXCLUDED.soundcloud_url,
-      "updatedAt" = $11`,
+      updated_at = EXCLUDED.updated_at`,
     [
       release.id,
       release.title,
-      artistId,
       release.artworkUrl,
       release.releaseDate,
-      release.genre,
-      labelId,
       release.spotifyUrl,
-      release.beatportUrl,
-      release.soundcloudUrl,
+      labelId,
       now
     ]
+  );
+
+  // Insert release_artists association
+  await pool.query(
+    `INSERT INTO release_artists (release_id, artist_id, created_at, updated_at)
+    VALUES ($1, $2, $3, $3)
+    ON CONFLICT (release_id, artist_id) DO NOTHING`,
+    [release.id, artistId, now]
   );
 }
 
@@ -108,93 +110,76 @@ async function insertTrack(track: any, artistId: string, releaseId: string): Pro
   const now = new Date().toISOString();
   await pool.query(
     `INSERT INTO tracks (
-      id, name, artist_id, release_id, preview_url, spotify_url, "createdAt", "updatedAt"
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $7)
+      id, title, preview_url, spotify_url, release_id, created_at, updated_at
+    ) VALUES ($1, $2, $3, $4, $5, $6, $6)
     ON CONFLICT (id) DO UPDATE SET
-      name = EXCLUDED.name,
-      artist_id = EXCLUDED.artist_id,
-      release_id = EXCLUDED.release_id,
+      title = EXCLUDED.title,
       preview_url = EXCLUDED.preview_url,
       spotify_url = EXCLUDED.spotify_url,
-      "updatedAt" = $7`,
+      updated_at = EXCLUDED.updated_at`,
     [
       track.id,
-      track.name,
-      artistId,
-      releaseId,
+      track.title,  // Changed from name to title
       track.previewUrl,
       track.spotifyUrl,
+      releaseId,
       now
     ]
   );
+
+  // Insert track_artists association
+  await pool.query(
+    `INSERT INTO track_artists (track_id, artist_id, created_at, updated_at)
+    VALUES ($1, $2, $3, $3)
+    ON CONFLICT (track_id, artist_id) DO NOTHING`,
+    [track.id, artistId, now]
+  );
 }
 
-async function verifyTrackLabel(track: any, label: string): Promise<boolean> {
+async function verifyTrackLabel(track: any, labelId: string): Promise<boolean> {
   try {
-    // Get the full album details
-    const albumData = await spotifyApi.getAlbum(track.album.id);
-    const album = albumData.body;
+    const album = await spotifyApi.getAlbum(track.album.id);
+    const copyrights = album.body.copyrights || [];
+    const trackCopyrights = copyrights.map(c => c.text?.toLowerCase().trim());
     
-    // Check if the label matches exactly (case-insensitive)
-    const trackLabel = album.label?.toLowerCase().trim();
-    const expectedLabel = label.toLowerCase().trim();
-    
-    // Check for exact match or variations
-    const isMatch = 
-      trackLabel === expectedLabel ||
-      (label === 'Build It Records' && trackLabel === 'build it') ||
-      (label === 'Build It Tech' && trackLabel === 'build it tech') ||
-      (label === 'Build It Deep' && trackLabel === 'build it deep');
-    
-    if (isMatch) {
-      console.log(`✅ Verified track "${track.name}" belongs to label "${label}"`);
-    } else {
-      console.log(`❌ Track "${track.name}" has label "${album.label}" - not matching "${label}"`);
-    }
-    
-    return isMatch;
+    // Check if any copyright mentions Build It Records
+    return trackCopyrights.some(copyright => 
+      copyright?.includes('build it') || 
+      copyright?.includes('buildit') ||
+      copyright?.includes(labelId.toLowerCase())
+    );
   } catch (error) {
-    console.error(`Error verifying track label for ${track.name}:`, error);
+    console.error(`Error verifying track label for "${track.title}":`, error);  // Changed from name to title
     return false;
   }
 }
 
-async function getTracksForLabel(label: string) {
-  const allTracks = new Map();
-  const searchQueries = [
-    `label:"${label}"`,
-    `label:${label.replace(/\s+/g, '')}`,
+async function getTracksForLabel(labelId: string) {
+  const allTracks = new Map<string, any>();
+  const queries = [
+    'label:"Build It Records"',
+    'label:"BuildIt Records"',
+    'label:"Buildit Records"',
+    'copyright:"Build It Records"',
+    'copyright:"BuildIt Records"',
+    'copyright:"Buildit Records"'
   ];
 
-  for (const query of searchQueries) {
+  for (const query of queries) {
+    let offset = 0;
+    const limit = 50;
+    let hasMore = true;
+
     try {
-      let offset = 0;
-      const limit = 50;
-      let hasMore = true;
-
       while (hasMore) {
-        console.log(`Fetching tracks for "${query}" (offset: ${offset})`);
-        const searchResults = await spotifyApi.searchTracks(query, { 
-          limit,
-          offset,
-        });
+        const result = await spotifyApi.searchTracks(query, { limit, offset });
+        const tracks = result.body.tracks?.items || [];
+        console.log(`Found ${tracks.length} tracks for query "${query}" (offset: ${offset})`);
 
-        const tracks = searchResults.body.tracks?.items || [];
-        if (tracks.length === 0) {
-          hasMore = false;
-          continue;
-        }
-
-        // Verify each track's label
         for (const track of tracks) {
-          if (!allTracks.has(track.id)) {
-            const isCorrectLabel = await verifyTrackLabel(track, label);
-            if (isCorrectLabel) {
-              allTracks.set(track.id, track);
-            }
+          if (await verifyTrackLabel(track, labelId)) {
+            allTracks.set(track.id, track);
           }
-          // Wait a bit to avoid rate limiting
-          await new Promise(resolve => setTimeout(resolve, 100));
         }
 
         offset += limit;
@@ -205,29 +190,28 @@ async function getTracksForLabel(label: string) {
     }
   }
 
-  return Array.from(allTracks.values());
+  const finalTracks = Array.from(allTracks.values());
+  console.log(`Total unique tracks found for ${labelId}: ${finalTracks.length}`);
+  return finalTracks;
 }
 
 async function migrateData() {
   try {
     console.log('Starting migration...');
     
-    // Insert labels first
-    const labelIds = new Map<string, number>();
-    for (const [labelName, label] of Object.entries(RECORD_LABELS)) {
-      const labelId = await insertLabel(label);
-      labelIds.set(labelName, labelId);
-      console.log(`Inserted label: ${labelName}`);
+    // Insert labels
+    for (const [labelId, label] of Object.entries(RECORD_LABELS)) {
+      await insertLabel(labelId, label);
+      console.log(`Inserted label: ${label.displayName}`);
     }
 
     // Migrate tracks and associated data for each label
-    for (const [labelName, label] of Object.entries(RECORD_LABELS)) {
-      console.log(`\nProcessing label: ${labelName}`);
-      const labelId = labelIds.get(labelName)!;
+    for (const [labelId, label] of Object.entries(RECORD_LABELS)) {
+      console.log(`\nProcessing label: ${label.displayName}`);
 
       await getSpotifyToken();
-      const tracks = await getTracksForLabel(label);
-      console.log(`\nFound ${tracks.length} verified tracks for ${labelName}`);
+      const tracks = await getTracksForLabel(labelId);
+      console.log(`\nFound ${tracks.length} verified tracks for ${label.displayName}`);
 
       for (const track of tracks) {
         try {
@@ -239,10 +223,9 @@ async function migrateData() {
             const artistDetails = {
               id: artist.id,
               name: artist.name,
-              imageUrl: artistData.body.images?.[0]?.url || '',
-              bio: '',
-              spotifyUrl: artistData.body.external_urls?.spotify || '',
-              monthlyListeners: artistData.body.followers?.total || 0
+              images: artistData.body.images,
+              external_urls: artistData.body.external_urls,
+              followers: artistData.body.followers
             };
 
             await insertArtist(artistDetails, labelId);
@@ -258,10 +241,7 @@ async function migrateData() {
               title: album.name,
               artworkUrl: album.images[0]?.url || '',
               releaseDate: album.release_date,
-              genre: album.genres?.[0] || '',
-              spotifyUrl: album.external_urls?.spotify || '',
-              beatportUrl: '',
-              soundcloudUrl: ''
+              spotifyUrl: album.external_urls?.spotify || ''
             };
 
             await insertRelease(release, artist.id, labelId);
@@ -270,13 +250,13 @@ async function migrateData() {
             // Insert track
             const trackDetails = {
               id: track.id,
-              name: track.name,
+              title: track.title,  // Changed from name to title
               previewUrl: track.preview_url || '',
               spotifyUrl: track.external_urls?.spotify || ''
             };
 
             await insertTrack(trackDetails, artist.id, release.id);
-            console.log(`Inserted track: ${track.name}`);
+            console.log(`Inserted track: ${track.title}`);  // Changed from name to title
 
             // Wait a bit to avoid rate limiting
             await new Promise(resolve => setTimeout(resolve, 100));

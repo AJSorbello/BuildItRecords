@@ -81,8 +81,35 @@ router.get('/search', [
             order: [['name', 'ASC']]
         });
 
+        // Format the response to match the expected Artist type
+        const formattedArtists = result.map(artist => ({
+            id: artist.id,
+            name: artist.name,
+            external_urls: {
+                spotify: artist.spotify_url
+            },
+            images: artist.image_url ? [{
+                url: artist.image_url,
+                height: null,
+                width: null
+            }] : [],
+            uri: artist.spotify_uri || `spotify:artist:${artist.id}`,
+            type: 'artist',
+            followers: {
+                total: artist.followers_count || 0,
+                href: null
+            },
+            genres: artist.genres || [],
+            popularity: artist.popularity || 0,
+            label: artist.label_id
+        }));
+
         console.log(`Found ${result.length} artists`);
-        res.json(result);
+        res.json({
+            success: true,
+            data: formattedArtists,
+            total: formattedArtists.length
+        });
     } catch (error) {
         console.error('Error searching artists:', error);
         res.status(500).json({ error: 'Failed to search artists' });
@@ -203,7 +230,7 @@ router.get('/:artistId/top-tracks', [
             console.log('Got Spotify response:', topTracksResponse.tracks.length, 'tracks');
             const formattedTopTracks = topTracksResponse.tracks.map(track => ({
                 id: track.id,
-                name: track.name,
+                title: track.name,
                 popularity: track.popularity,
                 preview_url: track.preview_url,
                 duration_ms: track.duration_ms,
@@ -221,7 +248,7 @@ router.get('/:artistId/top-tracks', [
                     artist_id: artistId,
                     market,
                     id: track.id,
-                    name: track.name,
+                    title: track.title,
                     popularity: track.popularity,
                     preview_url: track.preview_url,
                     duration_ms: track.duration_ms,

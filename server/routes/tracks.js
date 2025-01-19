@@ -46,9 +46,9 @@ const logger = require('../utils/logger');
  *         id:
  *           type: string
  *           description: Track ID
- *         name:
+ *         title:
  *           type: string
- *           description: Track name
+ *           description: Track title
  *         artists:
  *           type: array
  *           items:
@@ -290,7 +290,7 @@ const formatTrackData = (data) => {
 
         const formattedTrack = {
             id: data.id,
-            name: data.name || 'Unknown Track',
+            title: data.title || 'Unknown Track',
             duration: data.duration || 0,
             track_number: data.track_number || 0,
             disc_number: data.disc_number || 1,
@@ -312,7 +312,7 @@ const formatTrackData = (data) => {
         };
 
         // Validate the formatted track has required fields
-        if (!formattedTrack.id || !formattedTrack.name) {
+        if (!formattedTrack.id || !formattedTrack.title) {
             logger.error('Formatted track missing required fields:', formattedTrack);
             return null;
         }
@@ -452,7 +452,7 @@ async function getTrackWithCache(trackId, redisService) {
  *       - $ref: '#/components/parameters/offsetParam'
  *       - name: search
  *         in: query
- *         description: Search term for track name
+ *         description: Search term for track title
  *         schema:
  *           type: string
  *       - name: artist
@@ -521,7 +521,6 @@ router.get('/', async (req, res) => {
       {
         model: Artist,
         as: 'artists',
-        required: false,
         through: { attributes: [] },
         attributes: [
           'id', 
@@ -604,7 +603,7 @@ router.get('/', async (req, res) => {
     }
     if (search) {
       where[Op.or] = [
-        { name: { [Op.iLike]: `%${search}%` } },
+        { title: { [Op.iLike]: `%${search}%` } },
         { '$artists.name$': { [Op.iLike]: `%${search}%` } }
       ];
       logger.info('Searching for:', search);
@@ -657,7 +656,7 @@ router.get('/', async (req, res) => {
             // Debug logging for the first track
             if (tracks.indexOf(track) === 0) {
               logger.info('First track raw data:', {
-                trackName: plainTrack.name,
+                trackTitle: plainTrack.title,
                 hasArtists: !!plainTrack.artists,
                 artistsCount: plainTrack.artists?.length,
                 firstArtist: plainTrack.artists?.[0] ? {
@@ -675,7 +674,7 @@ router.get('/', async (req, res) => {
             // Debug logging for the formatted track
             if (tracks.indexOf(track) === 0) {
               logger.info('First track formatted data:', {
-                trackName: formatted.name,
+                trackTitle: formatted.title,
                 hasArtists: !!formatted.artists,
                 artistsCount: formatted.artists?.length,
                 firstArtist: formatted.artists?.[0] ? {
@@ -726,6 +725,24 @@ router.get('/all/:labelId', async (req, res) => {
   try {
     const { labelId } = req.params;
     logger.info('Getting all tracks for label:', labelId);
+
+    // First get the total count
+    const total = await Track.count({
+      where: { label_id: labelId },
+      distinct: true,
+      include: [
+        {
+          model: Artist,
+          as: 'artists',
+          through: { attributes: [] }
+        }
+      ]
+    });
+
+    logger.info('Total tracks count in database:', {
+      labelId,
+      total
+    });
 
     const tracks = await Track.findAll({
       where: { label_id: labelId },
@@ -779,7 +796,9 @@ router.get('/all/:labelId', async (req, res) => {
 
     logger.info('Found tracks:', {
       labelId,
-      count: tracks.length
+      count: tracks.length,
+      total,
+      difference: total - tracks.length
     });
 
     // Format each track using the formatTrackData helper
@@ -795,7 +814,17 @@ router.get('/all/:labelId', async (req, res) => {
       })
       .filter(track => track !== null);
 
-    res.json({ tracks: formattedTracks });
+    logger.info('Formatted tracks:', {
+      originalCount: tracks.length,
+      formattedCount: formattedTracks.length,
+      difference: tracks.length - formattedTracks.length
+    });
+
+    res.json({ 
+      tracks: formattedTracks,
+      total: total,
+      count: formattedTracks.length
+    });
   } catch (error) {
     logger.error('Error fetching all tracks:', error);
     res.status(500).json({ error: error.message });
@@ -835,56 +864,91 @@ router.get('/all/:labelId', async (req, res) => {
  *       500:
  *         $ref: '#/components/responses/Error'
  */
-router.get('/search', [
-  query('query').isString().notEmpty(),
-  query('labelId').optional().isString(),
-  validateRequest
-], async (req, res) => {
-  try {
-    const { query: searchQuery, labelId } = req.query;
+router.get('/search', async (req, res) => {
+    try {
+        const { artist: artistId, query: searchQuery } = req.query;
+        console.log('Searching tracks. Artist:', artistId, 'Query:', searchQuery);
 
-    const where = {
-      [Op.or]: [
-        { name: { [Op.iLike]: `%${searchQuery}%` } },
-        { '$artists.name$': { [Op.iLike]: `%${searchQuery}%` } },
-        { '$release.title$': { [Op.iLike]: `%${searchQuery}%` } }
-      ]
-    };
-
-    if (labelId) {
-      where.label_id = labelId;
-    }
-
-    const tracks = await Track.findAll({
-      where,
-      include: [
-        {
-          model: Artist,
-          as: 'artists',
-          through: { attributes: [] }
-        },
-        {
-          model: Release,
-          as: 'release'
-        },
-        {
-          model: Label,
-          as: 'label'
+        // Build the where clause for tracks
+        const where = {};
+        if (searchQuery) {
+            where.title = {
+                [sequelize.Op.iLike]: `%${searchQuery.trim()}%`
+            };
         }
-      ],
-      order: [['createdAt', 'DESC']],
-      limit: 50
-    });
 
-    res.json(tracks);
-  } catch (error) {
-    logger.error('Error searching tracks:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Error searching tracks',
-      error: error.message 
-    });
-  }
+        // Include artists with proper join condition
+        const artistInclude = {
+            model: Artist,
+            as: 'artists',
+            through: { attributes: [] },
+            required: true // This ensures INNER JOIN
+        };
+
+        // If artistId is provided, filter by that artist
+        if (artistId) {
+            artistInclude.where = { id: artistId };
+        }
+
+        console.log('Executing track search with conditions:', JSON.stringify({ where, artistInclude }, null, 2));
+
+        const tracks = await Track.findAll({
+            where,
+            include: [
+                artistInclude,
+                {
+                    model: Label,
+                    as: 'label',
+                    attributes: ['id', 'name']
+                },
+                {
+                    model: Release,
+                    as: 'release',
+                    attributes: ['id', 'name', 'artwork_url']
+                }
+            ],
+            order: [['release_date', 'DESC']],
+            distinct: true // Prevent duplicate tracks due to multiple artists
+        });
+
+        console.log(`Found ${tracks.length} tracks for artist ${artistId}`);
+
+        // Format tracks for response
+        const formattedTracks = tracks.map(track => {
+            const formatted = {
+                id: track.id,
+                title: track.title,
+                duration_ms: track.duration_ms || track.duration * 1000, // Convert to ms if needed
+                release_date: track.release_date,
+                artwork_url: track.release?.artwork_url || track.artwork_url,
+                spotify_url: track.spotify_url,
+                label: track.label?.id || null,
+                label_name: track.label?.name || 'Unknown Label',
+                artists: track.artists.map(artist => ({
+                    id: artist.id,
+                    name: artist.name,
+                    spotify_url: artist.spotify_url
+                }))
+            };
+            console.log('Formatted track:', formatted);
+            return formatted;
+        });
+
+        const response = {
+            success: true,
+            data: formattedTracks,
+            total: formattedTracks.length
+        };
+        console.log('Sending response:', response);
+        res.json(response);
+    } catch (error) {
+        console.error('Error searching tracks:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to search tracks',
+            error: error.message
+        });
+    }
 });
 
 /**
@@ -1033,7 +1097,7 @@ async function saveTrackToDatabase(track, labelId, releaseId = null) {
         
         const trackData = {
             id: track.id,
-            name: track.name,
+            title: track.title,
             duration: track.duration_ms,
             track_number: track.track_number,
             disc_number: track.disc_number,
@@ -1054,10 +1118,10 @@ async function saveTrackToDatabase(track, labelId, releaseId = null) {
 
         if (existingTrack) {
             await existingTrack.update(trackData);
-            logger.info(`Updated track: ${track.name}`);
+            logger.info(`Updated track: ${track.title}`);
         } else {
             await Track.create(trackData);
-            logger.info(`Created track: ${track.name}`);
+            logger.info(`Created track: ${track.title}`);
         }
 
         // Process artists

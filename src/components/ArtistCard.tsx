@@ -10,7 +10,13 @@ interface ArtistCardProps {
 
 const ArtistCard: React.FC<ArtistCardProps> = ({ artist, onClick }) => {
   const artistImage = artist.images?.[0]?.url || '/placeholder-artist.jpg';
-  const spotifyUrl = artist.external_urls.spotify;
+  const spotifyUrl = artist.external_urls?.spotify || artist.spotify_url;  // Handle both formats
+
+  const handleClick = () => {
+    if (onClick) {
+      onClick();
+    }
+  };
 
   return (
     <Card 
@@ -19,20 +25,24 @@ const ArtistCard: React.FC<ArtistCardProps> = ({ artist, onClick }) => {
         cursor: onClick ? 'pointer' : 'default',
         height: '100%',
         display: 'flex',
-        flexDirection: 'column'
+        flexDirection: 'column',
+        '&:hover': onClick ? {
+          transform: 'scale(1.02)',
+          transition: 'transform 0.2s ease-in-out'
+        } : {}
       }}
-      onClick={onClick}
+      onClick={handleClick}
     >
       <CardMedia
         component="img"
         height="200"
         image={artistImage}
-        alt={artist.name}
+        alt={artist.name || 'Unknown Artist'}
       />
       <CardContent sx={{ flexGrow: 1 }}>
         <Box display="flex" justifyContent="space-between" alignItems="center">
           <Typography gutterBottom variant="h6" component="div">
-            {artist.name}
+            {artist.name || 'Unknown Artist'}
           </Typography>
           {spotifyUrl && (
             <IconButton 
@@ -50,7 +60,7 @@ const ArtistCard: React.FC<ArtistCardProps> = ({ artist, onClick }) => {
             {artist.genres.join(', ')}
           </Typography>
         )}
-        {artist.followers && (
+        {artist.followers && artist.followers.total && (
           <Typography variant="body2" color="text.secondary">
             {artist.followers.total.toLocaleString()} followers
           </Typography>

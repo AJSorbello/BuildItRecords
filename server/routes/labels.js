@@ -195,11 +195,11 @@ const importTracksForLabel = async (labelId) => {
           // Process tracks for this release
           const releaseTracks = Array.from(tracks).filter(t => t.album.id === release.id);
           for (const track of releaseTracks) {
-            const [trackRecord] = await Track.findOrCreate({
+            const [trackRecord, created] = await Track.findOrCreate({
               where: { id: track.id },
               defaults: {
                 id: track.id,
-                name: track.name,
+                title: track.name,
                 duration: track.duration_ms,
                 track_number: track.track_number,
                 disc_number: track.disc_number,
@@ -214,7 +214,7 @@ const importTracksForLabel = async (labelId) => {
               transaction
             });
 
-            if (trackRecord) {
+            if (created) {
               newTracksCount++;
 
               // Create artist associations
@@ -245,6 +245,20 @@ const importTracksForLabel = async (labelId) => {
                   newArtistAssociationsCount++;
                 }
               }
+            } else {
+              await trackRecord.update({
+                title: track.name,
+                duration: track.duration_ms,
+                track_number: track.track_number,
+                disc_number: track.disc_number,
+                isrc: track.external_ids?.isrc,
+                preview_url: track.preview_url,
+                spotify_url: track.external_urls?.spotify,
+                spotify_uri: track.uri,
+                release_id: newRelease.id,
+                label_id: label.id,
+                status: 'published'
+              }, { transaction });
             }
           }
         } catch (error) {
@@ -412,10 +426,30 @@ router.get('/:labelId/tracks', async (req, res) => {
       order: [['created_at', 'DESC']]
     });
     
+    const formattedTracks = tracks.map(track => ({
+      id: track.id,
+      title: track.title,
+      duration: track.duration,
+      preview_url: track.preview_url,
+      spotify_url: track.spotify_url,
+      spotify_uri: track.spotify_uri,
+      release: track.release ? {
+        id: track.release.id,
+        title: track.release.title,
+        artwork_url: track.release.artwork_url,
+        release_date: track.release.release_date,
+        artists: track.artists.map(artist => ({
+          id: artist.id,
+          name: artist.name,
+          spotify_url: artist.spotify_url
+        }))
+      } : null
+    }));
+
     console.log(`Found ${tracks.length} tracks`);
-    console.log('Sample track with artists:', tracks[0]?.artists?.map(a => ({ id: a.id, name: a.name })));
+    console.log('Sample track with artists:', formattedTracks[0]?.release?.artists?.map(a => ({ id: a.id, name: a.name })));
     
-    res.json(tracks);
+    res.json(formattedTracks);
   } catch (error) {
     console.error('Error fetching tracks for label:', error);
     res.status(500).json({ error: error.message });

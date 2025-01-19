@@ -33,7 +33,7 @@ class BeatportService {
       if (response.data.results.length) {
         const track = response.data.results[0];
         return {
-          title: track.name,
+          title: track.title,
           artist: track.artists[0].name,
           imageUrl: track.release.image.uri,
           releaseDate: track.publish_date,

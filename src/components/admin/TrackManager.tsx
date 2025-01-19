@@ -51,16 +51,16 @@ const TrackManager: React.FC<TrackManagerProps> = ({
     return artists.map(artist => artist.name || 'Unknown Artist').join(', ');
   };
 
-  const extractRemixerFromTitle = (trackName: string): string | null => {
+  const extractRemixerFromTitle = (trackTitle: string): string | null => {
     // Match pattern: "- Name Remix" or "Name Remix"
-    const remixMatch = trackName.match(/[-\s]([^-]+)\s+Remix/i);
+    const remixMatch = trackTitle.match(/[-\s]([^-]+)\s+Remix/i);
     return remixMatch ? remixMatch[1].trim() : null;
   };
 
   const getArtists = (track: Track, isHeader: boolean = false) => {
     // Log track and artist data
     console.log('Track:', {
-      name: track.name,
+      title: track.title,
       label: track.release?.label?.name,
       artists: track.artists?.map(a => ({
         name: a.name,
@@ -82,10 +82,10 @@ const TrackManager: React.FC<TrackManagerProps> = ({
     }
 
     // For track rows, handle remixes specially
-    const isRemix = track.name.toLowerCase().includes('remix');
+    const isRemix = track.title.toLowerCase().includes('remix');
     if (isRemix) {
       // Try to get remixer name from track title
-      const remixerName = extractRemixerFromTitle(track.name);
+      const remixerName = extractRemixerFromTitle(track.title);
       if (remixerName) {
         // Find the artist whose name matches the remixer name
         const remixer = track.artists?.find(artist => 
@@ -191,7 +191,7 @@ const TrackManager: React.FC<TrackManagerProps> = ({
                         {release?.artwork_url && (
                           <img
                             src={release.artwork_url}
-                            alt={release.name}
+                            alt={release.title}
                             style={{
                               width: COLUMN_WIDTHS.artwork - 20,
                               height: COLUMN_WIDTHS.artwork - 20,
@@ -201,7 +201,7 @@ const TrackManager: React.FC<TrackManagerProps> = ({
                           />
                         )}
                         <Box>
-                          <Typography variant="subtitle1">{track?.name || 'Untitled'}</Typography>
+                          <Typography variant="subtitle1">{track?.title || 'Untitled'}</Typography>
                           {track?.spotify_url && (
                             <Typography
                               variant="body2"
@@ -289,7 +289,7 @@ const TrackManager: React.FC<TrackManagerProps> = ({
                       {release?.artwork_url && (
                         <img
                           src={release.artwork_url}
-                          alt={release.name}
+                          alt={release.title}
                           style={{
                             width: COLUMN_WIDTHS.artwork - 20,
                             height: COLUMN_WIDTHS.artwork - 20,
@@ -299,7 +299,7 @@ const TrackManager: React.FC<TrackManagerProps> = ({
                         />
                       )}
                       <Box>
-                        <Typography variant="subtitle1">{release?.name || 'Unknown Album'}</Typography>
+                        <Typography variant="subtitle1">{release?.title || 'Unknown Album'}</Typography>
                         <Typography variant="body2" color="textSecondary">
                           {releaseTracks.length} tracks
                         </Typography>
@@ -364,7 +364,7 @@ const TrackManager: React.FC<TrackManagerProps> = ({
                               <TableRow key={track.id}>
                                 <TableCell width={COLUMN_WIDTHS.track}>
                                   <Box sx={{ pl: 7 }}>
-                                    <Typography variant="subtitle1">{track.name || 'Untitled'}</Typography>
+                                    <Typography variant="subtitle1">{track.title || 'Untitled'}</Typography>
                                     {track.spotify_url && (
                                       <Typography
                                         variant="body2"

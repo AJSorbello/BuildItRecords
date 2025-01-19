@@ -37,7 +37,7 @@ export type Album = {
 
 export type Track = {
   id: string;
-  name: string;
+  title: string;
   duration: number;
   track_number?: number;
   disc_number?: number;
@@ -66,7 +66,7 @@ export type RecordLabelId = string;
 
 export type TrackDetails = {
   id: string;
-  name: string;
+  title: string;
   duration: number;
   track_number: number;
   disc_number: number;
@@ -91,7 +91,7 @@ export type LocalAlbum = Album & {
 
 export type BaseTrack = {
   id: string;
-  name: string;
+  title: string;
   artists: Artist[];
   album: Album;
   duration: number;
@@ -109,7 +109,7 @@ export type BaseTrack = {
 
 export type TrackSearchResult = {
   id: string;
-  name: string;
+  title: string;
   artists: Artist[];
   album: Album;
   duration_ms: number;
@@ -123,7 +123,7 @@ export type TrackSearchResult = {
 export function formatSpotifyTrack(track: any): TrackDetails {
   return {
     id: track.id,
-    name: track.name,
+    title: track.name,
     duration: track.duration_ms,
     track_number: track.track_number,
     disc_number: track.disc_number || 1,

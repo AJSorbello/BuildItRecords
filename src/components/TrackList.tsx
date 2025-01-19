@@ -67,11 +67,11 @@ const TrackList: React.FC<TrackListProps> = ({
               <Avatar
                 variant="square"
                 src={track.album?.images?.[0]?.url}
-                alt={track.name}
+                alt={track.title}
               />
             </ListItemAvatar>
             <ListItemText
-              primary={track.name}
+              primary={track.title}
               secondary={
                 <React.Fragment>
                   <Typography
