@@ -56,7 +56,10 @@ export class DatabaseService {
   private async fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     try {
       const token = localStorage.getItem('adminToken');
-      const response = await fetch(`${this.baseUrl}${endpoint}`, {
+      const url = `${this.baseUrl}${endpoint}`;
+      console.log('Making API request to:', url);
+      
+      const response = await fetch(url, {
         ...options,
         headers: {
           'Content-Type': 'application/json',
@@ -65,28 +68,16 @@ export class DatabaseService {
         },
       });
 
+      console.log('API Response status:', response.status);
+      const data = await response.json();
+      console.log('API Response data:', data);
+
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        console.error('API Error Response:', errorData);
+        console.error('API Error Response:', data);
         throw new DatabaseError(
-          errorData.message || `HTTP error! status: ${response.status}`,
+          data.error || `HTTP error! status: ${response.status}`,
           response.status === 404 ? 'not_found' : 'api_error'
         );
-      }
-
-      const data = await response.json();
-      console.log('API Response:', data);
-      
-      // Return data if it's an array or has valid data
-      if (Array.isArray(data) || 
-          (typeof data === 'object' && 
-           (data.data || data.tracks || data.releases || !('success' in data)))) {
-        return data as T;
-      }
-      
-      // Only throw error if success is explicitly false
-      if (data.success === false) {
-        throw new DatabaseError(data.message || 'API request failed', 'api_error');
       }
 
       return data;
@@ -96,42 +87,57 @@ export class DatabaseService {
         throw error;
       }
       throw new DatabaseError(
-        `Failed to fetch from ${endpoint}: ${error}`,
+        error instanceof Error ? error.message : 'Unknown error occurred',
         'api_error'
       );
     }
   }
 
   // Release Methods
-  public async getReleasesByLabelId(labelId: string, page: number = 1, limit: number = 500): Promise<any> {
+  public async getReleasesByLabelId(labelId: string): Promise<{
+    releases: Release[];
+    totalReleases: number;
+    totalTracks: number;
+  }> {
     try {
-      const offset = (page - 1) * limit;
       console.log('Fetching releases for label:', labelId);
-      const response = await this.fetchApi<ApiResponse<Release[]>>(`/releases?label=${labelId}&offset=${offset}&limit=${limit}`);
       
-      console.log('Raw response from /releases:', response);
-      
-      const releases = response.releases?.map(release => {
-        // Ensure release has required properties
-        if (!release.images && release.artwork_url) {
-          release.images = [{ url: release.artwork_url }];
-        }
-        return release;
-      }) || [];
+      // Map label IDs to their string values
+      const labelIdMap: { [key: string]: string } = {
+        'buildit-records': 'buildit-records',
+        'buildit-tech': 'buildit-tech',
+        'buildit-deep': 'buildit-deep'
+      };
 
-      console.log('Processed releases:', releases);
-      
-      const total = response.total || 0;
-      const currentPage = Math.floor((response.offset || 0) / limit) + 1;
-      const totalPages = Math.ceil(total / limit);
-      const hasMore = (response.offset || 0) + releases.length < total;
+      const dbLabelId = labelIdMap[labelId];
+      if (!dbLabelId) {
+        console.warn(`No label ID found for label: ${labelId}`);
+        return {
+          releases: [],
+          totalReleases: 0,
+          totalTracks: 0
+        };
+      }
+
+      console.log('Using label ID:', dbLabelId);
+      const response = await this.fetchApi<{
+        success: boolean;
+        releases: Release[];
+        totalReleases: number;
+        totalTracks: number;
+        error?: string;
+      }>(`/releases/label/${dbLabelId}`);
+
+      console.log('API response:', response);
+
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to fetch releases');
+      }
 
       return {
-        releases,
-        totalReleases: total,
-        currentPage,
-        totalPages,
-        hasMore
+        releases: response.releases || [],
+        totalReleases: response.totalReleases || 0,
+        totalTracks: response.totalTracks || 0
       };
     } catch (error) {
       console.error('Error in getReleasesByLabelId:', error);
@@ -189,16 +195,36 @@ export class DatabaseService {
   }
 
   // Track Methods
-  public async getTracksByLabel(labelId: string, sortBy?: string): Promise<{ tracks: Track[], total: number }> {
+  public async getTracksByLabel(labelId: string, sortBy: string = 'created_at'): Promise<{
+    tracks: Track[];
+    total: number;
+  }> {
     try {
-      const response = await this.fetchApi<ApiResponse<never>>(`/tracks/all/${labelId}`);
+      // Map label IDs to their string values
+      const labelIdMap: { [key: string]: string } = {
+        'buildit-records': 'buildit-records',
+        'buildit-tech': 'buildit-tech',
+        'buildit-deep': 'buildit-deep'
+      };
+
+      const dbLabelId = labelIdMap[labelId];
+      if (!dbLabelId) {
+        console.warn(`No label ID found for label: ${labelId}`);
+        return {
+          tracks: [],
+          total: 0
+        };
+      }
+
+      // Use the /all endpoint to get all tracks without pagination
+      const response = await this.fetchApi(`/tracks/all/${dbLabelId}`);
       return {
         tracks: response.tracks || [],
-        total: response.total || response.tracks?.length || 0
+        total: response.total || 0
       };
     } catch (error) {
-      console.error('Error fetching all tracks:', error);
-      throw new DatabaseError('Failed to fetch all tracks');
+      console.error('Error in getTracksByLabel:', error);
+      throw error;
     }
   }
 

@@ -58,14 +58,14 @@ const AdminDashboard: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      // Fetch all releases with pagination
-      const response = await databaseService.getReleasesByLabelId(selectedLabel, 1, 500);
+      // Fetch all releases without pagination
+      const response = await databaseService.getReleasesByLabelId(selectedLabel);
       console.log('Got releases:', response);
       
       if (response?.releases) {
         setReleases(response.releases);
         setTotalReleases(response.totalReleases);
-        setCurrentPage(response.currentPage);
+        setTotalTracks(response.totalTracks);
       }
 
       // Fetch all tracks sorted by created_at
@@ -73,7 +73,6 @@ const AdminDashboard: React.FC = () => {
       console.log('Got all tracks:', allTracksResponse);
       
       setTracks(allTracksResponse.tracks);
-      setTotalTracks(allTracksResponse.total);
       console.log('Set tracks state:', allTracksResponse.tracks.length, 'tracks');
 
     } catch (error) {

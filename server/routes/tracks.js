@@ -619,32 +619,23 @@ router.get('/', async (req, res) => {
           as: inc.as,
           required: inc.required
         })),
-        order: [[sort, 'DESC']],
-        limit,
-        offset
+        order: [[sort, 'DESC']]
       });
 
-      const [tracks, total] = await Promise.all([
-        Track.findAll({
-          where,
-          include,
-          order: [[sort, 'DESC']],
-          limit,
-          offset,
-          distinct: true
-        }),
-        Track.count({ 
-          where, 
-          include, 
-          distinct: true 
-        })
-      ]);
+      const { count, rows: tracks } = await Track.findAndCountAll({
+        where,
+        include,
+        order: [[sort, 'DESC']],
+        limit,
+        offset,
+        distinct: true
+      });
 
       logger.info('Found tracks:', { 
         count: tracks.length, 
-        total,
+        total: count,
         page,
-        totalPages: Math.ceil(total / limit)
+        totalPages: Math.ceil(count / limit)
       });
 
       // Format each track using the formatTrackData helper
@@ -700,11 +691,11 @@ router.get('/', async (req, res) => {
 
       return res.json({
         tracks: formattedTracks,
-        total: total,
+        total: count,
         count: formattedTracks.length,
         page: page,
-        totalPages: Math.ceil(total / limit),
-        hasMore: page < Math.ceil(total / limit)
+        totalPages: Math.ceil(count / limit),
+        hasMore: page < Math.ceil(count / limit)
       });
     } catch (queryError) {
       logger.error('Database query error:', queryError);

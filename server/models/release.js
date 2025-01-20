@@ -18,10 +18,7 @@ module.exports = (sequelize, DataTypes) => {
 
       Release.hasMany(models.Track, {
         foreignKey: 'release_id',
-        as: 'tracks',
-        scope: {
-          attributes: ['id', 'title', 'duration', 'preview_url', 'spotify_url', 'spotify_uri', 'popularity', 'remixer_id']
-        }
+        as: 'tracks'
       });
     }
   }

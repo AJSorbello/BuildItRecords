@@ -35,7 +35,9 @@ export const TrackManagement: React.FC = () => {
       
       const recordLabel = RECORD_LABELS[selectedLabel];
       if (recordLabel) {
-        const response = await databaseService.getTracksByLabel(recordLabel, 'created_at');
+        console.log('Fetching tracks for label:', recordLabel);
+        const response = await databaseService.getTracksByLabel(selectedLabel, 'created_at');
+        console.log('Fetched tracks:', response);
         setTracks(response.tracks);
       }
     } catch (err) {

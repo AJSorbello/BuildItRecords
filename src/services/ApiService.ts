@@ -78,8 +78,22 @@ class ApiService {
     return this.getReleases({ artistId });
   }
 
-  public async getReleasesByLabelId(labelId: string): Promise<Release[]> {
-    return this.getReleases({ labelId });
+  public async getReleasesByLabelId(labelId: string): Promise<{
+    releases: Release[];
+    totalReleases: number;
+    totalTracks: number;
+  }> {
+    try {
+      const response = await this.request<{
+        releases: Release[];
+        totalReleases: number;
+        totalTracks: number;
+      }>(`/releases/label/${labelId}`);
+      return response;
+    } catch (error) {
+      console.error('Error in getReleasesByLabelId:', error);
+      throw error;
+    }
   }
 
   public async getReleasesByLabel(label: RecordLabel): Promise<Release[]> {

@@ -151,11 +151,7 @@ module.exports = (sequelize) => {
     underscored: true,
     timestamps: true,
     createdAt: 'created_at',
-    updatedAt: 'updated_at',
-    defaultScope: {
-      attributes: ['id', 'title', 'duration', 'preview_url', 'spotify_url', 'spotify_uri', 'popularity', 'remixer_id'],
-      order: [['created_at', 'DESC']]
-    }
+    updatedAt: 'updated_at'
   });
 
   return Track;

@@ -8,6 +8,7 @@ interface UseReleasesResult {
   error: string | null;
   refetch: () => Promise<void>;
   totalReleases: number;
+  totalTracks: number;
   currentPage: number;
   totalPages: number;
   hasMore: boolean;
@@ -46,12 +47,10 @@ export function useReleases(label?: string): UseReleasesResult {
   const [releases, setReleases] = useState<Release[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
   const [totalReleases, setTotalReleases] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
-  const [hasMore, setHasMore] = useState(false);
+  const [totalTracks, setTotalTracks] = useState(0);
 
-  const fetchReleases = useCallback(async (isLoadMore = false) => {
+  const fetchReleases = useCallback(async () => {
     if (!label) {
       setReleases([]);
       setLoading(false);
@@ -60,56 +59,62 @@ export function useReleases(label?: string): UseReleasesResult {
 
     try {
       setError(null);
-      if (!isLoadMore) setLoading(true);
+      setLoading(true);
 
-      const data = await databaseService.getReleasesByLabelId(label, currentPage);
-      
-      // Validate each release
+      console.log('Fetching releases for label:', label);
+      const data = await databaseService.getReleasesByLabelId(label);
+      console.log('Raw API response:', data);
+
+      if (!data) {
+        throw new Error('No data received from server');
+      }
+
+      // Filter and validate releases
       const validReleases = data.releases
-        .filter(validateRelease)
+        .filter(release => {
+          const isValid = validateRelease(release);
+          if (!isValid) {
+            console.warn('Invalid release:', release);
+          }
+          return isValid;
+        })
         .map(release => ({
           ...release,
           artwork_url: release.artwork_url || release.images?.[0]?.url || null
         }));
 
-      setReleases(prev => isLoadMore ? [...prev, ...validReleases] : validReleases);
-      setTotalReleases(data.total || 0);
-      setTotalPages(Math.ceil((data.total || 0) / 20));
-      setHasMore(currentPage < Math.ceil((data.total || 0) / 20));
-    } catch (err) {
-      console.error('Error fetching releases:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch releases');
-      setReleases([]);
-    } finally {
+      console.log('Processed releases:', {
+        total: validReleases.length,
+        totalFromAPI: data.totalReleases,
+        totalTracksFromAPI: data.totalTracks,
+        filtered: data.releases.length - validReleases.length
+      });
+
+      setReleases(validReleases);
+      setTotalReleases(data.totalReleases);
+      setTotalTracks(data.totalTracks);
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching releases:', error);
+      setError(error instanceof Error ? error.message : 'Failed to fetch releases');
       setLoading(false);
     }
-  }, [label, currentPage]);
-
-  const loadMore = useCallback(async () => {
-    if (hasMore && !loading) {
-      setCurrentPage(prev => prev + 1);
-      await fetchReleases(true);
-    }
-  }, [hasMore, loading, fetchReleases]);
-
-  const refetch = useCallback(async () => {
-    setCurrentPage(1);
-    await fetchReleases();
-  }, [fetchReleases]);
+  }, [label]);
 
   useEffect(() => {
-    refetch();
-  }, [label, refetch]);
+    fetchReleases();
+  }, [fetchReleases]);
 
   return {
     releases,
     loading,
     error,
-    refetch,
+    refetch: fetchReleases,
     totalReleases,
-    currentPage,
-    totalPages,
-    hasMore,
-    loadMore
+    totalTracks,
+    currentPage: 1,
+    totalPages: 1,
+    hasMore: false,
+    loadMore: async () => {} // No-op since we load all releases at once
   };
 }

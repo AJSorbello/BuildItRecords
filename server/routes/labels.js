@@ -57,48 +57,88 @@ const importTracksForLabel = async (labelId) => {
     const artists = new Set();
     const failedReleases = new Set();
 
-    // Search for albums directly
-    const albums = await spotifyService.searchAlbums(searchQuery, { limit: 50 });
-    logger.info(`Found ${albums.items.length} potential releases`);
+    // Implement pagination to get all albums
+    let offset = 0;
+    const limit = 50; // Spotify's maximum limit per request
+    let hasMore = true;
+    let totalAlbums = 0;
 
-    // Process each album
-    for (const album of albums.items) {
-      try {
-        // Get full album details
-        const fullAlbum = await spotifyService.getAlbum(album.id);
-        
-        if (fullAlbum && fullAlbum.label && fullAlbum.label.toLowerCase().includes(label.name.toLowerCase())) {
-          logger.info('Found matching release:', {
-            id: fullAlbum.id,
-            name: fullAlbum.name,
-            label: fullAlbum.label
+    while (hasMore) {
+      // Search for albums with pagination
+      const albumsResponse = await spotifyService.searchAlbums(searchQuery, { limit, offset });
+      logger.info(`Fetching albums batch: offset=${offset}, limit=${limit}, found=${albumsResponse.items.length}`);
+      
+      if (!albumsResponse.items || albumsResponse.items.length === 0) {
+        hasMore = false;
+        continue;
+      }
+
+      // Update total on first request
+      if (offset === 0) {
+        totalAlbums = albumsResponse.total;
+        logger.info(`Total albums to process: ${totalAlbums}`);
+      }
+
+      // Process each album in this batch
+      for (const album of albumsResponse.items) {
+        try {
+          // Get full album details
+          const fullAlbum = await spotifyService.getAlbum(album.id);
+          
+          // Exact match on the label name
+          if (fullAlbum && fullAlbum.label === label.name) {
+            logger.info('Found matching release:', {
+              id: fullAlbum.id,
+              name: fullAlbum.name,
+              label: fullAlbum.label
+            });
+
+            releases.add(fullAlbum);
+
+            // Add all tracks from the album
+            fullAlbum.tracks.items.forEach(t => {
+              const fullTrack = { ...t, album: fullAlbum };
+              tracks.add(fullTrack);
+            });
+
+            // Add all artists from the album
+            fullAlbum.artists.forEach(a => artists.add(a));
+          } else {
+            logger.debug('Skipping non-matching release:', {
+              id: fullAlbum.id,
+              name: fullAlbum.name,
+              foundLabel: fullAlbum.label,
+              expectedLabel: label.name
+            });
+          }
+        } catch (error) {
+          logger.error('Error processing album:', {
+            id: album.id,
+            name: album.name,
+            error: error.message
           });
-
-          releases.add(fullAlbum);
-
-          // Add all tracks from the album
-          fullAlbum.tracks.items.forEach(t => {
-            const fullTrack = { ...t, album: fullAlbum };
-            tracks.add(fullTrack);
-          });
-
-          // Add all artists from the album
-          fullAlbum.artists.forEach(a => artists.add(a));
+          failedReleases.add(album);
         }
-      } catch (error) {
-        logger.error('Error processing album:', {
-          id: album.id,
-          name: album.name,
-          error: error.message
-        });
-        failedReleases.add(album);
+      }
+
+      // Update offset for next batch
+      offset += albumsResponse.items.length;
+      
+      // Check if we've processed all albums
+      hasMore = offset < totalAlbums;
+      
+      // Add a small delay to avoid rate limiting
+      if (hasMore) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
     }
 
-    logger.info('Found releases from Spotify:', {
-      totalReleases: releases.size,
+    logger.info('Completed Spotify search:', {
+      totalAlbumsSearched: offset,
+      matchingReleases: releases.size,
       totalTracks: tracks.size,
-      totalArtists: artists.size
+      totalArtists: artists.size,
+      failedReleases: failedReleases.size
     });
 
     // Get existing tracks and artist associations to avoid duplicates
