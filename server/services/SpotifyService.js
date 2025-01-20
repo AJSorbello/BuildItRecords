@@ -327,17 +327,27 @@ class SpotifyService {
       const labelName = label.display_name || label.name;
       logger.info('Using label name:', labelName);
 
-      // Try different search queries to maximize results
+      // First get all artists for this label
+      const artists = await Artist.findAll({
+        where: { label_id: labelId },
+        attributes: ['name'],
+        raw: true
+      });
+
+      // Base search queries - always include label to filter at search time
       const searchQueries = [
-        `label:"${labelName}"`,                  // Exact label match with quotes
-        `label:${labelName}`,                    // Label without quotes
-        `recordlabel:"${labelName}"`,            // Alternative field
+        `label:"${labelName}"`,                     // Exact label match with quotes
+        `recordlabel:"${labelName}"`,               // Alternative field
+        ...artists.map(artist => 
+          `label:"${labelName}" artist:"${artist.name}"`  // Combine exact label with exact artist
+        )
       ];
 
       logger.info('Will try search queries:', {
         labelId,
         labelName,
-        queries: searchQueries
+        totalQueries: searchQueries.length,
+        artistCount: artists.length
       });
 
       const transaction = await sequelize.transaction();
@@ -393,9 +403,7 @@ class SpotifyService {
                     });
 
                     // Strict equality check for the label
-                    const isMatchingLabel = albumLabel && 
-                      (albumLabel.toLowerCase() === labelName.toLowerCase() ||
-                       albumLabel.toLowerCase().replace(/[^a-z0-9]/gi, '') === labelName.toLowerCase().replace(/[^a-z0-9]/gi, ''));
+                    const isMatchingLabel = albumLabel && albumLabel.toLowerCase() === labelName.toLowerCase();
 
                     if (!isMatchingLabel) {
                       logger.info('Skipping non-matching label:', {

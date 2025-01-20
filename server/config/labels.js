@@ -5,6 +5,11 @@ const LABEL_CONFIGS = {
     releaseIds: [],
     variations: [
       'Build It Records',
+      'BuildIt Records',
+      'Build-It Records',
+      'Build It',
+      'BuildIt',
+      'Build-It'
     ]
   },
   'buildit-tech': {
@@ -12,6 +17,10 @@ const LABEL_CONFIGS = {
     releaseIds: [],
     variations: [
       'Build It Tech',
+      'BuildIt Tech',
+      'Build-It Tech',
+      'Build It Technology',
+      'BuildIt Technology'
     ]
   },
   'buildit-deep': {
@@ -19,6 +28,8 @@ const LABEL_CONFIGS = {
     releaseIds: [],
     variations: [
       'Build It Deep',
+      'BuildIt Deep',
+      'Build-It Deep'
     ]
   }
 };
