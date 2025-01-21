@@ -57,7 +57,8 @@ const TrackManager: React.FC<TrackManagerProps> = ({
     return remixMatch ? remixMatch[1].trim() : null;
   };
 
-  const getArtists = (track: Track, isHeader: boolean = false) => {
+  const getArtists = (track: Track | null): any[] => {
+    if (!track) return [];
     // Log track and artist data
     console.log('Track:', {
       title: track.title,
@@ -77,7 +78,7 @@ const TrackManager: React.FC<TrackManagerProps> = ({
     });
 
     // For album/release headers, always show the original artists
-    if (isHeader) {
+    if (track.release) {
       return track.release?.artists || track.artists || [];
     }
 
@@ -104,6 +105,15 @@ const TrackManager: React.FC<TrackManagerProps> = ({
     }
     // For regular tracks, show all artists
     return track.artists?.length ? track.artists : track.release?.artists || [];
+  };
+
+  const getTrackImage = (track: Track | null): string => {
+    if (!track) return '';
+    const artists = getArtists(track);
+    if (artists.length > 0 && artists[0].image_url) {
+      return artists[0].image_url;
+    }
+    return track.artwork_url || track.images?.[0]?.url || '';
   };
 
   const formatDuration = (ms: number | undefined): string => {
@@ -316,7 +326,7 @@ const TrackManager: React.FC<TrackManagerProps> = ({
                   </TableCell>
                   <TableCell>
                     <Box display="flex" alignItems="center" gap={1}>
-                      {getArtists(releaseTracks[0], true).map((artist) => (
+                      {getArtists(releaseTracks[0]).map((artist) => (
                         <Box key={artist.id} display="flex" alignItems="center" gap={1}>
                           {artist.image_url && (
                             <img

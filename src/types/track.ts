@@ -4,29 +4,19 @@
  */
 
 import type { SpotifyExternalUrls, SpotifyExternalIds } from './spotify';
-import { Artist } from './artist';
-
-export type Artist = {
-  id: string;
-  name: string;
-  spotify_url: string;
-  spotify_uri: string;
-  image_url: string;
-  images?: Array<{ url: string; height: number; width: number }>;
-  label_id?: string;
-  created_at?: Date;
-  updated_at?: Date;
-};
+import type { Artist } from './artist';
 
 export type Album = {
   id: string;
   name: string;
+  title: string;
   release_date: string;
   artwork_url?: string;
   images?: Array<{ url: string; height: number; width: number }>;
   spotify_url: string;
   spotify_uri: string;
   label_id: string;
+  label?: string;
   total_tracks: number;
   status?: string;
   created_at?: Date;
@@ -38,6 +28,7 @@ export type Album = {
 export type Track = {
   id: string;
   title: string;
+  name?: string;
   duration: number;
   track_number?: number;
   disc_number?: number;
@@ -45,12 +36,16 @@ export type Track = {
   spotify_url?: string;
   spotify_uri?: string;
   release_id?: string;
+  release?: Album;
   label_id?: string;
+  label?: string;
   remixer_id?: string;
+  remixer?: Artist;
+  artists?: Artist[];
   created_at?: Date;
   updated_at?: Date;
-  artists?: Artist[];
-  release?: Album;
+  artwork_url?: string;
+  images?: Array<{ url: string; height: number; width: number }>;
   isrc?: string;
   external_urls?: SpotifyExternalUrls;
   type?: 'track';
@@ -58,7 +53,6 @@ export type Track = {
   popularity?: number;
   available_markets?: string[];
   is_local?: boolean;
-  remixer?: Artist;
   remixers?: Artist[];  // Array of remixers for tracks with multiple remixers
 };
 

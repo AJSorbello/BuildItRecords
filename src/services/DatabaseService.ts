@@ -126,7 +126,7 @@ export class DatabaseService {
         totalReleases: number;
         totalTracks: number;
         error?: string;
-      }>(`/releases/label/${dbLabelId}`);
+      }>(`/releases?label=${dbLabelId}`);
 
       console.log('API response:', response);
 
@@ -134,10 +134,24 @@ export class DatabaseService {
         throw new Error(response.error || 'Failed to fetch releases');
       }
 
+      // Process the releases to ensure all fields are properly mapped
+      const processedReleases = (response.releases || []).map(release => ({
+        ...release,
+        name: release.name || release.title || 'Unknown Album',
+        title: release.title || release.name || 'Unknown Album',
+        artwork_url: release.artwork_url || release.images?.[0]?.url || null,
+        images: release.images?.map(img => ({
+          url: img.url,
+          height: img.height || 0,
+          width: img.width || 0
+        })) || [],
+        artists: release.artists || []
+      }));
+
       return {
-        releases: response.releases || [],
-        totalReleases: response.totalReleases || 0,
-        totalTracks: response.totalTracks || 0
+        releases: processedReleases,
+        totalReleases: response.totalReleases || processedReleases.length,
+        totalTracks: response.totalTracks || processedReleases.reduce((acc, rel) => acc + (rel.total_tracks || 0), 0)
       };
     } catch (error) {
       console.error('Error in getReleasesByLabelId:', error);
@@ -194,6 +208,39 @@ export class DatabaseService {
     }
   }
 
+  public async processReleases(response: { releases: any[] }): Promise<Release[]> {
+    try {
+      const releases = response.releases.map((release: any) => {
+        const images = release.images?.map((image: any) => ({
+          url: image.url,
+          height: image.height || 0,
+          width: image.width || 0
+        })) || [];
+
+        return {
+          id: release.id,
+          name: release.name || release.title,
+          title: release.title || release.name,
+          release_date: release.release_date,
+          artwork_url: release.artwork_url || release.images?.[0]?.url || null,
+          images: images,
+          spotify_url: release.spotify_url || release.external_urls?.spotify || null,
+          spotify_uri: release.spotify_uri || null,
+          total_tracks: release.total_tracks || release.tracks?.length || 0,
+          type: release.type || 'album',
+          label_id: release.label_id || label,
+          label: release.label || null,
+          artists: release.artists || []
+        };
+      });
+
+      return releases;
+    } catch (error) {
+      console.error('Error processing releases:', error);
+      throw new DatabaseError('Failed to process releases', error instanceof Error ? error.message : String(error));
+    }
+  }
+
   // Track Methods
   public async getTracksByLabel(labelId: string, sortBy: string = 'created_at'): Promise<{
     tracks: Track[];
@@ -218,9 +265,36 @@ export class DatabaseService {
 
       // Use the /all endpoint to get all tracks without pagination
       const response = await this.fetchApi(`/tracks/all/${dbLabelId}`);
+      const tracks = (response.tracks || []).map(track => {
+        // Process the release/album data
+        const release = track.release || track.album;
+        const processedRelease = release ? {
+          ...release,
+          name: release.name || release.title || 'Unknown Album',
+          title: release.title || release.name || 'Unknown Album',
+          artwork_url: release.artwork_url || release.images?.[0]?.url || null,
+          images: release.images?.map(img => ({
+            url: img.url,
+            height: img.height || 0,
+            width: img.width || 0
+          })) || [],
+          artists: release.artists || []
+        } : null;
+
+        return {
+          ...track,
+          title: track.title || track.name || 'Unknown Track',
+          name: track.name || track.title || 'Unknown Track',
+          release: processedRelease,
+          artists: track.artists || [],
+          label: track.label || track.label_id || null,
+          artwork_url: track.artwork_url || track.images?.[0]?.url || processedRelease?.artwork_url || null
+        };
+      });
+      
       return {
-        tracks: response.tracks || [],
-        total: response.total || 0
+        tracks,
+        total: response.total || tracks.length
       };
     } catch (error) {
       console.error('Error in getTracksByLabel:', error);

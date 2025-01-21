@@ -56,11 +56,11 @@ const AdminTrackList: React.FC<AdminTrackListProps> = ({
             <TableRow key={track.id}>
               <TableCell>{track.title}</TableCell>
               <TableCell>
-                {track.artists.map((artist) => artist.title).join(', ')}
+                {track.artists?.map((artist) => artist.name).join(', ') || 'Unknown Artist'}
               </TableCell>
-              <TableCell>{track.album?.title || 'N/A'}</TableCell>
-              <TableCell>{formatDate(track.album?.release_date)}</TableCell>
-              <TableCell>{track.label_id || 'N/A'}</TableCell>
+              <TableCell>{track.release?.name || track.release?.title || 'Unknown Album'}</TableCell>
+              <TableCell>{formatDate(track.release?.release_date)}</TableCell>
+              <TableCell>{track.label || track.label_id || 'N/A'}</TableCell>
               <TableCell align="right">
                 <IconButton
                   onClick={() => onTrackEdit(track)}
