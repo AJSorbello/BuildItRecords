@@ -332,18 +332,20 @@ export class DatabaseService {
 
   /**
    * Gets all artists for a specific label
-   * @param {string} labelId - The ID of the label to get artists for
+   * @param {string | { id: string }} labelId - The ID of the label to get artists for
    * @returns {Promise<Artist[]>} Array of artists
    */
-  public async getArtistsForLabel(labelId: string): Promise<Artist[]> {
+  public async getArtistsForLabel(labelId: string | { id: string }): Promise<Artist[]> {
     try {
-      if (!labelId || typeof labelId !== 'string') {
+      const id = typeof labelId === 'string' ? labelId : labelId.id;
+      
+      if (!id) {
         console.error('Invalid label ID:', labelId);
         return [];
       }
 
-      console.log('Fetching artists for label:', labelId);
-      const response = await this.fetchApi<Artist[] | ApiResponse<Artist[]>>(`/artists/search?label=${labelId}`);
+      console.log('Fetching artists for label:', id);
+      const response = await this.fetchApi<Artist[] | ApiResponse<Artist[]>>(`/artists/search?label=${id}`);
       
       // Handle both array and object responses
       const artists = Array.isArray(response) ? response : response.data || [];

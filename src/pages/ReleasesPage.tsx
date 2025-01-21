@@ -59,7 +59,6 @@ const ReleaseSection: React.FC<ReleaseSectionProps> = ({ release }) => {
 const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
   const labelId = RECORD_LABELS[label]?.id;
   const { loading, error, releases, refetch } = useReleases(labelId);
-  const labelDisplayName = RECORD_LABELS[label]?.displayName || 'Releases';
 
   if (!labelId) {
     return (
@@ -116,9 +115,6 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
     <ErrorBoundary>
       <Container maxWidth="xl" sx={{ mt: 8, mb: 4 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-          <Typography variant="h4" component="h1">
-            {labelDisplayName}
-          </Typography>
           <Button
             startIcon={<RefreshIcon />}
             onClick={refetch}

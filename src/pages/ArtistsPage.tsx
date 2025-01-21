@@ -50,15 +50,18 @@ const ArtistsPage: React.FC<ArtistsPageProps> = ({ label }) => {
   const [artists, setArtists] = useState<Artist[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedArtist, setSelectedArtist] = useState<Artist | null>(null);
   const [searchState, setSearchState] = useState<SearchState>({
     total: 0,
     page: 1,
   });
-  const [selectedArtist, setSelectedArtist] = useState<Artist | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
 
-  const labelId = RECORD_LABELS[label]?.id;
+  const labelId = useMemo(() => {
+    const labelKey = label.toLowerCase();
+    return `buildit-${labelKey}`;
+  }, [label]);
+
   const labelDisplayName = RECORD_LABELS[label]?.displayName || 'Artists';
 
   const handleArtistClick = (artist: Artist) => {
@@ -71,64 +74,23 @@ const ArtistsPage: React.FC<ArtistsPageProps> = ({ label }) => {
     setSelectedArtist(null);
   };
 
+  const [modalOpen, setModalOpen] = useState(false);
+
   const fetchArtists = async () => {
     if (!labelId) {
       setError('Invalid label');
-      setLoading(false);
       return;
     }
 
     try {
       setLoading(true);
       setError(null);
-      console.log('Fetching artists for label:', labelId);
       const fetchedArtists = await databaseService.getArtistsForLabel(labelId);
-      
-      // Transform and validate artist objects
-      const validArtists = fetchedArtists.filter((artist): artist is Artist => {
-        if (!artist || typeof artist !== 'object') {
-          console.error('Invalid artist object:', artist);
-          return false;
-        }
-
-        // Ensure required properties exist with correct format
-        if (!artist.external_urls) {
-          artist.external_urls = {
-            spotify: artist.spotify_url || null
-          };
-        }
-
-        if (!artist.images && artist.image_url) {
-          artist.images = [{
-            url: artist.image_url,
-            height: null,
-            width: null
-          }];
-        }
-
-        if (!artist.followers) {
-          artist.followers = {
-            total: artist.followers_count || 0,
-            href: null
-          };
-        }
-
-        // Ensure other required properties
-        artist.type = 'artist';
-        artist.genres = artist.genres || [];
-        artist.popularity = artist.popularity || 0;
-        artist.uri = artist.spotify_uri || `spotify:artist:${artist.id}`;
-
-        return true;
-      });
-
-      console.log('Found valid artists:', validArtists.length);
-      setArtists(validArtists);
-      setSearchState(prev => ({ ...prev, total: validArtists.length }));
+      setArtists(fetchedArtists);
+      setSearchState(prev => ({ ...prev, total: fetchedArtists.length }));
     } catch (err) {
       console.error('Error fetching artists:', err);
-      setError(err instanceof DatabaseError ? err.message : 'Failed to fetch artists');
-      setArtists([]);
+      setError('Failed to load artists');
     } finally {
       setLoading(false);
     }
@@ -164,13 +126,13 @@ const ArtistsPage: React.FC<ArtistsPageProps> = ({ label }) => {
   }, [labelId]);
 
   useEffect(() => {
-    if (searchQuery) {
-      debouncedSearch(searchQuery);
+    if (searchTerm) {
+      debouncedSearch(searchTerm);
     } else {
       setSearchState(prev => ({ ...prev, total: artists.length, page: 1 }));
     }
     return () => debouncedSearch.cancel();
-  }, [searchQuery, debouncedSearch]);
+  }, [searchTerm, debouncedSearch]);
 
   if (!labelId) {
     return (
@@ -182,9 +144,9 @@ const ArtistsPage: React.FC<ArtistsPageProps> = ({ label }) => {
     );
   }
 
-  const filteredArtists = searchQuery
+  const filteredArtists = searchTerm
     ? artists.filter(artist =>
-        artist.name.toLowerCase().includes(searchQuery.toLowerCase())
+        artist.name.toLowerCase().includes(searchTerm.toLowerCase())
       )
     : artists;
 
@@ -214,8 +176,8 @@ const ArtistsPage: React.FC<ArtistsPageProps> = ({ label }) => {
             fullWidth
             variant="outlined"
             placeholder="Search artists..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
             disabled={loading}
           />
         </Box>

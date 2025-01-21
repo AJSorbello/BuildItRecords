@@ -26,7 +26,7 @@ const RecordsPage = () => {
       try {
         setLoading(true);
         // Fetch artists
-        const recordsArtists = await databaseService.getArtistsForLabel(RECORD_LABELS['buildit-records']);
+        const recordsArtists = await databaseService.getArtistsForLabel('buildit-records');
         if (recordsArtists.length === 0) {
           setError('No artists found');
           return;

@@ -21,6 +21,7 @@ interface RecordsSidebarProps {
 const RecordsSidebar: React.FC<RecordsSidebarProps> = ({ open = true, onClose, variant, sx }) => {
   const navigate = useNavigate();
   const color = labelColors.records;
+  const isTemporary = variant === "temporary";
 
   const menuItems = [
     { text: 'Home', icon: <HomeIcon />, path: '/records' },
@@ -32,7 +33,7 @@ const RecordsSidebar: React.FC<RecordsSidebarProps> = ({ open = true, onClose, v
 
   const handleItemClick = (path: string) => {
     navigate(path);
-    if (variant === "temporary" && onClose) {
+    if (isTemporary && onClose) {
       onClose();
     }
   };
@@ -42,28 +43,43 @@ const RecordsSidebar: React.FC<RecordsSidebarProps> = ({ open = true, onClose, v
       variant={variant}
       open={open}
       onClose={onClose}
+      anchor="left"
+      ModalProps={{
+        keepMounted: true,
+      }}
       PaperProps={{
         sx: {
-          border: 'none'
+          width: drawerWidth,
+          backgroundColor: '#121212',
+          borderRight: '1px solid rgba(255, 255, 255, 0.12)',
+          '& .MuiListItemIcon-root': {
+            color: color,
+            minWidth: '40px',
+            marginLeft: '12px'
+          },
+          '& .MuiListItemText-root': {
+            color: '#ffffff',
+            '& .MuiTypography-root': {
+              fontSize: '0.875rem',
+              fontWeight: 500
+            }
+          }
         }
       }}
       sx={{
-        ...sx,
-        width: drawerWidth,
-        flexShrink: 0,
+        display: { xs: isTemporary ? 'block' : 'none', md: 'block' },
         '& .MuiDrawer-paper': {
-          width: drawerWidth,
           boxSizing: 'border-box',
-          backgroundColor: '#000000',
-          marginTop: variant === 'temporary' ? 0 : '180px',
-          border: 'none',
-          height: variant === 'temporary' ? '100%' : 'calc(100% - 180px)'
-        }
+          width: drawerWidth,
+          marginTop: isTemporary ? 0 : '180px',
+          height: isTemporary ? '100%' : 'calc(100% - 180px)',
+          ...sx
+        },
       }}
     >
-      {variant === 'temporary' && (
+      {isTemporary && (
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', p: 1 }}>
-          <IconButton onClick={onClose} sx={{ color: '#FFFFFF' }}>
+          <IconButton onClick={onClose} sx={{ color: '#ffffff' }}>
             <CloseIcon />
           </IconButton>
         </Box>
@@ -75,22 +91,14 @@ const RecordsSidebar: React.FC<RecordsSidebarProps> = ({ open = true, onClose, v
             key={item.text}
             onClick={() => handleItemClick(item.path)}
             sx={{
-              color: '#FFFFFF',
               height: '48px',
+              color: '#ffffff',
               '&:hover': {
                 backgroundColor: 'rgba(2, 255, 149, 0.08)',
-              },
-              '& .MuiListItemIcon-root': {
-                minWidth: '40px',
-                marginLeft: '12px',
-              },
-              '& .MuiListItemText-primary': {
-                fontSize: '0.875rem',
-                fontWeight: 500,
-              },
+              }
             }}
           >
-            <ListItemIcon sx={{ color: color }}>
+            <ListItemIcon>
               {item.icon}
             </ListItemIcon>
             <ListItemText primary={item.text} />

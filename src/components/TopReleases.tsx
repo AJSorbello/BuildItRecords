@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Typography, List, ListItem, ListItemText, Paper, Alert, IconButton, Avatar } from '@mui/material';
+import { Box, Typography, List, ListItem, ListItemText, Paper, Alert, IconButton, Avatar, Grid } from '@mui/material';
 import { PlayArrow, QueueMusic, Add } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
 import { Release } from '../types/release';
@@ -27,6 +27,7 @@ const AlbumArt = styled(Avatar)(({ theme }) => ({
   height: 48,
   marginRight: theme.spacing(2),
   borderRadius: theme.spacing(1),
+  aspectRatio: '1/1', // Add this line to ensure 1:1 aspect ratio
 }));
 
 const getTopReleasesTitle = (labelId: string) => {

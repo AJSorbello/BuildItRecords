@@ -49,55 +49,46 @@ export const ReleaseCard: React.FC<ReleaseCardProps> = ({ release, ranking }) =>
   return (
     <>
       <Card 
-        sx={{ 
-          height: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          position: 'relative'
+        onClick={handleClick}
+        sx={{
+          cursor: 'pointer',
+          backgroundColor: 'transparent',
+          boxShadow: 'none',
+          transition: 'transform 0.2s',
+          '&:hover': {
+            transform: 'scale(1.02)',
+          },
         }}
       >
-        <CardActionArea onClick={handleClick}>
+        <Box sx={{ position: 'relative', paddingTop: '100%', width: '100%' }}>
+          <CardMedia
+            component="img"
+            image={imageUrl || '/default-album-art.png'}
+            alt={name}
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              borderRadius: '4px'
+            }}
+          />
           {ranking && (
             <Box
               sx={{
                 position: 'absolute',
                 top: 8,
                 left: 8,
-                zIndex: 1,
-                bgcolor: 'primary.main',
-                color: 'white',
-                width: 32,
-                height: 32,
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: 'bold',
-                boxShadow: 2
+                backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                color: '#fff',
+                padding: '4px 8px',
+                borderRadius: '4px',
+                fontSize: '0.875rem',
               }}
             >
-              {ranking}
-            </Box>
-          )}
-          {imageUrl ? (
-            <CardMedia
-              component="img"
-              height="200"
-              image={imageUrl}
-              alt={name}
-              sx={{ objectFit: 'cover' }}
-            />
-          ) : (
-            <Box
-              sx={{
-                height: 200,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                bgcolor: 'grey.900'
-              }}
-            >
-              <AlbumIcon sx={{ fontSize: 80, color: 'grey.600' }} />
+              #{ranking}
             </Box>
           )}
           {previewUrl && (
@@ -105,38 +96,65 @@ export const ReleaseCard: React.FC<ReleaseCardProps> = ({ release, ranking }) =>
               <PlayButton url={previewUrl} />
             </Box>
           )}
-          <CardContent>
-            <Typography variant="h6" component="div" noWrap>
-              {name}
+        </Box>
+        <CardContent sx={{ p: 1, '&:last-child': { pb: 1 } }}>
+          <Typography 
+            variant="subtitle1" 
+            component="div" 
+            sx={{ 
+              color: '#fff',
+              fontWeight: 500,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            {name}
+          </Typography>
+          {artists && (
+            <Typography 
+              variant="body2" 
+              color="text.secondary"
+              sx={{
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              {artists}
             </Typography>
-            {artists && (
-              <Typography variant="body2" color="text.secondary" gutterBottom noWrap>
-                {artists}
-              </Typography>
-            )}
-            {releaseDate && (
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                {new Date(releaseDate).toLocaleDateString()}
-              </Typography>
-            )}
-            {spotifyUrl && (
-              <Box sx={{ mt: 'auto', pt: 1 }}>
-                <Link href={spotifyUrl} target="_blank" rel="noopener noreferrer">
-                  <IconButton size="small" color="primary">
-                    <SpotifyIcon />
-                  </IconButton>
-                </Link>
-              </Box>
-            )}
-          </CardContent>
-        </CardActionArea>
+          )}
+          {releaseDate && (
+            <Typography 
+              variant="body2" 
+              color="text.secondary"
+              sx={{
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              {new Date(releaseDate).toLocaleDateString()}
+            </Typography>
+          )}
+          {spotifyUrl && (
+            <Box sx={{ mt: 'auto', pt: 1 }}>
+              <Link href={spotifyUrl} target="_blank" rel="noopener noreferrer">
+                <IconButton size="small" color="primary">
+                  <SpotifyIcon />
+                </IconButton>
+              </Link>
+            </Box>
+          )}
+        </CardContent>
       </Card>
-
-      <ReleaseModal
-        open={modalOpen}
-        onClose={handleClose}
-        release={release}
-      />
+      {modalOpen && (
+        <ReleaseModal
+          open={modalOpen}
+          onClose={handleClose}
+          release={release}
+        />
+      )}
     </>
   );
 };

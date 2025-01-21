@@ -43,7 +43,7 @@ const TechHome: React.FC = () => {
   }
 
   return (
-    <Container maxWidth="xl">
+    <Container maxWidth="xl" disableGutters>
       <Box sx={{ py: 4 }}>
         <Typography variant="h4" component="h1" gutterBottom sx={{ color: '#fff' }}>
           Latest Releases
