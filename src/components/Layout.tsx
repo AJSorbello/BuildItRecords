@@ -6,6 +6,7 @@ import TopNavigation from './TopNavigation';
 import DeepSidebar from './DeepSidebar';
 import RecordsSidebar from './RecordsSidebar';
 import TechSidebar from './TechSidebar';
+import LogoHeader from './LogoHeader';
 
 import BuildItRecordsLogo from '../assets/png/records/BuildItRecords.png';
 import BuildItTechLogo from '../assets/png/tech/BuildIt_Tech.png';
@@ -81,6 +82,7 @@ const Layout: React.FC = () => {
             </IconButton>
           )}
           <TopNavigation logo={getLogo(currentLabel)} />
+          {!isMobile && <LogoHeader label={currentLabel} />}
           {renderSidebar()}
         </>
       )}

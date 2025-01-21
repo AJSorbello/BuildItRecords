@@ -56,7 +56,8 @@ const DeepSidebar: React.FC<DeepSidebarProps> = ({ open = true, onClose, variant
           boxSizing: 'border-box',
           backgroundColor: '#000000',
           marginTop: variant === 'temporary' ? 0 : '180px',
-          border: 'none'
+          border: 'none',
+          height: variant === 'temporary' ? '100%' : 'calc(100% - 180px)'
         }
       }}
     >
@@ -77,10 +78,9 @@ const DeepSidebar: React.FC<DeepSidebarProps> = ({ open = true, onClose, variant
               color: '#FFFFFF',
               height: '48px',
               '&:hover': {
-                backgroundColor: `${color}14`,
+                backgroundColor: 'rgba(0, 191, 255, 0.08)',
               },
               '& .MuiListItemIcon-root': {
-                color: color,
                 minWidth: '40px',
                 marginLeft: '12px',
               },
@@ -90,7 +90,9 @@ const DeepSidebar: React.FC<DeepSidebarProps> = ({ open = true, onClose, variant
               },
             }}
           >
-            <ListItemIcon>{item.icon}</ListItemIcon>
+            <ListItemIcon sx={{ color: color }}>
+              {item.icon}
+            </ListItemIcon>
             <ListItemText primary={item.text} />
           </ListItem>
         ))}

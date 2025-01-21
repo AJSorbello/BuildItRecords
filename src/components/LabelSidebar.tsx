@@ -93,15 +93,22 @@ const LabelSidebar: React.FC<LabelSidebarProps> = ({
       variant={variant}
       open={open}
       onClose={onClose}
+      PaperProps={{
+        sx: {
+          border: 'none'
+        }
+      }}
       sx={{
         width: drawerWidth,
         flexShrink: 0,
         '& .MuiDrawer-paper': {
           width: drawerWidth,
           boxSizing: 'border-box',
+          backgroundColor: color,
+          marginTop: variant === 'temporary' ? 0 : '64px',
           border: 'none',
-        },
-        ...sx,
+          height: variant === 'temporary' ? '100%' : 'calc(100% - 64px)'
+        }
       }}
     >
       {drawer}
