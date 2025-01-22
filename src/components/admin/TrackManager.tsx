@@ -57,54 +57,47 @@ const TrackManager: React.FC<TrackManagerProps> = ({
     return remixMatch ? remixMatch[1].trim() : null;
   };
 
-  const getArtists = (track: Track | null): any[] => {
+  const getArtists = (track: Track | null, isHeader: boolean = false): any[] => {
     if (!track) return [];
-    // Log track and artist data
-    console.log('Track:', {
-      title: track.title,
-      label: track.release?.label?.name,
-      artists: track.artists?.map(a => ({
-        name: a.name,
-        id: a.id,
-        image_url: a.image_url,
-        images: a.images
-      })),
-      releaseArtists: track.release?.artists?.map(a => ({
-        name: a.name,
-        id: a.id,
-        image_url: a.image_url,
-        images: a.images
-      }))
-    });
 
-    // For album/release headers, always show the original artists
-    if (track.release) {
-      return track.release?.artists || track.artists || [];
+    // For album/release headers, always show the original artist (Kwal)
+    if (isHeader) {
+      return track.release?.artists || [];
     }
 
-    // For track rows, handle remixes specially
-    const isRemix = track.title.toLowerCase().includes('remix');
+    // For remix tracks, show only the remixer
+    const isRemix = track.title?.toLowerCase().includes('remix');
     if (isRemix) {
-      // Try to get remixer name from track title
       const remixerName = extractRemixerFromTitle(track.title);
       if (remixerName) {
-        // Find the artist whose name matches the remixer name
+        // Try to find remixer in track's artists
         const remixer = track.artists?.find(artist => 
           artist.name.toLowerCase().includes(remixerName.toLowerCase())
         );
         if (remixer) {
           return [remixer];
         }
+        // If not found in track artists, try to find in all artists
+        const allArtists = tracks.flatMap(t => t.artists || []);
+        const remixerFromAll = allArtists.find(artist => 
+          artist.name.toLowerCase().includes(remixerName.toLowerCase())
+        );
+        if (remixerFromAll) {
+          return [remixerFromAll];
+        }
       }
-      // Fallback to using remixer_id if available
+      // Fallback to remixer_id
       if (track.remixer_id) {
-        return track.artists?.filter(artist => artist.id === track.remixer_id) || [];
+        const allArtists = tracks.flatMap(t => t.artists || []);
+        const remixer = allArtists.find(artist => artist.id === track.remixer_id);
+        if (remixer) {
+          return [remixer];
+        }
       }
-      // Last resort: show the last artist
-      return track.artists?.slice(-1) || [];
     }
-    // For regular tracks, show all artists
-    return track.artists?.length ? track.artists : track.release?.artists || [];
+
+    // For regular tracks, show the original artist
+    return track.artists || track.release?.artists || [];
   };
 
   const getTrackImage = (track: Track | null): string => {
@@ -158,10 +151,26 @@ const TrackManager: React.FC<TrackManagerProps> = ({
     return acc;
   }, {} as Record<string, { release: Track['release']; tracks: Track[] }>);
 
+  // Sort releases by date and sort tracks within each release
   const sortedReleases = Object.entries(tracksByRelease).sort(([, a], [, b]) => {
     const dateA = a.release?.release_date ? new Date(a.release.release_date).getTime() : 0;
     const dateB = b.release?.release_date ? new Date(b.release.release_date).getTime() : 0;
     return dateB - dateA;
+  }).map(([id, data]) => {
+    // Sort tracks: original versions first, then remixes
+    const sortedTracks = [...data.tracks].sort((a, b) => {
+      const aIsRemix = a.title?.toLowerCase().includes('remix');
+      const bIsRemix = b.title?.toLowerCase().includes('remix');
+      
+      if (aIsRemix && !bIsRemix) return 1;  // Remixes go after
+      if (!aIsRemix && bIsRemix) return -1; // Originals go first
+      
+      // For tracks of the same type (both remix or both original)
+      // Sort by title
+      return (a.title || '').localeCompare(b.title || '');
+    });
+
+    return [id, { ...data, tracks: sortedTracks }] as const;
   });
 
   if (!tracks || !Array.isArray(tracks) || tracks.length === 0) {
@@ -326,7 +335,7 @@ const TrackManager: React.FC<TrackManagerProps> = ({
                   </TableCell>
                   <TableCell>
                     <Box display="flex" alignItems="center" gap={1}>
-                      {getArtists(releaseTracks[0]).map((artist) => (
+                      {getArtists(releaseTracks[0], true).map((artist) => (
                         <Box key={artist.id} display="flex" alignItems="center" gap={1}>
                           {artist.image_url && (
                             <img
