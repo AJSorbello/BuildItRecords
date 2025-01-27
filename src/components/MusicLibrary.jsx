@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import styled from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
 import LoadingAnimation from './LoadingAnimation';
+import config from '../config'; // assuming config file is in the parent directory
 
 const Container = styled.div`
   max-width: 1200px;
@@ -249,7 +250,7 @@ const MusicLibrary = () => {
     setError(null);
 
     try {
-      const response = await fetch('/api/process/url', {
+      const response = await fetch(`${config.API_URL}/process/url`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -282,7 +283,7 @@ const MusicLibrary = () => {
     if (filter) {
       const searchTerm = filter.toLowerCase();
       filtered = labelTracks.filter(track => 
-        track.name.toLowerCase().includes(searchTerm) ||
+        track.title.toLowerCase().includes(searchTerm) ||
         track.artists.some(artist => 
           artist.name.toLowerCase().includes(searchTerm)
         )
@@ -296,7 +297,7 @@ const MusicLibrary = () => {
         case 'popularity':
           return b.popularity - a.popularity;
         case 'name':
-          return a.name.localeCompare(b.name);
+          return a.title.localeCompare(b.title);
         case 'duration':
           return a.duration_ms - b.duration_ms;
         default:
@@ -378,11 +379,11 @@ const MusicLibrary = () => {
                       >
                         <AlbumArt
                           src={track.album.images[0]?.url}
-                          alt={track.album.name}
+                          alt={track.title}
                         />
                         <TrackInfo>
                           <TrackName explicit={track.explicit}>
-                            {track.name}
+                            {track.title}
                             {track.explicit && (
                               <ExplicitBadge>E</ExplicitBadge>
                             )}

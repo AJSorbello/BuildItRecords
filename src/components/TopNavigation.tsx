@@ -1,5 +1,6 @@
 import React from 'react';
-import { AppBar, Tabs, Tab, Box, styled, useMediaQuery, useTheme } from '@mui/material';
+import { AppBar, Tabs, Tab, Box, styled, useMediaQuery, useTheme, IconButton } from '@mui/material';
+import MenuIcon from '@mui/icons-material/Menu';
 import { useLocation, useNavigate } from 'react-router-dom';
 import RecordsSquareLogo from '../assets/png/records/BuildIt_Records_Square.png';
 import TechSquareLogo from '../assets/png/tech/BuildIt_Tech_Square.png';
@@ -23,7 +24,7 @@ const StyledAppBar = styled(AppBar)(({ theme }) => ({
 }));
 
 const StyledTabs = styled(Tabs)({
-  width: '100%',
+  flex: 1,
   height: '64px',
   backgroundColor: 'transparent',
   '& .MuiTabs-indicator': {
@@ -79,18 +80,21 @@ const TabContent = styled(Box)({
   gap: '2px',
 });
 
-const TopNavigation = () => {
+interface TopNavigationProps {
+  onMenuClick?: () => void;
+  isMobile?: boolean;
+}
+
+const TopNavigation: React.FC<TopNavigationProps> = ({ onMenuClick, isMobile }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const theme = useTheme();
-  const isMobile = useMediaQuery('(max-width:900px)');
+
+  const currentLabel = location.pathname.split('/')[1] || 'records';
 
   const handleChange = (event: React.SyntheticEvent, newValue: string) => {
     navigate(`/${newValue}`);
   };
-
-  // Extract the label from the current path
-  const currentLabel = location.pathname.split('/')[1] || 'records';
 
   const tabs = [
     {
@@ -113,12 +117,24 @@ const TopNavigation = () => {
   return (
     <StyledAppBar>
       <Box sx={{ 
+        display: 'flex', 
+        alignItems: 'center', 
         width: '100%', 
-        background: 'transparent',
-        pl: isMobile ? '48px' : 0 // Add padding when mobile to account for hamburger menu
+        px: 2,
+        background: 'transparent' 
       }}>
+        {isMobile && onMenuClick && (
+          <IconButton
+            color="inherit"
+            aria-label="open drawer"
+            edge="start"
+            onClick={onMenuClick}
+            sx={{ mr: 2 }}
+          >
+            <MenuIcon />
+          </IconButton>
+        )}
         <StyledTabs
-          sx={{ background: 'transparent' }}
           value={currentLabel}
           onChange={handleChange}
           aria-label="label navigation"

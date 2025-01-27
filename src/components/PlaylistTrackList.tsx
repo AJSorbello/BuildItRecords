@@ -5,7 +5,7 @@ import { spotifyService } from '../services/SpotifyService';
 
 interface Track {
   id: string;
-  name: string;
+  title: string;
   artist: string;
   album: string;
   albumCover: string;
@@ -77,7 +77,7 @@ const PlaylistTrackList: React.FC<PlaylistTrackListProps> = ({ playlistId }) => 
         
         const formattedTracks = response.tracks.items.map((item: any) => ({
           id: item.track.id,
-          name: item.track.name,
+          title: item.track.title,
           artist: item.track.artists.map((artist: any) => artist.name).join(', '),
           album: item.track.album.name,
           albumCover: item.track.album.images[0]?.url || '',
@@ -128,12 +128,12 @@ const PlaylistTrackList: React.FC<PlaylistTrackListProps> = ({ playlistId }) => 
                 component="img"
                 sx={{ width: 60, height: 60 }}
                 image={track.albumCover}
-                alt={`${track.name} cover`}
+                alt={`${track.title} cover`}
               />
               <Box sx={{ display: 'flex', flexGrow: 1, alignItems: 'center', px: 2 }}>
                 <Box sx={{ flexGrow: 1 }}>
                   <Typography variant="subtitle1" component="div" sx={{ color: 'text.primary' }}>
-                    {track.name}
+                    {track.title}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     {track.artist}

@@ -24,7 +24,7 @@ interface PlaylistCardProps {
   label: 'records' | 'tech' | 'deep';
 }
 
-export const PlaylistCard: React.FC<PlaylistCardProps> = ({
+const PlaylistCard: React.FC<PlaylistCardProps> = ({
   title,
   description,
   imageUrl,
@@ -153,3 +153,5 @@ export const PlaylistCard: React.FC<PlaylistCardProps> = ({
     </Card>
   );
 };
+
+export { PlaylistCard };

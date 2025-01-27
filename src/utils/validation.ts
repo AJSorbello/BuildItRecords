@@ -14,12 +14,36 @@ export const artistSchema = z.object({
   email: z.string().email('Invalid email address'),
   country: z.string().min(2, 'Country must be at least 2 characters'),
   province: z.string().min(2, 'Province/State must be at least 2 characters'),
-  facebook: z.string().url('Invalid Facebook URL').optional().or(z.literal('')),
-  twitter: z.string().url('Invalid Twitter URL').optional().or(z.literal('')),
-  instagram: z.string().url('Invalid Instagram URL').optional().or(z.literal('')),
-  soundcloud: z.string().url('Invalid SoundCloud URL').optional().or(z.literal('')),
-  spotify: z.string().url('Invalid Spotify URL').optional().or(z.literal('')),
-  appleMusic: z.string().url('Invalid Apple Music URL').optional().or(z.literal(''))
+  facebook: z.string()
+    .url('Invalid Facebook URL')
+    .refine((url: string) => url.includes('facebook.com'), 'Must be a Facebook URL')
+    .optional()
+    .or(z.literal('')),
+  twitter: z.string()
+    .url('Invalid Twitter URL')
+    .refine((url: string) => url.includes('twitter.com'), 'Must be a Twitter URL')
+    .optional()
+    .or(z.literal('')),
+  instagram: z.string()
+    .url('Invalid Instagram URL')
+    .refine((url: string) => url.includes('instagram.com'), 'Must be an Instagram URL')
+    .optional()
+    .or(z.literal('')),
+  soundcloud: z.string()
+    .url('Invalid SoundCloud URL')
+    .refine((url: string) => url.includes('soundcloud.com'), 'Must be a SoundCloud URL')
+    .optional()
+    .or(z.literal('')),
+  spotify: z.string()
+    .url('Invalid Spotify URL')
+    .refine((url: string) => url.includes('spotify.com'), 'Must be a Spotify URL')
+    .optional()
+    .or(z.literal('')),
+  appleMusic: z.string()
+    .url('Invalid Apple Music URL')
+    .refine((url: string) => url.includes('music.apple.com'), 'Must be an Apple Music URL')
+    .optional()
+    .or(z.literal(''))
 });
 
 /**
@@ -29,7 +53,7 @@ export const trackSchema = z.object({
   title: z.string().min(2, 'Track title must be at least 2 characters'),
   soundCloudLink: z.string()
     .url('Invalid SoundCloud URL')
-    .refine((url) => url.includes('soundcloud.com'), 'Must be a SoundCloud URL'),
+    .refine((url: string) => url.includes('soundcloud.com'), 'Must be a SoundCloud URL'),
   genre: z.enum(['house', 'techno', 'deep-house', 'tech-house'], {
     errorMap: () => ({ message: 'Please select a valid genre' })
   })

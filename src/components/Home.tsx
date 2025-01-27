@@ -10,10 +10,11 @@ import {
   Tabs,
   Tab,
 } from '@mui/material';
+import { API_URL } from '../config'; // assuming config file is in the parent directory
 
 interface Track {
   id: string;
-  name: string;
+  title: string;
   artist: string;
   album: string;
   albumArt: string;
@@ -32,7 +33,8 @@ const Home: React.FC = () => {
 
   const fetchTracks = async () => {
     try {
-      const response = await axios.get<{ tracks: Track[] }>('/api/track-management/tracks');
+      setLoading(true);
+      const response = await axios.get<{ tracks: Track[] }>(`${API_URL}/track-management/tracks`);
       setTracks(response.data.tracks || []);
       setLoading(false);
     } catch (err) {
@@ -112,11 +114,11 @@ const Home: React.FC = () => {
                   objectFit: 'cover',
                 }}
                 image={track.albumArt || 'https://via.placeholder.com/300'}
-                alt={track.name}
+                alt={track.title}
               />
               <CardContent sx={{ flexGrow: 1 }}>
                 <Typography gutterBottom variant="h6" component="h2" sx={{ color: '#FFFFFF' }}>
-                  {track.name}
+                  {track.title}
                 </Typography>
                 <Typography sx={{ color: '#B3B3B3' }}>
                   {track.artist}

@@ -1,107 +1,99 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
-  Box,
-  Typography,
-  Button,
   Card,
-  CardMedia,
   CardContent,
-  Stack,
+  CardMedia,
+  Typography,
+  Box,
+  IconButton,
+  Link,
 } from '@mui/material';
-import MusicNoteIcon from '@mui/icons-material/MusicNote';
-import AlbumIcon from '@mui/icons-material/Album';
-import CloudQueueIcon from '@mui/icons-material/CloudQueue';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import { useTheme } from '../contexts/ThemeContext';
-import { Release } from '../types/release';
+import { Track } from '../types/track';
 
 interface FeaturedReleaseProps {
-  release: Release;
+  track: Track;
 }
 
-export default function FeaturedRelease({ release }: FeaturedReleaseProps) {
+const FeaturedRelease: React.FC<FeaturedReleaseProps> = ({ track }) => {
   const { colors } = useTheme();
 
-  const openLink = (url: string | undefined) => {
-    if (url) {
-      window.open(url, '_blank', 'noopener,noreferrer');
-    }
-  };
-
   return (
-    <Card sx={{ 
-      backgroundColor: colors.card,
-      borderRadius: 2,
-      overflow: 'hidden',
-      position: 'relative'
-    }}>
-      <CardMedia
-        component="img"
-        image={release.artwork}
-        alt={`${release.title} by ${release.artist}`}
-        sx={{
-          height: 400,
-          objectFit: 'cover'
-        }}
-      />
-      
-      <CardContent sx={{ position: 'relative', zIndex: 1 }}>
-        <Typography variant="h4" component="h1" sx={{ mb: 2, color: colors.text }}>
-          {release.title}
-        </Typography>
-        <Typography variant="h5" sx={{ mb: 3, color: colors.textSecondary }}>
-          {release.artist}
-        </Typography>
-        
-        <Stack direction="row" spacing={2}>
-          {release.spotifyUrl && (
-            <Button
-              variant="contained"
-              startIcon={<MusicNoteIcon />}
-              onClick={() => openLink(release.spotifyUrl)}
-              sx={{
-                bgcolor: '#1DB954',
-                '&:hover': {
-                  bgcolor: '#1ed760'
-                }
-              }}
-            >
-              Spotify
-            </Button>
+    <Card
+      sx={{
+        display: 'flex',
+        flexDirection: { xs: 'column', md: 'row' },
+        backgroundColor: colors.card,
+        borderRadius: 2,
+        overflow: 'hidden',
+        position: 'relative',
+      }}
+    >
+      <Box sx={{ 
+        position: 'relative', 
+        width: { xs: '100%', md: '500px' }, 
+        minWidth: { xs: '100%', md: '500px' },
+        maxWidth: { xs: '100%', md: '500px' }
+      }}>
+        <Box sx={{ position: 'relative', paddingTop: '100%', width: '100%' }}>
+          <CardMedia
+            component="img"
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover'
+            }}
+            image={track.artworkUrl || '/default-album-art.png'}
+            alt={track.title}
+          />
+        </Box>
+      </Box>
+      <Box sx={{ display: 'flex', flexDirection: 'column', flexGrow: 1, p: { xs: 3, md: 4 }, position: 'relative', zIndex: 1 }}>
+        <CardContent sx={{ flex: '1 0 auto', p: 0, position: 'relative', zIndex: 1 }}>
+          <Typography variant="h4" component="div" gutterBottom sx={{ color: colors.text }}>
+            {track.title}
+          </Typography>
+          <Typography variant="h6" color="textSecondary" gutterBottom sx={{ color: colors.textSecondary }}>
+            {track.artists.map(artist => artist.name).join(', ')}
+          </Typography>
+          {track.album && (
+            <Typography variant="subtitle1" color="text.secondary" gutterBottom sx={{ color: colors.textSecondary }}>
+              Album: {track.album.name}
+            </Typography>
           )}
-          
-          {release.beatportUrl && (
-            <Button
-              variant="contained"
-              startIcon={<AlbumIcon />}
-              onClick={() => openLink(release.beatportUrl)}
-              sx={{
-                bgcolor: '#FF6B00',
-                '&:hover': {
-                  bgcolor: '#ff7b1c'
-                }
-              }}
-            >
-              Beatport
-            </Button>
+          {track.releaseDate && (
+            <Typography variant="body2" color="text.secondary" sx={{ color: colors.textSecondary }}>
+              Released: {new Date(track.releaseDate).toLocaleDateString()}
+            </Typography>
           )}
-          
-          {release.soundcloudUrl && (
-            <Button
-              variant="contained"
-              startIcon={<CloudQueueIcon />}
-              onClick={() => openLink(release.soundcloudUrl)}
-              sx={{
-                bgcolor: '#FF5500',
-                '&:hover': {
-                  bgcolor: '#ff6a1f'
-                }
-              }}
-            >
-              Soundcloud
-            </Button>
+          {track.label && (
+            <Typography variant="body2" color="text.secondary" sx={{ color: colors.textSecondary }}>
+              Label: {track.label}
+            </Typography>
           )}
-        </Stack>
-      </CardContent>
+        </CardContent>
+        {track.spotifyUrl && (
+          <Box sx={{ p: 2, display: 'flex', alignItems: 'center', pl: 1, pb: 1 }}>
+            <Link
+              href={track.spotifyUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+            >
+              <IconButton size="small">
+                <OpenInNewIcon />
+              </IconButton>
+              Open in Spotify
+            </Link>
+          </Box>
+        )}
+      </Box>
     </Card>
   );
-}
+};
+
+export default FeaturedRelease;

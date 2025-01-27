@@ -1,109 +1,120 @@
-import { useState, useEffect } from 'react';
-import { spotifyService } from '../services/SpotifyService';
+import { useState, useEffect, useCallback } from 'react';
 import { Release } from '../types/release';
-import { RecordLabel, RECORD_LABELS } from '../constants/labels';
+import { databaseService } from '../services/DatabaseService';
 
-const SPOTIFY_IDS = {
-  records: 'builditrecords',
-  tech: 'buildittech',
-  deep: 'builditdeep',
-} as const;
+interface UseReleasesResult {
+  releases: Release[];
+  loading: boolean;
+  error: string | null;
+  refetch: () => Promise<void>;
+  totalReleases: number;
+  totalTracks: number;
+  currentPage: number;
+  totalPages: number;
+  hasMore: boolean;
+  loadMore: () => Promise<void>;
+}
 
-const BEATPORT_URLS = {
-  records: 'https://www.beatport.com/label/build-it-records/89999',
-  tech: 'https://www.beatport.com/label/build-it-tech/90000',
-  deep: 'https://www.beatport.com/label/build-it-deep/90001',
-} as const;
-
-const SOUNDCLOUD_URLS = {
-  records: 'https://soundcloud.com/builditrecords',
-  tech: 'https://soundcloud.com/buildittech',
-  deep: 'https://soundcloud.com/builditdeep',
-} as const;
-
-type LabelId = keyof typeof SPOTIFY_IDS;
-
-const labelIdToRecordLabel = (labelId: LabelId): RecordLabel => {
-  switch (labelId) {
-    case 'records':
-      return RECORD_LABELS.RECORDS;
-    case 'tech':
-      return RECORD_LABELS.TECH;
-    case 'deep':
-      return RECORD_LABELS.DEEP;
+const validateRelease = (release: any): release is Release => {
+  if (!release || typeof release !== 'object') {
+    console.error('Invalid release object:', release);
+    return false;
   }
+
+  // Ensure required properties exist
+  const hasRequiredProps = 
+    'id' in release && 
+    'name' in release && 
+    typeof release.id === 'string' && 
+    typeof release.name === 'string';
+
+  if (!hasRequiredProps) {
+    console.error('Release missing required properties:', release);
+    return false;
+  }
+
+  // Initialize optional properties with default values
+  release.artists = Array.isArray(release.artists) ? release.artists : [];
+  release.tracks = Array.isArray(release.tracks) ? release.tracks : [];
+  release.images = Array.isArray(release.images) ? release.images : [];
+  release.external_urls = release.external_urls || {};
+  release.artwork_url = release.artwork_url || release.images?.[0]?.url || null;
+
+  return true;
 };
 
-const useReleases = (labelId: LabelId) => {
+export function useReleases(label?: string): UseReleasesResult {
   const [releases, setReleases] = useState<Release[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [totalReleases, setTotalReleases] = useState(0);
+  const [totalTracks, setTotalTracks] = useState(0);
 
-  const convertSpotifyToRelease = (spotifyRelease: any): Release => ({
-    id: spotifyRelease.id,
-    title: spotifyRelease.name,
-    artist: spotifyRelease.artists[0]?.name || 'Unknown Artist',
-    artwork: spotifyRelease.images[0]?.url || '',
-    releaseDate: spotifyRelease.release_date,
-    spotifyUrl: spotifyRelease.external_urls.spotify,
-    beatportUrl: BEATPORT_URLS[labelId],
-    soundcloudUrl: SOUNDCLOUD_URLS[labelId],
-    label: labelIdToRecordLabel(labelId),
-    tracks: spotifyRelease.tracks.items.map((track: {
-      id: string;
-      name: string;
-      artists: Array<{ name: string }>;
-      duration_ms: number;
-      preview_url: string | null;
-    }) => ({
-      id: track.id,
-      title: track.name,
-      artist: track.artists[0]?.name || 'Unknown Artist',
-      duration: track.duration_ms,
-      previewUrl: track.preview_url,
-    })),
-  });
+  const fetchReleases = useCallback(async () => {
+    if (!label) {
+      setReleases([]);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setError(null);
+      setLoading(true);
+
+      console.log('Fetching releases for label:', label);
+      const data = await databaseService.getReleasesByLabelId(label);
+      console.log('Raw API response:', data);
+
+      if (!data) {
+        throw new Error('No data received from server');
+      }
+
+      // Filter and validate releases
+      const validReleases = data.releases
+        .filter(release => {
+          const isValid = validateRelease(release);
+          if (!isValid) {
+            console.warn('Invalid release:', release);
+          }
+          return isValid;
+        })
+        .map(release => ({
+          ...release,
+          artwork_url: release.artwork_url || release.images?.[0]?.url || null
+        }));
+
+      console.log('Processed releases:', {
+        total: validReleases.length,
+        totalFromAPI: data.totalReleases,
+        totalTracksFromAPI: data.totalTracks,
+        filtered: data.releases.length - validReleases.length
+      });
+
+      setReleases(validReleases);
+      setTotalReleases(data.totalReleases);
+      setTotalTracks(data.totalTracks);
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching releases:', error);
+      setError(error instanceof Error ? error.message : 'Failed to fetch releases');
+      setLoading(false);
+    }
+  }, [label]);
 
   useEffect(() => {
-    const fetchReleases = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        
-        const allReleases = await spotifyService.getLabelReleases(SPOTIFY_IDS[labelId]);
-        const formattedReleases = allReleases.map(convertSpotifyToRelease);
-        
-        setReleases(formattedReleases);
-      } catch (error) {
-        setError(error as Error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchReleases();
-  }, [labelId]);
+  }, [fetchReleases]);
 
   return {
     releases,
-    isLoading,
+    loading,
     error,
-    refetch: async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        
-        const allReleases = await spotifyService.getLabelReleases(SPOTIFY_IDS[labelId]);
-        const formattedReleases = allReleases.map(convertSpotifyToRelease);
-        
-        setReleases(formattedReleases);
-      } catch (error) {
-        setError(error as Error);
-      } finally {
-        setIsLoading(false);
-      }
-    },
+    refetch: fetchReleases,
+    totalReleases,
+    totalTracks,
+    currentPage: 1,
+    totalPages: 1,
+    hasMore: false,
+    loadMore: async () => {} // No-op since we load all releases at once
   };
-};
-
-export default useReleases;
+}

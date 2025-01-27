@@ -17,7 +17,8 @@ import {
 import RemoveIcon from '@mui/icons-material/Remove';
 import AddIcon from '@mui/icons-material/Add';
 import { useNavigate } from 'react-router-dom';
-import { LabelKey } from '../types/labels';
+import { RecordLabel, labelIdToKey } from '../constants/labels';
+import config from '../config'; // Assuming config file is in the same directory
 
 interface Track {
   title: string;
@@ -40,7 +41,7 @@ interface Artist {
 }
 
 interface SubmitPageProps {
-  label: LabelKey;
+  label: string;
 }
 
 const StyledCard = styled(Card)({
@@ -161,7 +162,7 @@ const SubmitPage: React.FC<SubmitPageProps> = ({ label }) => {
         return;
       }
 
-      const response = await fetch('/api/submit-demo', {
+      const response = await fetch(`${config.API_URL}/submit-demo`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -181,7 +182,7 @@ const SubmitPage: React.FC<SubmitPageProps> = ({ label }) => {
             appleMusic: artist.appleMusic
           },
           track: {
-            title: track.title,
+            name: track.title,
             genre: track.genre,
             soundCloudPrivateLink: track.soundCloudPrivateLink
           }
@@ -226,7 +227,8 @@ const SubmitPage: React.FC<SubmitPageProps> = ({ label }) => {
     }
   };
 
-  const labelDisplay = label.charAt(0).toUpperCase() + label.slice(1);
+  const recordLabel = labelIdToKey[label as keyof typeof labelIdToKey];
+  const labelDisplay = recordLabel.charAt(0).toUpperCase() + recordLabel.slice(1);
 
   return (
     <Box 
@@ -422,7 +424,7 @@ const SubmitPage: React.FC<SubmitPageProps> = ({ label }) => {
             <Grid item xs={12}>
               <TextField
                 fullWidth
-                label="Track Title"
+                label="Track Name"
                 value={track.title}
                 onChange={(e) => handleTrackChange(index, 'title', e.target.value)}
                 required

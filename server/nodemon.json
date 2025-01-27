@@ -1,0 +1,17 @@
+{
+  "verbose": true,
+  "watch": [
+    "*.js",
+    "routes/",
+    "models/",
+    "config/",
+    "services/"
+  ],
+  "ignore": [
+    "node_modules/",
+    ".git/",
+    "*.test.js"
+  ],
+  "ext": "js,json,env",
+  "delay": "500"
+}

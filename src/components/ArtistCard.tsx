@@ -1,150 +1,74 @@
 import React from 'react';
-import {
-  Card,
-  CardContent,
-  CardMedia,
-  Typography,
-  Box,
-  IconButton,
-  Link,
-} from '@mui/material';
-import SpotifyIcon from '@mui/icons-material/MusicNote';
-import InstagramIcon from '@mui/icons-material/Instagram';
-import SoundcloudIcon from '@mui/icons-material/CloudQueue';
+import { Card, CardContent, CardMedia, Typography, IconButton, Box } from '@mui/material';
+import { MusicNote as MusicIcon } from '@mui/icons-material';
+import { Artist } from '../types/artist';
 
 interface ArtistCardProps {
-  name: string;
-  imageUrl: string;
-  bio: string;
-  spotifyUrl?: string;
-  instagramUrl?: string;
-  soundcloudUrl?: string;
-  label: 'records' | 'tech' | 'deep';
+  artist: Artist;
+  onClick?: () => void;
 }
 
-export const ArtistCard: React.FC<ArtistCardProps> = ({
-  name,
-  imageUrl,
-  bio,
-  spotifyUrl,
-  instagramUrl,
-  soundcloudUrl,
-  label,
-}) => {
-  const labelColors = {
-    records: '#02FF95',
-    tech: '#FF0000',
-    deep: '#00BFFF'
+const ArtistCard: React.FC<ArtistCardProps> = ({ artist, onClick }) => {
+  const artistImage = artist.images?.[0]?.url || '/placeholder-artist.jpg';
+  const spotifyUrl = artist.external_urls?.spotify || artist.spotify_url;  // Handle both formats
+
+  const handleClick = () => {
+    if (onClick) {
+      onClick();
+    }
   };
 
-  const color = labelColors[label];
-
   return (
-    <Card
-      sx={{
+    <Card 
+      sx={{ 
         maxWidth: 345,
-        bgcolor: 'rgba(255, 255, 255, 0.05)',
-        borderRadius: 2,
-        transition: 'transform 0.2s ease-in-out',
-        '&:hover': {
+        cursor: onClick ? 'pointer' : 'default',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        '&:hover': onClick ? {
           transform: 'scale(1.02)',
-        },
+          transition: 'transform 0.2s ease-in-out'
+        } : {}
       }}
+      onClick={handleClick}
     >
       <CardMedia
         component="img"
-        height="345"
-        image={imageUrl}
-        alt={name}
-        sx={{
-          objectFit: 'cover',
-        }}
+        height="200"
+        image={artistImage}
+        alt={artist.name || 'Unknown Artist'}
       />
-      <CardContent>
-        <Typography
-          gutterBottom
-          variant="h5"
-          component="div"
-          sx={{
-            color: '#FFFFFF',
-            fontWeight: 'bold',
-          }}
-        >
-          {name}
-        </Typography>
-        <Typography
-          variant="body2"
-          sx={{
-            color: 'rgba(255, 255, 255, 0.7)',
-            mb: 2,
-            minHeight: '3em',
-            display: '-webkit-box',
-            WebkitLineClamp: 3,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-          }}
-        >
-          {bio}
-        </Typography>
-
-        <Box
-          sx={{
-            display: 'flex',
-            justifyContent: 'space-around',
-            mt: 2,
-          }}
-        >
+      <CardContent sx={{ flexGrow: 1 }}>
+        <Box display="flex" justifyContent="space-between" alignItems="center">
+          <Typography gutterBottom variant="h6" component="div">
+            {artist.name || 'Unknown Artist'}
+          </Typography>
           {spotifyUrl && (
-            <IconButton
-              component={Link}
+            <IconButton 
               href={spotifyUrl}
               target="_blank"
               rel="noopener noreferrer"
-              sx={{
-                color: '#FFFFFF',
-                '&:hover': {
-                  color: color,
-                },
-              }}
+              onClick={(e) => e.stopPropagation()}
             >
-              <SpotifyIcon />
-            </IconButton>
-          )}
-          {instagramUrl && (
-            <IconButton
-              component={Link}
-              href={instagramUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              sx={{
-                color: '#FFFFFF',
-                '&:hover': {
-                  color: color,
-                },
-              }}
-            >
-              <InstagramIcon />
-            </IconButton>
-          )}
-          {soundcloudUrl && (
-            <IconButton
-              component={Link}
-              href={soundcloudUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              sx={{
-                color: '#FFFFFF',
-                '&:hover': {
-                  color: color,
-                },
-              }}
-            >
-              <SoundcloudIcon />
+              <MusicIcon />
             </IconButton>
           )}
         </Box>
+        {artist.genres && artist.genres.length > 0 && (
+          <Typography variant="body2" color="text.secondary">
+            {artist.genres.join(', ')}
+          </Typography>
+        )}
+        {artist.followers && artist.followers.total && (
+          <Typography variant="body2" color="text.secondary">
+            {artist.followers.total.toLocaleString()} followers
+          </Typography>
+        )}
       </CardContent>
     </Card>
   );
 };
+
+export { ArtistCard };
+export default ArtistCard;

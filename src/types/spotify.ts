@@ -1,91 +1,82 @@
-import { RecordLabel } from '../constants/labels';
+/**
+ * @fileoverview Spotify API types
+ * @module types/spotify
+ */
 
-// Spotify API Types
-export interface SpotifyApiImage {
-  url: string;
-  height: number | null;
-  width: number | null;
+import type { Track } from './track';
+import type { Artist } from './artist';
+import type { Album } from './album';
+
+export interface SpotifyError {
+  status: number;
+  message: string;
+  reason?: string;
 }
 
-export interface SpotifyApiArtist {
-  id: string;
-  name: string;
-  external_urls: {
-    spotify: string;
-  };
-}
-
-export interface SpotifyApiAlbum {
-  id: string;
-  name: string;
-  images: SpotifyApiImage[];
-  artists: SpotifyApiArtist[];
-  release_date: string;
-  external_urls: {
-    spotify: string;
-  };
-  label?: string;
-}
-
-export interface SpotifyApiTrack {
-  id: string;
-  name: string;
-  artists: SpotifyApiArtist[];
-  album: {
-    name: string;
-    release_date: string;
-    images: SpotifyApiImage[];
-    label?: string;
-  };
-  preview_url: string | null;
-  external_urls: {
-    spotify: string;
-  };
-  duration_ms: number;
-}
-
-// Application Types
 export interface SpotifyImage {
   url: string;
   height: number | null;
   width: number | null;
 }
 
-export interface SpotifyAlbum {
+export interface SpotifyExternalUrls {
+  spotify: string;
+}
+
+export interface SpotifyExternalIds {
+  isrc?: string;
+  ean?: string;
+  upc?: string;
+}
+
+export interface SpotifyFollowers {
+  href: string | null;
+  total: number;
+}
+
+export interface SpotifyTrack {
+  id: string;
   name: string;
-  release_date: string;
-  images: SpotifyImage[];
+  artists: SpotifyArtist[];
+  album: SpotifyAlbum;
+  duration_ms: number;
+  preview_url: string | null;
+  external_urls: SpotifyExternalUrls;
+  external_ids: SpotifyExternalIds;
+  uri: string;
+  type: 'track';
+  track_number: number;
+  disc_number: number;
+  explicit: boolean;
+  popularity: number;
+  available_markets: string[];
+  is_local: boolean;
 }
 
 export interface SpotifyArtist {
   id: string;
   name: string;
-  external_urls: {
-    spotify: string;
-  };
+  images: SpotifyImage[];
+  external_urls: SpotifyExternalUrls;
+  uri: string;
+  type: 'artist';
+  followers: SpotifyFollowers;
+  genres: string[];
+  popularity: number;
 }
 
-export interface SpotifyTrack {
+export interface SpotifyAlbum {
   id: string;
-  trackTitle: string;
-  artist: string;
-  albumCover: string;
-  album: {
-    name: string;
-    releaseDate: string;
-    images: SpotifyImage[];
-  };
-  recordLabel: RecordLabel;
-  previewUrl: string | null;
-  spotifyUrl: string;
-  releaseDate: string;
-}
-
-export interface SimplifiedTrackOutput {
-  trackTitle: string;
-  artistName: string;
-  recordLabel: RecordLabel;
-  artwork: string;
+  name: string;
+  artists: SpotifyArtist[];
+  images: SpotifyImage[];
+  release_date: string;
+  release_date_precision: 'year' | 'month' | 'day';
+  total_tracks: number;
+  type: 'album' | 'single' | 'compilation';
+  external_urls: SpotifyExternalUrls;
+  external_ids: SpotifyExternalIds;
+  uri: string;
 }
 
 export interface SpotifyPlaylist {
@@ -93,72 +84,44 @@ export interface SpotifyPlaylist {
   name: string;
   description: string | null;
   images: SpotifyImage[];
+  external_urls: SpotifyExternalUrls;
+  uri: string;
   tracks: {
-    items: {
-      track: SpotifyApiTrack;
-      added_at: string;
-    }[];
+    total: number;
+    items: SpotifyTrack[];
   };
-  external_urls: {
-    spotify: string;
+  owner: {
+    id: string;
+    display_name: string;
   };
 }
 
-export interface SpotifyRelease {
-  id: string;
-  name: string;
-  artists: Array<{ name: string }>;
-  images: Array<{ url: string }>;
-  release_date: string;
-  tracks: {
-    items: Array<{
-      id: string;
-      name: string;
-      artists: Array<{ name: string }>;
-      duration_ms: number;
-      preview_url: string | null;
-    }>;
-  };
-  external_urls: {
-    spotify: string;
-  };
+export interface SpotifyPaging<T> {
+  href: string;
+  items: T[];
+  limit: number;
+  next: string | null;
+  offset: number;
+  previous: string | null;
+  total: number;
+}
+
+export interface SpotifyCredentials {
+  clientId: string;
+  clientSecret: string;
+  redirectUri: string;
+}
+
+export interface SpotifyTokens {
+  accessToken: string;
+  refreshToken: string;
+  expiresIn: number;
 }
 
 export interface SpotifyAuthResponse {
   access_token: string;
   token_type: string;
   expires_in: number;
-}
-
-export interface SpotifyApiError {
-  statusCode?: number;
-  body?: {
-    error?: {
-      status: number;
-      message: string;
-    };
-  };
-}
-
-// Type Guards
-export function isSpotifyTrack(track: any): track is SpotifyApiTrack {
-  return (
-    track &&
-    typeof track.id === 'string' &&
-    typeof track.name === 'string' &&
-    Array.isArray(track.artists) &&
-    track.album &&
-    typeof track.external_urls?.spotify === 'string'
-  );
-}
-
-export function isSpotifyAlbum(album: any): album is SpotifyApiAlbum {
-  return (
-    album &&
-    typeof album.id === 'string' &&
-    typeof album.name === 'string' &&
-    Array.isArray(album.images) &&
-    Array.isArray(album.artists) &&
-    typeof album.release_date === 'string'
-  );
+  refresh_token?: string;
+  scope: string;
 }
