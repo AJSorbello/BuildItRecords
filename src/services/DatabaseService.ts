@@ -109,6 +109,8 @@ export class DatabaseService {
       if (cachedData) return cachedData;
 
       const tracks = await apiService.get<Track[]>(`/artists/${artistId}/tracks`);
+      if (!tracks) return [];
+      
       this.trackCache.set(cacheKey, tracks);
       return tracks;
     } catch (error) {
@@ -123,6 +125,8 @@ export class DatabaseService {
       if (cachedData) return cachedData;
 
       const releases = await apiService.get<Release[]>(`/artists/${artistId}/releases`);
+      if (!releases) return [];
+      
       this.releaseCache.set(cacheKey, releases);
       return releases;
     } catch (error) {
@@ -315,6 +319,8 @@ export class DatabaseService {
       if (cachedData) return cachedData;
 
       const tracks = await apiService.get<Track[]>(`/albums/${albumId}/tracks`);
+      if (!tracks) return [];
+      
       this.trackCache.set(cacheKey, tracks);
       return tracks;
     } catch (error) {
@@ -395,6 +401,8 @@ export class DatabaseService {
       if (cachedData) return cachedData;
 
       const releases = await apiService.get<Release[]>(`/labels/${labelId}/releases`);
+      if (!releases) return [];
+      
       this.releaseCache.set(cacheKey, releases);
       return releases;
     } catch (error) {
