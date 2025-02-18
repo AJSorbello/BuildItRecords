@@ -1,12 +1,16 @@
 {
-  "name": "server",
+  "name": "builditrecords-server",
   "version": "1.0.0",
+  "private": true,
   "description": "Backend server for BuildIt Records",
   "main": "index.js",
   "license": "MIT",
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon --verbose index.js",
+    "start": "ts-node -r tsconfig-paths/register server.ts",
+    "dev": "nodemon",
+    "build": "tsc",
+    "lint": "eslint . --ext .ts",
+    "type-check": "tsc --noEmit",
     "db:migrate": "sequelize-cli db:migrate",
     "db:migrate:undo": "sequelize-cli db:migrate:undo",
     "db:migrate:undo:all": "sequelize-cli db:migrate:undo:all",
@@ -39,6 +43,7 @@
     "@types/spotify-web-api-node": "^5.0.11",
     "@types/swagger-jsdoc": "^6",
     "nodemon": "^3.0.2",
-    "sequelize-cli": "^6.6.2"
+    "sequelize-cli": "^6.6.2",
+    "pnpm": "^7.15.1"
   }
 }

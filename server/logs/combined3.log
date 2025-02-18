@@ -1443,3 +1443,13 @@
 {"artistId":"64aA4P3Ub9VVkAYCNioolq","artistName":"Alicia Moore","hasImages":false,"imageUrl":null,"level":"info","message":"First artist image data:","timestamp":"2025-01-21T02:03:44.617Z"}
 {"artistId":"7kNqXtgeIwFtelmRjWv205","artistName":"John Summit","hasImages":true,"imageUrl":"https://i.scdn.co/image/ab6761610000e5eb81180f8a7fd1f2c2e657c436","level":"info","message":"First artist image data:","timestamp":"2025-01-21T02:03:44.617Z"}
 {"difference":0,"formattedCount":316,"level":"info","message":"Formatted tracks:","originalCount":316,"timestamp":"2025-01-21T02:03:44.617Z"}
+{"NODE_ENV":"development","hasJwtSecret":true,"hasPasswordHash":true,"hasUsername":true,"level":"info","message":"Server starting with environment:","timestamp":"2025-02-18T17:37:03.196Z"}
+{"level":"debug","message":"Executing (default): SELECT 1+1 AS result","timestamp":"2025-02-18T17:37:03.281Z"}
+{"level":"info","message":"Database connection established successfully","timestamp":"2025-02-18T17:37:03.283Z"}
+{"level":"info","message":"Server is running on port 3001","timestamp":"2025-02-18T17:37:03.286Z"}
+{"CORS_ORIGIN":"http://localhost:3000","NODE_ENV":"development","PORT":"3001","dbConnected":true,"hasAdminPasswordHash":true,"hasAdminUsername":true,"hasJwtSecret":true,"level":"info","message":"Environment configuration:","timestamp":"2025-02-18T17:37:03.287Z"}
+{"NODE_ENV":"development","hasJwtSecret":true,"hasPasswordHash":true,"hasUsername":true,"level":"info","message":"Server starting with environment:","timestamp":"2025-02-18T17:38:48.332Z"}
+{"level":"debug","message":"Executing (default): SELECT 1+1 AS result","timestamp":"2025-02-18T17:38:48.429Z"}
+{"level":"info","message":"Database connection established successfully","timestamp":"2025-02-18T17:38:48.431Z"}
+{"level":"info","message":"Server is running on port 3001","timestamp":"2025-02-18T17:38:48.435Z"}
+{"CORS_ORIGIN":"http://localhost:3000","NODE_ENV":"development","PORT":"3001","dbConnected":true,"hasAdminPasswordHash":true,"hasAdminUsername":true,"hasJwtSecret":true,"level":"info","message":"Environment configuration:","timestamp":"2025-02-18T17:38:48.436Z"}
