@@ -17,7 +17,7 @@ import { databaseService } from '../services/DatabaseService';
 import { DatabaseError } from '../utils/errors';
 import ArtistCard from '../components/ArtistCard';
 import ArtistModal from '../components/modals/ArtistModal';
-import ErrorBoundary from '../components/ErrorBoundary';
+import { ErrorBoundary } from '../components/ErrorBoundary'; // Update ErrorBoundary import to use named import
 import { Artist } from '../types/artist';
 import { Refresh as RefreshIcon } from '@mui/icons-material';
 import { RECORD_LABELS } from '../constants/labels';
@@ -58,8 +58,8 @@ const ArtistsPage: React.FC<ArtistsPageProps> = ({ label }) => {
   });
 
   const labelId = useMemo(() => {
-    const labelKey = label.toLowerCase();
-    return `buildit-${labelKey}`;
+    // The label prop is already the correct ID format (e.g., 'buildit-records')
+    return label;
   }, [label]);
 
   const labelDisplayName = RECORD_LABELS[label]?.displayName || 'Artists';
@@ -104,7 +104,7 @@ const ArtistsPage: React.FC<ArtistsPageProps> = ({ label }) => {
           setLoading(true);
           setError(null);
           const filteredArtists = artists.filter(artist =>
-            artist.name.toLowerCase().includes(query.toLowerCase())
+            typeof artist.name === 'string' && artist.name.toLowerCase().includes(query.toLowerCase())
           );
           setSearchState(prev => ({
             ...prev,
@@ -146,7 +146,7 @@ const ArtistsPage: React.FC<ArtistsPageProps> = ({ label }) => {
 
   const filteredArtists = searchTerm
     ? artists.filter(artist =>
-        artist.name.toLowerCase().includes(searchTerm.toLowerCase())
+        typeof artist.name === 'string' && artist.name.toLowerCase().includes(searchTerm.toLowerCase())
       )
     : artists;
 

@@ -1,23 +1,30 @@
-import React, { useState, useEffect } from 'react';
-import { Box, Container, Typography, Grid, CircularProgress, Alert } from '@mui/material';
-import ReleaseCard from '../../components/ReleaseCard';
-import { RECORD_LABELS } from '../../constants/labels';
-import { databaseService } from '../../services/DatabaseService';
-import type { Release } from '../../types';
+import React, { useEffect, useState } from 'react';
+import { Container, Typography, Grid, Box, CircularProgress, Alert } from '@mui/material';
+import { ReleaseCard } from '../../components/ReleaseCard';
+import DatabaseService from '../../services/DatabaseService';
+import { Release } from '../../types/release';
 
 const TechHome: React.FC = () => {
   const [releases, setReleases] = useState<Release[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchReleases = async () => {
       try {
         setLoading(true);
-        const fetchedReleases = await databaseService.getReleasesForLabel('buildit-tech');
-        setReleases(fetchedReleases);
+        const response = await DatabaseService.getReleasesByLabelId('tech');
+        if (response.data) {
+          setReleases(response.data.map((release: any) => ({
+            ...release,
+            images: release.images || [],
+            release_date: release.release_date || new Date().toISOString(),
+            total_tracks: release.total_tracks || 1
+          })));
+        }
       } catch (err) {
-        setError(err instanceof Error ? err : new Error('Failed to fetch releases'));
+        setError('Failed to fetch releases');
+        console.error(err);
       } finally {
         setLoading(false);
       }
@@ -37,25 +44,26 @@ const TechHome: React.FC = () => {
   if (error) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
-        <Alert severity="error">{error.message}</Alert>
+        <Alert severity="error">{error}</Alert>
       </Box>
     );
   }
 
   return (
-    <Container maxWidth="xl" disableGutters>
-      <Box sx={{ py: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom sx={{ color: '#fff' }}>
-          Latest Releases
+    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h4" component="h1" gutterBottom>
+          Tech Releases
         </Typography>
-        <Grid container spacing={3}>
-          {releases.map((release) => (
-            <Grid item xs={12} sm={6} md={4} lg={3} key={release.id}>
-              <ReleaseCard release={release} />
-            </Grid>
-          ))}
-        </Grid>
       </Box>
+
+      <Grid container spacing={3}>
+        {releases.map((release) => (
+          <Grid item xs={12} sm={6} md={4} key={release.id}>
+            <ReleaseCard release={release} />
+          </Grid>
+        ))}
+      </Grid>
     </Container>
   );
 };

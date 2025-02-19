@@ -3,7 +3,8 @@ const router = express.Router();
 const { query, param, body } = require('express-validator');
 const { validateRequest, isValidSpotifyId } = require('../utils/validation');
 const spotifyService = require('../services/SpotifyService');
-const { Artist, Release, Track, sequelize } = require('../models');
+const { Artist, Release, Track, sequelize, Sequelize } = require('../models');
+const { Op } = Sequelize;
 
 // Format artist data to match Spotify SDK format
 const formatArtistData = (spotifyData) => {
@@ -49,70 +50,113 @@ router.get('/search', [
         const labelId = req.query.label;
         console.log('Searching artists with query:', searchQuery, 'and labelId:', labelId);
 
-        let queryText = 'SELECT * FROM artists WHERE 1=1';
-        const queryParams = [];
-
-        // Add search condition if search query exists
+        // Build the query conditions
+        const whereConditions = {};
         if (searchQuery.trim()) {
-            queryParams.push(`%${searchQuery.trim()}%`);
-            queryText += ` AND name ILIKE $${queryParams.length}`;
+            whereConditions.name = {
+                [Op.iLike]: `%${searchQuery.trim()}%`
+            };
         }
 
-        // Add label condition if label exists
-        if (labelId && labelId !== '[object Object]') {
-            queryParams.push(labelId);
-            queryText += ` AND label_id = $${queryParams.length}`;
+        const include = [];
+        let labelRecord = null;
+
+        if (labelId) {
+            // Try to find the label by either ID or slug
+            labelRecord = await sequelize.models.Label.findOne({
+                where: { 
+                  [Op.or]: [
+                    { id: labelId },
+                    { slug: { [Op.iLike]: `%${labelId}%` } },
+                    { name: { [Op.iLike]: `%${labelId}%` } },
+                    { display_name: { [Op.iLike]: `%${labelId}%` } }
+                  ]
+                },
+                attributes: ['id', 'name', 'display_name', 'slug']
+            });
+
+            if (!labelRecord) {
+                console.log('Label not found:', labelId);
+                return res.status(404).json({ error: 'Label not found' });
+            }
+
+            console.log('Found label:', labelRecord.get({ plain: true }));
+
+            // Include releases for this label
+            include.push({
+                model: Release,
+                as: 'releases',
+                required: true,
+                attributes: [
+                    'id',
+                    'spotify_id',
+                    'title',
+                    'release_type',
+                    'release_date',
+                    'artwork_url',
+                    'images',
+                    'spotify_url',
+                    'total_tracks',
+                    'label_id',
+                    'status',
+                    'created_at',
+                    'updated_at'
+                ],
+                through: {
+                    attributes: []
+                },
+                include: [{
+                    model: sequelize.models.Label,
+                    as: 'label',
+                    where: { id: labelRecord.id },
+                    required: true,
+                    attributes: []
+                }]
+            });
         }
 
-        queryText += ' ORDER BY name ASC';
+        console.log('Final where conditions:', whereConditions);
+        console.log('Include:', JSON.stringify(include, null, 2));
 
-        console.log('Executing query:', queryText, 'with params:', queryParams);
-        const result = await Artist.findAll({
-            where: {
-                ...(searchQuery.trim() && {
-                    name: {
-                        [sequelize.Op.iLike]: `%${searchQuery.trim()}%`
-                    }
-                }),
-                ...(labelId && labelId !== '[object Object]' && {
-                    label_id: labelId
-                })
-            },
-            order: [['name', 'ASC']]
+        const artists = await Artist.findAll({
+            where: whereConditions,
+            include: include,
+            order: [['name', 'ASC']],
+            attributes: ['id', 'name', 'spotify_url', 'profile_image_url', 'created_at', 'updated_at'],
+            group: ['Artist.id', 'releases.id', 'releases->ReleaseArtist.id'],
+            subQuery: false
         });
 
+        console.log(`Found ${artists.length} artists`);
+        
         // Format the response to match the expected Artist type
-        const formattedArtists = result.map(artist => ({
-            id: artist.id,
-            name: artist.name,
-            external_urls: {
-                spotify: artist.spotify_url
-            },
-            images: artist.image_url ? [{
-                url: artist.image_url,
-                height: null,
-                width: null
-            }] : [],
-            uri: artist.spotify_uri || `spotify:artist:${artist.id}`,
-            type: 'artist',
-            followers: {
-                total: artist.followers_count || 0,
-                href: null
-            },
-            genres: artist.genres || [],
-            popularity: artist.popularity || 0,
-            label: artist.label_id
-        }));
-
-        console.log(`Found ${result.length} artists`);
-        res.json({
-            success: true,
-            data: formattedArtists,
-            total: formattedArtists.length
+        const formattedArtists = artists.map(artist => {
+            const artistData = artist.get({ plain: true });
+            return {
+                id: artistData.id,
+                name: artistData.name,
+                spotify_url: artistData.spotify_url,
+                profile_image_url: artistData.profile_image_url,
+                created_at: artistData.created_at,
+                updated_at: artistData.updated_at,
+                releases: artistData.releases?.map(release => ({
+                    id: release.id,
+                    title: release.title,
+                    spotify_url: release.spotify_url,
+                    artwork_url: release.artwork_url,
+                    release_date: release.release_date,
+                    created_at: release.created_at,
+                    updated_at: release.updated_at
+                })) || []
+            };
         });
+
+        console.log('Successfully formatted artists:', formattedArtists.length);
+        res.json(formattedArtists);
     } catch (error) {
         console.error('Error searching artists:', error);
-        res.status(500).json({ error: 'Failed to search artists' });
+        console.error('Error stack:', error.stack);
+        res.status(500).json({ error: 'Failed to search artists', details: error.message });
     }
 });
 

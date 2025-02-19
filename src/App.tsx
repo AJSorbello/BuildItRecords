@@ -29,147 +29,61 @@ import LegalPage from './pages/LegalPage';
 import NotFoundPage from './pages/NotFoundPage';
 import TrackManager from './components/admin/TrackManager';
 
-const router = createBrowserRouter([
-  {
-    path: '/admin/login',
-    element: <AdminLogin />
-  },
-  {
-    path: '/admin/dashboard',
-    element: <ProtectedRoute><AdminDashboard /></ProtectedRoute>
-  },
-  {
-    path: '/admin/tracks/import/:label',
-    element: <ProtectedRoute><TrackManager /></ProtectedRoute>
-  },
-  {
-    path: '/admin',
-    element: <Navigate to="/admin/dashboard" replace />
-  },
-  {
-    path: '/',
-    element: <Layout />,
-    children: [
-      {
-        index: true,
-        element: <Navigate to="/records" replace />
-      },
-      {
-        path: 'records',
-        children: [
-          {
-            index: true,
-            element: <RecordsPage />
-          },
-          {
-            path: 'releases',
-            element: <ReleasesPage label="buildit-records" />
-          },
-          {
-            path: 'artists',
-            element: <ArtistsPage label="buildit-records" />
-          },
-          {
-            path: 'artists/:id',
-            element: <ArtistDetailPage />
-          },
-          {
-            path: 'playlists',
-            element: <PlaylistPage label="records" />
-          },
-          {
-            path: 'submit',
-            element: <SubmitPage label="records" />
-          },
-          {
-            path: 'legal',
-            element: <LegalPage />
-          }
-        ]
-      },
-      {
-        path: 'tech',
-        children: [
-          {
-            index: true,
-            element: <TechPage />
-          },
-          {
-            path: 'releases',
-            element: <ReleasesPage label="buildit-tech" />
-          },
-          {
-            path: 'artists',
-            element: <ArtistsPage label="buildit-tech" />
-          },
-          {
-            path: 'artists/:id',
-            element: <ArtistDetailPage />
-          },
-          {
-            path: 'playlists',
-            element: <PlaylistPage label="tech" />
-          },
-          {
-            path: 'submit',
-            element: <SubmitPage label="tech" />
-          },
-          {
-            path: 'legal',
-            element: <LegalPage />
-          }
-        ]
-      },
-      {
-        path: 'deep',
-        children: [
-          {
-            index: true,
-            element: <DeepPage />
-          },
-          {
-            path: 'releases',
-            element: <ReleasesPage label="buildit-deep" />
-          },
-          {
-            path: 'artists',
-            element: <ArtistsPage label="buildit-deep" />
-          },
-          {
-            path: 'artists/:id',
-            element: <ArtistDetailPage />
-          },
-          {
-            path: 'playlists',
-            element: <PlaylistPage label="deep" />
-          },
-          {
-            path: 'submit',
-            element: <SubmitPage label="deep" />
-          },
-          {
-            path: 'legal',
-            element: <LegalPage />
-          }
-        ]
-      }
-    ]
-  },
-  {
-    path: '*',
-    element: <NotFoundPage />
-  }
-]);
+const router = createBrowserRouter(
+  createRoutesFromElements(
+    <Route>
+      {/* Admin Routes */}
+      <Route path="/admin">
+        <Route path="login" element={<AdminLogin />} />
+        <Route path="dashboard" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
+        <Route path="tracks/import/:label" element={<ProtectedRoute><TrackManager /></ProtectedRoute>} />
+        <Route index element={<Navigate to="/admin/dashboard" replace />} />
+      </Route>
+
+      {/* Main App Routes */}
+      <Route path="/" element={<Layout />}>
+        <Route path="records">
+          <Route path="artists" element={<ArtistsPage label="records" />} />
+          <Route path="artists/:id" element={<ArtistDetailPage />} />
+          <Route path="releases" element={<ReleasesPage label="records" />} />
+          <Route path="playlists" element={<PlaylistPage label="records" />} />
+          <Route index element={<RecordsPage />} />
+        </Route>
+
+        <Route path="tech">
+          <Route path="artists" element={<ArtistsPage label="tech" />} />
+          <Route path="artists/:id" element={<ArtistDetailPage />} />
+          <Route path="releases" element={<ReleasesPage label="tech" />} />
+          <Route path="playlists" element={<PlaylistPage label="tech" />} />
+          <Route index element={<TechPage />} />
+        </Route>
+
+        <Route path="deep">
+          <Route path="artists" element={<ArtistsPage label="deep" />} />
+          <Route path="artists/:id" element={<ArtistDetailPage />} />
+          <Route path="releases" element={<ReleasesPage label="deep" />} />
+          <Route path="playlists" element={<PlaylistPage label="deep" />} />
+          <Route index element={<DeepPage />} />
+        </Route>
+
+        <Route path="submit" element={<SubmitPage label="records" />} />
+        <Route path="legal" element={<LegalPage />} />
+        <Route path="*" element={<NotFoundPage />} />
+        <Route index element={<Navigate to="/records" replace />} />
+      </Route>
+    </Route>
+  )
+);
 
 const App: React.FC = () => {
   return (
-    <MuiThemeProvider>
-      <CustomThemeProvider>
-        <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: 'background.default' }}>
+    <CustomThemeProvider>
+      <MuiThemeProvider>
+        <Box sx={{ display: 'flex', minHeight: '100vh' }}>
           <RouterProvider router={router} />
         </Box>
-      </CustomThemeProvider>
-    </MuiThemeProvider>
+      </MuiThemeProvider>
+    </CustomThemeProvider>
   );
 };
 

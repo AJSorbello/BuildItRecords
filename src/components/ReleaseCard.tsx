@@ -43,118 +43,131 @@ export const ReleaseCard: React.FC<ReleaseCardProps> = ({ release, ranking }) =>
   const artists = Array.isArray(release.artists) 
     ? release.artists.map(artist => artist?.name || '').filter(Boolean).join(', ') 
     : '';
-  const name = release.name || 'Untitled Release';
+  const title = release.title || 'Untitled Release';
   const releaseDate = release.release_date || '';
 
   return (
     <>
       <Card 
-        onClick={handleClick}
-        sx={{
-          cursor: 'pointer',
-          backgroundColor: 'transparent',
-          boxShadow: 'none',
-          transition: 'transform 0.2s',
+        sx={{ 
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          position: 'relative',
+          backgroundColor: 'background.paper',
+          borderRadius: 2,
+          overflow: 'hidden',
           '&:hover': {
             transform: 'scale(1.02)',
-          },
+            transition: 'transform 0.2s ease-in-out'
+          }
         }}
       >
-        <Box sx={{ position: 'relative', paddingTop: '100%', width: '100%' }}>
-          <CardMedia
-            component="img"
-            image={imageUrl || '/default-album-art.png'}
-            alt={name}
-            sx={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              borderRadius: '4px'
-            }}
-          />
-          {ranking && (
-            <Box
-              sx={{
-                position: 'absolute',
-                top: 8,
-                left: 8,
-                backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                color: '#fff',
-                padding: '4px 8px',
-                borderRadius: '4px',
-                fontSize: '0.875rem',
-              }}
-            >
-              #{ranking}
-            </Box>
-          )}
-          {previewUrl && (
-            <Box sx={{ position: 'absolute', bottom: 8, right: 8 }}>
-              <PlayButton url={previewUrl} />
-            </Box>
-          )}
-        </Box>
-        <CardContent sx={{ p: 1, '&:last-child': { pb: 1 } }}>
-          <Typography 
-            variant="subtitle1" 
-            component="div" 
-            sx={{ 
-              color: '#fff',
-              fontWeight: 500,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap'
-            }}
-          >
-            {name}
-          </Typography>
-          {artists && (
-            <Typography 
-              variant="body2" 
-              color="text.secondary"
-              sx={{
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap'
-              }}
-            >
+        <CardActionArea onClick={handleClick}>
+          <Box sx={{ position: 'relative', paddingTop: '100%' }}>
+            {imageUrl ? (
+              <CardMedia
+                component="img"
+                image={imageUrl}
+                alt={title}
+                sx={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover'
+                }}
+              />
+            ) : (
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  bgcolor: 'grey.300'
+                }}
+              >
+                <AlbumIcon sx={{ fontSize: 60, color: 'grey.500' }} />
+              </Box>
+            )}
+          </Box>
+
+          <CardContent sx={{ flexGrow: 1, p: 2 }}>
+            <Typography variant="subtitle1" component="div" noWrap>
+              {title}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" noWrap>
               {artists}
             </Typography>
-          )}
-          {releaseDate && (
-            <Typography 
-              variant="body2" 
-              color="text.secondary"
-              sx={{
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap'
+            <Typography variant="caption" color="text.secondary" display="block">
+              {releaseDate}
+            </Typography>
+          </CardContent>
+        </CardActionArea>
+
+        {/* Spotify and Preview Controls */}
+        <Box sx={{ 
+          position: 'absolute', 
+          top: 8, 
+          right: 8, 
+          display: 'flex', 
+          gap: 1,
+          backgroundColor: 'rgba(0, 0, 0, 0.6)',
+          borderRadius: 1,
+          padding: '4px'
+        }}>
+          {spotifyUrl && (
+            <IconButton
+              size="small"
+              href={spotifyUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              sx={{ 
+                color: 'white',
+                '&:hover': { color: '#1DB954' }
               }}
             >
-              {new Date(releaseDate).toLocaleDateString()}
-            </Typography>
+              <SpotifyIcon />
+            </IconButton>
           )}
-          {spotifyUrl && (
-            <Box sx={{ mt: 'auto', pt: 1 }}>
-              <Link href={spotifyUrl} target="_blank" rel="noopener noreferrer">
-                <IconButton size="small" color="primary">
-                  <SpotifyIcon />
-                </IconButton>
-              </Link>
-            </Box>
+          {previewUrl && (
+            <PlayButton 
+              previewUrl={previewUrl}
+              size="small"
+              sx={{ color: 'white' }}
+            />
           )}
-        </CardContent>
+        </Box>
+
+        {/* Ranking Badge */}
+        {ranking && (
+          <Chip
+            label={`#${ranking}`}
+            size="small"
+            sx={{
+              position: 'absolute',
+              top: 8,
+              left: 8,
+              backgroundColor: 'primary.main',
+              color: 'white',
+              fontWeight: 'bold'
+            }}
+          />
+        )}
       </Card>
-      {modalOpen && (
-        <ReleaseModal
-          open={modalOpen}
-          onClose={handleClose}
-          release={release}
-        />
-      )}
+
+      <ReleaseModal
+        open={modalOpen}
+        onClose={handleClose}
+        release={release}
+      />
     </>
   );
 };

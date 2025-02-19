@@ -3,36 +3,24 @@ const { Model, DataTypes } = require('sequelize');
 module.exports = (sequelize) => {
   class Label extends Model {
     static associate(models) {
-      Label.hasMany(models.Artist, {
-        foreignKey: 'label_id',
-        as: 'artists'
-      });
-
       Label.hasMany(models.Release, {
         foreignKey: 'label_id',
         as: 'releases'
       });
 
-      Label.hasMany(models.Track, {
+      Label.hasMany(models.Artist, {
         foreignKey: 'label_id',
-        as: 'tracks'
-      });
-
-      Label.hasMany(models.ImportLog, {
-        foreignKey: 'label_id',
-        as: 'importLogs'
+        as: 'artists'
       });
     }
   }
 
   Label.init({
     id: {
-      type: DataTypes.STRING,
+      type: DataTypes.UUID,
       primaryKey: true,
-      allowNull: false,
-      validate: {
-        notEmpty: true
-      }
+      defaultValue: DataTypes.UUIDV4,
+      allowNull: false
     },
     name: {
       type: DataTypes.STRING,
@@ -60,17 +48,18 @@ module.exports = (sequelize) => {
       type: DataTypes.TEXT,
       allowNull: true
     },
-    spotifyPlaylistId: {
+    spotify_playlist_id: {
       type: DataTypes.STRING,
-      allowNull: true,
-      field: 'spotify_playlist_id'
+      allowNull: true
     }
   }, {
     sequelize,
     modelName: 'Label',
     tableName: 'labels',
     underscored: true,
-    timestamps: true
+    timestamps: true,
+    createdAt: 'created_at',
+    updatedAt: 'updated_at'
   });
 
   return Label;

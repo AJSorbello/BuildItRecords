@@ -327,23 +327,35 @@ class SpotifyService {
       const labelName = label.display_name || label.name;
       logger.info('Using label name:', labelName);
 
-      // First get all artists for this label
+      // First get all artists for this label through releases
       const artists = await Artist.findAll({
-        where: { label_id: labelId },
-        attributes: ['name'],
+        include: [{
+          model: Release,
+          as: 'releases',
+          required: true,
+          where: { label_id: labelId },
+          attributes: []
+        }],
+        attributes: ['name', 'spotify_id'],
         raw: true
       });
 
-      // Base search queries - always include label to filter at search time
+      // Build search queries using Spotify's advanced search operators
       const searchQueries = [
-        `label:"${labelName}"`,                     // Exact label match with quotes
-        `recordlabel:"${labelName}"`,               // Alternative field
-        ...artists.map(artist => 
-          `label:"${labelName}" artist:"${artist.name}"`  // Combine exact label with exact artist
+        // Exact label match
+        `label:"${labelName}"`,
+        
+        // Try alternative spellings/formats
+        `label:"${labelName.toLowerCase()}"`,
+        `label:"${labelName.replace(/records/i, 'rec')}"`,
+        
+        // Search by known artists
+        ...artists.filter(a => a.spotify_id).map(artist => 
+          `artist:${artist.spotify_id} label:"${labelName}"`
         )
       ];
 
-      logger.info('Will try search queries:', {
+      logger.info('Using optimized search queries:', {
         labelId,
         labelName,
         totalQueries: searchQueries.length,
@@ -354,113 +366,102 @@ class SpotifyService {
 
       try {
         for (const searchQuery of searchQueries) {
-          logger.info(`Trying search query: ${searchQuery}`);
+          logger.info(`Executing search query: ${searchQuery}`);
           
-          // Search with the exact label name
           let offset = 0;
           let hasMore = true;
           let retryCount = 0;
           const maxRetries = 3;
 
-          while (hasMore) {
+          while (hasMore && offset < 1000) { // Limit to first 1000 results
             try {
-              const requestFn = async () => {
-                const response = await this.spotifyApi.searchAlbums(searchQuery, {
-                  limit: 50,
-                  offset,
-                  market: 'GB'
-                });
-                
-                if (!response.body.albums || !response.body.albums.items) {
-                  logger.error('Invalid response from Spotify:', response.body);
-                  return;
-                }
-
-                logger.info('Search result:', {
-                  query: searchQuery,
-                  offset,
-                  limit: 50,
-                  total: response.body.albums.total,
-                  found: response.body.albums.items.length,
-                  hasMore: response.body.albums.items.length === 50
-                });
-
-                for (const album of response.body.albums.items) {
-                  try {
-                    // Get full album details
-                    const fullAlbum = await this.getAlbumById(album.id);
-                    if (!fullAlbum) {
-                      logger.warn(`Could not get full album details for ${album.name} (${album.id})`);
-                      continue;
-                    }
-
-                    const albumLabel = fullAlbum.label;
-                    logger.info('Checking album:', {
-                      id: fullAlbum.id,
-                      name: fullAlbum.name,
-                      label: albumLabel,
-                      targetLabel: labelName
-                    });
-
-                    // Strict equality check for the label
-                    const isMatchingLabel = albumLabel && albumLabel.toLowerCase() === labelName.toLowerCase();
-
-                    if (!isMatchingLabel) {
-                      logger.info('Skipping non-matching label:', {
-                        albumLabel,
-                        targetLabel: labelName
-                      });
-                      continue;
-                    }
-
-                    logger.info('Found matching release:', {
-                      id: fullAlbum.id,
-                      name: fullAlbum.name,
-                      label: albumLabel,
-                    });
-                    releases.add(fullAlbum);
-
-                  } catch (error) {
-                    logger.error(`Failed to fetch full album details for ${album.name}:`, error.message);
-                    if (retryCount < maxRetries) {
-                      retryCount++;
-                      await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
-                      continue;
-                    }
-                  }
-
-                  // Add a small delay to avoid rate limiting
-                  await new Promise(resolve => setTimeout(resolve, 100));
-                }
-
-                offset += 50;
-                hasMore = response.body.albums.items.length === 50 && offset < response.body.albums.total;
-              };
-
-              await this.makeRequest(requestFn);
-              retryCount = 0; // Reset retry count on success
-            } catch (error) {
-              logger.error('Error in search request:', error);
-              if (retryCount < maxRetries) {
-                retryCount++;
-                await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+              const response = await this.spotifyApi.searchAlbums(searchQuery, {
+                limit: 50,
+                offset,
+                market: 'GB'
+              });
+              
+              if (!response.body.albums || !response.body.albums.items) {
+                logger.error('Invalid response from Spotify:', response.body);
                 continue;
               }
-              throw error;
+
+              const items = response.body.albums.items;
+              logger.info('Search result:', {
+                query: searchQuery,
+                offset,
+                limit: 50,
+                total: response.body.albums.total,
+                found: items.length,
+                hasMore: items.length === 50
+              });
+
+              // Process albums sequentially to avoid rate limits
+              for (const album of items) {
+                try {
+                  // Get full album details
+                  const fullAlbum = await this.getAlbumById(album.id);
+                  if (!fullAlbum) {
+                    logger.warn(`Could not get full album details for ${album.name} (${album.id})`);
+                    continue;
+                  }
+
+                  const albumLabel = fullAlbum.label;
+                  logger.info('Checking album:', {
+                    id: fullAlbum.id,
+                    name: fullAlbum.name,
+                    label: albumLabel,
+                    targetLabel: labelName
+                  });
+
+                  // Check if this is our label using fuzzy matching
+                  const isMatch = 
+                    albumLabel?.toLowerCase().includes(labelName.toLowerCase()) ||
+                    labelName.toLowerCase().includes(albumLabel?.toLowerCase());
+
+                  if (isMatch && !releases.has(fullAlbum.id)) {
+                    releases.add(fullAlbum.id);
+                    logger.info('Found matching album:', {
+                      id: fullAlbum.id,
+                      name: fullAlbum.name,
+                      label: albumLabel
+                    });
+                  } else {
+                    logger.info('Skipping non-matching label:', {
+                      albumLabel,
+                      targetLabel: labelName
+                    });
+                  }
+
+                  // Add a small delay between requests
+                  await new Promise(resolve => setTimeout(resolve, 500));
+                } catch (error) {
+                  logger.error('Error processing album:', {
+                    albumId: album.id,
+                    error: error.message
+                  });
+                }
+              }
+
+              hasMore = items.length === 50;
+              offset += items.length;
+            } catch (error) {
+              logger.error('Error in search loop:', error);
+              retryCount++;
+              if (retryCount >= maxRetries) {
+                logger.error('Max retries reached, moving to next query');
+                break;
+              }
+              await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
             }
           }
         }
 
-        logger.info('Found releases:', {
-          total: releases.size,
-          labelId
-        });
+        // Convert the Set back to an array
+        const uniqueReleases = Array.from(releases);
+        logger.info(`Found ${uniqueReleases.length} unique releases for label: ${labelName}`);
+        return uniqueReleases;
 
-        // Import releases and tracks
-        await this.importReleases(label, Array.from(releases), transaction);
-        await transaction.commit();
-        
-        return Array.from(releases);
       } catch (error) {
         await transaction.rollback();
         throw error;
@@ -548,7 +549,6 @@ class SpotifyService {
                       spotify_url: track.external_urls?.spotify,
                       spotify_uri: track.uri,
                       release_id: release.id,
-                      label_id: label.id,
                       status: 'published'
                     },
                     transaction
@@ -607,7 +607,11 @@ class SpotifyService {
 
   async importReleases(label, albums, transaction) {
     try {
-      logger.info(`Starting import of ${albums.length} releases for label ${label.name}`);
+      logger.info(`Starting import of ${albums.length} releases for label ${label.name}`, {
+        labelId: label.id,
+        albumIds: albums.map(a => a.id)
+      });
+
       let totalTracksImported = 0;
       let totalTracksSkipped = 0;
       let totalTracksAttempted = 0;
@@ -616,37 +620,57 @@ class SpotifyService {
 
       for (const album of albums) {
         try {
-          logger.info(`Processing release: ${album.name} (${album.id})`);
-          totalTracksAttempted += album.tracks?.items?.length || 0;
+          logger.info(`Processing release: ${album.name} (${album.id})`, {
+            albumId: album.id,
+            albumName: album.name,
+            labelId: label.id
+          });
 
           // Get full album details
           const fullAlbum = await this.getAlbumById(album.id);
           if (!fullAlbum) {
-            logger.warn(`Could not get full album details for ${album.name} (${album.id})`);
+            logger.warn(`Could not get full album details for ${album.name} (${album.id})`, {
+              albumId: album.id,
+              albumName: album.name,
+              error: 'No album data returned'
+            });
             continue;
           }
 
-          // Create or update release
-          const [release, created] = await Release.findOrCreate({
-            where: { id: fullAlbum.id },
-            defaults: {
-              id: fullAlbum.id,
-              title: fullAlbum.name,
-              release_date: fullAlbum.release_date,
-              spotify_url: fullAlbum.external_urls.spotify,
-              artwork_url: fullAlbum.images[0]?.url,
-              total_tracks: fullAlbum.total_tracks,
-              label_id: label.id,
-              type: fullAlbum.album_type,
-              popularity: fullAlbum.popularity
-            },
-            transaction
-          });
+          // Create release in database
+          const release = await Release.create({
+            id: album.id,
+            title: album.name,
+            release_date: album.release_date,
+            artwork_url: album.images[0]?.url,
+            images: album.images,
+            spotify_url: album.external_urls.spotify,
+            spotify_uri: album.uri,
+            label_id: label.id,
+            total_tracks: album.total_tracks,
+            status: 'active'
+          }, { transaction });
 
-          if (created) {
-            totalReleasesImported++;
-            logger.info(`Created new release: ${fullAlbum.name}`);
-          }
+          // Create tracks
+          const tracks = await Promise.all(album.tracks.items.map(async track => {
+            const trackData = {
+              id: track.id,
+              title: track.name,
+              duration_ms: track.duration_ms,
+              track_number: track.track_number,
+              disc_number: track.disc_number,
+              preview_url: track.preview_url,
+              spotify_url: track.external_urls?.spotify,
+              spotify_uri: track.uri,
+              release_id: release.id,
+              status: 'published',
+              type: track.type || 'track',
+              explicit: track.explicit || false,
+              spotify_popularity: track.popularity || 0
+            };
+
+            return Track.create(trackData, { transaction });
+          }));
 
           // Process all artists for the release
           for (const artist of fullAlbum.artists || []) {
@@ -664,7 +688,11 @@ class SpotifyService {
 
             if (artistCreated) {
               totalArtistsImported++;
-              logger.info(`Created new artist: ${artist.name}`);
+              logger.info(`Created new artist: ${artist.name}`, {
+                artistId: artistRecord.id,
+                artistName: artistRecord.name,
+                labelId: label.id
+              });
             }
 
             // Link artist to release
@@ -674,6 +702,7 @@ class SpotifyService {
           // Process all tracks
           for (const track of fullAlbum.tracks.items || []) {
             try {
+              totalTracksAttempted++;
               const [trackRecord, trackCreated] = await Track.findOrCreate({
                 where: { id: track.id },
                 defaults: {
@@ -684,7 +713,6 @@ class SpotifyService {
                   spotify_url: track.external_urls?.spotify,
                   spotify_uri: track.uri,
                   release_id: release.id,
-                  label_id: label.id,
                   status: 'published',
                   track_number: track.track_number,
                   disc_number: track.disc_number
@@ -694,9 +722,20 @@ class SpotifyService {
 
               if (trackCreated) {
                 totalTracksImported++;
-                logger.info(`Created new track: ${track.name}`);
+                logger.info(`Created new track: ${track.name}`, {
+                  trackId: trackRecord.id,
+                  trackName: trackRecord.title,
+                  releaseId: release.id,
+                  labelId: label.id
+                });
               } else {
                 totalTracksSkipped++;
+                logger.info(`Skipped existing track: ${track.name}`, {
+                  trackId: trackRecord.id,
+                  trackName: trackRecord.title,
+                  releaseId: release.id,
+                  labelId: label.id
+                });
               }
 
               // Process all artists for this track
@@ -715,39 +754,59 @@ class SpotifyService {
 
                 if (artistCreated) {
                   totalArtistsImported++;
-                  logger.info(`Created new artist: ${artist.name}`);
+                  logger.info(`Created new artist: ${artist.name}`, {
+                    artistId: artistRecord.id,
+                    artistName: artistRecord.name,
+                    labelId: label.id
+                  });
                 }
 
                 // Link artist to track
                 await trackRecord.addArtist(artistRecord, { transaction });
               }
             } catch (error) {
-              logger.error(`Error processing track ${track.name}: ${error.message}`);
+              logger.error(`Error processing track: ${track.name}`, {
+                trackId: track.id,
+                trackName: track.name,
+                releaseId: release.id,
+                error: error.message,
+                stack: error.stack
+              });
+              throw error;
             }
           }
         } catch (error) {
-          logger.error(`Error processing album ${album.name}: ${error.message}`);
+          logger.error(`Error processing release: ${album.name}`, {
+            albumId: album.id,
+            albumName: album.name,
+            error: error.message,
+            stack: error.stack
+          });
+          throw error;
         }
       }
 
       logger.info('Import completed:', {
+        totalArtistsImported,
         totalReleasesImported,
-        totalTracksImported,
-        totalTracksSkipped,
         totalTracksAttempted,
-        totalArtistsImported
+        totalTracksImported,
+        totalTracksSkipped
       });
 
       return {
+        totalArtistsImported,
         totalReleasesImported,
-        totalTracksImported,
-        totalTracksSkipped,
         totalTracksAttempted,
-        totalArtistsImported
+        totalTracksImported,
+        totalTracksSkipped
       };
-
     } catch (error) {
-      logger.error('Error in importReleases:', error);
+      logger.error('Error in importReleases:', {
+        labelId: label.id,
+        error: error.message,
+        stack: error.stack
+      });
       throw error;
     }
   }

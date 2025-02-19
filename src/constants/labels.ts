@@ -4,22 +4,25 @@ import type { RecordLabel } from '../types/labels';
 export const RECORD_LABELS: { [key: string]: RecordLabel } = {
   'buildit-records': {
     id: 'buildit-records',
-    name: 'Records',
+    name: 'Build It Records',
     displayName: 'Build It Records',
+    slug: 'buildit-records',
     createdAt: '2024-01-01T00:00:00Z',
     updatedAt: '2024-01-01T00:00:00Z'
   },
   'buildit-tech': {
     id: 'buildit-tech',
-    name: 'Tech',
+    name: 'Build It Tech',
     displayName: 'Build It Tech',
+    slug: 'buildit-tech',
     createdAt: '2024-01-01T00:00:00Z',
     updatedAt: '2024-01-01T00:00:00Z'
   },
   'buildit-deep': {
     id: 'buildit-deep',
-    name: 'Deep',
+    name: 'Build It Deep',
     displayName: 'Build It Deep',
+    slug: 'buildit-deep',
     createdAt: '2024-01-01T00:00:00Z',
     updatedAt: '2024-01-01T00:00:00Z'
   }
@@ -49,16 +52,11 @@ export const LABEL_COLORS: { [key: string]: string } = {
 // Helper functions
 export const getAllLabels = (): RecordLabel[] => Object.values(RECORD_LABELS);
 
-export const getLabelById = (id: string): RecordLabel | undefined => 
-  RECORD_LABELS[id];
-
 export const getLabelByName = (name: string): RecordLabel | undefined =>
   Object.values(RECORD_LABELS).find(label => label.name.toLowerCase() === name.toLowerCase());
 
-export const labelIdToKey = (id: string): string | undefined => {
-  const label = getLabelById(id);
-  return label ? label.name.toUpperCase() : undefined;
-};
+export const labelIdToKey = (id: string): string | undefined =>
+  Object.keys(RECORD_LABELS).find(key => RECORD_LABELS[key].id === id);
 
 // Re-export the RecordLabel type
 export type { RecordLabel } from '../types/labels';

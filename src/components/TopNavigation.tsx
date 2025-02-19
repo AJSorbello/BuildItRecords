@@ -83,9 +83,10 @@ const TabContent = styled(Box)({
 interface TopNavigationProps {
   onMenuClick?: () => void;
   isMobile?: boolean;
+  logo?: string;
 }
 
-const TopNavigation: React.FC<TopNavigationProps> = ({ onMenuClick, isMobile }) => {
+const TopNavigation: React.FC<TopNavigationProps> = ({ onMenuClick, isMobile, logo }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const theme = useTheme();

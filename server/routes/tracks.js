@@ -12,6 +12,9 @@ const { validateRequest, isValidSpotifyId } = require('../utils/validation');
 const { Track, Artist, Release, Label, ImportLog, sequelize } = require('../models');
 const { Op } = require('sequelize');
 const logger = require('../utils/logger');
+const LABEL_CONFIGS = require('../config/labels');
+const getSpotifyService = require('../services/SpotifyService');
+const spotifyService = getSpotifyService();
 
 /**
  * @swagger
@@ -224,23 +227,14 @@ const formatTrackData = (data) => {
             if (!artist) return null;
             try {
                 // Get the best available image URL
-                let imageUrl = null;
-                if (artist.image_url) {
-                    imageUrl = artist.image_url;
-                } else if (artist.images && artist.images.length > 0) {
-                    // Sort images by size and get the medium one if available
-                    const sortedImages = [...artist.images].sort((a, b) => (b.width || 0) - (a.width || 0));
-                    const mediumImage = sortedImages.find(img => (img.width || 0) <= 300) || sortedImages[0];
-                    imageUrl = mediumImage.url;
-                }
+                let imageUrl = artist.profile_image_url;
 
                 return {
                     id: artist.id || 'unknown',
                     name: artist.name || 'Unknown Artist',
-                    image_url: imageUrl,
-                    images: artist.images || [],
+                    profile_image_url: imageUrl,
                     spotify_url: artist.spotify_url || artist.external_urls?.spotify || null,
-                    spotify_uri: artist.spotify_uri || artist.uri || null
+                    spotify_url: artist.spotify_url || artist.external_urls?.spotify || null
                 };
             } catch (err) {
                 logger.error('Error mapping artist:', err, { artist });
@@ -248,86 +242,34 @@ const formatTrackData = (data) => {
             }
         };
 
-        // Helper to safely map artists array
-        const mapArtists = (artists) => {
-            if (!Array.isArray(artists)) {
-                logger.warn('Artists is not an array:', artists);
-                return [];
-            }
-            return artists.filter(artist => artist).map(mapArtist).filter(artist => artist);
-        };
+        // Map the release data
+        const release = data.release || data.album;
+        const mappedRelease = release ? {
+            id: release.id,
+            title: release.title || release.name,
+            release_date: release.release_date,
+            artwork_url: release.artwork_url,
+            artwork_small_url: release.artwork_small_url,
+            artwork_large_url: release.artwork_large_url,
+            spotify_url: release.spotify_url || release.external_urls?.spotify,
+            status: release.status
+        } : null;
 
-        // Helper to safely map release/album data
-        const mapRelease = (release) => {
-            if (!release) return null;
-            try {
-                // Get the best available artwork URL
-                let artworkUrl = null;
-                if (release.artwork_url) {
-                    artworkUrl = release.artwork_url;
-                } else if (release.images && release.images.length > 0) {
-                    // Sort images by size and get the medium one if available
-                    const sortedImages = [...release.images].sort((a, b) => (b.width || 0) - (a.width || 0));
-                    const mediumImage = sortedImages.find(img => (img.width || 0) <= 300) || sortedImages[0];
-                    artworkUrl = mediumImage.url;
-                }
-
-                return {
-                    id: release.id || null,
-                    name: release.name || release.title || 'Unknown Album',
-                    artwork_url: artworkUrl,
-                    images: release.images || [],
-                    release_date: release.release_date || null,
-                    spotify_url: release.spotify_url || release.external_urls?.spotify || null,
-                    spotify_uri: release.spotify_uri || release.uri || null,
-                    artists: mapArtists(release.artists || [])
-                };
-            } catch (err) {
-                logger.error('Error mapping release:', err, { release });
-                return null;
-            }
-        };
-
-        const formattedTrack = {
+        // Map the track data
+        return {
             id: data.id,
-            title: data.title || 'Unknown Track',
-            duration: data.duration || 0,
-            track_number: data.track_number || 0,
-            disc_number: data.disc_number || 1,
-            isrc: data.isrc || null,
-            preview_url: data.preview_url || null,
-            spotify_url: data.spotify_url || data.external_urls?.spotify || null,
-            spotify_uri: data.spotify_uri || data.uri || null,
-            release: mapRelease(isSpotifyData ? data.album : data.release),
-            artists: mapArtists(data.artists || []),
-            status: data.status || 'published',
-            external_urls: data.external_urls || {},
-            type: data.type || 'track',
-            explicit: data.explicit || false,
-            popularity: data.popularity || 0,
-            available_markets: data.available_markets || [],
-            is_local: data.is_local || false,
-            created_at: data.created_at || new Date().toISOString(),
-            updated_at: data.updated_at || new Date().toISOString()
+            title: data.title || data.name,
+            duration_ms: data.duration_ms,
+            track_number: data.track_number,
+            disc_number: data.disc_number,
+            isrc: data.isrc,
+            preview_url: data.preview_url,
+            spotify_url: data.spotify_url || data.external_urls?.spotify,
+            external_urls: data.external_urls,
+            explicit: data.explicit,
+            release: mappedRelease,
+            artists: (data.artists || []).map(mapArtist).filter(Boolean)
         };
-
-        // Validate the formatted track has required fields
-        if (!formattedTrack.id || !formattedTrack.title) {
-            logger.error('Formatted track missing required fields:', formattedTrack);
-            return null;
-        }
-
-        // Log the first artist's image data for debugging
-        if (formattedTrack.artists && formattedTrack.artists.length > 0) {
-            logger.info('First artist image data:', {
-                artistId: formattedTrack.artists[0].id,
-                artistName: formattedTrack.artists[0].name,
-                imageUrl: formattedTrack.artists[0].image_url,
-                hasImages: formattedTrack.artists[0].images?.length > 0
-            });
-        }
-
-        return formattedTrack;
     } catch (error) {
         logger.error('Error in formatTrackData:', error, { data });
         return null;
@@ -525,11 +467,13 @@ router.get('/', async (req, res) => {
         attributes: [
           'id', 
           'name', 
+          'display_name', 
+          'profile_image_url',
+          'profile_image_small_url',
+          'profile_image_large_url',
           'spotify_url', 
-          'spotify_uri',
-          'image_url',
-          'images',
-          'label_id'
+          'spotify_id',
+          'external_urls'
         ]
       },
       {
@@ -537,28 +481,31 @@ router.get('/', async (req, res) => {
         as: 'release',
         required: false,
         attributes: [
-          'id', 
-          'name', 
-          'title', 
-          'release_date', 
-          'artwork_url', 
-          'images', 
-          'spotify_url', 
-          'spotify_uri', 
-          'status'
+          'id',
+          'title',
+          'release_date',
+          'artwork_url',
+          'artwork_small_url',
+          'artwork_large_url',
+          'spotify_url',
+          'external_urls',
+          'total_tracks',
+          'release_type'
         ],
         include: [{
           model: Artist,
           as: 'artists',
           through: { attributes: [] },
           attributes: [
-            'id', 
-            'name', 
-            'spotify_url', 
-            'spotify_uri',
-            'image_url',
-            'images',
-            'label_id'
+            'id',
+            'name',
+            'display_name',
+            'profile_image_url',
+            'profile_image_small_url',
+            'profile_image_large_url',
+            'spotify_url',
+            'spotify_id',
+            'external_urls'
           ]
         }]
       }
@@ -583,7 +530,8 @@ router.get('/', async (req, res) => {
           return res.status(404).json({ error: 'Label not found', label: labelId });
         }
         
-        where.label_id = label.id;
+        include[1].where = { label_id: label.id };
+        include[1].required = true;
         logger.info('Found label:', { id: label.id, name: label.name, slug: label.slug });
       } catch (labelError) {
         logger.error('Error finding label:', labelError);
@@ -628,7 +576,13 @@ router.get('/', async (req, res) => {
         order: [[sort, 'DESC']],
         limit,
         offset,
-        distinct: true
+        distinct: true,
+        attributes: [
+          'id', 'spotify_id', 'title', 'duration_ms', 'track_number', 
+          'disc_number', 'isrc', 'preview_url', 'spotify_url', 'spotify_uri',
+          'spotify_popularity', 'external_urls', 'release_id', 'remixer_id', 
+          'type', 'explicit', 'created_at', 'updated_at'
+        ]
       });
 
       logger.info('Found tracks:', { 
@@ -639,52 +593,38 @@ router.get('/', async (req, res) => {
       });
 
       // Format each track using the formatTrackData helper
-      const formattedTracks = tracks
-        .map(track => {
-          try {
-            const plainTrack = track.get({ plain: true });
-            
-            // Debug logging for the first track
-            if (tracks.indexOf(track) === 0) {
-              logger.info('First track raw data:', {
-                trackTitle: plainTrack.title,
-                hasArtists: !!plainTrack.artists,
-                artistsCount: plainTrack.artists?.length,
-                firstArtist: plainTrack.artists?.[0] ? {
-                  name: plainTrack.artists[0].name,
-                  image_url: plainTrack.artists[0].image_url,
-                  hasImages: !!plainTrack.artists[0].images,
-                  imagesCount: plainTrack.artists[0].images?.length,
-                  firstImage: plainTrack.artists[0].images?.[0]
-                } : null
-              });
-            }
-
-            const formatted = formatTrackData(plainTrack);
-            
-            // Debug logging for the formatted track
-            if (tracks.indexOf(track) === 0) {
-              logger.info('First track formatted data:', {
-                trackTitle: formatted.title,
-                hasArtists: !!formatted.artists,
-                artistsCount: formatted.artists?.length,
-                firstArtist: formatted.artists?.[0] ? {
-                  name: formatted.artists[0].name,
-                  image_url: formatted.artists[0].image_url,
-                  hasImages: !!formatted.artists[0].images,
-                  imagesCount: formatted.artists[0].images?.length,
-                  firstImage: formatted.artists[0].images?.[0]
-                } : null
-              });
-            }
-            
-            return formatted;
-          } catch (err) {
-            logger.error('Error formatting track:', err, { trackId: track?.id });
-            return null;
-          }
-        })
-        .filter(track => track !== null);
+      const formattedTracks = tracks.map(track => ({
+        id: track.id,
+        title: track.title,
+        duration_ms: track.duration_ms,
+        track_number: track.track_number,
+        disc_number: track.disc_number,
+        isrc: track.isrc,
+        preview_url: track.preview_url,
+        spotify_url: track.spotify_url,
+        spotify_popularity: track.spotify_popularity,
+        external_urls: track.external_urls,
+        type: track.type,
+        release: {
+          id: track.release.id,
+          title: track.release.title,
+          release_date: track.release.release_date,
+          artwork_url: track.release.artwork_url,
+          artwork_small_url: track.release.artwork_small_url,
+          artwork_large_url: track.release.artwork_large_url,
+          spotify_url: track.release.spotify_url,
+          status: track.release.status,
+          release_type: track.release.release_type
+        },
+        artists: track.artists.map(artist => ({
+          id: artist.id,
+          name: artist.name,
+          spotify_url: artist.spotify_url,
+          profile_image_url: artist.profile_image_url
+        })),
+        created_at: track.created_at,
+        updated_at: track.updated_at
+      }));
 
       const endTime = Date.now();
       logger.info(`Request processed in ${endTime - startTime}ms`);
@@ -715,95 +655,82 @@ router.get('/', async (req, res) => {
 router.get('/all/:labelId', async (req, res) => {
   try {
     const { labelId } = req.params;
-    logger.info('Getting all tracks for label:', labelId);
-
-    // First get the total count
-    const total = await Track.count({
-      where: { label_id: labelId },
-      distinct: true,
-      include: [
-        {
-          model: Artist,
-          as: 'artists',
-          through: { attributes: [] }
-        }
-      ]
+    const label = await Label.findOne({
+      where: { 
+        [Op.or]: [
+          { id: labelId },
+          { slug: labelId },
+          { name: { [Op.iLike]: labelId } }
+        ]
+      },
+      attributes: ['id', 'name', 'display_name', 'slug']
     });
 
-    logger.info('Total tracks count in database:', {
-      labelId,
-      total
-    });
+    if (!label) {
+      logger.warn('Label not found:', labelId);
+      return res.status(404).json({ error: 'Label not found', label: labelId });
+    }
 
     const tracks = await Track.findAll({
-      where: { label_id: labelId },
-      include: [
-        {
-          model: Artist,
-          as: 'artists',
-          through: { attributes: [] },
-          attributes: [
-            'id', 
-            'name', 
-            'spotify_url', 
-            'spotify_uri',
-            'image_url',
-            'images',
-            'label_id'
-          ]
-        },
-        {
-          model: Release,
-          as: 'release',
-          attributes: [
-            'id', 
-            'name', 
-            'title', 
-            'release_date', 
-            'artwork_url', 
-            'images', 
-            'spotify_url', 
-            'spotify_uri', 
-            'status'
-          ],
-          include: [{
-            model: Artist,
-            as: 'artists',
-            through: { attributes: [] },
-            attributes: [
-              'id', 
-              'name', 
-              'spotify_url', 
-              'spotify_uri',
-              'image_url',
-              'images',
-              'label_id'
-            ]
-          }]
-        }
+      include: [{
+        model: Release,
+        as: 'release',
+        required: true,
+        where: { label_id: label.id },
+        attributes: ['id', 'title', 'release_date', 'artwork_url', 'artwork_small_url', 'artwork_large_url', 'spotify_url', 'release_type']
+      }, {
+        model: Artist,
+        as: 'artists',
+        through: { attributes: [] },
+        attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
+      }],
+      attributes: [
+        'id', 'spotify_id', 'title', 'duration_ms', 'track_number', 
+        'disc_number', 'isrc', 'preview_url', 'spotify_url', 'spotify_uri',
+        'spotify_popularity', 'external_urls', 'release_id', 'remixer_id', 
+        'type', 'explicit', 'created_at', 'updated_at'
       ],
       order: [['created_at', 'DESC']]
     });
 
     logger.info('Found tracks:', {
       labelId,
-      count: tracks.length,
-      total,
-      difference: total - tracks.length
+      count: tracks.length
     });
 
     // Format each track using the formatTrackData helper
-    const formattedTracks = tracks
-      .map(track => {
-        try {
-          const plainTrack = track.get({ plain: true });
-          return formatTrackData(plainTrack);
-        } catch (err) {
-          logger.error('Error formatting track:', err, { trackId: track?.id });
-          return null;
-        }
-      })
-      .filter(track => track !== null);
+    const formattedTracks = tracks.map(track => ({
+      id: track.id,
+      title: track.title,
+      duration_ms: track.duration_ms,
+      track_number: track.track_number,
+      disc_number: track.disc_number,
+      isrc: track.isrc,
+      preview_url: track.preview_url,
+      spotify_url: track.spotify_url,
+      spotify_popularity: track.spotify_popularity,
+      external_urls: track.external_urls,
+      type: track.type,
+      release: {
+        id: track.release.id,
+        title: track.release.title,
+        release_date: track.release.release_date,
+        artwork_url: track.release.artwork_url,
+        artwork_small_url: track.release.artwork_small_url,
+        artwork_large_url: track.release.artwork_large_url,
+        spotify_url: track.release.spotify_url,
+        status: track.release.status,
+        release_type: track.release.release_type
+      },
+      artists: track.artists.map(artist => ({
+        id: artist.id,
+        name: artist.name,
+        spotify_url: artist.spotify_url,
+        profile_image_url: artist.profile_image_url
+      })),
+      created_at: track.created_at,
+      updated_at: track.updated_at
+    }));
 
     logger.info('Formatted tracks:', {
       originalCount: tracks.length,
@@ -813,7 +740,7 @@ router.get('/all/:labelId', async (req, res) => {
 
     res.json({ 
       tracks: formattedTracks,
-      total: total,
+      total: tracks.length,
       count: formattedTracks.length
     });
   } catch (error) {
@@ -888,14 +815,15 @@ router.get('/search', async (req, res) => {
             include: [
                 artistInclude,
                 {
+                    model: Release,
+                    as: 'release',
+                    required: true,
+                    attributes: ['id', 'title', 'release_date', 'artwork_url', 'artwork_small_url', 'artwork_large_url', 'spotify_url', 'status', 'label_id']
+                },
+                {
                     model: Label,
                     as: 'label',
                     attributes: ['id', 'name']
-                },
-                {
-                    model: Release,
-                    as: 'release',
-                    attributes: ['id', 'name', 'artwork_url']
                 }
             ],
             order: [['release_date', 'DESC']],
@@ -913,7 +841,7 @@ router.get('/search', async (req, res) => {
                 release_date: track.release_date,
                 artwork_url: track.release?.artwork_url || track.artwork_url,
                 spotify_url: track.spotify_url,
-                label: track.label?.id || null,
+                label: track.release?.label_id || null,
                 label_name: track.label?.name || 'Unknown Label',
                 artists: track.artists.map(artist => ({
                     id: artist.id,
@@ -987,8 +915,8 @@ router.post('/import', async (req, res) => {
     }
 
     try {
-      // Initialize Spotify service and ensure valid token
-      await spotifyService.ensureValidToken();
+      // Initialize Spotify service
+      await spotifyService.initialize();
 
       // Search for albums by label
       const albums = await spotifyService.searchAlbumsByLabel(labelConfig.spotifyLabel);
@@ -1000,7 +928,7 @@ router.post('/import', async (req, res) => {
     } catch (error) {
       if (error.statusCode === 401) {
         // Try one more time with a fresh token
-        await spotifyService.ensureValidToken();
+        await spotifyService.initialize();
         const albums = await spotifyService.searchAlbumsByLabel(labelConfig.spotifyLabel);
         await spotifyService.importReleases({ id: labelId, name: labelConfig.spotifyLabel }, albums);
         res.json({ success: true, message: 'Import started successfully (after token refresh)' });
@@ -1095,9 +1023,7 @@ async function saveTrackToDatabase(track, labelId, releaseId = null) {
             isrc: track.external_ids?.isrc,
             preview_url: track.preview_url,
             spotify_url: track.external_urls?.spotify,
-            spotify_uri: track.uri,
             release_id: releaseId || track.album?.id,
-            label_id: labelId,
             status: track.status || 'published',  // Default to published
             type: track.type || 'track',
             explicit: track.explicit || false,
@@ -1124,9 +1050,7 @@ async function saveTrackToDatabase(track, labelId, releaseId = null) {
                         id: artist.id,
                         name: artist.name,
                         spotify_url: artist.external_urls?.spotify,
-                        spotify_uri: artist.uri,
                         image_url: artist.images?.[0]?.url,
-                        images: artist.images || [],
                         label_id: labelId
                     }
                 });

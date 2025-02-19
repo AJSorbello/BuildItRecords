@@ -4,13 +4,13 @@ import {
   Typography,
   Grid,
   Box,
-  CircularProgress,
 } from '@mui/material';
 import { Track } from '../types/track';
+import { Release } from '../types/release';
 import { Artist } from '../types/artist';
-import { databaseService } from '../services/DatabaseService';
+import DatabaseService from '../services/DatabaseService';
 import FeaturedRelease from '../components/FeaturedRelease';
-import ReleaseCard from '../components/ReleaseCard';
+import { ReleaseCard } from '../components/ReleaseCard';
 import { useNavigate } from 'react-router-dom';
 
 const HomePage: React.FC = () => {
@@ -25,7 +25,7 @@ const HomePage: React.FC = () => {
       try {
         setLoading(true);
         // Get recent tracks
-        const tracks = await databaseService.getTracksFromApi();
+        const tracks = await DatabaseService.getTracksFromApi();
         if (tracks.length > 0) {
           // Set the first track as featured
           setFeaturedTrack(tracks[0]);
@@ -47,6 +47,19 @@ const HomePage: React.FC = () => {
     if (track.artists[0]?.id) {
       navigate(`/artists/${track.artists[0].id}`);
     }
+  };
+
+  const convertTrackToRelease = (track: Track): Release => {
+    return {
+      id: track.id,
+      name: track.name,
+      artists: track.artists || [],
+      images: track.images || [],
+      release_date: track.release_date || new Date().toISOString(),
+      uri: track.uri || '',
+      tracks: [track],
+      total_tracks: 1
+    };
   };
 
   if (loading) {
@@ -86,8 +99,8 @@ const HomePage: React.FC = () => {
           <Grid container spacing={3}>
             {recentTracks.map((track) => (
               <Grid item key={track.id} xs={12} sm={6} md={4}>
-                <ReleaseCard
-                  track={track}
+                <ReleaseCard 
+                  release={convertTrackToRelease(track)}
                   onClick={() => handleTrackClick(track)}
                 />
               </Grid>

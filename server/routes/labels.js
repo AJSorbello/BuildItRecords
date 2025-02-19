@@ -49,12 +49,16 @@ const importTracksForLabel = async (labelId) => {
     logger.info('Found label:', { id: label.id, name: label.name });
 
     // Search for releases by label name
-    const searchQuery = `label:"${label.name}"`;
+    const searchQueries = {
+      'Build It Records': 'label:"Build It Records"',
+      'Build It Tech': 'label:"Build It Tech"',
+      'Build It Deep': 'label:"Build It Deep"'
+    };
+
+    const searchQuery = searchQueries[label.name] || `label:"${label.name}"`;
     logger.info('Searching Spotify with query:', searchQuery);
     
     const releases = new Set();
-    const tracks = new Set();
-    const artists = new Set();
     const failedReleases = new Set();
 
     // Implement pagination to get all albums
@@ -64,273 +68,272 @@ const importTracksForLabel = async (labelId) => {
     let totalAlbums = 0;
 
     while (hasMore) {
-      // Search for albums with pagination
-      const albumsResponse = await spotifyService.searchAlbums(searchQuery, { limit, offset });
-      logger.info(`Fetching albums batch: offset=${offset}, limit=${limit}, found=${albumsResponse.items.length}`);
-      
-      if (!albumsResponse.items || albumsResponse.items.length === 0) {
-        hasMore = false;
-        continue;
-      }
-
-      // Update total on first request
-      if (offset === 0) {
-        totalAlbums = albumsResponse.total;
-        logger.info(`Total albums to process: ${totalAlbums}`);
-      }
-
-      // Process each album in this batch
-      for (const album of albumsResponse.items) {
-        try {
-          // Get full album details
-          const fullAlbum = await spotifyService.getAlbum(album.id);
-          
-          // Exact match on the label name
-          if (fullAlbum && fullAlbum.label === label.name) {
-            logger.info('Found matching release:', {
-              id: fullAlbum.id,
-              name: fullAlbum.name,
-              label: fullAlbum.label
-            });
-
-            releases.add(fullAlbum);
-
-            // Add all tracks from the album
-            fullAlbum.tracks.items.forEach(t => {
-              const fullTrack = { ...t, album: fullAlbum };
-              tracks.add(fullTrack);
-            });
-
-            // Add all artists from the album
-            fullAlbum.artists.forEach(a => artists.add(a));
-          } else {
-            logger.debug('Skipping non-matching release:', {
-              id: fullAlbum.id,
-              name: fullAlbum.name,
-              foundLabel: fullAlbum.label,
-              expectedLabel: label.name
-            });
-          }
-        } catch (error) {
-          logger.error('Error processing album:', {
-            id: album.id,
-            name: album.name,
-            error: error.message
-          });
-          failedReleases.add(album);
+      try {
+        // Search for albums with pagination
+        const albumsResponse = await spotifyService.searchAlbums(searchQuery, { limit, offset });
+        logger.info(`Fetching albums batch: offset=${offset}, limit=${limit}, found=${albumsResponse?.items?.length || 0}, total=${albumsResponse?.total || 0}`);
+        
+        if (!albumsResponse?.items || albumsResponse.items.length === 0) {
+          hasMore = false;
+          continue;
         }
-      }
 
-      // Update offset for next batch
-      offset += albumsResponse.items.length;
-      
-      // Check if we've processed all albums
-      hasMore = offset < totalAlbums;
-      
-      // Add a small delay to avoid rate limiting
-      if (hasMore) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Update total on first request
+        if (offset === 0) {
+          totalAlbums = albumsResponse.total;
+          logger.info(`Found ${totalAlbums} total albums for label ${label.name}`);
+        }
+
+        // Process each album
+        for (const album of albumsResponse.items) {
+          try {
+            // Get full album details
+            const fullAlbum = await spotifyService.getAlbum(album.id);
+            if (fullAlbum) {
+              releases.add(fullAlbum);
+            }
+          } catch (error) {
+            logger.error('Error processing album:', {
+              albumId: album.id,
+              error: error.message
+            });
+            failedReleases.add(album);
+          }
+        }
+
+        offset += albumsResponse.items.length;
+        hasMore = offset < totalAlbums;
+
+        // Add a small delay between batches
+        if (hasMore) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      } catch (error) {
+        logger.error('Error fetching albums batch:', {
+          offset,
+          error: error.message
+        });
+        hasMore = false;
       }
     }
 
     logger.info('Completed Spotify search:', {
       totalAlbumsSearched: offset,
       matchingReleases: releases.size,
-      totalTracks: tracks.size,
-      totalArtists: artists.size,
       failedReleases: failedReleases.size
-    });
-
-    // Get existing tracks and artist associations to avoid duplicates
-    const existingTracks = await Track.findAll({
-      where: {
-        id: { [Op.in]: Array.from(tracks).map(t => t.id) }
-      },
-      include: [{
-        model: Artist,
-        as: 'artists',
-        through: { attributes: [] }
-      }]
-    });
-
-    const existingArtists = await TrackArtist.findAll({
-      where: {
-        track_id: { [Op.in]: Array.from(tracks).map(t => t.id) }
-      }
-    });
-
-    logger.info('Current database state:', {
-      existingTracks: existingTracks.length,
-      existingArtistAssociations: existingArtists.length
     });
 
     // Process releases
     logger.info('Starting release processing...');
     const processedReleases = [];
-    const skippedReleases = [];
-    let newTracksCount = 0;
+    const processedTracks = [];
+    const newTracksCount = 0;
     let newArtistAssociationsCount = 0;
 
     // Use a transaction for the entire import
     const result = await sequelize.transaction(async (transaction) => {
-      for (const release of releases) {
-        try {
-          logger.info(`Processing release: ${release.name}`);
-          
-          // Check if release already exists
-          let newRelease = await Release.findOne({
-            where: { id: release.id },
-            transaction
-          });
-
-          if (!newRelease) {
-            logger.info('Creating new release:', {
-              id: release.id,
-              name: release.name,
-              label: release.label
-            });
-
-            newRelease = await Release.create({
-              id: release.id,
-              name: release.name,
-              title: release.name,
-              release_date: release.release_date,
-              artwork_url: release.images?.[0]?.url,
-              images: release.images || [],
-              spotify_url: release.external_urls?.spotify,
-              spotify_uri: release.uri,
-              label_id: label.id,
-              total_tracks: release.total_tracks,
-              status: 'published'
-            }, { transaction });
-
-            // Create artist associations for the release
-            for (const artist of release.artists) {
-              const [artistRecord] = await Artist.findOrCreate({
-                where: { id: artist.id },
-                defaults: {
-                  id: artist.id,
-                  name: artist.name,
-                  spotify_url: artist.external_urls?.spotify,
-                  spotify_uri: artist.uri,
-                  image_url: artist.images?.[0]?.url,
-                  images: artist.images || [],
-                  label_id: label.id
-                },
-                transaction
-              });
-
-              await newRelease.addArtist(artistRecord, { transaction });
-            }
-
-            processedReleases.push(newRelease);
-          } else {
-            logger.info('Release already exists:', {
-              id: release.id,
-              name: release.name
-            });
-            skippedReleases.push(newRelease);
-          }
-
-          // Process tracks for this release
-          const releaseTracks = Array.from(tracks).filter(t => t.album.id === release.id);
-          for (const track of releaseTracks) {
-            const [trackRecord, created] = await Track.findOrCreate({
-              where: { id: track.id },
-              defaults: {
-                id: track.id,
-                title: track.name,
-                duration: track.duration_ms,
-                track_number: track.track_number,
-                disc_number: track.disc_number,
-                isrc: track.external_ids?.isrc,
-                preview_url: track.preview_url,
-                spotify_url: track.external_urls?.spotify,
-                spotify_uri: track.uri,
-                release_id: newRelease.id,
-                label_id: label.id,
-                status: 'published'
-              },
+      try {
+        for (const release of releases) {
+          try {
+            logger.info(`Processing release: ${release.name}`);
+            
+            // Try to find existing release by spotify_id
+            let newRelease = await Release.findOne({
+              where: { spotify_id: release.id },
               transaction
             });
 
-            if (created) {
-              newTracksCount++;
+            if (!newRelease) {
+              logger.info('Creating new release:', {
+                spotify_id: release.id,
+                name: release.name,
+                label: release.label
+              });
 
-              // Create artist associations
-              for (const artist of track.artists) {
-                const [artistRecord] = await Artist.findOrCreate({
-                  where: { id: artist.id },
-                  defaults: {
-                    id: artist.id,
-                    name: artist.name,
-                    spotify_url: artist.external_urls?.spotify,
-                    spotify_uri: artist.uri,
-                    image_url: artist.images?.[0]?.url,
-                    images: artist.images || [],
-                    label_id: label.id
-                  },
-                  transaction
-                });
-
-                const [trackArtist] = await TrackArtist.findOrCreate({
-                  where: {
-                    track_id: trackRecord.id,
-                    artist_id: artistRecord.id
-                  },
-                  transaction
-                });
-
-                if (trackArtist) {
-                  newArtistAssociationsCount++;
-                }
-              }
-            } else {
-              await trackRecord.update({
-                title: track.name,
-                duration: track.duration_ms,
-                track_number: track.track_number,
-                disc_number: track.disc_number,
-                isrc: track.external_ids?.isrc,
-                preview_url: track.preview_url,
-                spotify_url: track.external_urls?.spotify,
-                spotify_uri: track.uri,
-                release_id: newRelease.id,
+              // Create release with auto-generated UUID
+              newRelease = await Release.create({
+                spotify_id: release.id,
+                name: release.name,
+                title: release.name,
+                release_type: release.album_type || 'album',
+                release_date: release.release_date || new Date(),
+                artwork_url: release.images?.[0]?.url,
+                images: release.images || [],
+                spotify_url: release.external_urls?.spotify,
                 label_id: label.id,
+                total_tracks: release.total_tracks,
                 status: 'published'
               }, { transaction });
+
+              // Create artist associations for the release
+              for (const artist of release.artists) {
+                try {
+                  // Find or create artist using spotify_id
+                  const [artistRecord] = await Artist.findOrCreate({
+                    where: { spotify_id: artist.id },
+                    defaults: {
+                      name: artist.name,
+                      spotify_id: artist.id,
+                      spotify_url: artist.external_urls?.spotify,
+                      profile_image_url: artist.images?.[0]?.url,
+                      images: artist.images || [],
+                      label_id: label.id,
+                      status: 'active'
+                    },
+                    transaction
+                  });
+
+                  await newRelease.addArtist(artistRecord, { transaction });
+                  newArtistAssociationsCount++;
+                } catch (error) {
+                  logger.error('Error creating artist association:', {
+                    artistId: artist.id,
+                    releaseId: newRelease.id,
+                    error: error.message
+                  });
+                }
+              }
+
+              processedReleases.push(newRelease);
+            } else {
+              logger.info('Release already exists:', {
+                id: newRelease.id,
+                spotify_id: release.id,
+                name: release.name
+              });
+              processedReleases.push(newRelease);
             }
+
+            // Process tracks for this release
+            if (release.tracks?.items) {
+              for (const track of release.tracks.items) {
+                try {
+                  // Check if track already exists by spotify_id
+                  let trackRecord = await Track.findOne({
+                    where: { spotify_id: track.id },
+                    transaction
+                  });
+
+                  if (!trackRecord) {
+                    logger.info('Creating new track:', {
+                      spotify_id: track.id,
+                      name: track.name
+                    });
+
+                    // Create track with auto-generated UUID
+                    trackRecord = await Track.create({
+                      spotify_id: track.id,
+                      title: track.name,
+                      duration_ms: track.duration_ms,
+                      track_number: track.track_number,
+                      disc_number: track.disc_number || 1,
+                      isrc: track.external_ids?.isrc,
+                      preview_url: track.preview_url,
+                      spotify_url: track.external_urls?.spotify,
+                      spotify_popularity: track.popularity,
+                      external_urls: track.external_urls,
+                      release_id: newRelease.id,
+                      status: 'published',
+                      type: 'track'
+                    }, { transaction });
+
+                    processedTracks.push(trackRecord);
+
+                    // Create artist associations
+                    for (const artist of track.artists) {
+                      try {
+                        // Find or create artist using spotify_id
+                        const [artistRecord] = await Artist.findOrCreate({
+                          where: { spotify_id: artist.id },
+                          defaults: {
+                            name: artist.name,
+                            spotify_id: artist.id,
+                            spotify_url: artist.external_urls?.spotify,
+                            profile_image_url: artist.images?.[0]?.url,
+                            images: artist.images || [],
+                            label_id: label.id,
+                            status: 'active'
+                          },
+                          transaction
+                        });
+
+                        // Create track-artist association
+                        await trackRecord.addArtist(artistRecord, { transaction });
+                        newArtistAssociationsCount++;
+                      } catch (error) {
+                        logger.error('Error creating track-artist association:', {
+                          trackId: trackRecord.id,
+                          artistId: artist.id,
+                          error: error.message
+                        });
+                      }
+                    }
+                  } else {
+                    logger.info('Track already exists:', {
+                      id: trackRecord.id,
+                      spotify_id: track.id,
+                      name: track.name
+                    });
+                    processedTracks.push(trackRecord);
+                  }
+                } catch (error) {
+                  logger.error('Error processing track:', {
+                    trackId: track.id,
+                    releaseName: release.name,
+                    error: error.message
+                  });
+                }
+              }
+            }
+          } catch (error) {
+            logger.error('Error processing release:', {
+              id: release.id,
+              name: release.name,
+              error: error.message
+            });
+            failedReleases.add(release);
           }
-        } catch (error) {
-          logger.error('Error processing release:', {
-            id: release.id,
-            name: release.name,
-            error: error.message,
-            stack: error.stack
-          });
-          failedReleases.add(release);
-          throw error;
         }
+
+        // Get final counts from database
+        const [releaseCount, trackCount, artistCount] = await Promise.all([
+          Release.count({ where: { label_id: label.id }, transaction }),
+          Track.count({ 
+            include: [{
+              model: Release,
+              as: 'release',
+              where: { label_id: label.id },
+              required: true
+            }],
+            transaction 
+          }),
+          Artist.count({
+            include: [{
+              model: Release,
+              as: 'releases',
+              required: true,
+              where: { label_id: label.id }
+            }],
+            transaction
+          })
+        ]);
+
+        return {
+          totalReleasesFound: releases.size,
+          processedReleases: processedReleases.length,
+          failedReleases: failedReleases.size,
+          newTracks: processedTracks.length,
+          newArtistAssociations: newArtistAssociationsCount,
+          finalCounts: {
+            releases: releaseCount,
+            tracks: trackCount,
+            artists: artistCount
+          }
+        };
+      } catch (error) {
+        logger.error('Error in transaction:', error);
+        throw error;
       }
-
-      // Get final counts from database
-      const finalCounts = await Promise.all([
-        Release.count({ where: { label_id: label.id }, transaction }),
-        Track.count({ where: { label_id: label.id }, transaction })
-      ]);
-
-      return {
-        totalReleasesFound: releases.size,
-        processedReleases: processedReleases.length,
-        skippedReleases: skippedReleases.length,
-        failedReleases: failedReleases.size,
-        newTracks: newTracksCount,
-        newArtistAssociations: newArtistAssociationsCount,
-        finalCounts: {
-          releases: finalCounts[0],
-          tracks: finalCounts[1]
-        }
-      };
     });
 
     logger.info('Import completed successfully:', result);
@@ -356,6 +359,31 @@ router.post('/:labelId/import', async (req, res) => {
   }
 });
 
+// Create or update label
+router.post('/', async (req, res) => {
+  try {
+    const { name, slug, display_name } = req.body;
+    
+    if (!name) {
+      return res.status(400).json({ error: 'Name is required' });
+    }
+
+    const [label, created] = await Label.findOrCreate({
+      where: { name },
+      defaults: {
+        slug: slug || name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+        display_name: display_name || name,
+        status: 'active'
+      }
+    });
+
+    res.json({ label, created });
+  } catch (error) {
+    console.error('Error creating/updating label:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Get all labels
 router.get('/', async (req, res) => {
   try {
@@ -371,25 +399,35 @@ router.get('/', async (req, res) => {
 router.get('/stats', async (req, res) => {
   try {
     // First get raw counts for debugging
-    const rawCounts = await Promise.all([
+    const [releaseCounts, trackCounts, artistCounts] = await Promise.all([
       Release.count({ group: ['label_id'] }),
-      Track.count({ group: ['label_id'] }),
-      Artist.count({
-        include: [
-          {
-            model: Track,
-            attributes: [],
-            required: true
-          }
+      Release.findAll({
+        attributes: [
+          'label_id',
+          [sequelize.fn('COUNT', sequelize.col('tracks.id')), 'track_count']
         ],
-        group: ['Track.label_id']
+        include: [{
+          model: Track,
+          as: 'tracks',
+          attributes: []
+        }],
+        group: ['Release.label_id']
+      }),
+      Artist.count({
+        include: [{
+          model: Release,
+          as: 'releases',
+          attributes: [],
+          required: true
+        }],
+        group: ['releases.label_id']
       })
     ]);
 
     console.log('Raw counts:', {
-      releases: rawCounts[0],
-      tracks: rawCounts[1],
-      artists: rawCounts[2]
+      releases: releaseCounts,
+      tracks: trackCounts,
+      artists: artistCounts
     });
 
     const stats = await Label.findAll({
@@ -444,35 +482,101 @@ router.get('/stats', async (req, res) => {
   }
 });
 
+// Get counts for each label
+router.get('/counts', async (req, res) => {
+  try {
+    const labels = await Label.findAll({
+      attributes: ['id', 'name', 'slug'],
+      include: [
+        {
+          model: Release,
+          as: 'releases',
+          attributes: [],
+        },
+        {
+          model: Artist,
+          as: 'artists',
+          attributes: [],
+        }
+      ],
+      group: ['Label.id', 'Label.name', 'Label.slug'],
+      raw: true,
+      nest: true,
+      attributes: {
+        include: [
+          [sequelize.fn('COUNT', sequelize.fn('DISTINCT', sequelize.col('releases.id'))), 'releaseCount'],
+          [sequelize.fn('COUNT', sequelize.fn('DISTINCT', sequelize.col('artists.id'))), 'artistCount']
+        ]
+      }
+    });
+
+    // Get track counts
+    const labelIds = labels.map(l => l.id);
+    const trackCounts = await Release.findAll({
+      attributes: [
+        'label_id',
+        [sequelize.fn('COUNT', sequelize.fn('DISTINCT', sequelize.col('Tracks.id'))), 'trackCount']
+      ],
+      include: [{
+        model: Track,
+        as: 'tracks',
+        attributes: []
+      }],
+      where: {
+        label_id: {
+          [Op.in]: labelIds
+        }
+      },
+      group: ['label_id'],
+      raw: true
+    });
+
+    // Combine the results
+    const labelStats = labels.map(label => {
+      const trackData = trackCounts.find(tc => tc.label_id === label.id) || { trackCount: '0' };
+      return {
+        ...label,
+        trackCount: parseInt(trackData.trackCount),
+        releaseCount: parseInt(label.releaseCount),
+        artistCount: parseInt(label.artistCount)
+      };
+    });
+
+    res.json(labelStats);
+  } catch (error) {
+    console.error('Error getting label counts:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Get tracks for a label
 router.get('/:labelId/tracks', async (req, res) => {
   try {
     console.log(`Fetching tracks for label: ${req.params.labelId}`);
     
-    const tracks = await Track.findAll({
+    const releases = await Release.findAll({
       where: { label_id: req.params.labelId },
       include: [
-        { 
-          model: Artist,
-          as: 'artists',
-          through: { attributes: [] }
-        },
         {
-          model: Release,
-          as: 'release',
-          attributes: ['id', 'name', 'artwork_url', 'release_date', 'total_tracks']
+          model: Track,
+          as: 'tracks',
+          include: [{
+            model: Artist,
+            as: 'artists',
+            through: { attributes: [] }
+          }]
         }
-      ],
-      order: [['created_at', 'DESC']]
+      ]
     });
-    
+
+    const tracks = releases.reduce((acc, release) => acc.concat(release.tracks), []);
+
     const formattedTracks = tracks.map(track => ({
       id: track.id,
       title: track.title,
       duration: track.duration,
       preview_url: track.preview_url,
       spotify_url: track.spotify_url,
-      spotify_uri: track.spotify_uri,
       release: track.release ? {
         id: track.release.id,
         title: track.release.title,

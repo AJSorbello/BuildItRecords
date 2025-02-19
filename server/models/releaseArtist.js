@@ -1,57 +1,54 @@
 'use strict';
 
-const { Model } = require('sequelize');
+const { Model, DataTypes } = require('sequelize');
 
-module.exports = (sequelize, DataTypes) => {
+module.exports = (sequelize) => {
   class ReleaseArtist extends Model {
     static associate(models) {
-      // associations can be defined here
+      // No associations needed for join table
     }
   }
 
   ReleaseArtist.init({
-    release_id: {
-      type: DataTypes.STRING,
-      allowNull: false,
+    id: {
+      type: DataTypes.UUID,
       primaryKey: true,
+      defaultValue: DataTypes.UUIDV4,
+      allowNull: false
+    },
+    release_id: {
+      type: DataTypes.UUID,
+      allowNull: false,
       references: {
         model: 'releases',
         key: 'id'
       }
     },
     artist_id: {
-      type: DataTypes.STRING,
+      type: DataTypes.UUID,
       allowNull: false,
-      primaryKey: true,
       references: {
         model: 'artists',
         key: 'id'
       }
     },
     role: {
-      type: DataTypes.STRING,
+      type: DataTypes.ENUM('primary', 'featured', 'remixer'),
       allowNull: false,
-      defaultValue: 'primary',
-      validate: {
-        isIn: [['primary', 'featured', 'remixer']]
-      }
+      defaultValue: 'primary'
     }
   }, {
     sequelize,
     modelName: 'ReleaseArtist',
     tableName: 'release_artists',
+    underscored: true,
     timestamps: true,
     createdAt: 'created_at',
     updatedAt: 'updated_at',
     indexes: [
       {
-        fields: ['release_id']
-      },
-      {
-        fields: ['artist_id']
-      },
-      {
-        fields: ['role']
+        unique: true,
+        fields: ['release_id', 'artist_id', 'role']
       }
     ]
   });

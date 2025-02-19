@@ -2,7 +2,7 @@ import React from 'react';
 import { Container, Typography, Grid, Box, Paper, Button } from '@mui/material';
 import { LoadingSpinner, ErrorMessage, ReleaseCard } from '../components';
 import TopReleases from '../components/TopReleases';
-import ErrorBoundary from '../components/ErrorBoundary';
+import { ErrorBoundary } from '../components/ErrorBoundary'; // Update ErrorBoundary import to use named import
 import { useReleases } from '../hooks/useReleases';
 import { RECORD_LABELS } from '../constants/labels';
 import { Release } from '../types/release';
@@ -13,33 +13,10 @@ interface ReleasesPageProps {
 }
 
 // Validate a release object
-const isValidRelease = (release: any): release is Release => {
-  if (!release || typeof release !== 'object') {
-    console.error('Invalid release object:', release);
-    return false;
-  }
-
-  const hasRequiredProps = 
-    'id' in release && 
-    'name' in release && 
-    typeof release.id === 'string' && 
-    typeof release.name === 'string';
-
-  if (!hasRequiredProps) {
-    console.error('Release missing required properties:', release);
-    return false;
-  }
-
-  // Initialize optional properties with default values
-  release.artists = Array.isArray(release.artists) ? release.artists : [];
-  release.tracks = Array.isArray(release.tracks) ? release.tracks : [];
-  release.images = Array.isArray(release.images) ? release.images : [];
-  release.external_urls = release.external_urls || {};
-  release.artwork_url = release.artwork_url || release.images?.[0]?.url || null;
-  release.release_date = release.release_date || null;
-
-  return true;
-};
+const isValidRelease = (release: any): release is Release =>
+  typeof release === 'object' &&
+  release !== null &&
+  typeof release.title === 'string';
 
 interface ReleaseSectionProps {
   release: Release | null;
@@ -147,7 +124,7 @@ const ReleasesPage: React.FC<ReleasesPageProps> = ({ label }) => {
                   </Grid>
                   <Grid item xs={12} md={7}>
                     <Typography variant="h4" gutterBottom>
-                      {latestRelease.name}
+                      {latestRelease.title}
                     </Typography>
                     <Typography variant="h6" color="text.secondary" gutterBottom>
                       {latestRelease.artists?.map(artist => artist?.name || '').filter(Boolean).join(', ')}

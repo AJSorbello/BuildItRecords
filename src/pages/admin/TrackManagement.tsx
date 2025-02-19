@@ -188,8 +188,8 @@ export const TrackManagement: React.FC = () => {
                   tracks={tracks.filter(track =>
                     searchQuery
                       ? track.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        track.artists.some(artist => artist.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
-                        track.release.name.toLowerCase().includes(searchQuery.toLowerCase())
+                        (track.artists || []).some(artist => artist.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                        (track.release?.title || '').toLowerCase().includes(searchQuery.toLowerCase())
                       : true
                   )}
                   onEdit={handleEditTrack}

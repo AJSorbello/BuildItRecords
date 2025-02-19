@@ -5,11 +5,12 @@ import type { RecordLabelId } from './labels';
 
 export interface Release {
   id: string;
-  name: string;
+  title: string;
   type: 'album' | 'single' | 'compilation';
   artists: Artist[];
   tracks: Track[];
   images: SpotifyImage[];
+  artwork_url?: string;
   release_date: string;
   release_date_precision?: string;
   external_urls: SpotifyExternalUrls;
@@ -17,6 +18,9 @@ export interface Release {
   label?: RecordLabelId;
   total_tracks: number;
   spotifyUrl?: string;
+  spotify_url?: string;
+  spotify_uri?: string;
+  status?: 'active' | 'draft' | 'archived';
 }
 
 export interface ReleaseDetails extends Release {
@@ -41,11 +45,12 @@ export interface LocalRelease extends Release {
 }
 
 export interface ReleaseUpdate {
-  name?: string;
+  title?: string;
   type?: 'album' | 'single' | 'compilation';
   artists?: Artist[];
   tracks?: Track[];
   images?: SpotifyImage[];
+  artwork_url?: string;
   release_date?: string;
   release_date_precision?: string;
   external_urls?: SpotifyExternalUrls;
@@ -53,6 +58,21 @@ export interface ReleaseUpdate {
   label?: RecordLabelId;
   total_tracks?: number;
   spotifyUrl?: string;
+}
+
+export interface ReleaseResponse {
+  id: string;
+  title: string;
+  release_date: string;
+  artwork_url?: string;
+  images?: SpotifyImage[];
+  spotify_url?: string;
+  spotify_uri?: string;
+  label_id?: string;
+  total_tracks?: number;
+  status?: string;
+  artists?: Artist[];
+  tracks?: Track[];
 }
 
 export interface PaginatedResponse<T> {
@@ -88,7 +108,7 @@ export const getArtistId = (artist: string | { id: string; name: string; uri: st
 };
 
 export const getReleaseImage = (release: Release): string => {
-  return release.images[0]?.url || '';
+  return release.images[0]?.url || release.artwork_url || '';
 };
 
 export const getReleaseSpotifyUrl = (release: Release): string => {

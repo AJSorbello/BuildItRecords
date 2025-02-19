@@ -1,11 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const { Release, Artist, Track, Label } = require('../models');
+const { Release, Artist, Track, Label, sequelize } = require('../models');
 const { Op } = require('sequelize');
 const { query, validationResult } = require('express-validator');
-const logger = require('../utils/logger');
 const getSpotifyService = require('../services/SpotifyService');
-const sequelize = require('../config/database');
+const logger = require('../utils/logger');
 
 // Error handling helper
 const handleError = (res, error) => {
@@ -56,26 +55,23 @@ router.get('/top', [
         {
           model: Artist,
           as: 'artists',
-          attributes: ['id', 'name', 'spotify_url', 'spotify_uri', 'image_url']
+          attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
         },
         {
           model: Track,
           as: 'tracks',
-          attributes: ['id', 'title', 'duration', 'preview_url', 'spotify_url', 'spotify_uri', 'track_number', 'disc_number', 'isrc', 'popularity', 'remixer_id', 'status', 'created_at', 'updated_at'],
-          where: {
-            status: 'published'
-          },
+          attributes: ['id', 'title', 'duration_ms', 'preview_url', 'spotify_url', 'spotify_id', 'track_number', 'disc_number', 'isrc', 'spotify_popularity', 'external_urls', 'explicit', 'remixer_id', 'created_at', 'updated_at'],
           required: false,
           include: [
             {
               model: Artist,
               as: 'artists',
-              attributes: ['id', 'name', 'spotify_url', 'image_url']
+              attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
             },
             {
               model: Artist,
               as: 'remixer',
-              attributes: ['id', 'name', 'spotify_url', 'image_url']
+              attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
             }
           ]
         }
@@ -119,24 +115,23 @@ router.get('/', [
             {
               model: Artist,
               as: 'artists',
-              attributes: ['id', 'name', 'spotify_url', 'spotify_uri', 'image_url']
+              attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
             },
             {
               model: Track,
               as: 'tracks',
-              attributes: ['id', 'title', 'duration', 'preview_url', 'spotify_url', 'spotify_uri', 'track_number', 'disc_number', 'isrc', 'popularity', 'remixer_id', 'status', 'created_at', 'updated_at'],
-              where: { status: 'published' },
+              attributes: ['id', 'title', 'duration_ms', 'preview_url', 'spotify_url', 'spotify_id', 'track_number', 'disc_number', 'isrc', 'spotify_popularity', 'external_urls', 'explicit', 'remixer_id', 'created_at', 'updated_at'],
               required: false,
               include: [
                 {
                   model: Artist,
                   as: 'artists',
-                  attributes: ['id', 'name', 'spotify_url', 'image_url']
+                  attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
                 },
                 {
                   model: Artist,
                   as: 'remixer',
-                  attributes: ['id', 'name', 'spotify_url', 'image_url']
+                  attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
                 }
               ]
             }
@@ -151,7 +146,7 @@ router.get('/', [
           
           // Calculate total popularity from track popularities
           const totalPopularity = tracks.reduce((sum, track) => {
-            return sum + (track.popularity || 0);
+            return sum + (track.spotify_popularity || 0);
           }, 0);
 
           // Calculate average popularity (avoiding division by zero)
@@ -162,8 +157,12 @@ router.get('/', [
             popularity: avgPopularity,
             totalPopularity,
             trackCount: tracks.length,
-            artwork_url: releaseData.artwork_url || releaseData.images?.[0]?.url,
-            images: releaseData.images || (releaseData.artwork_url ? [{ url: releaseData.artwork_url }] : [])
+            artwork_url: releaseData.artwork_url || releaseData.artwork_small_url || releaseData.artwork_large_url,
+            tracks: tracks.map(track => ({
+              ...track,
+              duration: track.duration_ms,
+              popularity: track.spotify_popularity
+            }))
           };
         });
 
@@ -206,14 +205,12 @@ router.get('/:id', async (req, res) => {
                 {
                     model: Artist,
                     as: 'artists',
-                    attributes: ['id', 'name', 'spotify_url', 'spotify_uri', 'image_url', 'label_id']
+                    attributes: ['id', 'name', 'spotify_url', 'profile_image_url', 'label_id']
                 },
                 {
                     model: Track,
                     as: 'tracks',
-                    attributes: ['id', 'title', 'duration', 'track_number', 'disc_number', 
-                      'isrc', 'preview_url', 'spotify_url', 'spotify_uri', 
-                      'label_id', 'status', 'remixer_id']
+                    attributes: ['id', 'title', 'duration_ms', 'preview_url', 'spotify_url', 'spotify_id', 'track_number', 'disc_number', 'isrc', 'spotify_popularity', 'external_urls', 'explicit', 'remixer_id', 'created_at', 'updated_at']
                 },
                 {
                     model: Label,
@@ -261,8 +258,10 @@ router.post('/:labelId/import', async (req, res) => {
     const albums = await spotifyService.searchReleases(labelId);
     console.log(`Found ${albums.length} releases, starting import...`);
 
-    // Use a transaction to ensure data consistency
-    const result = await sequelize.transaction(async (t) => {
+    // Start a new transaction
+    const t = await sequelize.transaction();
+    
+    try {
       // Import the releases
       await spotifyService.importReleases(label, albums, t);
 
@@ -273,17 +272,17 @@ router.post('/:labelId/import', async (req, res) => {
           {
             model: Artist,
             as: 'artists',
-            attributes: ['id', 'name', 'spotify_url', 'spotify_uri', 'image_url', 'label_id']
+            attributes: ['id', 'name', 'spotify_url', 'profile_image_url', 'label_id']
           },
           {
             model: Track,
             as: 'tracks',
-            attributes: ['id', 'title', 'duration', 'preview_url', 'spotify_url', 'spotify_uri', 'track_number', 'disc_number', 'isrc', 'popularity', 'remixer_id', 'status', 'created_at', 'updated_at'],
+            attributes: ['id', 'title', 'duration_ms', 'preview_url', 'spotify_url', 'spotify_id', 'track_number', 'disc_number', 'isrc', 'spotify_popularity', 'external_urls', 'explicit', 'remixer_id', 'created_at', 'updated_at'],
             include: [
               {
                 model: Artist,
                 as: 'artists',
-                attributes: ['id', 'name', 'spotify_url', 'image_url']
+                attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
               }
             ]
           }
@@ -292,18 +291,23 @@ router.post('/:labelId/import', async (req, res) => {
         transaction: t
       });
 
-      return { count, releases };
-    });
+      // Commit the transaction
+      await t.commit();
 
-    console.log(`Successfully imported ${result.count} releases for label: ${label.name}`);
+      console.log(`Successfully imported ${count} releases for label: ${label.name}`);
 
-    res.json({
-      success: true,
-      message: `Successfully imported ${albums.length} releases`,
-      totalReleases: result.count,
-      releases: result.releases
-    });
-
+      res.json({
+        success: true,
+        message: `Successfully imported ${albums.length} releases`,
+        totalReleases: count,
+        releases
+      });
+    } catch (error) {
+      // Rollback transaction on error
+      await t.rollback();
+      console.error('Error importing releases:', error);
+      handleError(res, error);
+    }
   } catch (error) {
     console.error('Error importing releases:', error);
     console.error('Error stack:', error.stack);
@@ -379,29 +383,28 @@ router.get('/label/:labelId', async (req, res) => {
         label_id: label.id,
         status: 'published' // Only get published releases
       },
-      attributes: ['id', 'title', 'release_date', 'artwork_url', 'images', 'spotify_url', 'spotify_uri', 'label_id', 'total_tracks', 'status', 'created_at', 'updated_at'],
+      attributes: ['id', 'title', 'release_date', 'artwork_url', 'artwork_small_url', 'artwork_large_url', 'spotify_url', 'label_id', 'total_tracks', 'status', 'created_at', 'updated_at'],
       include: [
         {
           model: Artist,
           as: 'artists',
-          attributes: ['id', 'name', 'spotify_url', 'spotify_uri', 'image_url', 'label_id']
+          attributes: ['id', 'name', 'spotify_url', 'profile_image_url', 'label_id']
         },
         {
           model: Track,
           as: 'tracks',
-          attributes: ['id', 'title', 'duration', 'preview_url', 'spotify_url', 'spotify_uri', 'track_number', 'disc_number', 'isrc', 'popularity', 'remixer_id', 'status', 'created_at', 'updated_at'],
-          where: { status: 'published' }, // Only get published tracks
+          attributes: ['id', 'title', 'duration_ms', 'preview_url', 'spotify_url', 'spotify_id', 'track_number', 'disc_number', 'isrc', 'spotify_popularity', 'external_urls', 'explicit', 'remixer_id', 'created_at', 'updated_at'],
           required: false,
           include: [
             {
               model: Artist,
               as: 'artists',
-              attributes: ['id', 'name', 'spotify_url', 'image_url']
+              attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
             },
             {
               model: Artist,
               as: 'remixer',
-              attributes: ['id', 'name', 'spotify_url', 'image_url']
+              attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
             }
           ]
         }
@@ -420,14 +423,14 @@ router.get('/label/:labelId', async (req, res) => {
 
     // Transform the releases
     const transformedReleases = releases.map(release => {
-      const releaseData = release.get({ plain: true });
+      const releaseData = release.toJSON();
       return {
         ...releaseData,
         artists: releaseData.artists.map(artist => ({
           id: artist.id,
           name: artist.name,
           spotify_url: artist.spotify_url,
-          image_url: artist.image_url
+          profile_image_url: artist.profile_image_url
         })),
         tracks: (releaseData.tracks || []).map(track => ({
           ...track,
@@ -435,7 +438,7 @@ router.get('/label/:labelId', async (req, res) => {
             id: artist.id,
             name: artist.name,
             spotify_url: artist.spotify_url,
-            image_url: artist.image_url
+            profile_image_url: artist.profile_image_url
           }))
         }))
       };
@@ -489,17 +492,17 @@ router.get('/:labelId', async (req, res) => {
         {
           model: Artist,
           as: 'artists',
-          attributes: ['id', 'name', 'spotify_url']
+          attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
         },
         {
           model: Track,
           as: 'tracks',
-          attributes: ['id', 'title', 'duration', 'preview_url', 'spotify_url', 'spotify_uri', 'track_number', 'disc_number', 'isrc', 'popularity', 'remixer_id', 'status', 'created_at', 'updated_at'],
+          attributes: ['id', 'title', 'duration_ms', 'preview_url', 'spotify_url', 'spotify_id', 'track_number', 'disc_number', 'isrc', 'spotify_popularity', 'external_urls', 'explicit', 'remixer_id', 'created_at', 'updated_at'],
           include: [
             {
               model: Artist,
               as: 'artists',
-              attributes: ['id', 'name', 'spotify_url']
+              attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
             }
           ]
         }
@@ -516,14 +519,18 @@ router.get('/:labelId', async (req, res) => {
         ...releaseJson,
         artists: releaseJson.artists.map(artist => ({
           id: artist.id,
-          name: artist.name
+          name: artist.name,
+          spotify_url: artist.spotify_url,
+          profile_image_url: artist.profile_image_url
         })),
-        albumCover: releaseJson.artworkUrl || releaseJson.artwork,
+        albumCover: releaseJson.artwork_url || releaseJson.artwork_small_url || releaseJson.artwork_large_url,
         tracks: releaseJson.tracks.map(track => ({
           ...track,
           artists: track.artists.map(artist => ({
             id: artist.id,
-            name: artist.name
+            name: artist.name,
+            spotify_url: artist.spotify_url,
+            profile_image_url: artist.profile_image_url
           }))
         }))
       };
@@ -563,12 +570,12 @@ router.get('/:labelId/:releaseId', async (req, res) => {
         {
           model: Artist,
           as: 'artists',
-          attributes: ['id', 'name', 'spotify_url', 'spotify_uri', 'image_url']
+          attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
         },
         {
           model: Track,
           as: 'tracks',
-          attributes: ['id', 'title', 'duration', 'preview_url', 'spotify_url', 'spotify_uri', 'track_number', 'disc_number', 'isrc', 'popularity', 'remixer_id', 'status', 'created_at', 'updated_at']
+          attributes: ['id', 'title', 'duration_ms', 'preview_url', 'spotify_url', 'spotify_id', 'track_number', 'disc_number', 'isrc', 'spotify_popularity', 'external_urls', 'explicit', 'remixer_id', 'created_at', 'updated_at']
         }
       ]
     });
@@ -634,17 +641,17 @@ router.post('/', async (req, res) => {
         {
           model: Artist,
           as: 'artists',
-          attributes: ['id', 'name', 'spotify_url']
+          attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
         },
         {
           model: Track,
           as: 'tracks',
-          attributes: ['id', 'title', 'duration', 'preview_url', 'spotify_url', 'spotify_uri', 'track_number', 'disc_number', 'isrc', 'popularity', 'remixer_id', 'status', 'created_at', 'updated_at'],
+          attributes: ['id', 'title', 'duration_ms', 'preview_url', 'spotify_url', 'spotify_id', 'track_number', 'disc_number', 'isrc', 'spotify_popularity', 'external_urls', 'explicit', 'remixer_id', 'created_at', 'updated_at'],
           include: [
             {
               model: Artist,
               as: 'artists',
-              attributes: ['id', 'name', 'spotify_url']
+              attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
             }
           ]
         }
@@ -708,12 +715,12 @@ router.get('/featured', async (req, res) => {
         {
           model: Artist,
           as: 'primaryArtist',
-          attributes: ['id', 'name', 'spotify_url']
+          attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
         },
         {
           model: Artist,
           as: 'artists',
-          attributes: ['id', 'name', 'spotify_url']
+          attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
         }
       ],
       order: [
@@ -764,12 +771,12 @@ router.get('/', async (req, res) => {
         {
           model: Artist,
           as: 'artists',
-          attributes: ['id', 'name', 'spotify_url']
+          attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
         },
         {
           model: Track,
           as: 'tracks',
-          attributes: ['id', 'title', 'duration', 'preview_url', 'spotify_url', 'spotify_uri', 'track_number', 'disc_number', 'isrc', 'popularity', 'remixer_id', 'status', 'created_at', 'updated_at']
+          attributes: ['id', 'title', 'duration_ms', 'preview_url', 'spotify_url', 'spotify_id', 'track_number', 'disc_number', 'isrc', 'spotify_popularity', 'external_urls', 'explicit', 'remixer_id', 'created_at', 'updated_at']
         },
         {
           model: Label,
@@ -802,12 +809,12 @@ router.get('/:id', async (req, res) => {
         {
           model: Artist,
           as: 'artists',
-          attributes: ['id', 'name', 'spotify_url']
+          attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
         },
         {
           model: Track,
           as: 'tracks',
-          attributes: ['id', 'title', 'duration', 'preview_url', 'spotify_url', 'spotify_uri', 'track_number', 'disc_number', 'isrc', 'popularity', 'remixer_id', 'status', 'created_at', 'updated_at']
+          attributes: ['id', 'title', 'duration_ms', 'preview_url', 'spotify_url', 'spotify_id', 'track_number', 'disc_number', 'isrc', 'spotify_popularity', 'external_urls', 'explicit', 'remixer_id', 'created_at', 'updated_at']
         },
         {
           model: Label,
@@ -907,32 +914,29 @@ router.get('/top/:labelId', async (req, res) => {
         {
           model: Artist,
           as: 'artists',
-          attributes: ['id', 'name', 'spotify_url', 'spotify_uri', 'image_url']
+          attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
         },
         {
           model: Track,
           as: 'tracks',
-          attributes: ['id', 'title', 'duration', 'preview_url', 'spotify_url', 'spotify_uri', 'track_number', 'disc_number', 'isrc', 'popularity', 'remixer_id', 'status', 'created_at', 'updated_at'],
-          where: {
-            status: 'published'
-          },
+          attributes: ['id', 'title', 'duration_ms', 'preview_url', 'spotify_url', 'spotify_id', 'track_number', 'disc_number', 'isrc', 'spotify_popularity', 'external_urls', 'explicit', 'remixer_id', 'created_at', 'updated_at'],
           required: false,
           include: [
             {
               model: Artist,
               as: 'artists',
-              attributes: ['id', 'name', 'spotify_url', 'image_url']
+              attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
             },
             {
               model: Artist,
               as: 'remixer',
-              attributes: ['id', 'name', 'spotify_url', 'image_url']
+              attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
             }
           ]
         }
       ],
       order: [
-        [{ model: Track, as: 'tracks' }, 'popularity', 'DESC']
+        [{ model: Track, as: 'tracks' }, 'spotify_popularity', 'DESC']
       ],
       limit
     });
@@ -942,7 +946,7 @@ router.get('/top/:labelId', async (req, res) => {
       success: true,
       releases: releases.map(release => ({
         ...release.toJSON(),
-        popularity: Math.max(...(release.tracks?.map(track => track.popularity) || [0]))
+        popularity: Math.max(...(release.tracks?.map(track => track.spotify_popularity) || [0]))
       }))
     });
   } catch (error) {
@@ -963,29 +967,28 @@ router.get('/:labelId', async (req, res) => {
 
     const releases = await Release.findAll({
       where,
-      attributes: ['id', 'title', 'release_date', 'artwork_url', 'images', 'spotify_url', 'spotify_uri', 'label_id', 'total_tracks', 'status', 'created_at', 'updated_at'],
+      attributes: ['id', 'title', 'release_date', 'artwork_url', 'artwork_small_url', 'artwork_large_url', 'spotify_url', 'label_id', 'total_tracks', 'status', 'created_at', 'updated_at'],
       include: [
         {
           model: Artist,
           as: 'artists',
-          attributes: ['id', 'name', 'spotify_url', 'spotify_uri', 'image_url', 'label_id']
+          attributes: ['id', 'name', 'spotify_url', 'profile_image_url', 'label_id']
         },
         {
           model: Track,
           as: 'tracks',
-          attributes: ['id', 'title', 'duration', 'preview_url', 'spotify_url', 'spotify_uri', 'track_number', 'disc_number', 'isrc', 'popularity', 'remixer_id', 'status', 'created_at', 'updated_at'],
-          where: { status: 'published' },
+          attributes: ['id', 'title', 'duration_ms', 'preview_url', 'spotify_url', 'spotify_id', 'track_number', 'disc_number', 'isrc', 'spotify_popularity', 'external_urls', 'explicit', 'remixer_id', 'created_at', 'updated_at'],
           required: false,
           include: [
             {
               model: Artist,
               as: 'artists',
-              attributes: ['id', 'name', 'spotify_url', 'image_url']
+              attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
             },
             {
               model: Artist,
               as: 'remixer',
-              attributes: ['id', 'name', 'spotify_url', 'image_url']
+              attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
             }
           ]
         }
@@ -1030,28 +1033,28 @@ router.get('/label/:labelId', async (req, res) => {
         label_id: label.id,
         status: 'published'
       },
+      attributes: ['id', 'title', 'release_date', 'artwork_url', 'artwork_small_url', 'artwork_large_url', 'spotify_url', 'label_id', 'total_tracks', 'status', 'created_at', 'updated_at'],
       include: [
         {
           model: Artist,
           as: 'artists',
-          attributes: ['id', 'name', 'spotify_url', 'spotify_uri', 'image_url', 'label_id']
+          attributes: ['id', 'name', 'spotify_url', 'profile_image_url', 'label_id']
         },
         {
           model: Track,
           as: 'tracks',
-          attributes: ['id', 'title', 'duration', 'preview_url', 'spotify_url', 'spotify_uri', 'track_number', 'disc_number', 'isrc', 'popularity', 'remixer_id', 'status', 'created_at', 'updated_at'],
-          where: { status: 'published' },
+          attributes: ['id', 'title', 'duration_ms', 'preview_url', 'spotify_url', 'spotify_id', 'track_number', 'disc_number', 'isrc', 'spotify_popularity', 'external_urls', 'explicit', 'remixer_id', 'created_at', 'updated_at'],
           required: false,
           include: [
             {
               model: Artist,
               as: 'artists',
-              attributes: ['id', 'name', 'spotify_url', 'image_url']
+              attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
             },
             {
               model: Artist,
               as: 'remixer',
-              attributes: ['id', 'name', 'spotify_url', 'image_url']
+              attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
             }
           ]
         }
@@ -1084,7 +1087,7 @@ router.get('/label/:labelId', async (req, res) => {
           id: artist.id,
           name: artist.name,
           spotify_url: artist.spotify_url,
-          image_url: artist.image_url
+          profile_image_url: artist.profile_image_url
         })),
         tracks: (releaseData.tracks || []).map(track => ({
           ...track,
@@ -1092,7 +1095,7 @@ router.get('/label/:labelId', async (req, res) => {
             id: artist.id,
             name: artist.name,
             spotify_url: artist.spotify_url,
-            image_url: artist.image_url
+            profile_image_url: artist.profile_image_url
           }))
         }))
       };

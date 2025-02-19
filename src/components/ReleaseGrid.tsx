@@ -1,6 +1,6 @@
 import React from 'react';
 import { Grid } from '@mui/material';
-import ReleaseCard from './ReleaseCard';
+import { ReleaseCard } from './ReleaseCard';
 import { Track } from '../types/track';
 
 interface ReleaseGridProps {

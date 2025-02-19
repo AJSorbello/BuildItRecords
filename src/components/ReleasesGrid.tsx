@@ -4,7 +4,7 @@ import {
   Box,
   Typography,
 } from '@mui/material';
-import ReleaseCard from './ReleaseCard';
+import { ReleaseCard } from './ReleaseCard';
 import { Release } from '../types/release';
 
 interface ReleasesGridProps {

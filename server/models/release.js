@@ -1,16 +1,8 @@
 const { Model, DataTypes } = require('sequelize');
-const sequelize = require('../config/database');
 
-module.exports = (sequelize, DataTypes) => {
+module.exports = (sequelize) => {
   class Release extends Model {
     static associate(models) {
-      // associations can be defined here
-      Release.belongsToMany(models.Artist, {
-        through: 'release_artists',
-        foreignKey: 'release_id',
-        as: 'artists'
-      });
-
       Release.belongsTo(models.Label, {
         foreignKey: 'label_id',
         as: 'label'
@@ -20,17 +12,27 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'release_id',
         as: 'tracks'
       });
+
+      Release.belongsToMany(models.Artist, {
+        through: models.ReleaseArtist,
+        foreignKey: 'release_id',
+        otherKey: 'artist_id',
+        as: 'artists'
+      });
     }
   }
 
   Release.init({
     id: {
-      type: DataTypes.STRING,
+      type: DataTypes.UUID,
       primaryKey: true,
-      allowNull: false,
-      validate: {
-        notEmpty: true
-      }
+      defaultValue: DataTypes.UUIDV4,
+      allowNull: false
+    },
+    spotify_id: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      unique: true
     },
     title: {
       type: DataTypes.STRING,
@@ -39,9 +41,15 @@ module.exports = (sequelize, DataTypes) => {
         notEmpty: true
       }
     },
+    release_type: {
+      type: DataTypes.ENUM('album', 'single', 'compilation'),
+      allowNull: false,
+      defaultValue: 'single'
+    },
     release_date: {
       type: DataTypes.DATE,
-      allowNull: true
+      allowNull: false,
+      defaultValue: DataTypes.NOW
     },
     artwork_url: {
       type: DataTypes.STRING,
@@ -54,39 +62,29 @@ module.exports = (sequelize, DataTypes) => {
     },
     spotify_url: {
       type: DataTypes.STRING,
-      validate: {
-        isUrl: true
-      }
-    },
-    spotify_uri: {
-      type: DataTypes.STRING,
-      validate: {
-        isSpotifyUri(value) {
-          if (value && !value.startsWith('spotify:album:')) {
-            throw new Error('Invalid Spotify URI format');
-          }
-        }
-      }
-    },
-    label_id: {
-      type: DataTypes.STRING,
-      allowNull: false,
-      references: {
-        model: 'labels',
-        key: 'id'
-      }
+      allowNull: true
     },
     total_tracks: {
       type: DataTypes.INTEGER,
+      allowNull: true,
+      validate: {
+        min: 0
+      }
+    },
+    label_id: {
+      type: DataTypes.UUID,
       allowNull: false,
-      defaultValue: 0
+      references: {
+        model: 'Labels',
+        key: 'id'
+      }
     },
     status: {
-      type: DataTypes.ENUM('draft', 'scheduled', 'published'),
+      type: DataTypes.STRING,
       allowNull: false,
       defaultValue: 'draft',
       validate: {
-        isIn: [['draft', 'scheduled', 'published']]
+        isIn: [['draft', 'published', 'archived']]
       }
     }
   }, {
@@ -96,25 +94,7 @@ module.exports = (sequelize, DataTypes) => {
     underscored: true,
     timestamps: true,
     createdAt: 'created_at',
-    updatedAt: 'updated_at',
-    indexes: [
-      {
-        fields: ['label_id']
-      },
-      {
-        fields: ['release_date']
-      },
-      {
-        fields: ['status']
-      }
-    ],
-    hooks: {
-      beforeValidate: (release) => {
-        if (release.release_date && release.release_date instanceof Date) {
-          release.release_date = release.release_date.toISOString().split('T')[0];
-        }
-      }
-    }
+    updatedAt: 'updated_at'
   });
 
   return Release;

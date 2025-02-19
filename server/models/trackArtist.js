@@ -1,31 +1,23 @@
 'use strict';
 
-const { Model } = require('sequelize');
+const { Model, DataTypes } = require('sequelize');
 
-module.exports = (sequelize, DataTypes) => {
+module.exports = (sequelize) => {
   class TrackArtist extends Model {
     static associate(models) {
-      // associations can be defined here
-      TrackArtist.belongsTo(models.Track, {
-        foreignKey: 'track_id',
-        as: 'track'
-      });
-
-      TrackArtist.belongsTo(models.Artist, {
-        foreignKey: 'artist_id',
-        as: 'artist'
-      });
+      // No associations needed for join table
     }
   }
 
   TrackArtist.init({
     id: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.UUID,
       primaryKey: true,
-      autoIncrement: true
+      defaultValue: DataTypes.UUIDV4,
+      allowNull: false
     },
     track_id: {
-      type: DataTypes.STRING,
+      type: DataTypes.UUID,
       allowNull: false,
       references: {
         model: 'tracks',
@@ -33,12 +25,17 @@ module.exports = (sequelize, DataTypes) => {
       }
     },
     artist_id: {
-      type: DataTypes.STRING,
+      type: DataTypes.UUID,
       allowNull: false,
       references: {
         model: 'artists',
         key: 'id'
       }
+    },
+    role: {
+      type: DataTypes.ENUM('primary', 'featured', 'remixer'),
+      allowNull: false,
+      defaultValue: 'primary'
     }
   }, {
     sequelize,
@@ -47,7 +44,13 @@ module.exports = (sequelize, DataTypes) => {
     underscored: true,
     timestamps: true,
     createdAt: 'created_at',
-    updatedAt: 'updated_at'
+    updatedAt: 'updated_at',
+    indexes: [
+      {
+        unique: true,
+        fields: ['track_id', 'artist_id', 'role']
+      }
+    ]
   });
 
   return TrackArtist;

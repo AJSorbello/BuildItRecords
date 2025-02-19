@@ -5,8 +5,9 @@
 
 import type { Track, LocalTrack } from '../types/track';
 import type { Artist } from '../types/artist';
-import type { Release } from '../types/release';
+import type { Release, ReleaseResponse } from '../types/release';
 import type { RecordLabelId } from '../types/labels';
+import type { SpotifyImage } from '../types/spotify';
 import { DatabaseError } from '../utils/errors';
 
 interface ApiResponse<T> {
@@ -15,7 +16,7 @@ interface ApiResponse<T> {
   message?: string;
   error?: string;
   tracks?: Track[];
-  releases?: Release[];
+  releases?: ReleaseResponse[];
   total?: number;
   offset?: number;
   limit?: number;
@@ -31,6 +32,22 @@ interface AdminLoginResponse {
 interface TokenVerificationResponse {
   verified: boolean;
   message?: string;
+}
+
+interface ProcessedRelease extends Omit<Release, 'artwork_url'> {
+  artwork_url?: string;
+}
+
+interface ApiTrackResponse {
+  tracks: Array<{
+    id: string;
+    title: string;
+    duration_ms: number;
+    preview_url?: string;
+    release?: ReleaseResponse;
+    artists?: Artist[];
+    remixer?: Artist;
+  }>;
 }
 
 /**
@@ -122,7 +139,7 @@ export class DatabaseService {
       console.log('Using label ID:', dbLabelId);
       const response = await this.fetchApi<{
         success: boolean;
-        releases: Release[];
+        releases: ReleaseResponse[];
         totalReleases: number;
         totalTracks: number;
         error?: string;
@@ -135,18 +152,7 @@ export class DatabaseService {
       }
 
       // Process the releases to ensure all fields are properly mapped
-      const processedReleases = (response.releases || []).map(release => ({
-        ...release,
-        name: release.name || release.title || 'Unknown Album',
-        title: release.title || release.name || 'Unknown Album',
-        artwork_url: release.artwork_url || release.images?.[0]?.url || null,
-        images: release.images?.map(img => ({
-          url: img.url,
-          height: img.height || 0,
-          width: img.width || 0
-        })) || [],
-        artists: release.artists || []
-      }));
+      const processedReleases = await this.processReleases(response);
 
       return {
         releases: processedReleases,
@@ -185,16 +191,18 @@ export class DatabaseService {
         return [];
       }
 
-      const releases = response.releases.map(release => {
-        // Ensure release has required properties
-        if (!release.images && release.artwork_url) {
-          release.images = [{ url: release.artwork_url }];
-        }
-        return {
-          ...release,
-          artwork_url: release.artwork_url || release.images?.[0]?.url || null
-        };
-      });
+      const releases = response.releases.map(release => ({
+        ...release,
+        title: release.title || 'Unknown Album',
+        release_date: release.release_date,
+        artwork_url: release.artwork_url || release.images?.[0]?.url || null,
+        images: (release.images || []).map(img => ({
+          url: img.url,
+          height: img.height || 0,
+          width: img.width || 0
+        })),
+        artists: release.artists || []
+      }));
 
       console.log('Processed top releases:', releases);
       return releases;
@@ -208,36 +216,90 @@ export class DatabaseService {
     }
   }
 
-  public async processReleases(response: { releases: any[] }): Promise<Release[]> {
+  public async processReleases(response: { releases: ReleaseResponse[] }): Promise<Release[]> {
     try {
-      const releases = response.releases.map((release: any) => {
-        const images = release.images?.map((image: any) => ({
-          url: image.url,
-          height: image.height || 0,
-          width: image.width || 0
-        })) || [];
+      const releases = response.releases.map((release) => {
+        const processedImages = (release.images || []).map((img: SpotifyImage) => ({
+          url: img.url,
+          height: img.height !== null ? img.height : 0,
+          width: img.width !== null ? img.width : 0
+        }));
 
         return {
           id: release.id,
-          name: release.name || release.title,
-          title: release.title || release.name,
+          title: release.title || 'Unknown Album',
+          type: 'album' as const,
+          artists: release.artists || [],
+          tracks: release.tracks || [],
+          images: processedImages,
+          artwork_url: release.artwork_url,
           release_date: release.release_date,
-          artwork_url: release.artwork_url || release.images?.[0]?.url || null,
-          images: images,
-          spotify_url: release.spotify_url || release.external_urls?.spotify || null,
-          spotify_uri: release.spotify_uri || null,
-          total_tracks: release.total_tracks || release.tracks?.length || 0,
-          type: release.type || 'album',
-          label_id: release.label_id || label,
-          label: release.label || null,
-          artists: release.artists || []
-        };
+          external_urls: {
+            spotify: release.spotify_url || ''
+          },
+          uri: release.spotify_uri || '',
+          total_tracks: release.total_tracks || 0,
+          release_date_precision: 'day',
+          label: undefined
+        } satisfies Release;
       });
 
       return releases;
     } catch (error) {
       console.error('Error processing releases:', error);
-      throw new DatabaseError('Failed to process releases', error instanceof Error ? error.message : String(error));
+      throw error;
+    }
+  }
+
+  public async processTracks(response: ApiTrackResponse): Promise<Track[]> {
+    try {
+      const tracks = response.tracks.map((track) => {
+        const release = track.release;
+        const processedRelease = release ? {
+          id: release.id,
+          title: release.title || 'Unknown Album',
+          type: 'album' as const,
+          artists: release.artists || [],
+          tracks: [],
+          images: (release.images || []).map((img: SpotifyImage) => ({
+            url: img.url,
+            height: img.height !== null ? img.height : 0,
+            width: img.width !== null ? img.width : 0
+          })),
+          artwork_url: release.artwork_url,
+          release_date: release.release_date,
+          external_urls: {
+            spotify: release.spotify_url || ''
+          },
+          uri: release.spotify_uri || '',
+          total_tracks: release.total_tracks || 0,
+          release_date_precision: 'day',
+          label: undefined
+        } satisfies Release : undefined;
+
+        return {
+          id: track.id,
+          title: track.title || 'Unknown Track',
+          duration: track.duration_ms || 0,
+          track_number: 1,
+          disc_number: 1,
+          preview_url: track.preview_url || undefined,
+          external_urls: { spotify: '' },
+          external_ids: {},
+          uri: '',
+          type: 'track' as const,
+          release: processedRelease,
+          artists: track.artists || [],
+          remixer: track.remixer || null,
+          isrc: '',
+          name: track.title || 'Unknown Track'
+        } satisfies Track;
+      });
+
+      return tracks;
+    } catch (error) {
+      console.error('Error processing tracks:', error);
+      throw error;
     }
   }
 
@@ -270,20 +332,20 @@ export class DatabaseService {
         const release = track.release || track.album;
         const processedRelease = release ? {
           ...release,
-          name: release.name || release.title || 'Unknown Album',
-          title: release.title || release.name || 'Unknown Album',
+          title: release.title || 'Unknown Album',
+          release_date: release.release_date,
           artwork_url: release.artwork_url || release.images?.[0]?.url || null,
-          images: release.images?.map(img => ({
+          images: (release.images || []).map(img => ({
             url: img.url,
             height: img.height || 0,
             width: img.width || 0
-          })) || [],
+          })),
           artists: release.artists || []
         } : null;
 
         return {
           ...track,
-          title: track.title || track.name || 'Unknown Track',
+          title: track.title || 'Unknown Track',
           name: track.name || track.title || 'Unknown Track',
           release: processedRelease,
           artists: track.artists || [],
@@ -344,8 +406,20 @@ export class DatabaseService {
         return [];
       }
 
-      console.log('Fetching artists for label:', id);
-      const response = await this.fetchApi<Artist[] | ApiResponse<Artist[]>>(`/artists/search?label=${id}`);
+      // Convert label ID to lowercase for consistency
+      const normalizedId = id.toLowerCase();
+      
+      // Map label names to IDs if needed
+      const labelMap: { [key: string]: string } = {
+        'records': 'buildit-records',
+        'tech': 'buildit-tech',
+        'deep': 'buildit-deep'
+      };
+
+      const finalId = labelMap[normalizedId] || normalizedId;
+      console.log('Fetching artists for label:', finalId);
+      
+      const response = await this.fetchApi<Artist[] | ApiResponse<Artist[]>>(`/artists/search?label=${finalId}`);
       
       // Handle both array and object responses
       const artists = Array.isArray(response) ? response : response.data || [];
@@ -414,6 +488,32 @@ export class DatabaseService {
     } catch (error) {
       console.error('Error fetching tracks for artist:', error);
       throw new DatabaseError('Failed to fetch artist tracks');
+    }
+  }
+
+  /**
+   * Delete a track from the database
+   * @param trackId - ID of the track to delete
+   * @returns Promise resolving to success status
+   */
+  public async deleteTrack(trackId: string): Promise<boolean> {
+    try {
+      const response = await fetch(`${this.baseUrl}/tracks/${trackId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to delete track: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return data.success || false;
+    } catch (error) {
+      console.error('Error deleting track:', error);
+      throw error;
     }
   }
 }

@@ -8,11 +8,6 @@ module.exports = (sequelize) => {
         as: 'release'
       });
 
-      Track.belongsTo(models.Label, {
-        foreignKey: 'label_id',
-        as: 'label'
-      });
-
       Track.belongsToMany(models.Artist, {
         through: models.TrackArtist,
         foreignKey: 'track_id',
@@ -29,12 +24,10 @@ module.exports = (sequelize) => {
 
   Track.init({
     id: {
-      type: DataTypes.STRING,
+      type: DataTypes.UUID,
       primaryKey: true,
-      allowNull: false,
-      validate: {
-        notEmpty: true
-      }
+      defaultValue: DataTypes.UUIDV4,
+      allowNull: false
     },
     title: {
       type: DataTypes.STRING,
@@ -43,11 +36,36 @@ module.exports = (sequelize) => {
         notEmpty: true
       }
     },
-    duration: {
+    duration_ms: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
       validate: {
         min: 0
+      }
+    },
+    preview_url: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    spotify_id: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      unique: true
+    },
+    spotify_uri: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    spotify_url: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    release_id: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: {
+        model: 'Releases',
+        key: 'id'
       }
     },
     track_number: {
@@ -60,6 +78,7 @@ module.exports = (sequelize) => {
     disc_number: {
       type: DataTypes.INTEGER,
       allowNull: true,
+      defaultValue: 1,
       validate: {
         min: 1
       }
@@ -68,71 +87,33 @@ module.exports = (sequelize) => {
       type: DataTypes.STRING,
       allowNull: true
     },
-    preview_url: {
-      type: DataTypes.STRING,
+    external_urls: {
+      type: DataTypes.JSONB,
       allowNull: true,
-      validate: {
-        isUrl: true
-      }
+      defaultValue: {}
     },
-    spotify_url: {
-      type: DataTypes.STRING,
-      allowNull: true,
-      validate: {
-        isUrl: true
-      }
-    },
-    spotify_uri: {
-      type: DataTypes.STRING,
-      allowNull: true,
-      validate: {
-        isSpotifyUri(value) {
-          if (value && !value.startsWith('spotify:track:')) {
-            throw new Error('Invalid Spotify URI format');
-          }
-        }
-      }
-    },
-    popularity: {
+    spotify_popularity: {
       type: DataTypes.INTEGER,
       allowNull: true,
-      defaultValue: 0,
-      validate: {
-        min: 0,
-        max: 100
-      }
+      defaultValue: 0
     },
-    release_id: {
-      type: DataTypes.STRING,
-      allowNull: false,
-      references: {
-        model: 'releases',
-        key: 'id'
-      }
-    },
-    label_id: {
-      type: DataTypes.STRING,
-      allowNull: false,
-      references: {
-        model: 'labels',
-        key: 'id'
-      }
+    explicit: {
+      type: DataTypes.BOOLEAN,
+      allowNull: true,
+      defaultValue: false
     },
     remixer_id: {
-      type: DataTypes.STRING,
+      type: DataTypes.UUID,
       allowNull: true,
       references: {
-        model: 'artists',
+        model: 'Artists',
         key: 'id'
       }
     },
-    status: {
-      type: DataTypes.ENUM('draft', 'scheduled', 'published'),
+    type: {
+      type: DataTypes.STRING,
       allowNull: false,
-      defaultValue: 'draft',
-      validate: {
-        isIn: [['draft', 'scheduled', 'published']]
-      }
+      defaultValue: 'track'
     },
     created_at: {
       type: DataTypes.DATE,
@@ -149,9 +130,7 @@ module.exports = (sequelize) => {
     modelName: 'Track',
     tableName: 'tracks',
     underscored: true,
-    timestamps: true,
-    createdAt: 'created_at',
-    updatedAt: 'updated_at'
+    timestamps: false
   });
 
   return Track;

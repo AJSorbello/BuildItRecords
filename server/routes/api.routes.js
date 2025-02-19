@@ -102,7 +102,7 @@ router.get('/labels/:labelId/releases/top', async (req, res) => {
           model: Artist,
           as: 'artists',
           through: { attributes: [] },
-          attributes: ['id', 'name', 'spotify_url', 'spotify_uri', 'image_url']
+          attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
         },
         {
           model: Track,

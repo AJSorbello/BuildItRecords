@@ -29,10 +29,17 @@ const Layout: React.FC = () => {
   const isMobile = useMediaQuery('(max-width:900px)');
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const path = location.pathname;
-  const currentLabel = (path.split('/')[1] || 'records').toUpperCase();
+  const pathLabel = (path.split('/')[1] || 'records').toUpperCase();
+  const labelMap = {
+    'RECORDS': 'buildit-records',
+    'TECH': 'buildit-tech',
+    'DEEP': 'buildit-deep'
+  };
+  const currentLabel = pathLabel;
+  const labelId = labelMap[pathLabel] || 'buildit-records';
   const isAdminRoute = path.startsWith('/admin');
 
-  console.log('Layout rendered:', { path, currentLabel, isAdminRoute });
+  console.log('Layout rendered:', { path, currentLabel, labelId, isAdminRoute });
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -59,7 +66,7 @@ const Layout: React.FC = () => {
   };
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
       <CssBaseline />
       
       {!isAdminRoute && (
@@ -91,10 +98,16 @@ const Layout: React.FC = () => {
         component="main"
         sx={{
           flexGrow: 1,
-          width: { sm: isAdminRoute ? '100%' : `calc(100% - ${240}px)` },
-          ml: { sm: isAdminRoute ? 0 : `${240}px` },
-          mt: isAdminRoute ? 0 : '64px',
-          position: 'relative'
+          width: '100%',
+          minHeight: '100vh',
+          bgcolor: 'background.default',
+          ...(isAdminRoute ? {
+            p: 3
+          } : {
+            width: { sm: `calc(100% - ${240}px)` },
+            ml: { sm: `${240}px` },
+            mt: '64px'
+          })
         }}
       >
         <Outlet />
