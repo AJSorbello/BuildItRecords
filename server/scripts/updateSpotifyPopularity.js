@@ -14,21 +14,21 @@ async function updateTrackPopularity() {
     const data = await spotifyApi.clientCredentialsGrant();
     spotifyApi.setAccessToken(data.body['access_token']);
 
-    // Get all tracks with Spotify URIs
+    // Get all tracks with Spotify IDs
     const tracks = await db.Track.findAll({
       where: {
-        spotify_uri: {
+        spotify_id: {
           [Sequelize.Op.ne]: null
         }
       }
     });
 
-    console.log(`Found ${tracks.length} tracks with Spotify URIs`);
+    console.log(`Found ${tracks.length} tracks with Spotify IDs`);
 
     // Update tracks in batches of 50 (Spotify API limit)
     for (let i = 0; i < tracks.length; i += 50) {
       const batch = tracks.slice(i, i + 50);
-      const trackIds = batch.map(track => track.spotify_uri.split(':')[2]);
+      const trackIds = batch.map(track => track.spotify_id);
       
       console.log(`Processing batch ${i/50 + 1} of ${Math.ceil(tracks.length/50)}`);
       
@@ -42,9 +42,9 @@ async function updateTrackPopularity() {
         
         if (spotifyTrack && typeof spotifyTrack.popularity === 'number') {
           await track.update({
-            popularity: spotifyTrack.popularity
+            spotify_popularity: spotifyTrack.popularity
           });
-          console.log(`Updated popularity for track: ${track.name} (${spotifyTrack.popularity})`);
+          console.log(`Updated popularity for track: ${track.title} (${spotifyTrack.popularity})`);
         }
       }
 

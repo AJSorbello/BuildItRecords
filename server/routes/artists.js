@@ -3,8 +3,8 @@ const router = express.Router();
 const { query, param, body } = require('express-validator');
 const { validateRequest, isValidSpotifyId } = require('../utils/validation');
 const spotifyService = require('../services/SpotifyService');
-const { Artist, Release, Track, sequelize, Sequelize } = require('../models');
-const { Op } = Sequelize;
+const { Artist, Release, Track, sequelize } = require('../models');
+const { Op } = require('sequelize');
 
 // Format artist data to match Spotify SDK format
 const formatArtistData = (spotifyData) => {
@@ -537,6 +537,78 @@ router.get('/:artistId/releases', [
             stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
         });
     }
+});
+
+// Get all artists for a label
+router.get('/label/:labelId', async (req, res) => {
+  try {
+    const { labelId } = req.params;
+    console.log('Getting artists for label:', labelId);
+
+    // Find the label with more flexible matching
+    const label = await sequelize.models.Label.findOne({
+      where: { 
+        [Op.or]: [
+          { id: labelId },
+          { id: `buildit-${labelId}` }, // Try with buildit- prefix
+          { slug: { [Op.iLike]: `%${labelId}%` } },
+          { name: { [Op.iLike]: `%${labelId}%` } },
+          { display_name: { [Op.iLike]: `%${labelId}%` } }
+        ]
+      }
+    });
+
+    if (!label) {
+      console.log('Label not found:', labelId);
+      return res.status(404).json({ error: 'Label not found' });
+    }
+
+    console.log('Found label:', label.id);
+
+    // Get all artists who have releases under this label
+    const artists = await sequelize.models.Artist.findAll({
+      include: [{
+        model: sequelize.models.Release,
+        as: 'releases',
+        required: true,
+        where: { label_id: label.id },
+        through: { attributes: [] },
+        attributes: []
+      }],
+      attributes: [
+        'id',
+        'name',
+        'display_name',
+        'profile_image_url',
+        'profile_image_small_url',
+        'profile_image_large_url',
+        'spotify_url',
+        'spotify_id',
+        'external_urls',
+        'created_at',
+        'updated_at'
+      ],
+      group: ['Artist.id'],
+      order: [['name', 'ASC']]
+    });
+
+    console.log('Found artists:', artists.length);
+
+    // Return the artists wrapped in a data object
+    res.json({
+      success: true,
+      data: {
+        artists: artists
+      }
+    });
+  } catch (error) {
+    console.error('Error getting artists for label:', error);
+    return res.status(500).json({ 
+      error: 'Failed to get artists', 
+      details: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
 });
 
 // Create or update multiple artist profiles

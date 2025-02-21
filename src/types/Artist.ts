@@ -6,12 +6,29 @@ import type { RecordLabelId } from './labels';
 export interface Artist {
   id: string;
   name: string;
-  images: SpotifyImage[];
-  external_urls: SpotifyExternalUrls;
+  spotify_url?: string;
+  spotify_uri?: string;
+  image_url?: string;
+  profile_image_url?: string;
+  profile_image_small_url?: string;
+  profile_image_large_url?: string;
+  images?: Array<{
+    url: string;
+    height?: number;
+    width?: number;
+  }>;
+  external_urls?: {
+    spotify?: string;
+    [key: string]: string | undefined;
+  };
+  genres?: string[];
+  followers?: {
+    total: number;
+  };
+  tracks?: any[]; // Will be properly typed when we implement track types
+  releases?: any[]; // Will be properly typed when we implement release types
   uri: string;
   type: 'artist';
-  followers: SpotifyFollowers;
-  genres: string[];
   popularity: number;
   label?: RecordLabelId;
 }

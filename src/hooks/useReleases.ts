@@ -21,24 +21,48 @@ const validateRelease = (release: any): release is Release => {
     return false;
   }
 
-  // Ensure required properties exist
-  const hasRequiredProps = 
-    'id' in release && 
-    'name' in release && 
-    typeof release.id === 'string' && 
-    typeof release.name === 'string';
+  // Required properties and their types
+  const requiredProps = {
+    id: 'string',
+    title: 'string',
+    type: ['album', 'single', 'compilation'],
+    release_date: 'string',
+    uri: 'string',
+    total_tracks: 'number'
+  };
 
-  if (!hasRequiredProps) {
-    console.error('Release missing required properties:', release);
-    return false;
+  // Check all required properties
+  for (const [prop, expectedType] of Object.entries(requiredProps)) {
+    if (!(prop in release)) {
+      console.error(`Release missing required property: ${prop}`, release);
+      return false;
+    }
+
+    if (Array.isArray(expectedType)) {
+      if (!expectedType.includes(release[prop])) {
+        console.error(`Invalid value for ${prop}:`, release[prop], 'expected one of:', expectedType);
+        return false;
+      }
+    } else if (typeof release[prop] !== expectedType) {
+      console.error(`Invalid type for ${prop}:`, typeof release[prop], 'expected:', expectedType);
+      return false;
+    }
   }
 
-  // Initialize optional properties with default values
+  // Initialize array properties
   release.artists = Array.isArray(release.artists) ? release.artists : [];
   release.tracks = Array.isArray(release.tracks) ? release.tracks : [];
   release.images = Array.isArray(release.images) ? release.images : [];
+
+  // Initialize object properties
   release.external_urls = release.external_urls || {};
-  release.artwork_url = release.artwork_url || release.images?.[0]?.url || null;
+
+  // Handle optional properties with undefined (not null)
+  release.artwork_url = release.artwork_url || release.images?.[0]?.url || undefined;
+  release.release_date_precision = release.release_date_precision || 'day';
+  release.spotifyUrl = release.spotifyUrl || release.spotify_url || release.external_urls?.spotify;
+  release.spotify_uri = release.spotify_uri || release.uri;
+  release.status = release.status || 'active';
 
   return true;
 };
@@ -49,8 +73,11 @@ export function useReleases(label?: string): UseReleasesResult {
   const [error, setError] = useState<string | null>(null);
   const [totalReleases, setTotalReleases] = useState(0);
   const [totalTracks, setTotalTracks] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
-  const fetchReleases = useCallback(async () => {
+  const fetchReleases = useCallback(async (page: number = 1, isLoadingMore: boolean = false) => {
     if (!label) {
       setReleases([]);
       setLoading(false);
@@ -58,11 +85,15 @@ export function useReleases(label?: string): UseReleasesResult {
     }
 
     try {
+      if (!isLoadingMore) {
+        setLoading(true);
+      } else {
+        setIsLoadingMore(true);
+      }
       setError(null);
-      setLoading(true);
 
-      console.log('Fetching releases for label:', label);
-      const data = await databaseService.getReleasesByLabelId(label);
+      console.log('Fetching releases for label:', label, 'page:', page);
+      const data = await databaseService.getReleasesByLabelId(label, page);
       console.log('Raw API response:', data);
 
       if (!data) {
@@ -80,41 +111,56 @@ export function useReleases(label?: string): UseReleasesResult {
         })
         .map(release => ({
           ...release,
-          artwork_url: release.artwork_url || release.images?.[0]?.url || null
+          artwork_url: release.artwork_url || release.images?.[0]?.url || undefined
         }));
 
       console.log('Processed releases:', {
         total: validReleases.length,
         totalFromAPI: data.totalReleases,
         totalTracksFromAPI: data.totalTracks,
-        filtered: data.releases.length - validReleases.length
+        filtered: data.releases.length - validReleases.length,
+        hasMore: data.hasMore
       });
 
-      setReleases(validReleases);
+      setReleases(prev => isLoadingMore ? [...prev, ...validReleases] : validReleases);
       setTotalReleases(data.totalReleases);
       setTotalTracks(data.totalTracks);
-      setLoading(false);
+      setHasMore(data.hasMore);
+      setCurrentPage(page);
     } catch (error) {
       console.error('Error fetching releases:', error);
       setError(error instanceof Error ? error.message : 'Failed to fetch releases');
-      setLoading(false);
+    } finally {
+      if (!isLoadingMore) {
+        setLoading(false);
+      } else {
+        setIsLoadingMore(false);
+      }
     }
   }, [label]);
 
+  const loadMore = useCallback(async () => {
+    if (!loading && !isLoadingMore && hasMore) {
+      await fetchReleases(currentPage + 1, true);
+    }
+  }, [loading, isLoadingMore, hasMore, currentPage, fetchReleases]);
+
+  const refetch = useCallback(() => fetchReleases(1), [fetchReleases]);
+
   useEffect(() => {
-    fetchReleases();
-  }, [fetchReleases]);
+    fetchReleases(1);
+  }, [label, fetchReleases]);
 
   return {
     releases,
-    loading,
+    loading: loading || isLoadingMore,
     error,
-    refetch: fetchReleases,
+    refetch,
     totalReleases,
     totalTracks,
-    currentPage: 1,
-    totalPages: 1,
-    hasMore: false,
-    loadMore: async () => {} // No-op since we load all releases at once
+    currentPage,
+    totalPages: Math.ceil(totalReleases / 50),
+    hasMore,
+    loadMore
   };
 }

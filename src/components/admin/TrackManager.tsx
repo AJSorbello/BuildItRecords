@@ -100,11 +100,22 @@ const TrackManager: React.FC<TrackManagerProps> = ({
     return track.artists || track.release?.artists || [];
   };
 
+  const getArtistImage = (artist: any): string => {
+    // Check all possible image URL fields in order of preference
+    return artist.profile_image_url || 
+           artist.profile_image_small_url || 
+           artist.profile_image_large_url ||
+           artist.image_url || 
+           (artist.images && artist.images[0]?.url) ||
+           (artist.external_urls?.spotify ? `https://i.scdn.co/image/${artist.id}` : '') ||
+           '';
+  };
+
   const getTrackImage = (track: Track | null): string => {
     if (!track) return '';
     const artists = getArtists(track);
-    if (artists.length > 0 && artists[0].image_url) {
-      return artists[0].image_url;
+    if (artists.length > 0 && getArtistImage(artists[0])) {
+      return getArtistImage(artists[0]);
     }
     return track.artwork_url || track.images?.[0]?.url || '';
   };
@@ -136,6 +147,30 @@ const TrackManager: React.FC<TrackManagerProps> = ({
       console.error('Error formatting date:', error);
       return 'Error';
     }
+  };
+
+  const getReleaseType = (release: any, tracks: Track[]): { label: string; color: "primary" | "secondary" | "success" | "info" } => {
+    // Check for compilation first
+    if (release?.type === 'compilation' || 
+        (release?.name && release.name.toLowerCase().includes('compilation')) ||
+        (release?.name && release.name.toLowerCase().includes('various artists'))) {
+      return { label: 'Compilation', color: 'secondary' };
+    }
+
+    const totalTracks = tracks.length;
+    
+    // Singles are typically 1-3 tracks
+    if (totalTracks <= 3) {
+      return { label: 'Single', color: 'primary' };
+    }
+    
+    // EPs are typically 4-6 tracks
+    if (totalTracks <= 6) {
+      return { label: 'EP', color: 'info' };
+    }
+    
+    // Albums are 7+ tracks
+    return { label: 'Album', color: 'success' };
   };
 
   // Group tracks by release and sort by date
@@ -241,9 +276,9 @@ const TrackManager: React.FC<TrackManagerProps> = ({
                       <Box display="flex" alignItems="center" gap={1}>
                         {getArtists(track).map((artist) => (
                           <Box key={artist.id} display="flex" alignItems="center" gap={1}>
-                            {artist.image_url && (
+                            {getArtistImage(artist) && (
                               <img
-                                src={artist.image_url}
+                                src={getArtistImage(artist)}
                                 alt={artist.name}
                                 style={{
                                   width: 32,
@@ -265,8 +300,8 @@ const TrackManager: React.FC<TrackManagerProps> = ({
                     </TableCell>
                     <TableCell align="center">
                       <Chip 
-                        label="Single"
-                        color="primary"
+                        label={getReleaseType(release, releaseTracks).label}
+                        color={getReleaseType(release, releaseTracks).color}
                         size="small"
                       />
                     </TableCell>
@@ -337,9 +372,9 @@ const TrackManager: React.FC<TrackManagerProps> = ({
                     <Box display="flex" alignItems="center" gap={1}>
                       {getArtists(releaseTracks[0], true).map((artist) => (
                         <Box key={artist.id} display="flex" alignItems="center" gap={1}>
-                          {artist.image_url && (
+                          {getArtistImage(artist) && (
                             <img
-                              src={artist.image_url}
+                              src={getArtistImage(artist)}
                               alt={artist.name}
                               style={{
                                 width: 32,
@@ -361,8 +396,8 @@ const TrackManager: React.FC<TrackManagerProps> = ({
                   </TableCell>
                   <TableCell align="center">
                     <Chip 
-                      label="Album"
-                      color="secondary"
+                      label={getReleaseType(release, releaseTracks).label}
+                      color={getReleaseType(release, releaseTracks).color}
                       size="small"
                     />
                   </TableCell>
@@ -403,9 +438,9 @@ const TrackManager: React.FC<TrackManagerProps> = ({
                                   <Box display="flex" alignItems="center" gap={1}>
                                     {getArtists(track).map((artist) => (
                                       <Box key={artist.id} display="flex" alignItems="center" gap={1}>
-                                        {artist.image_url && (
+                                        {getArtistImage(artist) && (
                                           <img
-                                            src={artist.image_url}
+                                            src={getArtistImage(artist)}
                                             alt={artist.name}
                                             style={{
                                               width: 32,

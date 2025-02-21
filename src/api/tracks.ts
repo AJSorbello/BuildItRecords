@@ -82,20 +82,6 @@ export const updateTrack = async (
   return response.json();
 };
 
-// Delete track
-export const deleteTrack = async (token: string, trackId: string): Promise<void> => {
-  const response = await fetch(`${API_URL}/tracks/${trackId}`, {
-    method: 'DELETE',
-    headers: {
-      'Authorization': `Bearer ${token}`
-    }
-  });
-
-  if (!response.ok) {
-    throw new Error('Failed to delete track');
-  }
-};
-
 // Get track import history
 export const getTrackImports = async (
   token: string,

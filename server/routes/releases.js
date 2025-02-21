@@ -33,7 +33,9 @@ router.get('/top', [
     const { label } = req.query;
     const limit = 10;
 
-    logger.info('GET /releases/top request:', { label });
+    if (!label) {
+      return res.status(400).json({ error: 'Label ID is required' });
+    }
 
     // First check if label exists
     const labelExists = await Label.findOne({
@@ -47,9 +49,56 @@ router.get('/top', [
       });
     }
 
+    // Get releases with tracks
     const releases = await Release.findAll({
       where: {
-        label_id: label
+        label_id: label,
+        status: 'active'
+      },
+      include: [
+        {
+          model: Track,
+          as: 'tracks',
+          required: true,
+          attributes: ['spotify_popularity']
+        }
+      ],
+      attributes: [
+        'id',
+        'title',
+        'release_date',
+        'artwork_url',
+        'spotify_url',
+        'total_tracks'
+      ],
+      order: [['release_date', 'DESC']],
+      limit
+    });
+
+    if (releases.length === 0) {
+      return res.json({
+        success: true,
+        releases: [],
+        totalReleases: 0
+      });
+    }
+
+    // Calculate average popularity and sort
+    const releasesWithPopularity = releases.map(release => {
+      const avgPopularity = release.tracks.reduce((sum, track) => sum + (track.spotify_popularity || 0), 0) / release.tracks.length;
+      return {
+        ...release.toJSON(),
+        avg_popularity: avgPopularity
+      };
+    }).sort((a, b) => b.avg_popularity - a.avg_popularity);
+
+    // Get the IDs in order
+    const releaseIds = releasesWithPopularity.map(r => r.id);
+
+    // Fetch full release data with all associations
+    const fullReleases = await Release.findAll({
+      where: {
+        id: releaseIds
       },
       include: [
         {
@@ -60,31 +109,23 @@ router.get('/top', [
         {
           model: Track,
           as: 'tracks',
-          attributes: ['id', 'title', 'duration_ms', 'preview_url', 'spotify_url', 'spotify_id', 'track_number', 'disc_number', 'isrc', 'spotify_popularity', 'external_urls', 'explicit', 'remixer_id', 'created_at', 'updated_at'],
-          required: false,
-          include: [
-            {
-              model: Artist,
-              as: 'artists',
-              attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
-            },
-            {
-              model: Artist,
-              as: 'remixer',
-              attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
-            }
-          ]
+          attributes: ['id', 'title', 'duration_ms', 'preview_url', 'spotify_url', 'spotify_id', 'track_number', 'disc_number', 'isrc', 'spotify_popularity', 'external_urls', 'explicit', 'remixer_id', 'created_at', 'updated_at']
         }
-      ],
-      order: [['popularity', 'DESC']],
-      limit
+      ]
     });
+
+    // Sort fullReleases to match the order of releaseIds
+    const sortedReleases = releaseIds.map(id => 
+      fullReleases.find(release => release.id === id)
+    );
 
     res.json({
       success: true,
-      releases
+      releases: sortedReleases,
+      totalReleases: sortedReleases.length
     });
   } catch (error) {
+    logger.error('Error in releases route:', error);
     handleError(res, error);
   }
 });
@@ -103,14 +144,30 @@ router.get('/', [
         
         logger.info('GET /releases request:', { label, offset, limit, sort, order });
 
-        let where = {};
+        const where = {
+          status: 'active'  // Only show active releases
+        };
         if (label) {
           where.label_id = label;
         }
 
-        // Get all releases with their tracks
-        const releases = await Release.findAll({
+        const { count, rows } = await Release.findAndCountAll({
           where,
+          attributes: [
+            'id',
+            'title',
+            'release_type',
+            'release_date',
+            'artwork_url',
+            'artwork_small_url',
+            'artwork_large_url',
+            'spotify_url',
+            'spotify_id',
+            'external_urls',
+            'created_at',
+            'updated_at',
+            'status'
+          ],
           include: [
             {
               model: Artist,
@@ -120,27 +177,14 @@ router.get('/', [
             {
               model: Track,
               as: 'tracks',
-              attributes: ['id', 'title', 'duration_ms', 'preview_url', 'spotify_url', 'spotify_id', 'track_number', 'disc_number', 'isrc', 'spotify_popularity', 'external_urls', 'explicit', 'remixer_id', 'created_at', 'updated_at'],
-              required: false,
-              include: [
-                {
-                  model: Artist,
-                  as: 'artists',
-                  attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
-                },
-                {
-                  model: Artist,
-                  as: 'remixer',
-                  attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
-                }
-              ]
+              attributes: ['id', 'title', 'duration_ms', 'preview_url', 'spotify_url', 'spotify_id', 'track_number', 'disc_number', 'isrc', 'spotify_popularity', 'external_urls', 'explicit', 'remixer_id', 'created_at', 'updated_at']
             }
           ],
           distinct: true
         });
 
         // Process releases and calculate total popularity
-        const processedReleases = releases.map(release => {
+        const processedReleases = rows.map(release => {
           const releaseData = release.toJSON();
           const tracks = releaseData.tracks || [];
           
@@ -154,6 +198,7 @@ router.get('/', [
 
           return {
             ...releaseData,
+            release_type: releaseData.release_type || 'single', // Ensure release_type is included
             popularity: avgPopularity,
             totalPopularity,
             trackCount: tracks.length,
@@ -186,7 +231,7 @@ router.get('/', [
         res.json({
           success: true,
           releases: paginatedReleases,
-          total: releases.length,
+          total: rows.length,
           offset,
           limit,
           sort,
@@ -277,14 +322,7 @@ router.post('/:labelId/import', async (req, res) => {
           {
             model: Track,
             as: 'tracks',
-            attributes: ['id', 'title', 'duration_ms', 'preview_url', 'spotify_url', 'spotify_id', 'track_number', 'disc_number', 'isrc', 'spotify_popularity', 'external_urls', 'explicit', 'remixer_id', 'created_at', 'updated_at'],
-            include: [
-              {
-                model: Artist,
-                as: 'artists',
-                attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
-              }
-            ]
+            attributes: ['id', 'title', 'duration_ms', 'preview_url', 'spotify_url', 'spotify_id', 'track_number', 'disc_number', 'isrc', 'spotify_popularity', 'external_urls', 'explicit', 'remixer_id', 'created_at', 'updated_at']
           }
         ],
         order: [['release_date', 'DESC']],
@@ -760,7 +798,9 @@ router.get('/', async (req, res) => {
     const offset = parseInt(req.query.offset) || 0;
     const limit = parseInt(req.query.limit) || 10;
 
-    const where = {};
+    const where = {
+      status: 'active'  // Only show active releases
+    };
     if (labelId) {
       where.label_id = labelId;
     }
@@ -960,7 +1000,9 @@ router.get('/:labelId', async (req, res) => {
     const offset = parseInt(req.query.offset) || 0;
     const limit = parseInt(req.query.limit) || 10;
 
-    const where = {};
+    const where = {
+      status: 'active'  // Only show active releases
+    };
     if (labelId) {
       where.label_id = labelId;
     }

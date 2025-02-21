@@ -5,16 +5,12 @@
 
 const express = require('express');
 const router = express.Router();
-const axios = require('axios');
-const { body, query, param } = require('express-validator');
 const rateLimit = require('express-rate-limit');
-const { validateRequest, isValidSpotifyId } = require('../utils/validation');
-const { Track, Artist, Release, Label, ImportLog, sequelize } = require('../models');
 const { Op } = require('sequelize');
+const { Track, Artist, Release, Label } = require('../models');
+const { LABEL_CONFIGS } = require('../config/labels');
+const { getSpotifyService } = require('../services/SpotifyService');
 const logger = require('../utils/logger');
-const LABEL_CONFIGS = require('../config/labels');
-const getSpotifyService = require('../services/SpotifyService');
-const spotifyService = getSpotifyService();
 
 /**
  * @swagger
@@ -902,6 +898,8 @@ router.get('/search', async (req, res) => {
  *         $ref: '#/components/responses/Error'
  */
 router.post('/import', async (req, res) => {
+  const spotifyService = await getSpotifyService();
+  
   try {
     const { labelId } = req.body;
     if (!labelId) {
@@ -914,30 +912,46 @@ router.post('/import', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid label ID' });
     }
 
-    try {
-      // Initialize Spotify service
-      await spotifyService.initialize();
+    // Initialize Spotify service
+    await spotifyService.initialize();
 
-      // Search for albums by label
-      const albums = await spotifyService.searchAlbumsByLabel(labelConfig.spotifyLabel);
-      
-      // Import the releases
-      await spotifyService.importReleases({ id: labelId, name: labelConfig.spotifyLabel }, albums);
-
-      res.json({ success: true, message: 'Import started successfully' });
-    } catch (error) {
-      if (error.statusCode === 401) {
-        // Try one more time with a fresh token
-        await spotifyService.initialize();
-        const albums = await spotifyService.searchAlbumsByLabel(labelConfig.spotifyLabel);
-        await spotifyService.importReleases({ id: labelId, name: labelConfig.spotifyLabel }, albums);
-        res.json({ success: true, message: 'Import started successfully (after token refresh)' });
-      } else {
-        throw error;
-      }
+    // Get the label from database
+    const label = await Label.findByPk(labelId);
+    if (!label) {
+      return res.status(404).json({ success: false, message: 'Label not found in database' });
     }
+
+    logger.info('Starting import for label:', {
+      labelId,
+      labelName: labelConfig.spotifyLabel,
+      displayName: label.display_name
+    });
+
+    // Search for albums by label
+    const albums = await spotifyService.searchAlbumsByLabel(labelConfig.spotifyLabel);
+    
+    if (!albums || !albums.items || albums.items.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        message: `No albums found for label: ${labelConfig.spotifyLabel}` 
+      });
+    }
+
+    logger.info('Found albums:', {
+      count: albums.items.length,
+      labelName: labelConfig.spotifyLabel
+    });
+
+    // Import the releases
+    const result = await spotifyService.importReleases(label, albums);
+
+    res.json({ 
+      success: true, 
+      message: 'Import completed successfully',
+      details: result
+    });
   } catch (error) {
-    console.error('Error importing tracks:', error);
+    logger.error('Error importing tracks:', error);
     res.status(500).json({ 
       success: false, 
       message: 'Error importing tracks', 
@@ -1070,30 +1084,5 @@ async function saveTrackToDatabase(track, labelId, releaseId = null) {
         throw error;
     }
 }
-
-/**
- * @swagger
- * /tracks/cache:
- *   delete:
- *     summary: Clear track cache
- *     tags: [Tracks]
- *     responses:
- *       200:
- *         description: Cache cleared successfully
- *       500:
- *         $ref: '#/components/responses/Error'
- */
-router.delete('/cache', async (req, res) => {
-    try {
-        // Clear all tracks from the database
-        await Track.destroy({ where: {} });
-        
-        logger.info('Track cache cleared successfully');
-        res.json({ message: 'Track cache cleared successfully' });
-    } catch (error) {
-        logger.error('Error clearing track cache:', error);
-        res.status(500).json({ error: 'Internal server error', details: error.message });
-    }
-});
 
 module.exports = router;

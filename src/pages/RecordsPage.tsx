@@ -1,120 +1,96 @@
-import React, { useEffect, useState } from 'react';
-import { Box, Grid, Card, CardMedia, CardContent, Typography, Link as MuiLink, IconButton, CircularProgress } from '@mui/material';
-import { Link } from 'react-router-dom';
-import { styled } from '@mui/material/styles';
-import { OpenInNew } from '@mui/icons-material';
-import { RECORD_LABELS } from '../constants/labels';
-import { databaseService } from '../services/DatabaseService';
-import { Artist } from '../types/artist';
-import PageLayout from '../components/PageLayout';
+import React from 'react';
+import { Container, Typography, Box, Paper, Grid } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 
-const IconLink = styled(Link)({
-  color: '#FFFFFF',
-  marginRight: '10px',
-  '&:hover': {
-    color: '#1DB954',
-  },
-});
-
-const RecordsPage = () => {
-  const [artists, setArtists] = useState<Artist[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        // Fetch artists
-        const recordsArtists = await databaseService.getArtistsForLabel('buildit-records');
-        if (recordsArtists.length === 0) {
-          setError('No artists found');
-          return;
-        }
-        setArtists(recordsArtists);
-      } catch (err) {
-        console.error('Error fetching data:', err);
-        setError('Failed to load data');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, []);
-
-  if (loading) {
-    return (
-      <PageLayout label="records">
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
-          <CircularProgress />
-        </Box>
-      </PageLayout>
-    );
-  }
-
-  if (error) {
-    return (
-      <PageLayout label="records">
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
-          <Typography color="error">{error}</Typography>
-        </Box>
-      </PageLayout>
-    );
-  }
+const RecordsPage: React.FC = () => {
+  const theme = useTheme();
 
   return (
-    <PageLayout label="records">
-      <Box sx={{ flexGrow: 1, p: 3 }}>
-        <Typography variant="h4" gutterBottom>
-          Build It Records Artists
+    <Container maxWidth="lg" sx={{ py: 8 }}>
+      <Paper 
+        elevation={3} 
+        sx={{ 
+          p: 4, 
+          background: 'rgba(0, 0, 0, 0.8)',
+          borderRadius: 2,
+          backdropFilter: 'blur(10px)'
+        }}
+      >
+        <Typography variant="h2" component="h1" gutterBottom align="center" sx={{ mb: 4 }}>
+          Build It Records
         </Typography>
-        
-        <Grid container spacing={4}>
-          {artists.map((artist) => (
-            <Grid item xs={12} sm={6} md={4} key={artist.id}>
-              <Card>
-                <Box sx={{ position: 'relative' }}>
-                  <CardMedia
-                    component="img"
-                    height="200"
-                    image={artist.images && artist.images.length > 0 ? artist.images[0].url : 'https://via.placeholder.com/200'}
-                    alt={artist.name}
-                  />
-                  <CardContent>
-                    <Typography variant="h6" component="div">
-                      {artist.name}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{
-                      height: '3em',
-                      overflow: 'hidden',
-                      mb: 2
-                    }}>
-                      {artist.bio || `Artist on ${RECORD_LABELS['buildit-records'].displayName}`}
-                    </Typography>
-                    <Box sx={{ 
-                      display: 'flex', 
-                      justifyContent: 'space-between',
-                      alignItems: 'center'
-                    }}>
-                      <Box>
-                        {artist.spotifyUrl && (
-                          <MuiLink href={artist.spotifyUrl} target="_blank" rel="noopener noreferrer">
-                            <IconButton size="small">
-                              <OpenInNew />
-                            </IconButton>
-                          </MuiLink>
-                        )}
-                      </Box>
-                    </Box>
-                  </CardContent>
-                </Box>
-              </Card>
+
+        <Box sx={{ mb: 6 }}>
+          <Typography variant="h5" gutterBottom sx={{ color: theme.palette.primary.main }}>
+            Our Story
+          </Typography>
+          <Typography variant="body1" paragraph>
+            Build It Records was established in 2023 with a clear vision: to create a home for
+            exceptional electronic music across multiple genres. As the parent company of Build It Deep
+            and Build It Tech, we've cultivated a diverse ecosystem of musical talent, fostering
+            creativity and innovation in electronic music production.
+          </Typography>
+        </Box>
+
+        <Box sx={{ mb: 6 }}>
+          <Typography variant="h5" gutterBottom sx={{ color: theme.palette.primary.main }}>
+            Our Labels
+          </Typography>
+          <Grid container spacing={4}>
+            <Grid item xs={12} md={6}>
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="h6" gutterBottom color="secondary">
+                  Build It Deep
+                </Typography>
+                <Typography variant="body1">
+                  Focused on deep, soulful house music that emphasizes emotion and atmosphere.
+                  Build It Deep represents the more introspective side of our catalog, where
+                  melody and mood take center stage.
+                </Typography>
+              </Box>
             </Grid>
-          ))}
-        </Grid>
-      </Box>
-    </PageLayout>
+            <Grid item xs={12} md={6}>
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="h6" gutterBottom color="secondary">
+                  Build It Tech
+                </Typography>
+                <Typography variant="body1">
+                  Our platform for cutting-edge tech house and techno. Build It Tech showcases
+                  innovative production techniques and peak-time energy, perfect for the
+                  modern dance floor.
+                </Typography>
+              </Box>
+            </Grid>
+          </Grid>
+        </Box>
+
+        <Box sx={{ mb: 6 }}>
+          <Typography variant="h5" gutterBottom sx={{ color: theme.palette.primary.main }}>
+            Our Philosophy
+          </Typography>
+          <Typography variant="body1" paragraph>
+            At Build It Records, we believe in quality over quantity. Each release is carefully
+            selected and curated to maintain our high standards. We work closely with our artists,
+            providing them with the support and platform they need to realize their creative vision.
+            Our commitment to excellence extends beyond just the music - we pride ourselves on
+            professional mastering, striking artwork, and strategic promotion for every release.
+          </Typography>
+        </Box>
+
+        <Box>
+          <Typography variant="h5" gutterBottom sx={{ color: theme.palette.primary.main }}>
+            Looking Forward
+          </Typography>
+          <Typography variant="body1" paragraph>
+            As we continue to grow, our focus remains on discovering and nurturing talented artists
+            who share our passion for quality electronic music. We're constantly exploring new
+            sounds and pushing boundaries while staying true to our core values. Through our
+            labels, events, and community engagement, we're building more than just a record
+            company - we're creating a movement in electronic music.
+          </Typography>
+        </Box>
+      </Paper>
+    </Container>
   );
 };
 

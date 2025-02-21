@@ -40,6 +40,7 @@ const Track = require('./track')(sequelize, DataTypes);
 const ImportLog = require('./importLog')(sequelize, DataTypes);
 const ReleaseArtist = require('./releaseArtist')(sequelize, DataTypes);
 const TrackArtist = require('./trackArtist')(sequelize, DataTypes);
+const DemoSubmission = require('./demo-submission')(sequelize, DataTypes);
 
 // Set up associations
 const models = {
@@ -49,7 +50,8 @@ const models = {
   Track,
   ImportLog,
   ReleaseArtist,
-  TrackArtist
+  TrackArtist,
+  DemoSubmission
 };
 
 Object.values(models)
@@ -60,7 +62,7 @@ Object.values(models)
 sequelize
   .authenticate()
   .then(() => {
-    console.log('Database connection established successfully');
+    console.log('Database connection has been established successfully.');
   })
   .catch(err => {
     console.error('Unable to connect to the database:', err);
@@ -68,6 +70,5 @@ sequelize
 
 module.exports = {
   sequelize,
-  Sequelize,
   ...models
 };

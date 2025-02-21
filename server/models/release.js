@@ -24,32 +24,27 @@ module.exports = (sequelize) => {
 
   Release.init({
     id: {
-      type: DataTypes.UUID,
+      type: DataTypes.STRING,
       primaryKey: true,
-      defaultValue: DataTypes.UUIDV4,
       allowNull: false
     },
     spotify_id: {
       type: DataTypes.STRING,
-      allowNull: true,
-      unique: true
+      unique: true,
+      allowNull: true
     },
     title: {
       type: DataTypes.STRING,
-      allowNull: false,
-      validate: {
-        notEmpty: true
-      }
+      allowNull: false
     },
     release_type: {
-      type: DataTypes.ENUM('album', 'single', 'compilation'),
+      type: DataTypes.ENUM('album', 'single', 'ep', 'compilation'),
       allowNull: false,
       defaultValue: 'single'
     },
     release_date: {
       type: DataTypes.DATE,
-      allowNull: false,
-      defaultValue: DataTypes.NOW
+      allowNull: false
     },
     artwork_url: {
       type: DataTypes.STRING,
@@ -57,8 +52,7 @@ module.exports = (sequelize) => {
     },
     images: {
       type: DataTypes.JSONB,
-      allowNull: true,
-      defaultValue: []
+      allowNull: true
     },
     spotify_url: {
       type: DataTypes.STRING,
@@ -66,26 +60,30 @@ module.exports = (sequelize) => {
     },
     total_tracks: {
       type: DataTypes.INTEGER,
-      allowNull: true,
-      validate: {
-        min: 0
-      }
+      allowNull: false,
+      defaultValue: 0
     },
     label_id: {
-      type: DataTypes.UUID,
-      allowNull: false,
+      type: DataTypes.STRING,
+      allowNull: true,
       references: {
-        model: 'Labels',
+        model: 'labels',
         key: 'id'
       }
     },
     status: {
-      type: DataTypes.STRING,
+      type: DataTypes.ENUM('active', 'draft', 'archived'),
       allowNull: false,
       defaultValue: 'draft',
       validate: {
-        isIn: [['draft', 'published', 'archived']]
+        isIn: [['active', 'draft', 'archived']]
       }
+    },
+    popularity: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      defaultValue: 0,
+      comment: 'Spotify popularity score (0-100)'
     }
   }, {
     sequelize,

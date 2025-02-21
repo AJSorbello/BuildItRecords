@@ -17,7 +17,7 @@ import {
 import RemoveIcon from '@mui/icons-material/Remove';
 import AddIcon from '@mui/icons-material/Add';
 import { useNavigate } from 'react-router-dom';
-import { RecordLabel, labelIdToKey } from '../constants/labels';
+import { LABEL_DISPLAY_NAMES } from '../constants/labels';
 import config from '../config'; // Assuming config file is in the same directory
 
 interface Track {
@@ -32,16 +32,23 @@ interface Artist {
   email: string;
   country: string;
   province: string;
+  city: string;
   facebook: string;
   twitter: string;
   instagram: string;
   soundcloud: string;
   spotify: string;
   appleMusic: string;
+  hasFacebook: boolean;
+  hasTwitter: boolean;
+  hasInstagram: boolean;
+  hasSoundcloud: boolean;
+  hasSpotify: boolean;
+  hasAppleMusic: boolean;
 }
 
 interface SubmitPageProps {
-  label: string;
+  label?: string;
 }
 
 const StyledCard = styled(Card)({
@@ -69,7 +76,7 @@ const buttonStyle = {
   },
 };
 
-const SubmitPage: React.FC<SubmitPageProps> = ({ label }) => {
+const SubmitPage: React.FC<SubmitPageProps> = ({ label = 'records' }) => {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -79,12 +86,19 @@ const SubmitPage: React.FC<SubmitPageProps> = ({ label }) => {
     email: '',
     country: '',
     province: '',
+    city: '',
     facebook: '',
     twitter: '',
     instagram: '',
     soundcloud: '',
     spotify: '',
     appleMusic: '',
+    hasFacebook: false,
+    hasTwitter: false,
+    hasInstagram: false,
+    hasSoundcloud: false,
+    hasSpotify: false,
+    hasAppleMusic: false
   }]);
 
   const [tracks, setTracks] = React.useState<Track[]>([{
@@ -115,12 +129,19 @@ const SubmitPage: React.FC<SubmitPageProps> = ({ label }) => {
       email: '',
       country: '',
       province: '',
+      city: '',
       facebook: '',
       twitter: '',
       instagram: '',
       soundcloud: '',
       spotify: '',
       appleMusic: '',
+      hasFacebook: false,
+      hasTwitter: false,
+      hasInstagram: false,
+      hasSoundcloud: false,
+      hasSpotify: false,
+      hasAppleMusic: false
     }]);
   };
 
@@ -145,6 +166,37 @@ const SubmitPage: React.FC<SubmitPageProps> = ({ label }) => {
     return regex.test(url);
   };
 
+  const isValidUrl = (url: string) => {
+    try {
+      new URL(url);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const validateSocialMediaUrls = (artist: Artist): string | null => {
+    if (artist.hasFacebook && artist.facebook && !isValidUrl(artist.facebook)) {
+      return 'Please enter a valid Facebook URL';
+    }
+    if (artist.hasTwitter && artist.twitter && !isValidUrl(artist.twitter)) {
+      return 'Please enter a valid Twitter URL';
+    }
+    if (artist.hasInstagram && artist.instagram && !isValidUrl(artist.instagram)) {
+      return 'Please enter a valid Instagram URL';
+    }
+    if (artist.hasSoundcloud && artist.soundcloud && !isValidUrl(artist.soundcloud)) {
+      return 'Please enter a valid SoundCloud URL';
+    }
+    if (artist.hasSpotify && artist.spotify && !isValidUrl(artist.spotify)) {
+      return 'Please enter a valid Spotify URL';
+    }
+    if (artist.hasAppleMusic && artist.appleMusic && !isValidUrl(artist.appleMusic)) {
+      return 'Please enter a valid Apple Music URL';
+    }
+    return null;
+  };
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -157,12 +209,20 @@ const SubmitPage: React.FC<SubmitPageProps> = ({ label }) => {
       const artist = artists[0]; // Assuming single artist for simplicity
       const track = tracks[0]; // Assuming single track for simplicity
 
+      // Validate SoundCloud URL
       if (!isValidSoundCloudUrl(track.soundCloudPrivateLink)) {
-        setError('Please enter a valid SoundCloud URL.');
+        setError('Please enter a valid SoundCloud URL for your track.');
         return;
       }
 
-      const response = await fetch(`${config.API_URL}/submit-demo`, {
+      // Validate social media URLs
+      const socialMediaError = validateSocialMediaUrls(artist);
+      if (socialMediaError) {
+        setError(socialMediaError);
+        return;
+      }
+
+      const response = await fetch(`${config.API_URL}/api/submit-demo`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -174,12 +234,13 @@ const SubmitPage: React.FC<SubmitPageProps> = ({ label }) => {
             email: artist.email,
             country: artist.country,
             province: artist.province,
-            facebook: artist.facebook,
-            twitter: artist.twitter,
-            instagram: artist.instagram,
-            soundcloud: artist.soundcloud,
-            spotify: artist.spotify,
-            appleMusic: artist.appleMusic
+            city: artist.city,
+            facebook: artist.hasFacebook ? artist.facebook : null,
+            twitter: artist.hasTwitter ? artist.twitter : null,
+            instagram: artist.hasInstagram ? artist.instagram : null,
+            soundcloud: artist.hasSoundcloud ? artist.soundcloud : null,
+            spotify: artist.hasSpotify ? artist.spotify : null,
+            appleMusic: artist.hasAppleMusic ? artist.appleMusic : null
           },
           track: {
             name: track.title,
@@ -190,45 +251,49 @@ const SubmitPage: React.FC<SubmitPageProps> = ({ label }) => {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to submit form');
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to submit form');
       }
 
-      // Clear form
+      setSuccess('Demo submitted successfully!');
+      // Clear form after successful submission
       setArtists([{
         fullName: '',
         name: '',
         email: '',
         country: '',
         province: '',
+        city: '',
         facebook: '',
         twitter: '',
         instagram: '',
         soundcloud: '',
         spotify: '',
         appleMusic: '',
+        hasFacebook: false,
+        hasTwitter: false,
+        hasInstagram: false,
+        hasSoundcloud: false,
+        hasSpotify: false,
+        hasAppleMusic: false
       }]);
-      setTracks([{
-        title: '',
-        soundCloudPrivateLink: '',
-        genre: '',
-      }]);
+      setTracks([{ title: '', soundCloudPrivateLink: '', genre: '' }]);
       setTermsAccepted(false);
-      setError('');
-      setSuccess('Form submitted successfully! We will review your submission and get back to you soon.');
-      setOpen(true); // Open modal on success
-      setTimeout(() => {
-        console.log('Closing modal and redirecting to home.');
-        setOpen(false);
-        navigate('/'); // Redirect to home
-      }, 3000);
-    } catch (error) {
-      console.error('Submission error:', error);
-      setError('Failed to submit form. Please try again later.');
+
+    } catch (err) {
+      console.error('Submission error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to process submission');
     }
   };
 
-  const recordLabel = labelIdToKey[label as keyof typeof labelIdToKey];
-  const labelDisplay = recordLabel.charAt(0).toUpperCase() + recordLabel.slice(1);
+  // Get the label display name
+  let labelDisplay = 'Build It Records';
+  if (label) {
+    const labelId = label === 'records' ? 'buildit-records' : 
+                   label === 'tech' ? 'buildit-tech' : 
+                   label === 'deep' ? 'buildit-deep' : 'buildit-records';
+    labelDisplay = LABEL_DISPLAY_NAMES[labelId] || 'Build It Records';
+  }
 
   return (
     <Box 
@@ -243,7 +308,7 @@ const SubmitPage: React.FC<SubmitPageProps> = ({ label }) => {
       }}
     >
       <Typography variant="h3" component="h1" gutterBottom sx={{ color: 'text.primary', mb: 4 }}>
-        Submit Demo to Build It {labelDisplay}
+        Submit Demo to {labelDisplay}
       </Typography>
 
       <Typography variant="body1" sx={{ color: 'text.secondary', mb: 4 }}>
@@ -256,12 +321,12 @@ const SubmitPage: React.FC<SubmitPageProps> = ({ label }) => {
         Artist Information
       </Typography>
         
-      {artists.map((artist, index) => (
-        <FormSection key={index}>
+      {artists.map((artist, artistIndex) => (
+        <FormSection key={artistIndex}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Typography variant="h6">Artist {index + 1}</Typography>
+            <Typography variant="h6">Artist {artistIndex + 1}</Typography>
             {artists.length > 1 && (
-              <IconButton onClick={() => removeArtist(index)} color="error">
+              <IconButton onClick={() => removeArtist(artistIndex)} color="error">
                 <RemoveIcon />
               </IconButton>
             )}
@@ -273,10 +338,10 @@ const SubmitPage: React.FC<SubmitPageProps> = ({ label }) => {
                 fullWidth
                 label="Full Name"
                 value={artist.fullName}
-                onChange={(e) => handleArtistChange(index, 'fullName', e.target.value)}
+                onChange={(e) => handleArtistChange(artistIndex, 'fullName', e.target.value)}
                 required
-                id={`artist-fullname-${index}`}
-                name={`artist-fullname-${index}`}
+                id={`artist-fullname-${artistIndex}`}
+                name={`artist-fullname-${artistIndex}`}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -284,10 +349,10 @@ const SubmitPage: React.FC<SubmitPageProps> = ({ label }) => {
                 fullWidth
                 label="Artist Name"
                 value={artist.name}
-                onChange={(e) => handleArtistChange(index, 'name', e.target.value)}
+                onChange={(e) => handleArtistChange(artistIndex, 'name', e.target.value)}
                 required
-                id={`artist-name-${index}`}
-                name={`artist-name-${index}`}
+                id={`artist-name-${artistIndex}`}
+                name={`artist-name-${artistIndex}`}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -296,10 +361,10 @@ const SubmitPage: React.FC<SubmitPageProps> = ({ label }) => {
                 label="Email"
                 type="email"
                 value={artist.email}
-                onChange={(e) => handleArtistChange(index, 'email', e.target.value)}
+                onChange={(e) => handleArtistChange(artistIndex, 'email', e.target.value)}
                 required
-                id={`artist-email-${index}`}
-                name={`artist-email-${index}`}
+                id={`artist-email-${artistIndex}`}
+                name={`artist-email-${artistIndex}`}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -307,10 +372,21 @@ const SubmitPage: React.FC<SubmitPageProps> = ({ label }) => {
                 fullWidth
                 label="Country"
                 value={artist.country}
-                onChange={(e) => handleArtistChange(index, 'country', e.target.value)}
+                onChange={(e) => handleArtistChange(artistIndex, 'country', e.target.value)}
                 required
-                id={`artist-country-${index}`}
-                name={`artist-country-${index}`}
+                id={`artist-country-${artistIndex}`}
+                name={`artist-country-${artistIndex}`}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="City"
+                value={artist.city}
+                onChange={(e) => handleArtistChange(artistIndex, 'city', e.target.value)}
+                required
+                id={`artist-city-${artistIndex}`}
+                name={`artist-city-${artistIndex}`}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -318,76 +394,167 @@ const SubmitPage: React.FC<SubmitPageProps> = ({ label }) => {
                 fullWidth
                 label="Province/State"
                 value={artist.province}
-                onChange={(e) => handleArtistChange(index, 'province', e.target.value)}
+                onChange={(e) => handleArtistChange(artistIndex, 'province', e.target.value)}
                 required
-                id={`artist-province-${index}`}
-                name={`artist-province-${index}`}
+                id={`artist-province-${artistIndex}`}
+                name={`artist-province-${artistIndex}`}
               />
             </Grid>
-            <Grid item xs={12}>
-              <Typography variant="subtitle1" gutterBottom>
-                Social Media Links
-              </Typography>
-            </Grid>
+          </Grid>
+
+          <Typography variant="subtitle1" sx={{ mt: 3, mb: 2 }}>
+            Social Media Links
+          </Typography>
+            
+          <Grid container spacing={2}>
+            {/* Facebook */}
             <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Facebook"
-                value={artist.facebook}
-                onChange={(e) => handleArtistChange(index, 'facebook', e.target.value)}
-                id={`artist-facebook-${index}`}
-                name={`artist-facebook-${index}`}
-              />
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <TextField
+                  fullWidth
+                  label="Facebook URL"
+                  value={artist.facebook}
+                  onChange={(e) => handleArtistChange(artistIndex, 'facebook', e.target.value)}
+                  error={!artist.hasFacebook && artist.facebook === ''}
+                  helperText={!artist.hasFacebook && artist.facebook === '' ? 'Required unless checked as not available' : ''}
+                  disabled={artist.hasFacebook}
+                />
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={artist.hasFacebook}
+                      onChange={(e) => handleArtistChange(artistIndex, 'hasFacebook', e.target.checked)}
+                    />
+                  }
+                  label="Don't have"
+                  sx={{ minWidth: '100px', ml: 1 }}
+                />
+              </Box>
             </Grid>
+
+            {/* Twitter */}
             <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Twitter/X"
-                value={artist.twitter}
-                onChange={(e) => handleArtistChange(index, 'twitter', e.target.value)}
-                id={`artist-twitter-${index}`}
-                name={`artist-twitter-${index}`}
-              />
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <TextField
+                  fullWidth
+                  label="Twitter URL"
+                  value={artist.twitter}
+                  onChange={(e) => handleArtistChange(artistIndex, 'twitter', e.target.value)}
+                  error={!artist.hasTwitter && artist.twitter === ''}
+                  helperText={!artist.hasTwitter && artist.twitter === '' ? 'Required unless checked as not available' : ''}
+                  disabled={artist.hasTwitter}
+                />
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={artist.hasTwitter}
+                      onChange={(e) => handleArtistChange(artistIndex, 'hasTwitter', e.target.checked)}
+                    />
+                  }
+                  label="Don't have"
+                  sx={{ minWidth: '100px', ml: 1 }}
+                />
+              </Box>
             </Grid>
+
+            {/* Instagram */}
             <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Instagram"
-                value={artist.instagram}
-                onChange={(e) => handleArtistChange(index, 'instagram', e.target.value)}
-                id={`artist-instagram-${index}`}
-                name={`artist-instagram-${index}`}
-              />
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <TextField
+                  fullWidth
+                  label="Instagram URL"
+                  value={artist.instagram}
+                  onChange={(e) => handleArtistChange(artistIndex, 'instagram', e.target.value)}
+                  error={!artist.hasInstagram && artist.instagram === ''}
+                  helperText={!artist.hasInstagram && artist.instagram === '' ? 'Required unless checked as not available' : ''}
+                  disabled={artist.hasInstagram}
+                />
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={artist.hasInstagram}
+                      onChange={(e) => handleArtistChange(artistIndex, 'hasInstagram', e.target.checked)}
+                    />
+                  }
+                  label="Don't have"
+                  sx={{ minWidth: '100px', ml: 1 }}
+                />
+              </Box>
             </Grid>
+
+            {/* SoundCloud */}
             <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="SoundCloud"
-                value={artist.soundcloud}
-                onChange={(e) => handleArtistChange(index, 'soundcloud', e.target.value)}
-                id={`artist-soundcloud-${index}`}
-                name={`artist-soundcloud-${index}`}
-              />
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <TextField
+                  fullWidth
+                  label="SoundCloud URL"
+                  value={artist.soundcloud}
+                  onChange={(e) => handleArtistChange(artistIndex, 'soundcloud', e.target.value)}
+                  error={!artist.hasSoundcloud && artist.soundcloud === ''}
+                  helperText={!artist.hasSoundcloud && artist.soundcloud === '' ? 'Required unless checked as not available' : ''}
+                  disabled={artist.hasSoundcloud}
+                />
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={artist.hasSoundcloud}
+                      onChange={(e) => handleArtistChange(artistIndex, 'hasSoundcloud', e.target.checked)}
+                    />
+                  }
+                  label="Don't have"
+                  sx={{ minWidth: '100px', ml: 1 }}
+                />
+              </Box>
             </Grid>
+
+            {/* Spotify */}
             <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Spotify"
-                value={artist.spotify}
-                onChange={(e) => handleArtistChange(index, 'spotify', e.target.value)}
-                id={`artist-spotify-${index}`}
-                name={`artist-spotify-${index}`}
-              />
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <TextField
+                  fullWidth
+                  label="Spotify URL"
+                  value={artist.spotify}
+                  onChange={(e) => handleArtistChange(artistIndex, 'spotify', e.target.value)}
+                  error={!artist.hasSpotify && artist.spotify === ''}
+                  helperText={!artist.hasSpotify && artist.spotify === '' ? 'Required unless checked as not available' : ''}
+                  disabled={artist.hasSpotify}
+                />
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={artist.hasSpotify}
+                      onChange={(e) => handleArtistChange(artistIndex, 'hasSpotify', e.target.checked)}
+                    />
+                  }
+                  label="Don't have"
+                  sx={{ minWidth: '100px', ml: 1 }}
+                />
+              </Box>
             </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Apple Music"
-                value={artist.appleMusic}
-                onChange={(e) => handleArtistChange(index, 'appleMusic', e.target.value)}
-                id={`artist-applemusic-${index}`}
-                name={`artist-applemusic-${index}`}
-              />
+
+            {/* Apple Music */}
+            <Grid item xs={12} sm={6}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <TextField
+                  fullWidth
+                  label="Apple Music URL"
+                  value={artist.appleMusic}
+                  onChange={(e) => handleArtistChange(artistIndex, 'appleMusic', e.target.value)}
+                  error={!artist.hasAppleMusic && artist.appleMusic === ''}
+                  helperText={!artist.hasAppleMusic && artist.appleMusic === '' ? 'Required unless checked as not available' : ''}
+                  disabled={artist.hasAppleMusic}
+                />
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={artist.hasAppleMusic}
+                      onChange={(e) => handleArtistChange(artistIndex, 'hasAppleMusic', e.target.checked)}
+                    />
+                  }
+                  label="Don't have"
+                  sx={{ minWidth: '100px', ml: 1 }}
+                />
+              </Box>
             </Grid>
           </Grid>
         </FormSection>

@@ -1,124 +1,75 @@
-import React, { useEffect, useState } from 'react';
-import { Box, Grid, Card, CardMedia, CardContent, Typography, Link as MuiLink, IconButton, CircularProgress } from '@mui/material';
-import { Link } from 'react-router-dom';
-import { styled } from '@mui/material/styles';
-import { OpenInNew, Instagram, Facebook, Twitter } from '@mui/icons-material';
-import { RECORD_LABELS } from '../constants/labels';
-import { databaseService } from '../services/DatabaseService';
-import { Artist } from '../types/artist';
-import TrackList from '../components/TrackList';
-import PageLayout from '../components/PageLayout';
+import React from 'react';
+import { Container, Typography, Box, Paper } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 
-const IconLink = styled(Link)({
-  color: '#FFFFFF',
-  marginRight: '10px',
-  '&:hover': {
-    color: '#1DB954',
-  },
-});
-
-const DeepPage = () => {
-  const [artists, setArtists] = useState<Artist[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        // Fetch artists
-        const deepArtists = await databaseService.getArtistsForLabel(RECORD_LABELS['buildit-deep']);
-        if (deepArtists.length === 0) {
-          setError('No artists found');
-          return;
-        }
-        setArtists(deepArtists);
-      } catch (err) {
-        console.error('Error fetching data:', err);
-        setError('Failed to load data');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, []);
-
-  if (loading) {
-    return (
-      <PageLayout label="deep">
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
-          <CircularProgress />
-        </Box>
-      </PageLayout>
-    );
-  }
-
-  if (error) {
-    return (
-      <PageLayout label="deep">
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
-          <Typography color="error">{error}</Typography>
-        </Box>
-      </PageLayout>
-    );
-  }
+const DeepPage: React.FC = () => {
+  const theme = useTheme();
 
   return (
-    <PageLayout label="deep">
-      <Box sx={{ flexGrow: 1, p: 3 }}>
-        <Typography variant="h4" gutterBottom>
-          Build It Deep Artists
+    <Container maxWidth="lg" sx={{ py: 8 }}>
+      <Paper 
+        elevation={3} 
+        sx={{ 
+          p: 4, 
+          background: 'rgba(0, 0, 0, 0.8)',
+          borderRadius: 2,
+          backdropFilter: 'blur(10px)'
+        }}
+      >
+        <Typography variant="h2" component="h1" gutterBottom align="center" sx={{ mb: 4 }}>
+          Build It Deep
         </Typography>
-        
-        <Grid container spacing={4}>
-          {artists.map((artist) => (
-            <Grid item xs={12} sm={6} md={4} key={artist.id}>
-              <Card>
-                <Box sx={{ position: 'relative' }}>
-                  {artist.images.map((image, index) => (
-                    <CardMedia
-                      key={index}
-                      component="img"
-                      height="200"
-                      image={image.url || 'https://via.placeholder.com/200'}
-                      alt={artist.name}
-                    />
-                  ))}
-                  <CardContent>
-                    <Typography variant="h6" component="div">
-                      {artist.name}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{
-                      height: '3em',
-                      overflow: 'hidden',
-                      mb: 2
-                    }}>
-                      {artist.bio || `Artist on ${RECORD_LABELS['buildit-deep'].displayName}`}
-                    </Typography>
-                    <Box sx={{ 
-                      display: 'flex', 
-                      justifyContent: 'space-between',
-                      alignItems: 'center'
-                    }}>
-                      <Box>
-                        {artist.spotifyUrl && (
-                          <MuiLink href={artist.spotifyUrl} target="_blank" rel="noopener noreferrer">
-                            <IconButton size="small">
-                              <OpenInNew />
-                            </IconButton>
-                          </MuiLink>
-                        )}
-                      </Box>
-                    </Box>
-                  </CardContent>
-                </Box>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
-      </Box>
-    </PageLayout>
+
+        <Box sx={{ mb: 6 }}>
+          <Typography variant="h5" gutterBottom sx={{ color: theme.palette.primary.main }}>
+            The Soul of Underground House Music
+          </Typography>
+          <Typography variant="body1" paragraph>
+            Build It Deep represents the purest expression of underground house music. Founded in 2023,
+            our label emerged from a passion for the deeper, more soulful side of electronic music.
+            We believe in music that doesn't just move your feet, but touches your soul.
+          </Typography>
+        </Box>
+
+        <Box sx={{ mb: 6 }}>
+          <Typography variant="h5" gutterBottom sx={{ color: theme.palette.primary.main }}>
+            Our Sound
+          </Typography>
+          <Typography variant="body1" paragraph>
+            Deep, warm basslines, hypnotic rhythms, and atmospheric soundscapes define the Build It Deep sound.
+            We specialize in deep house, tech house, and minimal techno that prioritizes quality and feeling
+            over commercial appeal. Each release is carefully curated to maintain our high standards and
+            unique sonic identity.
+          </Typography>
+        </Box>
+
+        <Box sx={{ mb: 6 }}>
+          <Typography variant="h5" gutterBottom sx={{ color: theme.palette.primary.main }}>
+            Artist Development
+          </Typography>
+          <Typography variant="body1" paragraph>
+            At Build It Deep, we're more than just a record label - we're a community of artists who
+            share a common vision. We work closely with both established and emerging talents,
+            providing a platform for innovative producers who push the boundaries of deep house music.
+            Our commitment to artist development has helped launch several careers in the underground
+            electronic music scene.
+          </Typography>
+        </Box>
+
+        <Box>
+          <Typography variant="h5" gutterBottom sx={{ color: theme.palette.primary.main }}>
+            Vision & Future
+          </Typography>
+          <Typography variant="body1" paragraph>
+            Looking ahead, Build It Deep continues to evolve while staying true to our core values.
+            We're expanding our reach through digital platforms while maintaining the intimate
+            connection with our audience that deep house music naturally creates. Through carefully
+            selected releases and events, we aim to strengthen our position as a leading voice in
+            the underground electronic music community.
+          </Typography>
+        </Box>
+      </Paper>
+    </Container>
   );
 };
 

@@ -160,48 +160,56 @@ const ReleaseModal: React.FC<ReleaseModalProps> = ({ open, onClose, release }) =
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {release.tracks?.map((track, index) => {
-                    // Check if the track is a remix
-                    const isRemix = track.title.includes(' - ') && track.title.toLowerCase().endsWith('remix');
-                    let remixArtist = '';
+                  {release?.tracks?.length > 0 ? (
+                    release.tracks.map((track, index) => {
+                      // Check if the track is a remix
+                      const isRemix = track.title?.includes(' - ') && track.title?.toLowerCase().endsWith('remix');
+                      let remixArtist = '';
 
-                    if (isRemix) {
-                      const parts = track.title.split(' - ');
-                      remixArtist = parts[parts.length - 1].replace(' Remix', '');
-                    }
+                      if (isRemix) {
+                        const parts = track.title.split(' - ');
+                        remixArtist = parts[parts.length - 1].replace(' Remix', '');
+                      }
 
-                    return (
-                      <TableRow key={track.id} hover>
-                        <TableCell>{index + 1}</TableCell>
-                        <TableCell>{track.title}</TableCell>
-                        <TableCell>
-                          {track.artists.map(artist => artist.name).join(', ')}
-                          {isRemix && remixArtist && ` (${remixArtist} Remix)`}
-                        </TableCell>
-                        <TableCell>{track.duration ? formatDuration(track.duration) : '--:--'}</TableCell>
-                        <TableCell>
-                          {track.preview_url && (
-                            <audio controls>
-                              <source src={track.preview_url} type="audio/mpeg" />
-                              Your browser does not support the audio element.
-                            </audio>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {track.spotify_url && (
-                            <Link
-                              href={track.spotify_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              underline="hover"
-                            >
-                              Spotify
-                            </Link>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
+                      return (
+                        <TableRow key={track.id} hover>
+                          <TableCell>{index + 1}</TableCell>
+                          <TableCell>{track.title}</TableCell>
+                          <TableCell>
+                            {track.artists?.map(artist => artist.name).join(', ')}
+                            {isRemix && remixArtist && ` (${remixArtist} Remix)`}
+                          </TableCell>
+                          <TableCell>{track.duration ? formatDuration(track.duration) : '--:--'}</TableCell>
+                          <TableCell>
+                            {track.preview_url && (
+                              <audio controls>
+                                <source src={track.preview_url} type="audio/mpeg" />
+                                Your browser does not support the audio element.
+                              </audio>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {track.spotify_url && (
+                              <Link
+                                href={track.spotify_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                underline="hover"
+                              >
+                                Spotify
+                              </Link>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={6} align="center">
+                        No tracks available
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </TableContainer>

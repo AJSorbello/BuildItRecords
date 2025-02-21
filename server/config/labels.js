@@ -30,6 +30,11 @@ const LABEL_CONFIGS = {
       'Build It Deep',
       'BuildIt Deep',
       'Build-It Deep'
+    ],
+    searchQueries: [
+      'label:"Build It Deep"',
+      'label:"BuildIt Deep"',
+      'label:"Build-It Deep"'
     ]
   }
 };

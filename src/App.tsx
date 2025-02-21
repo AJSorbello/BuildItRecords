@@ -47,6 +47,7 @@ const router = createBrowserRouter(
           <Route path="artists/:id" element={<ArtistDetailPage />} />
           <Route path="releases" element={<ReleasesPage label="records" />} />
           <Route path="playlists" element={<PlaylistPage label="records" />} />
+          <Route path="submit" element={<SubmitPage label="records" />} />
           <Route index element={<RecordsPage />} />
         </Route>
 
@@ -55,6 +56,7 @@ const router = createBrowserRouter(
           <Route path="artists/:id" element={<ArtistDetailPage />} />
           <Route path="releases" element={<ReleasesPage label="tech" />} />
           <Route path="playlists" element={<PlaylistPage label="tech" />} />
+          <Route path="submit" element={<SubmitPage label="tech" />} />
           <Route index element={<TechPage />} />
         </Route>
 
@@ -63,10 +65,10 @@ const router = createBrowserRouter(
           <Route path="artists/:id" element={<ArtistDetailPage />} />
           <Route path="releases" element={<ReleasesPage label="deep" />} />
           <Route path="playlists" element={<PlaylistPage label="deep" />} />
+          <Route path="submit" element={<SubmitPage label="deep" />} />
           <Route index element={<DeepPage />} />
         </Route>
 
-        <Route path="submit" element={<SubmitPage label="records" />} />
         <Route path="legal" element={<LegalPage />} />
         <Route path="*" element={<NotFoundPage />} />
         <Route index element={<Navigate to="/records" replace />} />

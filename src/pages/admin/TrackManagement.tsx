@@ -69,16 +69,6 @@ export const TrackManagement: React.FC = () => {
     navigate(`/admin/tracks/edit/${track.id}`);
   };
 
-  const handleDeleteTrack = async (trackId: string) => {
-    try {
-      await databaseService.deleteTrack(trackId);
-      fetchTracks(); // Refresh the list
-    } catch (err) {
-      setError('Failed to delete track');
-      console.error(err);
-    }
-  };
-
   return (
     <Container maxWidth="xl">
       <Box sx={{ py: 4 }}>
@@ -193,7 +183,6 @@ export const TrackManagement: React.FC = () => {
                       : true
                   )}
                   onEdit={handleEditTrack}
-                  onDelete={handleDeleteTrack}
                 />
               </CardContent>
             </Card>

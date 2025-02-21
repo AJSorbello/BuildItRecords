@@ -1,5 +1,5 @@
 // Load environment variables first
-require('dotenv').config();
+require('dotenv').config({ path: '../.env' });
 
 const express = require('express');
 const cors = require('cors');
@@ -7,6 +7,7 @@ const helmet = require('helmet');
 const { Sequelize } = require('sequelize');
 const apiRoutes = require('./routes/api.routes');
 const logger = require('./utils/logger');
+const { verifyEmailConfig } = require('./services/email.service');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -16,7 +17,10 @@ logger.info('Server starting with environment:', {
   NODE_ENV: process.env.NODE_ENV,
   hasUsername: !!process.env.ADMIN_USERNAME,
   hasPasswordHash: !!process.env.ADMIN_PASSWORD_HASH,
-  hasJwtSecret: !!process.env.JWT_SECRET
+  hasJwtSecret: !!process.env.JWT_SECRET,
+  hasSmtpUser: !!process.env.SMTP_USER,
+  hasSmtpPass: !!process.env.SMTP_PASS,
+  smtpUser: process.env.SMTP_USER
 });
 
 // Body parsing middleware
@@ -29,13 +33,20 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false
 }));
 
-// Configure CORS
+// Configure CORS - simplified for development
+const isDevelopment = process.env.NODE_ENV === 'development';
 const corsOptions = {
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  origin: isDevelopment ? 'http://localhost:3000' : process.env.CORS_ORIGIN,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 };
+
+// Log CORS configuration
+logger.info('CORS configuration:', {
+  environment: process.env.NODE_ENV,
+  origin: corsOptions.origin
+});
 
 app.use(cors(corsOptions));
 
@@ -119,6 +130,14 @@ async function startServer() {
 
     // Make sequelize instance available globally
     global.sequelize = sequelize;
+
+    // Verify email configuration
+    const emailConfigValid = await verifyEmailConfig();
+    if (!emailConfigValid) {
+      logger.error('Email configuration verification failed');
+      process.exit(1);
+    }
+    logger.info('Email configuration verified successfully');
 
     // Start server
     app.listen(PORT, () => {

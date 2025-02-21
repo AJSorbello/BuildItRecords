@@ -33,6 +33,7 @@ const tracksRouter = require('./tracks');
 const artistsRouter = require('./artists');
 const releasesRouter = require('./releases');
 const adminRouter = require('./admin');
+const submitDemoRouter = require('./submit-demo');
 
 // Mount route handlers
 router.use('/tracks', tracksRouter);
@@ -40,6 +41,7 @@ router.use('/labels', labelsRouter);
 router.use('/artists', artistsRouter);
 router.use('/releases', releasesRouter);
 router.use('/admin', adminRouter);
+router.use('/submit-demo', submitDemoRouter); // Mount at /api/submit-demo instead of /
 
 // Import tracks for a label
 router.post('/labels/:labelId/import', authenticateToken, async (req, res) => {

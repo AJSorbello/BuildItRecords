@@ -9,8 +9,13 @@ interface ArtistCardProps {
 }
 
 const ArtistCard: React.FC<ArtistCardProps> = ({ artist, onClick }) => {
-  const artistImage = artist.images?.[0]?.url || '/placeholder-artist.jpg';
-  const spotifyUrl = artist.external_urls?.spotify || artist.spotify_url;  // Handle both formats
+  // Try all possible image fields
+  const artistImage = artist.image_url || 
+                     artist.profile_image_url || 
+                     (artist.images && artist.images[0]?.url) || 
+                     '/images/placeholder-artist.jpg';
+                     
+  const spotifyUrl = artist.spotify_url || artist.external_urls?.spotify;
 
   const handleClick = () => {
     if (onClick) {
@@ -38,6 +43,11 @@ const ArtistCard: React.FC<ArtistCardProps> = ({ artist, onClick }) => {
         height="200"
         image={artistImage}
         alt={artist.name || 'Unknown Artist'}
+        onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
+          // Fallback to placeholder if image fails to load
+          const target = e.target as HTMLImageElement;
+          target.src = '/images/placeholder-artist.jpg';
+        }}
       />
       <CardContent sx={{ flexGrow: 1 }}>
         <Box display="flex" justifyContent="space-between" alignItems="center">

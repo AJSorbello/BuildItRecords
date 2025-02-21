@@ -44,6 +44,45 @@ module.exports = (sequelize, DataTypes) => {
         notEmpty: true
       }
     },
+    full_name: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    email: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      validate: {
+        isEmail: true
+      }
+    },
+    country: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    province: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    facebook_url: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    twitter_url: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    instagram_url: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    soundcloud_url: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    apple_music_url: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
     display_name: {
       type: DataTypes.STRING,
       allowNull: true

@@ -1,70 +1,77 @@
-import React, { useEffect, useState } from 'react';
-import { Box, Container, Grid, Typography } from '@mui/material';
-import { ReleaseCard, LoadingSpinner, ErrorMessage } from '../components';
-import { spotifyService } from '../services/SpotifyService';
-import { Track } from '../types/track';
-import { RECORD_LABELS } from '../types/labels';
-import PageLayout from '../components/PageLayout';
-import { useTheme } from '../contexts/ThemeContext';
-import TechSidebar from '../components/TechSidebar';
+import React from 'react';
+import { Container, Typography, Box, Paper } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 
-const TechPage = () => {
-  const [releases, setReleases] = useState<Track[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const { colors } = useTheme();
-
-  useEffect(() => {
-    const fetchReleases = async () => {
-      try {
-        setLoading(true);
-        const tracks = await spotifyService.getTracksByLabel(RECORD_LABELS.TECH);
-        setReleases(tracks);
-        setError(null);
-      } catch (err) {
-        console.error('Error fetching tech releases:', err);
-        setError('Failed to load releases. Please try again later.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchReleases();
-  }, []);
-
-  if (loading) return <LoadingSpinner />;
-  if (error) return <ErrorMessage message={error} />;
+const TechPage: React.FC = () => {
+  const theme = useTheme();
 
   return (
-    <PageLayout label="tech">
-      <Box sx={{ display: 'flex' }}>
-        <TechSidebar variant="permanent" />
-        <Box sx={{ flexGrow: 1, p: 3 }}>
-          <Container maxWidth="lg">
-            <Box sx={{ py: 4 }}>
-              <Typography variant="h4" component="h1" gutterBottom sx={{ color: colors.text }}>
-                Build It Tech Releases
-              </Typography>
+    <Container maxWidth="lg" sx={{ py: 8 }}>
+      <Paper 
+        elevation={3} 
+        sx={{ 
+          p: 4, 
+          background: 'rgba(0, 0, 0, 0.8)',
+          borderRadius: 2,
+          backdropFilter: 'blur(10px)'
+        }}
+      >
+        <Typography variant="h2" component="h1" gutterBottom align="center" sx={{ mb: 4 }}>
+          Build It Tech
+        </Typography>
 
-              <Grid container spacing={3}>
-                {releases.map((track) => (
-                  <Grid item xs={12} sm={6} md={4} key={track.id}>
-                    <ReleaseCard track={track} />
-                  </Grid>
-                ))}
-                {releases.length === 0 && (
-                  <Grid item xs={12}>
-                    <Typography variant="body1" color="text.secondary" align="center">
-                      No releases found.
-                    </Typography>
-                  </Grid>
-                )}
-              </Grid>
-            </Box>
-          </Container>
+        <Box sx={{ mb: 6 }}>
+          <Typography variant="h5" gutterBottom sx={{ color: theme.palette.primary.main }}>
+            Pushing Boundaries in Tech House
+          </Typography>
+          <Typography variant="body1" paragraph>
+            Build It Tech stands at the forefront of modern electronic music innovation. Launched as
+            a sister label to Build It Deep, we focus on the cutting edge of tech house, techno,
+            and progressive electronic music. Our mission is to push the boundaries of what's possible
+            in electronic music while maintaining the highest production standards.
+          </Typography>
         </Box>
-      </Box>
-    </PageLayout>
+
+        <Box sx={{ mb: 6 }}>
+          <Typography variant="h5" gutterBottom sx={{ color: theme.palette.primary.main }}>
+            Musical Identity
+          </Typography>
+          <Typography variant="body1" paragraph>
+            The Build It Tech sound is characterized by driving rhythms, innovative sound design,
+            and forward-thinking production techniques. We embrace both analog warmth and digital
+            precision, creating a unique sonic palette that defines the modern tech house genre.
+            Our releases often feature intricate percussion work, memorable hooks, and that
+            essential peak-time energy that moves dance floors worldwide.
+          </Typography>
+        </Box>
+
+        <Box sx={{ mb: 6 }}>
+          <Typography variant="h5" gutterBottom sx={{ color: theme.palette.primary.main }}>
+            Innovation & Technology
+          </Typography>
+          <Typography variant="body1" paragraph>
+            True to our name, we're constantly exploring new technologies and production methods.
+            From cutting-edge synthesizers to innovative mixing techniques, Build It Tech embraces
+            the latest advancements in music technology. We encourage our artists to experiment
+            with new tools and techniques, pushing the boundaries of what's possible in electronic
+            music production.
+          </Typography>
+        </Box>
+
+        <Box>
+          <Typography variant="h5" gutterBottom sx={{ color: theme.palette.primary.main }}>
+            Global Impact
+          </Typography>
+          <Typography variant="body1" paragraph>
+            While our sound is firmly rooted in tech house, our influence extends across the
+            electronic music spectrum. Our releases regularly feature in sets by leading DJs
+            and receive support from major players in the industry. Through our commitment to
+            innovation and quality, we've established ourselves as a trusted source for
+            forward-thinking electronic music that consistently delivers on the dance floor.
+          </Typography>
+        </Box>
+      </Paper>
+    </Container>
   );
 };
 
