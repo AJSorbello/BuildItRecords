@@ -4,11 +4,12 @@ import {
   Typography,
   Grid,
   Box,
+  CircularProgress,
 } from '@mui/material';
 import { Track } from '../types/track';
 import { Release } from '../types/release';
 import { Artist } from '../types/artist';
-import DatabaseService from '../services/DatabaseService';
+import { databaseService } from '../services/DatabaseService';
 import FeaturedRelease from '../components/FeaturedRelease';
 import { ReleaseCard } from '../components/ReleaseCard';
 import { useNavigate } from 'react-router-dom';
@@ -24,13 +25,13 @@ const HomePage: React.FC = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        // Get recent tracks
-        const tracks = await DatabaseService.getTracksFromApi();
-        if (tracks.length > 0) {
+        // Get recent tracks for the records label
+        const response = await databaseService.getTracksByLabel('records');
+        if (response.tracks.length > 0) {
           // Set the first track as featured
-          setFeaturedTrack(tracks[0]);
+          setFeaturedTrack(response.tracks[0]);
           // Set the rest as recent tracks (up to 6)
-          setRecentTracks(tracks.slice(1, 7));
+          setRecentTracks(response.tracks.slice(1, 7));
         }
       } catch (err) {
         console.error('Error fetching data:', err);
@@ -44,7 +45,7 @@ const HomePage: React.FC = () => {
   }, []);
 
   const handleTrackClick = (track: Track) => {
-    if (track.artists[0]?.id) {
+    if (track.artists?.[0]?.id) {
       navigate(`/artists/${track.artists[0].id}`);
     }
   };
@@ -52,13 +53,17 @@ const HomePage: React.FC = () => {
   const convertTrackToRelease = (track: Track): Release => {
     return {
       id: track.id,
-      name: track.name,
+      title: track.title,
       artists: track.artists || [],
-      images: track.images || [],
-      release_date: track.release_date || new Date().toISOString(),
-      uri: track.uri || '',
+      images: track.release?.images || [],
+      artwork_url: track.release?.artwork_url,
+      release_date: new Date().toISOString(),
+      external_urls: { spotify: track.external_urls?.spotify || '' },
+      uri: track.spotify_uri || '',
       tracks: [track],
-      total_tracks: 1
+      total_tracks: 1,
+      type: 'single',
+      status: 'active'
     };
   };
 

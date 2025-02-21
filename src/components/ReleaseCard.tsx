@@ -18,9 +18,10 @@ import { PlayButton } from './PlayButton';
 interface ReleaseCardProps {
   release?: Release;
   ranking?: number;
+  onClick?: () => void;
 }
 
-export const ReleaseCard: React.FC<ReleaseCardProps> = ({ release, ranking }) => {
+export const ReleaseCard: React.FC<ReleaseCardProps> = ({ release, ranking, onClick }) => {
   const [modalOpen, setModalOpen] = useState(false);
 
   // Early return if release is undefined or invalid
@@ -30,6 +31,9 @@ export const ReleaseCard: React.FC<ReleaseCardProps> = ({ release, ranking }) =>
   }
 
   const handleClick = () => {
+    if (onClick) {
+      onClick();
+    }
     setModalOpen(true);
   };
 
