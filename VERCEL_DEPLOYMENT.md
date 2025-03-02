@@ -8,176 +8,56 @@ The application is configured to deploy on Vercel by replacing PostgreSQL-relate
 
 ## Key Configuration Files
 
-### 1. `vercel.json`
+1. **vercel.json**: Contains deployment configuration that uses a custom build script approach
+   - Defines routes for serving static files and API endpoints
+   - Sets environment variables for the build process
+   - Specifies build output location
 
-This file configures how Vercel builds and serves the application:
+2. **build-script.sh**: Custom shell script that handles the build process
+   - Bypasses pnpm lockfile issues by using npm instead
+   - Creates mock implementations for PostgreSQL modules
+   - Handles dependency installation and build steps
 
-```json
-{
-  "version": 2,
-  "buildCommand": "node ./scripts/vercel-build-patch.js && pnpm install --no-frozen-lockfile && pnpm run build",
-  "installCommand": "echo 'Installation handled by buildCommand'",
-  "ignoreCommand": "git diff --quiet HEAD^ HEAD ./{package.json,pnpm-lock.yaml,server/package.json}",
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "zeroConfig": true,
-        "skipInstall": true
-      }
-    },
-    {
-      "src": "server/server.js",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": ["server/package.json"]
-      }
-    }
-  ],
-  "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "/server/server.js"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/"
-    }
-  ]
-}
-```
+## How It Works
 
-### 2. `.npmrc`
+1. When Vercel starts the deployment, it reads the `vercel.json` configuration
+2. Instead of using the standard build command, it executes our custom `build-script.sh`
+3. The script removes any existing lock files and uses npm to avoid pnpm lockfile issues
+4. PostgreSQL dependencies are mocked to prevent native compilation errors
+5. The application is built and output to the `dist` directory
+6. Vercel serves the static files based on the routes configuration
 
-This file prevents native module build scripts from running:
+## Deployment Branch
 
-```
-ignore-scripts=true
-node-linker=hoisted
-public-hoist-pattern[]=*pg*
-public-hoist-pattern[]=*libpq*
-shamefully-hoist=true
-strict-peer-dependencies=false
-auto-install-peers=true
-```
+The `vercel-deploy-fix` branch contains the latest deployment configuration. After deploying successfully, these changes can be merged into the `main` branch.
 
-### 3. `scripts/vercel-build-patch.js`
+## Troubleshooting
 
-This script automatically runs during the build process and:
+If you encounter deployment issues:
 
-1. Creates a `.npmrc` file for dependency management
-2. Cleans up all PostgreSQL-related dependencies from package.json files
-3. Adds package overrides to replace PostgreSQL modules with empty implementations
-4. Creates mock implementations for PostgreSQL native modules
-5. Patches Sequelize to avoid requiring the PostgreSQL native modules
-
-### 4. `webpack.config.js`
-
-Provides additional configuration for client-side bundling:
-
-```js
-module.exports = {
-  resolve: {
-    fallback: {
-      pg: false,
-      'pg-native': false,
-      'pg-hstore': false,
-      libpq: false,
-    },
-    alias: {
-      pg: require.resolve('@vercel/noop'),
-      'pg-native': require.resolve('@vercel/noop'),
-      'pg-hstore': require.resolve('@vercel/noop'),
-      libpq: require.resolve('@vercel/noop'),
-    },
-  },
-};
-```
-
-## Package Overrides
-
-The package.json files contain overrides to replace PostgreSQL dependencies with `@vercel/noop`:
-
-```json
-"overrides": {
-  "pg": "npm:@vercel/noop",
-  "pg-native": "npm:@vercel/noop",
-  "pg-hstore": "npm:@vercel/noop",
-  "libpq": "npm:@vercel/noop"
-}
-```
-
-## Deployment Steps
-
-1. **Prepare Your Code**:
-   - Ensure all PostgreSQL direct dependencies are removed
-   - Verify all database operations use Supabase
-   - Set up proper environment variables
-
-2. **Configure Vercel**:
-   - Connect your GitHub repository to Vercel
-   - Set the appropriate environment variables in Vercel Dashboard
-   - Use the configuration files described above
-
-3. **Deployment Workflow**:
-   - Push code to GitHub repository
-   - Vercel automatically detects changes and triggers a deployment
-   - The `vercel-build-patch.js` script runs to modify dependency configuration
-   - pnpm installs dependencies with `--no-frozen-lockfile` to allow updating the lockfile
-   - The application builds with mock PostgreSQL dependencies
-   - Vercel deploys the built application
-
-## Supabase Integration
-
-For successful deployment with Supabase:
-
-1. Make sure all direct PostgreSQL queries are replaced with equivalent Supabase queries
-2. Update any sequelize or PostgreSQL-specific models to use Supabase data access patterns
-3. Properly set up Supabase environment variables in Vercel project settings
-
-## Environment Variables
-
-Ensure the following environment variables are set in the Vercel project:
-
-- `SUPABASE_URL`: URL for your Supabase instance
-- `SUPABASE_KEY`: API key for your Supabase instance
-- `SUPABASE_SERVICE_KEY`: (if needed) Service role key for Supabase
-- `JWT_SECRET`: Secret key for JWT token generation
-- `NODE_ENV`: Production environment setting
-- Other application-specific environment variables as needed
-
-## Troubleshooting Common Issues
-
-If encountering deployment issues:
-
-1. **Lockfile Mismatch**: Use `--no-frozen-lockfile` when running pnpm install, especially after updating dependencies
-2. **Native Module Build Errors**: Ensure all PostgreSQL-related dependencies are properly overridden
-3. **Missing Modules**: Check if any transitive dependencies require PostgreSQL and update the patch script
-4. **Sequelize Errors**: The patch script includes a special handler for Sequelize that may need updates 
+1. **Lock File Errors**: The custom build script should handle this, but verify in logs
+2. **PostgreSQL Errors**: Check if mock implementations are being properly created
+3. **Environment Variables**: Ensure all required environment variables are set in Vercel
+4. **Build Script Execution**: Verify the build script has execute permissions
 5. **Build Failures**: Check the Vercel build logs for specific errors
 6. **Runtime Errors**: Verify environment variables are correctly set in Vercel Dashboard
 
 ## Maintenance
 
-When adding new dependencies:
-1. Check if they have PostgreSQL dependencies
-2. If they do, update the `vercel-build-patch.js` script to handle them
-3. Update the lockfile locally before pushing changes
-4. Consider testing the build process locally before pushing to Vercel
+To update the deployment configuration:
 
-## Testing Your Deployment
+1. Modify the `build-script.sh` file to change the build process
+2. Update `vercel.json` if you need to modify routes or deployment settings
+3. Commit and push changes to the `vercel-deploy-fix` branch
+4. Monitor Vercel deployment logs for any issues
 
-After successful deployment:
+## Recent Changes (2025-03-02)
 
-1. Test the core functionalities of your application
-2. Verify that database operations are working correctly with Supabase
-3. Check media uploads and static asset serving
-4. Test API endpoints for proper functionality
-5. Verify authentication flows work as expected
+We've completely changed the deployment approach to resolve persistent issues with pnpm lock files:
 
-## Resources
+1. **Switched to Custom Build Script**: Created a dedicated shell script that handles the entire build process
+2. **Bypass pnpm Issues**: Using npm instead of pnpm to avoid lockfile problems
+3. **Mock PostgreSQL Modules**: Creating direct mock implementations in the build script
+4. **Simplified vercel.json**: Updated configuration to use the custom build approach
 
-- [Vercel Documentation](https://vercel.com/docs)
-- [Supabase Documentation](https://supabase.io/docs)
-- [pnpm Documentation](https://pnpm.io/)
+These changes should resolve the deployment issues that were occurring with the previous approach.
