@@ -36,8 +36,12 @@
   ],
   "git": {
     "deploymentEnabled": {
-      "main": true,
-      "working-releases": false
+      "main": true
     }
+  },
+  "github": {
+    "enabled": true,
+    "silent": false,
+    "autoJobCancelation": true
   }
 }

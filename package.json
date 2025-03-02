@@ -137,5 +137,12 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "vercelDeploymentTimestamp": "2025-03-02T12:05:44.624Z",
+  "buildInfo": {
+    "timestamp": "2025-03-02T12:05:44.625Z",
+    "forcedUpdate": true,
+    "reason": "Manual update to trigger new Vercel deployment",
+    "commitHash": "unknown"
   }
 }
