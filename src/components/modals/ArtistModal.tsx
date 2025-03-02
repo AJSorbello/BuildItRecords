@@ -34,7 +34,10 @@ import InfoIcon from '@mui/icons-material/Info';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import { databaseService } from '../../services/DatabaseService';
 import { formatDate } from '../../utils/dateUtils';
-import { Artist, Label, Release, Track } from '../../types';
+import { Artist } from '../../types/artist';
+import { Release } from '../../types/release';
+import { Track } from '../../types/track';
+import { RecordLabelId } from '../../types/labels';
 
 interface ArtistModalProps {
   artist: Artist;
@@ -116,7 +119,7 @@ class ArtistModalClass extends Component<ArtistModalProps, ArtistModalState> {
   tracksByLabel = () => {
     const { tracks } = this.state;
     return tracks.reduce((acc: Record<string, Track[]>, track) => {
-      const labelId = track.release?.label_id || 'unknown';
+      const labelId = track.release?.label?.id || 'unknown';
       if (!acc[labelId]) {
         acc[labelId] = [];
       }
@@ -124,24 +127,6 @@ class ArtistModalClass extends Component<ArtistModalProps, ArtistModalState> {
       return acc;
     }, {});
   };
-
-  async fetchReleases() {
-    const { artist } = this.props;
-    if (!artist?.id) return;
-    
-    this.setState({ releasesLoading: true });
-    
-    try {
-      console.log(`Fetching releases for artist: ${artist.name} (${artist.id})`);
-      const releases = await databaseService.getReleasesByArtist(artist.id);
-      console.log('Releases response:', releases);
-      this.setState({ releases });
-    } catch (error) {
-      console.error('Error fetching artist releases:', error);
-    } finally {
-      this.setState({ releasesLoading: false });
-    }
-  }
 
   releasesByLabel = () => {
     const { releases } = this.state;
@@ -154,6 +139,66 @@ class ArtistModalClass extends Component<ArtistModalProps, ArtistModalState> {
       return acc;
     }, {});
   };
+
+  isCompilation = (release: Release): boolean => {
+    // Check common indicators of a compilation
+    return (release.title?.toLowerCase().includes('compilation') || 
+            release.title?.toLowerCase().includes('various') ||
+            (release.tracks && release.tracks.length > 2 && 
+             new Set(release.tracks.flatMap(t => t.artists?.map(a => a.id) || [])).size > 3));
+  };
+
+  getReleaseArtistImage = (release: Release, trackIndex: number = 0): string => {
+    if (this.isCompilation(release)) {
+      // For compilations, use the album artwork
+      return release.artwork_url || '/images/placeholder-release.jpg';
+    }
+
+    // For normal releases, try to get the artist image
+    if (release.tracks && 
+        release.tracks.length > trackIndex && 
+        release.tracks[trackIndex].artists && 
+        release.tracks[trackIndex].artists.length > 0) {
+      const artist = release.tracks[trackIndex].artists[0];
+      return artist.profile_image_small_url || 
+             artist.profile_image_url || 
+             artist.profile_image_large_url || 
+             '/images/placeholder-artist.jpg';
+    }
+
+    return '/images/placeholder-artist.jpg';
+  };
+
+  async fetchReleases() {
+    const { artist } = this.props;
+    if (!artist?.id) return;
+    
+    this.setState({ releasesLoading: true });
+    
+    try {
+      console.log(`Fetching releases for artist: ${artist.name} (${artist.id})`);
+      const releases = await databaseService.getReleasesByArtist(artist.id);
+      console.log('Releases response:', releases);
+      
+      // Log Spotify URLs for debugging
+      releases.forEach(release => {
+        console.log(`Release "${release.title}" Spotify URL:`, 
+          release.external_urls?.spotify || release.spotify_url || 'None');
+        if (release.tracks && release.tracks.length > 0) {
+          release.tracks.forEach(track => {
+            console.log(`  Track "${track.title}" Spotify URL:`, 
+              track.external_urls?.spotify || track.spotify_url || 'None');
+          });
+        }
+      });
+      
+      this.setState({ releases });
+    } catch (error) {
+      console.error('Error fetching artist releases:', error);
+    } finally {
+      this.setState({ releasesLoading: false });
+    }
+  }
 
   renderReleases() {
     const { releases, releasesLoading } = this.state;
@@ -194,38 +239,81 @@ class ArtistModalClass extends Component<ArtistModalProps, ArtistModalState> {
                     <TableCell>Artists</TableCell>
                     <TableCell>Duration</TableCell>
                     <TableCell>Released</TableCell>
-                    <TableCell align="right">Actions</TableCell>
+                    <TableCell align="center">Play</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {labelReleases.map((release) => (
-                    <TableRow key={release.id} hover>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          {release.artwork_url && (
-                            <Avatar
-                              src={release.artwork_url}
-                              alt={release.title}
-                              variant="rounded"
-                              sx={{ width: 40, height: 40, mr: 1 }}
-                            />
-                          )}
-                          <Box>
-                            <Typography variant="body2" component="div" fontWeight="bold">
-                              {release.title}
-                            </Typography>
-                            {release.catalog_number && (
-                              <Typography variant="caption" color="text.secondary">
-                                Cat: {release.catalog_number}
-                              </Typography>
+                  {labelReleases.map((release) => {
+                    // Extract track with Spotify URL if available
+                    const firstTrackWithSpotify = release.tracks && release.tracks.length > 0 
+                      ? release.tracks.find(t => t.spotify_url || t.external_urls?.spotify) 
+                      : null;
+                    
+                    // Get the best available Spotify URL
+                    const spotifyUrl = 
+                      (firstTrackWithSpotify?.external_urls?.spotify) || 
+                      (firstTrackWithSpotify?.spotify_url) ||
+                      (release.external_urls?.spotify) || 
+                      (release.spotify_url) ||
+                      '';
+                      
+                    return (
+                      <TableRow key={release.id} hover>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            {release.artwork_url && (
+                              <Avatar
+                                src={release.artwork_url}
+                                alt={release.title}
+                                variant="rounded"
+                                sx={{ width: 40, height: 40, mr: 1 }}
+                              />
                             )}
+                            <Box>
+                              <Typography variant="body2" component="div" fontWeight="bold">
+                                {release.title}
+                              </Typography>
+                              {release.catalog_number && (
+                                <Typography variant="caption" color="text.secondary">
+                                  Cat: {release.catalog_number}
+                                </Typography>
+                              )}
+                            </Box>
                           </Box>
-                        </Box>
-                      </TableCell>
-                      <TableCell>
-                        {release.tracks && release.tracks.length > 0 && release.tracks[0].artists && 
-                          <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.5 }}>
-                            {release.tracks[0].artists.map((artist, index) => (
+                        </TableCell>
+                        <TableCell>
+                          {(() => {
+                            // Determine which track to use for artist info
+                            let trackIndex = 0;
+                            // For compilations, use track at index 1 if available
+                            if ((release.title && release.title.toLowerCase().includes('compilation')) && 
+                                release.tracks.length > 1 && 
+                                release.tracks[1].artists && 
+                                release.tracks[1].artists.length > 0) {
+                              trackIndex = 1;
+                            }
+                            
+                            // Check if this is a compilation album
+                            const isCompilation = this.isCompilation(release);
+                            
+                            if (isCompilation) {
+                              // For compilations, show "Various Artists" with the album artwork
+                              return (
+                                <Box key="various-artists" sx={{ display: 'flex', alignItems: 'center' }}>
+                                  <Avatar 
+                                    src={release.artwork_url || '/images/placeholder-release.jpg'} 
+                                    alt="Various Artists"
+                                    sx={{ width: 24, height: 24, mr: 0.5 }}
+                                  />
+                                  <Typography variant="body2">
+                                    Various Artists
+                                  </Typography>
+                                </Box>
+                              );
+                            }
+                            
+                            // Return the artists from the selected track
+                            return release.tracks[trackIndex].artists?.map((artist, index) => (
                               <Box key={artist.id} sx={{ display: 'flex', alignItems: 'center' }}>
                                 {artist.profile_image_small_url && (
                                   <Avatar 
@@ -235,44 +323,36 @@ class ArtistModalClass extends Component<ArtistModalProps, ArtistModalState> {
                                   />
                                 )}
                                 <Typography variant="body2">
-                                  {artist.name}{index < release.tracks[0].artists.length - 1 ? ' & ' : ''}
+                                  {artist.name}{index < release.tracks[trackIndex].artists.length - 1 ? ' & ' : ''}
                                 </Typography>
                               </Box>
-                            ))}
-                          </Box>
-                        }
-                      </TableCell>
-                      <TableCell>
-                        {release.tracks && release.tracks.length > 0 && 
-                          this.formatTrackDuration(release.tracks[0].duration_ms)}
-                      </TableCell>
-                      <TableCell>
-                        {formatDate(release.release_date)}
-                      </TableCell>
-                      <TableCell align="right">
-                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-                          {release.spotify_url && (
+                            ));
+                          })()}
+                        </TableCell>
+                        <TableCell>
+                          {release.tracks && release.tracks.length > 0 && 
+                            this.formatTrackDuration(release.tracks[0].duration_ms)}
+                        </TableCell>
+                        <TableCell>
+                          {formatDate(release.release_date)}
+                        </TableCell>
+                        <TableCell align="center">
+                          {spotifyUrl ? (
                             <IconButton
                               size="small"
                               color="primary"
-                              onClick={() => window.open(release.spotify_url, '_blank')}
+                              onClick={() => window.open(spotifyUrl, '_blank')}
                               title="Play on Spotify"
                             >
-                              <MusicNoteIcon fontSize="small" />
+                              <PlayArrowIcon fontSize="small" />
                             </IconButton>
+                          ) : (
+                            <Typography variant="caption" color="text.secondary">N/A</Typography>
                           )}
-                          <IconButton
-                            size="small"
-                            color="primary"
-                            onClick={() => window.open(`/releases/${release.id}`, '_blank')}
-                            title="View Details"
-                          >
-                            <InfoIcon fontSize="small" />
-                          </IconButton>
-                        </Box>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </TableContainer>
@@ -285,7 +365,7 @@ class ArtistModalClass extends Component<ArtistModalProps, ArtistModalState> {
   renderLabels() {
     const labelIdsSet = new Set();
     this.state.releases.forEach(release => {
-      if (release.label_id) labelIdsSet.add(release.label_id);
+      if (release.label?.id) labelIdsSet.add(release.label.id);
     });
     
     const labelIds = Array.from(labelIdsSet) as string[];
@@ -347,9 +427,9 @@ class ArtistModalClass extends Component<ArtistModalProps, ArtistModalState> {
               />
               <Box mt={2}>
                 <Typography variant="h6">About the Artist</Typography>
-                {artist.spotify_id && (
+                {artist.uri && (
                   <Link 
-                    href={`https://open.spotify.com/artist/${artist.spotify_id}`} 
+                    href={`https://open.spotify.com/artist/${artist.uri.split(':')[2]}`} 
                     target="_blank"
                     rel="noopener noreferrer"
                     color="primary"

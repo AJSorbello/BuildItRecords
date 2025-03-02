@@ -111,12 +111,26 @@ export const ReleasesPage = ({ label: propLabel }: ReleasesPageProps) => {
           }
           return isValid;
         })
-        .map(release => ({
-          ...release,
-          artwork_url: release.artwork_url || release.images?.[0]?.url || undefined
-        }));
+        .map(release => {
+          // Make sure artwork_url is populated
+          let artworkUrl = release.artwork_url;
+          if (!artworkUrl && release.images && release.images.length > 0) {
+            artworkUrl = release.images[0].url;
+          }
+          
+          return {
+            ...release,
+            artwork_url: artworkUrl || '/images/placeholder-release.jpg'
+          };
+        });
 
-      setReleases(validReleases);
+      // If this is page 1, replace releases, otherwise append to existing releases
+      if (page === 1) {
+        setReleases(validReleases);
+      } else {
+        setReleases(prevReleases => [...prevReleases, ...validReleases]);
+      }
+      
       setTotalReleases(data.totalReleases || 0);
       setHasMore(data.hasMore || false);
       setCurrentPage(page);
@@ -129,7 +143,6 @@ export const ReleasesPage = ({ label: propLabel }: ReleasesPageProps) => {
   };
 
   const loadMore = async () => {
-    const { loading, hasMore, currentPage } = { loading, hasMore, currentPage };
     if (!loading && hasMore) {
       await fetchReleases(currentPage + 1);
     }
@@ -211,28 +224,47 @@ export const ReleasesPage = ({ label: propLabel }: ReleasesPageProps) => {
         </Box>
         
         {validReleases.length > 0 && (
-          <Box sx={{ mb: 6 }}>
-            <Typography variant="h5" component="h2" gutterBottom>
-              Latest Release
-            </Typography>
-            <Paper 
-              elevation={3} 
-              sx={{ 
-                p: isMobile ? 2 : 3, 
-                borderRadius: 2,
-                transition: 'transform 0.3s ease-in-out',
-                '&:hover': {
-                  transform: 'translateY(-4px)'
-                }
-              }}
-            >
-              <ReleaseSection 
-                release={latestRelease}
-                ranking={1} 
-                onClick={() => {}} 
-              />
-            </Paper>
-          </Box>
+          <Grid container spacing={3} sx={{ mb: 6 }}>
+            <Grid item xs={12} md={6}>
+              <Typography variant="h5" component="h2" gutterBottom>
+                Latest Release
+              </Typography>
+              <Paper 
+                elevation={3} 
+                sx={{ 
+                  p: isMobile ? 2 : 3, 
+                  borderRadius: 2,
+                  height: '100%',
+                  transition: 'transform 0.3s ease-in-out',
+                  '&:hover': {
+                    transform: 'translateY(-4px)'
+                  }
+                }}
+              >
+                <ReleaseSection 
+                  release={latestRelease}
+                  ranking={1} 
+                  onClick={() => {}} 
+                />
+              </Paper>
+            </Grid>
+            
+            <Grid item xs={12} md={6}>
+              <Typography variant="h5" component="h2" gutterBottom>
+                Top Releases
+              </Typography>
+              <Paper 
+                elevation={3} 
+                sx={{ 
+                  p: isMobile ? 2 : 3, 
+                  borderRadius: 2,
+                  height: '100%'
+                }}
+              >
+                <TopReleases label={labelConfig} />
+              </Paper>
+            </Grid>
+          </Grid>
         )}
 
         <Box sx={{ mb: 6 }}>
@@ -258,13 +290,6 @@ export const ReleasesPage = ({ label: propLabel }: ReleasesPageProps) => {
               </Button>
             </Box>
           )}
-        </Box>
-
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="h5" component="h2" gutterBottom>
-            Top Releases
-          </Typography>
-          <TopReleases label={labelConfig} />
         </Box>
       </Container>
     </ErrorBoundary>

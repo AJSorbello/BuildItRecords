@@ -12,12 +12,25 @@ import {
   AvatarGroup,
   Chip,
   Link,
-  useMediaQuery
+  useMediaQuery,
+  styled
 } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import { Release } from '../types/release';
 import { ReleaseModal } from './modals/ReleaseModal';
+import ArtistModal from './modals/ArtistModal';
 import { formatDate } from '../utils/dateUtils';
+import { Artist } from '../types/artist';
+
+// Styled component for album artwork
+const AlbumArtwork = styled(Box)(({ theme }) => ({
+  position: 'relative',
+  width: '100%',
+  paddingTop: '100%', // 1:1 aspect ratio
+  backgroundSize: 'cover',
+  backgroundPosition: 'center',
+  borderRadius: '4px 4px 0 0',
+}));
 
 interface ReleaseCardProps {
   release: Release;
@@ -27,6 +40,8 @@ interface ReleaseCardProps {
 
 export const ReleaseCard = ({ release, ranking, onClick }: ReleaseCardProps) => {
   const [modalOpen, setModalOpen] = React.useState(false);
+  const [artistModalOpen, setArtistModalOpen] = React.useState(false);
+  const [selectedArtist, setSelectedArtist] = React.useState<Artist | null>(null);
   const theme = useMuiTheme();
 
   const handleClick = () => {
@@ -40,6 +55,16 @@ export const ReleaseCard = ({ release, ranking, onClick }: ReleaseCardProps) => 
     setModalOpen(false);
   };
 
+  const handleArtistClick = (artist: Artist) => {
+    setSelectedArtist(artist);
+    setArtistModalOpen(true);
+    // Keep the release modal open to maintain context
+  };
+
+  const handleArtistModalClose = () => {
+    setArtistModalOpen(false);
+  };
+
   // Get the best available artist image
   const getArtistImage = (artist: any): string => {
     return artist.profile_image_url || 
@@ -47,6 +72,16 @@ export const ReleaseCard = ({ release, ranking, onClick }: ReleaseCardProps) => 
            artist.profile_image_large_url || 
            (artist.images && artist.images[0]?.url) || 
            '/images/placeholder-artist.jpg';
+  };
+
+  // Get the best available release artwork
+  const getReleaseArtwork = (release: Release): string => {
+    console.log("Release artwork:", release.artwork_url, 
+                release.images && release.images.length > 0 ? release.images[0].url : "no images");
+    
+    return release.artwork_url || 
+           (release.images && release.images.length > 0 ? release.images[0].url : '') || 
+           '/images/placeholder-release.jpg';
   };
 
   // Extract artists from tracks if not available in release
@@ -83,6 +118,7 @@ export const ReleaseCard = ({ release, ranking, onClick }: ReleaseCardProps) => 
   };
 
   const artists = getArtistsFromRelease(release);
+  const artworkUrl = getReleaseArtwork(release);
 
   return (
     <>
@@ -100,122 +136,94 @@ export const ReleaseCard = ({ release, ranking, onClick }: ReleaseCardProps) => 
               opacity: 1,
             },
           },
-          cursor: 'pointer',
-          borderRadius: 2,
+          boxShadow: theme.shadows[3],
+          borderRadius: '8px',
           overflow: 'hidden',
         }}
-        onClick={handleClick}
       >
-        <Box sx={{ position: 'relative' }}>
-          {ranking && (
-            <Chip
-              label={`#${ranking}`}
-              size="small"
-              color="primary"
-              sx={{
-                position: 'absolute',
-                top: 8,
-                right: 8,
-                zIndex: 2,
-                fontWeight: 'bold',
-              }}
-            />
-          )}
-
-          <CardMedia
-            component="img"
-            image={release.artwork_url || '/default-artwork.png'}
-            alt={release.title}
-            sx={{
-              aspectRatio: '1/1',
-              objectFit: 'cover',
-            }}
-          />
-
+        {ranking && (
           <Box
-            className="play-icon"
             sx={{
               position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: '100%',
+              top: 10,
+              left: 10,
+              backgroundColor: 'rgba(0, 0, 0, 0.7)',
+              borderRadius: '50%',
+              width: 32,
+              height: 32,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              zIndex: 1,
+            }}
+          >
+            <Typography variant="body2" sx={{ color: 'white', fontWeight: 'bold' }}>
+              {ranking}
+            </Typography>
+          </Box>
+        )}
+
+        <CardActionArea onClick={handleClick} sx={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
+          <AlbumArtwork 
+            sx={{ 
+              backgroundImage: `url("${artworkUrl}")`,
+              marginBottom: 0,
+            }}
+          />
+          <Box 
+            className="play-icon"
+            sx={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
               opacity: 0,
               transition: 'opacity 0.2s',
-              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              backgroundColor: 'rgba(0, 0, 0, 0.6)',
+              borderRadius: '50%',
+              width: 60,
+              height: 60,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
-            <PlayArrowIcon
-              sx={{
-                fontSize: 64,
-                color: 'white',
-              }}
-            />
-          </Box>
-        </Box>
-
-        <CardContent sx={{ flexGrow: 1, p: 2 }}>
-          <Typography
-            variant="h6"
-            component="div"
-            gutterBottom
-            sx={{
-              fontWeight: 'bold',
-              fontSize: '1rem',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              display: '-webkit-box',
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: 'vertical',
-              minHeight: '2.5rem',
-              lineHeight: 1.25,
-            }}
-          >
-            {release.title}
-          </Typography>
-
-          {/* Artists with images */}
-          <Box sx={{ mb: 1 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <AvatarGroup
-                max={3}
-                sx={{
-                  '& .MuiAvatar-root': {
-                    width: 24,
-                    height: 24,
-                    fontSize: '0.75rem',
-                    border: `1px solid ${theme.palette.background.paper}`,
-                  },
-                  mr: 1,
-                }}
-              >
-                {artists.map((artist, index) => (
-                  <Avatar 
-                    key={artist.id || index} 
-                    alt={artist.name} 
-                    src={getArtistImage(artist)}
-                    sx={{ 
-                      width: 24, 
-                      height: 24,
-                    }}
-                  />
-                ))}
-              </AvatarGroup>
-              <Typography variant="body2" color="text.secondary">
-                {artists.map(artist => artist.name).join(', ')}
-              </Typography>
-            </Box>
+            <PlayArrowIcon sx={{ fontSize: 40, color: 'white' }} />
           </Box>
 
-          {release.release_date && (
-            <Typography variant="caption" color="text.secondary">
-              Released: {formatDate(release.release_date)}
+          <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+            <Typography variant="subtitle1" component="h2" gutterBottom sx={{ fontWeight: 'medium' }}>
+              {release.title}
             </Typography>
-          )}
-        </CardContent>
+
+            <Box sx={{ flexGrow: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                <AvatarGroup max={3} sx={{ mr: 1 }}>
+                  {artists.map(artist => (
+                    <Avatar 
+                      key={artist.id} 
+                      src={getArtistImage(artist)} 
+                      alt={artist.name}
+                      sx={{ 
+                        width: 24, 
+                        height: 24,
+                      }}
+                    />
+                  ))}
+                </AvatarGroup>
+                <Typography variant="body2" color="text.secondary">
+                  {artists.map(artist => artist.name).join(', ')}
+                </Typography>
+              </Box>
+            </Box>
+
+            {release.release_date && (
+              <Typography variant="caption" color="text.secondary">
+                Released: {formatDate(release.release_date)}
+              </Typography>
+            )}
+          </CardContent>
+        </CardActionArea>
       </Card>
 
       {release && (
@@ -223,6 +231,15 @@ export const ReleaseCard = ({ release, ranking, onClick }: ReleaseCardProps) => 
           open={modalOpen}
           onClose={handleCloseModal}
           release={release}
+          onArtistClick={handleArtistClick}
+        />
+      )}
+
+      {selectedArtist && (
+        <ArtistModal
+          open={artistModalOpen}
+          onClose={handleArtistModalClose}
+          artist={selectedArtist}
         />
       )}
     </>

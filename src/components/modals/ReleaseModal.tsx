@@ -21,24 +21,28 @@ import {
   Card,
   CardContent,
   CardMedia,
-  Avatar
+  Avatar,
+  Tooltip
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { Release } from '../../types/release';
 import { Artist } from '../../types/artist';
 import { useNavigate } from 'react-router-dom';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 
 interface ReleaseModalProps {
   open: boolean;
   onClose: () => void;
   release: Release;
+  onArtistClick?: (artist: Artist) => void;
 }
 
 interface ArtistPreviewProps {
   artist: Artist;
+  onArtistClick?: (artist: Artist) => void;
 }
 
-const ArtistPreview: React.FC<ArtistPreviewProps> = ({ artist }) => {
+const ArtistPreview: React.FC<ArtistPreviewProps> = ({ artist, onArtistClick }) => {
   const navigate = useNavigate();
   
   // Get the best available image URL
@@ -52,8 +56,12 @@ const ArtistPreview: React.FC<ArtistPreviewProps> = ({ artist }) => {
   };
   
   const handleArtistClick = () => {
-    console.log('Navigating to artist:', artist.id);
-    navigate(`/artists/${artist.id}`);
+    if (onArtistClick) {
+      onArtistClick(artist);
+    } else {
+      console.log('Navigating to artist:', artist.id);
+      navigate(`/artists/${artist.id}`);
+    }
   };
 
   return (
@@ -87,7 +95,7 @@ const ArtistPreview: React.FC<ArtistPreviewProps> = ({ artist }) => {
   );
 };
 
-export const ReleaseModal = ({ open, onClose, release }: ReleaseModalProps) => {
+export const ReleaseModal = ({ open, onClose, release, onArtistClick }: ReleaseModalProps) => {
   const theme = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down('md'));
   const navigate = useNavigate();
@@ -100,7 +108,11 @@ export const ReleaseModal = ({ open, onClose, release }: ReleaseModalProps) => {
   };
 
   const handleArtistClick = (artist: Artist) => {
-    navigate(`/artists/${artist.id}`);
+    if (onArtistClick) {
+      onArtistClick(artist);
+    } else {
+      navigate(`/artists/${artist.id}`);
+    }
   };
 
   // Log the release for debugging
@@ -142,12 +154,22 @@ export const ReleaseModal = ({ open, onClose, release }: ReleaseModalProps) => {
   if (!hasArtists) {
     console.log('Creating default artist for release:', release.title);
     
+    // Check if this is likely a compilation
+    const isCompilation = release.title?.toLowerCase().includes('compilation') || 
+                         release.title?.toLowerCase().includes('various') ||
+                         (release.tracks && release.tracks.length > 2 && 
+                          new Set(release.tracks.flatMap(t => t.artists?.map(a => a.id) || [])).size > 3);
+    
     // Try to extract artist name and image from release data
-    let artistName = 'Unknown Artist';
-    let artistImageUrl = 'https://via.placeholder.com/50?text=Artist';
+    let artistName = isCompilation ? 'Various Artists' : 'Unknown Artist';
+    
+    // For compilations or Various Artists, use the album artwork
+    let artistImageUrl = isCompilation && release.artwork_url 
+      ? release.artwork_url 
+      : '/images/placeholder-artist.jpg';
     
     // Check if we have any artist information from tracks
-    if (release.tracks && release.tracks.length > 0) {
+    if (!isCompilation && release.tracks && release.tracks.length > 0) {
       const trackWithArtist = release.tracks.find(track => 
         track.artists && track.artists.length > 0 && track.artists[0].name);
       
@@ -159,7 +181,7 @@ export const ReleaseModal = ({ open, onClose, release }: ReleaseModalProps) => {
     }
     
     const defaultArtist = {
-      id: 'unknown',
+      id: isCompilation ? 'various-artists' : 'unknown',
       name: artistName,
       uri: '',
       type: 'artist',
@@ -168,6 +190,18 @@ export const ReleaseModal = ({ open, onClose, release }: ReleaseModalProps) => {
     
     artists = [defaultArtist];
     hasArtists = true;
+  } else {
+    // Check if this might be a Various Artists compilation
+    const isCompilation = release.title?.toLowerCase().includes('compilation') ||
+                         release.title?.toLowerCase().includes('various') ||
+                         (artists.length === 1 && artists[0].name === "Various Artists") ||
+                         (release.tracks && release.tracks.length > 2 && 
+                          new Set(release.tracks.flatMap(t => t.artists?.map(a => a.id) || [])).size > 3);
+    
+    if (isCompilation && artists.length === 1 && artists[0].name === "Various Artists") {
+      // Update the Various Artists image to use the album artwork
+      artists[0].profile_image_url = release.artwork_url || artists[0].profile_image_url;
+    }
   }
 
   // Helper function to get the best available image URL for an artist
@@ -279,6 +313,7 @@ export const ReleaseModal = ({ open, onClose, release }: ReleaseModalProps) => {
                   <ArtistPreview
                     key={artist.id}
                     artist={artist}
+                    onArtistClick={onArtistClick}
                   />
                 ))
               ) : (
@@ -315,8 +350,7 @@ export const ReleaseModal = ({ open, onClose, release }: ReleaseModalProps) => {
                     <TableCell>Title</TableCell>
                     <TableCell>Artists</TableCell>
                     <TableCell>Duration</TableCell>
-                    <TableCell>Preview</TableCell>
-                    <TableCell>Links</TableCell>
+                    <TableCell align="center">Play</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -379,24 +413,19 @@ export const ReleaseModal = ({ open, onClose, release }: ReleaseModalProps) => {
                             {isRemix && remixArtist && ` (${remixArtist} Remix)`}
                           </TableCell>
                           <TableCell>{track.duration ? formatDuration(track.duration) : '--:--'}</TableCell>
-                          <TableCell>
-                            {track.preview_url && (
-                              <audio controls>
-                                <source src={track.preview_url} type="audio/mpeg" />
-                                Your browser does not support the audio element.
-                              </audio>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {track.spotify_url && (
-                              <Link
-                                href={track.spotify_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                underline="hover"
-                              >
-                                Spotify
-                              </Link>
+                          <TableCell align="center">
+                            {track.spotify_url || track.external_urls?.spotify ? (
+                              <Tooltip title="Play on Spotify">
+                                <IconButton
+                                  size="small"
+                                  color="primary"
+                                  onClick={() => window.open(track.spotify_url || track.external_urls?.spotify, '_blank')}
+                                >
+                                  <PlayArrowIcon />
+                                </IconButton>
+                              </Tooltip>
+                            ) : (
+                              <Typography variant="caption" color="text.secondary">N/A</Typography>
                             )}
                           </TableCell>
                         </TableRow>
@@ -404,7 +433,7 @@ export const ReleaseModal = ({ open, onClose, release }: ReleaseModalProps) => {
                     })
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={6} align="center">
+                      <TableCell colSpan={5} align="center">
                         No tracks available
                       </TableCell>
                     </TableRow>

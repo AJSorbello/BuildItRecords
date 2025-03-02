@@ -169,14 +169,21 @@ class DatabaseService {
   public async processReleases(response: { releases: Release[] }): Promise<Release[]> {
     try {
       const releases = response.releases.map((release) => {
+        // Process images
         const processedImages = (release.images || []).map((img: SpotifyImage) => ({
           url: img.url,
           height: img.height !== null ? img.height : 0,
           width: img.width !== null ? img.width : 0
         }));
         
+        // Ensure we have an artwork_url by using the first image if available
+        const artwork_url = release.artwork_url || 
+                           (release.images && release.images.length > 0 && release.images[0].url) || 
+                           '';
+        
         // Log artists information for debugging
         console.log('Processing release:', release.title);
+        console.log('  Release artwork_url:', artwork_url);
         console.log('  Release artists:', release.artists?.length || 0);
         if (release.artists && release.artists.length > 0) {
           console.log('  Release artists details:');
@@ -207,7 +214,7 @@ class DatabaseService {
           artists: release.artists || [],
           tracks: release.tracks || [],
           images: processedImages,
-          artwork_url: release.artwork_url,
+          artwork_url: artwork_url,
           release_date: release.release_date,
           external_urls: {
             spotify: release.spotify_url || ''
