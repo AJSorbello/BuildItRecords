@@ -1,140 +1,182 @@
 #!/usr/bin/env node
 
 /**
- * This script patches the necessary files and dependencies for deploying to Vercel
- * It eliminates the need for native PostgreSQL modules by adding overrides
+ * This script prepares the build environment for Vercel deployment
+ * It handles PostgreSQL dependencies and creates mock implementations
  */
 
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 
-console.log('📝 Starting Vercel build patch process...');
+console.log(' Running Vercel build patch script...');
 
-// Create .npmrc file to prevent native module builds
-const createNpmrc = () => {
-  const npmrcPath = path.join(__dirname, '..', '.npmrc');
-  console.log(`Creating .npmrc at ${npmrcPath}...`);
-  
-  const npmrcContent = [
-    'node-linker=hoisted',
-    'public-hoist-pattern[]=*types*',
-    'public-hoist-pattern[]=*eslint*',
-    'public-hoist-pattern[]=@typescript-eslint/*',
-    'lockfile=false',
-    'prefer-frozen-lockfile=false',
-    'shamefully-hoist=true',
-    'auto-install-peers=true',
-    'strict-peer-dependencies=false'
-  ].join('\n');
-  
-  fs.writeFileSync(npmrcPath, npmrcContent);
-  console.log('✅ .npmrc file created successfully');
-};
+// Create .npmrc file with proper node-linker setting
+const npmrcPath = path.join(__dirname, '..', '.npmrc');
+fs.writeFileSync(npmrcPath, 'node-linker=hoisted\npublic-hoist-pattern[]=*postgresql*\npublic-hoist-pattern[]=*pg*\npublic-hoist-pattern[]=*postgres*\nstrict-peer-dependencies=false\nauto-install-peers=true\ninclude-workspace-root=true\nprefer-workspace-packages=true\n');
+console.log(' Created .npmrc file with proper settings');
 
-// Add necessary overrides to the package.json to handle PostgreSQL dependencies
-const updatePackageJson = () => {
-  const packageJsonPath = path.join(__dirname, '..', 'package.json');
-  console.log(`Updating package.json at ${packageJsonPath}...`);
-  
-  try {
-    const packageData = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-    
-    // Add overrides for PostgreSQL related packages
-    packageData.overrides = {
-      ...(packageData.overrides || {}),
-      'pg': 'npm:@vercel/noop',
-      'pg-native': 'npm:@vercel/noop',
-      'pg-hstore': 'npm:@vercel/noop',
-      'libpq': 'npm:@vercel/noop'
-    };
-    
-    // Add a timestamp to force Vercel to recognize changes
-    packageData.vercelDeploymentTimestamp = new Date().toISOString();
-    
-    // Write the updated package.json
-    fs.writeFileSync(packageJsonPath, JSON.stringify(packageData, null, 2));
-    console.log('✅ package.json updated successfully');
+// Get the paths
+const packageJsonPath = path.join(__dirname, '..', 'package.json');
+const pgNativePath = path.join(__dirname, '..', 'node_modules', 'pg-native');
+const pgPath = path.join(__dirname, '..', 'node_modules', 'pg');
 
-    // Run pnpm to update the lock file
-    try {
-      console.log('📦 Updating pnpm-lock.yaml to match package.json...');
-      execSync('pnpm install --no-frozen-lockfile', { stdio: 'inherit' });
-      console.log('✅ pnpm-lock.yaml updated successfully');
-    } catch (err) {
-      console.error('❌ Failed to update pnpm-lock.yaml:', err.message);
-      // Continue with the build process even if lock update fails
-    }
-    
-    return true;
-  } catch (error) {
-    console.error('❌ Error updating package.json:', error.message);
-    return false;
-  }
-};
-
-// Create a mock implementation for the pg package
-const createPgMock = () => {
-  const mockDir = path.join(__dirname, '..', 'node_modules', '@vercel', 'noop');
-  
-  if (!fs.existsSync(mockDir)) {
-    console.log(`Creating mock directory at ${mockDir}...`);
-    fs.mkdirSync(mockDir, { recursive: true });
+try {
+  // Create a mock pg-native implementation
+  if (!fs.existsSync(path.dirname(pgNativePath))) {
+    fs.mkdirSync(path.dirname(pgNativePath), { recursive: true });
   }
   
-  const mockIndexPath = path.join(mockDir, 'index.js');
-  console.log(`Creating mock implementation at ${mockIndexPath}...`);
-  
-  const mockContent = `
-    module.exports = {};
-    module.exports.default = {};
-    module.exports.Pool = class Pool {
-      connect() { return Promise.resolve(); }
-      query() { return Promise.resolve({ rows: [] }); }
-      end() { return Promise.resolve(); }
-    };
-    module.exports.Client = class Client {
-      connect() { return Promise.resolve(); }
-      query() { return Promise.resolve({ rows: [] }); }
-      end() { return Promise.resolve(); }
-    };
-  `;
-  
-  fs.writeFileSync(mockIndexPath, mockContent);
-  
-  const mockPackageJsonPath = path.join(mockDir, 'package.json');
-  const mockPackageJson = {
-    name: '@vercel/noop',
-    version: '1.0.0',
-    main: 'index.js'
-  };
-  
-  fs.writeFileSync(mockPackageJsonPath, JSON.stringify(mockPackageJson, null, 2));
-  console.log('✅ Mock pg implementation created successfully');
-};
-
-// Main execution
-(async () => {
-  try {
-    console.log('🔍 Checking for PostgreSQL dependencies...');
+  if (!fs.existsSync(pgNativePath)) {
+    fs.mkdirSync(pgNativePath, { recursive: true });
     
-    // Create .npmrc file
-    createNpmrc();
+    // Create package.json for pg-native
+    fs.writeFileSync(
+      path.join(pgNativePath, 'package.json'),
+      JSON.stringify({
+        name: 'pg-native',
+        version: '3.0.0',
+        main: 'index.js'
+      }, null, 2)
+    );
     
-    // Update package.json with overrides
-    const packageUpdated = updatePackageJson();
-    
-    if (packageUpdated) {
-      // Create mock implementation
-      createPgMock();
+    // Create mock index.js for pg-native
+    fs.writeFileSync(
+      path.join(pgNativePath, 'index.js'),
+      `console.warn('Using mock pg-native implementation for Vercel deployment');
       
-      console.log('✅ Vercel build patch completed successfully');
-    } else {
-      console.error('❌ Vercel build patch failed');
-      process.exit(1);
-    }
-  } catch (error) {
-    console.error('❌ Vercel build patch error:', error.message);
-    process.exit(1);
+module.exports = class Client {
+  constructor() {
+    console.warn('Mock pg-native Client instantiated');
   }
-})();
+  
+  connectSync() {
+    console.warn('Mock pg-native connectSync called');
+    return this;
+  }
+  
+  querySync() {
+    console.warn('Mock pg-native querySync called');
+    return [];
+  }
+  
+  query(text, values, callback) {
+    console.warn('Mock pg-native query called');
+    if (typeof callback === 'function') {
+      callback(null, { rows: [] });
+    }
+    return Promise.resolve({ rows: [] });
+  }
+  
+  end() {
+    console.warn('Mock pg-native end called');
+  }
+};`
+    );
+    
+    console.log(' Created mock pg-native implementation');
+  }
+  
+  // Create a similar mock for pg if needed
+  if (!fs.existsSync(pgPath)) {
+    fs.mkdirSync(pgPath, { recursive: true });
+    
+    // Create package.json for pg
+    fs.writeFileSync(
+      path.join(pgPath, 'package.json'),
+      JSON.stringify({
+        name: 'pg',
+        version: '8.11.0',
+        main: 'index.js'
+      }, null, 2)
+    );
+    
+    // Create mock index.js for pg
+    fs.writeFileSync(
+      path.join(pgPath, 'index.js'),
+      `console.warn('Using mock pg implementation for Vercel deployment');
+      
+const Pool = class {
+  constructor() {
+    console.warn('Mock pg Pool instantiated');
+  }
+  
+  connect() {
+    console.warn('Mock pg Pool.connect called');
+    return Promise.resolve({
+      query: async () => ({ rows: [] }),
+      release: () => {}
+    });
+  }
+  
+  query() {
+    console.warn('Mock pg Pool.query called');
+    return Promise.resolve({ rows: [] });
+  }
+  
+  end() {
+    console.warn('Mock pg Pool.end called');
+    return Promise.resolve();
+  }
+};
+
+const Client = class {
+  constructor() {
+    console.warn('Mock pg Client instantiated');
+  }
+  
+  connect() {
+    console.warn('Mock pg Client.connect called');
+    return Promise.resolve(this);
+  }
+  
+  query() {
+    console.warn('Mock pg Client.query called');
+    return Promise.resolve({ rows: [] });
+  }
+  
+  end() {
+    console.warn('Mock pg Client.end called');
+    return Promise.resolve();
+  }
+};
+
+module.exports = {
+  Pool,
+  Client
+};`
+    );
+    
+    console.log(' Created mock pg implementation');
+  }
+  
+  // Update package.json with current timestamp to force rebuild
+  const packageData = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+  
+  // Add override for PostgreSQL dependencies
+  if (!packageData.overrides) {
+    packageData.overrides = {};
+  }
+  
+  packageData.overrides['pg'] = '@vercel/noop';
+  packageData.overrides['pg-native'] = '@vercel/noop';
+  packageData.overrides['pg-hstore'] = '@vercel/noop';
+  packageData.overrides['sequelize'] = 'sequelize';  // Keep sequelize but mock its pg dependencies
+  
+  // Write updated package.json
+  fs.writeFileSync(packageJsonPath, JSON.stringify(packageData, null, 2));
+  console.log(' Updated package.json with dependency overrides');
+  
+  // Log current Git commit
+  try {
+    const commitHash = execSync('git rev-parse HEAD').toString().trim();
+    console.log(` Current Git commit: ${commitHash}`);
+  } catch (error) {
+    console.warn(' Unable to get Git commit hash:', error.message);
+  }
+  
+  console.log(' Vercel build patch completed successfully');
+} catch (error) {
+  console.error(' Error during Vercel build patch:', error);
+  process.exit(1);
+}

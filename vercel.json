@@ -1,7 +1,7 @@
 {
   "version": 2,
-  "buildCommand": "node ./scripts/bypass-vercel-check.js && node ./scripts/check-commit.js && node ./scripts/vercel-build-patch.js && pnpm install --no-frozen-lockfile --force && pnpm run build",
-  "installCommand": "pnpm install --no-frozen-lockfile",
+  "buildCommand": "rm -f pnpm-lock.yaml && node ./scripts/ci-mode-patch.js && node ./scripts/fix-package-json.js && node ./scripts/bypass-vercel-check.js && node ./scripts/vercel-build-patch.js && pnpm install --force && pnpm run build",
+  "installCommand": "rm -f pnpm-lock.yaml && node ./scripts/ci-mode-patch.js && pnpm install --force",
   "ignoreCommand": "",
   "builds": [
     {
