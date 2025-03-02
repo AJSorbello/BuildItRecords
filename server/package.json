@@ -5,6 +5,12 @@
   "description": "Backend server for BuildIt Records",
   "main": "index.js",
   "license": "MIT",
+  "overrides": {
+    "pg": "npm:@vercel/noop",
+    "pg-native": "npm:@vercel/noop",
+    "pg-hstore": "npm:@vercel/noop",
+    "libpq": "npm:@vercel/noop"
+  },
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon",
