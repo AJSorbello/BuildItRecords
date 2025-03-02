@@ -18,8 +18,13 @@ const StyledAppBar = styled(AppBar)(({ theme }) => ({
   zIndex: 1300,
   display: 'flex',
   alignItems: 'center',
+  padding: '0 16px',
   '& .MuiToolbar-root': {
     background: 'transparent'
+  },
+  [theme.breakpoints.down('md')]: {
+    padding: '0 8px',
+    justifyContent: 'center'
   }
 }));
 
@@ -38,7 +43,11 @@ const StyledTabs = styled(Tabs)(({ theme }) => ({
     backgroundColor: 'transparent',
   },
   [theme.breakpoints.down('md')]: {
-    display: 'none',
+    marginLeft: '56px',  
+    marginRight: '8px',
+    '& .MuiTabs-flexContainer': {
+      justifyContent: 'space-around'
+    }
   }
 }));
 
@@ -59,12 +68,13 @@ const StyledTab = styled(Tab)<{ tabtype: string }>(({ theme, tabtype }) => ({
   minWidth: 120,
   padding: '12px 16px',
   [theme.breakpoints.down('md')]: {
-    minWidth: 90,
-    padding: '8px 12px',
+    minWidth: 60,
+    padding: '4px',
+    fontSize: '0.75rem'
   }
 }));
 
-const Logo = styled('img')<{ tabtype: string }>(({ tabtype }) => ({
+const Logo = styled('img')<{ tabtype: string }>(({ tabtype, theme }) => ({
   width: '32px',
   height: '32px',
   filter: 'brightness(0) invert(1)',
@@ -75,6 +85,11 @@ const Logo = styled('img')<{ tabtype: string }>(({ tabtype }) => ({
            'brightness(0) invert(0.75) sepia(1) saturate(5000%) hue-rotate(175deg)',
   },
   marginBottom: '2px',
+  [theme.breakpoints.down('md')]: {
+    width: '24px',
+    height: '24px',
+    marginBottom: '1px'
+  }
 }));
 
 const TabContent = styled(Box)({
@@ -84,6 +99,9 @@ const TabContent = styled(Box)({
   justifyContent: 'center',
   height: '100%',
   gap: '2px',
+  [`@media (max-width: 600px)`]: {
+    gap: '1px'
+  }
 });
 
 interface TopNavigationProps {
@@ -169,9 +187,10 @@ class TopNavigationClass extends Component<TopNavigationProps> {
                 top: '50%',
                 transform: 'translateY(-50%)',
                 zIndex: 1400,
-                backgroundColor: 'rgba(0,0,0,0.5)',
+                backgroundColor: 'rgba(0,0,0,0.7)',
+                padding: '8px',
                 '&:hover': {
-                  backgroundColor: 'rgba(0,0,0,0.7)'
+                  backgroundColor: 'rgba(0,0,0,0.9)'
                 }
               }}
             >

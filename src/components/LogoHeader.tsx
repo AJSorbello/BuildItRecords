@@ -6,6 +6,7 @@ import BuildItDeepLogo from '../assets/png/deep/BuildIt_Deep.png';
 
 interface LogoHeaderProps {
   label: string;
+  sx?: any;
 }
 
 const getLogo = (label: string) => {
@@ -19,7 +20,7 @@ const getLogo = (label: string) => {
   }
 };
 
-const LogoHeader: React.FC<LogoHeaderProps> = ({ label }) => {
+const LogoHeader: React.FC<LogoHeaderProps> = ({ label, sx = {} }) => {
   const logo = getLogo(label);
 
   return (
@@ -33,7 +34,8 @@ const LogoHeader: React.FC<LogoHeaderProps> = ({ label }) => {
         position: 'fixed',
         top: '64px',
         width: '240px',
-        zIndex: 1200
+        zIndex: 1200,
+        ...sx
       }}
     >
       <Box

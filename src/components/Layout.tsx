@@ -126,6 +126,7 @@ class LayoutClass extends Component<LayoutProps, LayoutState> {
               md: '240px' // Drawer width
             },
             marginTop: '64px', // Height of TopNavigation
+            paddingTop: { xs: '16px', md: '0' },
             minHeight: 'calc(100vh - 64px)',
             overflow: 'auto',
             backgroundColor: '#121212',
