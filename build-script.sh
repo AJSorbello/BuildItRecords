@@ -16,9 +16,9 @@ rm -f pnpm-lock.yaml package-lock.json yarn.lock
 echo "📦 Installing dependencies with NPM"
 npm install --no-package-lock
 
-# Install TailwindCSS and PostCSS dependencies with the correct plugin
+# Install TailwindCSS and PostCSS dependencies
 echo "🌈 Installing TailwindCSS and related dependencies"
-npm install --no-package-lock tailwindcss@latest postcss@latest autoprefixer@latest @tailwindcss/postcss@latest
+npm install --no-package-lock tailwindcss@3.3.0 postcss@8.4.31 autoprefixer@10.4.15
 
 # The package.json modifications to handle PostgreSQL dependencies
 echo "🔧 Patching package.json for Vercel compatibility"
@@ -43,16 +43,13 @@ if (!packageJson.devDependencies) {
   packageJson.devDependencies = {};
 }
 if (!packageJson.devDependencies.tailwindcss) {
-  packageJson.devDependencies.tailwindcss = "^3.4.0";
+  packageJson.devDependencies.tailwindcss = "^3.3.0";
 }
 if (!packageJson.devDependencies.autoprefixer) {
-  packageJson.devDependencies.autoprefixer = "^10.4.16";
+  packageJson.devDependencies.autoprefixer = "^10.4.15";
 }
 if (!packageJson.devDependencies.postcss) {
-  packageJson.devDependencies.postcss = "^8.4.32";
-}
-if (!packageJson.devDependencies['@tailwindcss/postcss']) {
-  packageJson.devDependencies['@tailwindcss/postcss'] = "latest";
+  packageJson.devDependencies.postcss = "^8.4.31";
 }
 
 fs.writeFileSync('./package.json', JSON.stringify(packageJson, null, 2));
