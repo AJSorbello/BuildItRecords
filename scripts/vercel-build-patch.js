@@ -4,6 +4,7 @@
  * 1. Patches package.json files to remove PostgreSQL dependencies
  * 2. Creates a mock implementation for pg/pg-native/libpq
  * 3. Adds overrides to package.json
+ * 4. Updates package.json to ensure lockfile compatibility
  */
 
 const fs = require('fs');
@@ -27,7 +28,8 @@ public-hoist-pattern[]=*pg*
 public-hoist-pattern[]=*libpq*
 shamefully-hoist=true
 strict-peer-dependencies=false
-auto-install-peers=true`;
+auto-install-peers=true
+lockfile=false`;
 
   fs.writeFileSync(npmrcPath, npmrcContent);
   console.log('✅ Created .npmrc file with optimized settings');
@@ -298,6 +300,26 @@ module.exports = PostgresDialect;`;
   }
 }
 
+// Function to update timestamp in package.json to force rebuild
+function updateTimestampForRebuild(packageJsonPath) {
+  try {
+    console.log(`Updating build timestamp in ${packageJsonPath}...`);
+    
+    const packageData = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+    
+    // Add or update the vercel-build property
+    packageData.vercelBuild = packageData.vercelBuild || {};
+    packageData.vercelBuild.timestamp = new Date().toISOString();
+    packageData.vercelBuild.commit = process.env.VERCEL_GIT_COMMIT_SHA || 'local-build';
+    
+    // Write the updated package.json
+    fs.writeFileSync(packageJsonPath, JSON.stringify(packageData, null, 2));
+    console.log('✅ Updated package.json with build timestamp');
+  } catch (error) {
+    console.error(`❌ Error updating timestamp in ${packageJsonPath}:`, error);
+  }
+}
+
 // Run all functions
 console.log('🧹 Setting up .npmrc...');
 createNpmRcFile();
@@ -316,4 +338,7 @@ addOverrides(serverPackageJsonPath);
 console.log('🔧 Creating mock implementations...');
 createMockModules();
 
-console.log('✅ Build patch completed successfully!');
+console.log('🕒 Updating timestamp for rebuild...');
+updateTimestampForRebuild(mainPackageJsonPath);
+
+console.log('✅ Vercel build patch script completed successfully');
