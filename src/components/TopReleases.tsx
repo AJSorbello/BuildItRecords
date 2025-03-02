@@ -1,6 +1,6 @@
 import React from 'react';
-import { Box, Typography, List, ListItem, ListItemText, Paper, Alert, IconButton, Avatar, Grid } from '@mui/material';
-import { PlayArrow, QueueMusic, Add } from '@mui/icons-material';
+import { Box, Typography, List, ListItem, ListItemText, Paper, Alert, IconButton, Avatar, Grid, Tooltip } from '@mui/material';
+import { PlayArrow, QueueMusic, Add, MusicNote } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
 import { Release } from '../types/release';
 import { RecordLabel } from '../constants/labels';
@@ -27,7 +27,22 @@ const AlbumArt = styled(Avatar)(({ theme }) => ({
   height: 48,
   marginRight: theme.spacing(2),
   borderRadius: theme.spacing(1),
-  aspectRatio: '1/1', // Add this line to ensure 1:1 aspect ratio
+  aspectRatio: '1/1',
+}));
+
+const PlayIconButton = styled(IconButton)(({ theme }) => ({
+  width: 28,
+  height: 28,
+  borderRadius: '50%',
+  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  color: theme.palette.primary.main,
+  marginLeft: theme.spacing(1),
+  '&:hover': {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  '& svg': {
+    fontSize: 16,
+  }
 }));
 
 const getTopReleasesTitle = (labelId: string) => {
@@ -71,106 +86,99 @@ export const TopReleases = ({ label }: TopReleasesProps) => {
     fetchTopReleases();
   }, [label]);
 
+  const openSpotifyUrl = (url: string) => {
+    if (!url) return;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
   if (loading) {
     return (
-      <Paper elevation={3} sx={{ p: 2, bgcolor: 'background.paper', borderRadius: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-          <PlayArrow />
-          <QueueMusic sx={{ mx: 1 }} />
-          <Add />
-          <Typography variant="h6" sx={{ ml: 1 }}>
-            {title}
-          </Typography>
-        </Box>
-        <Box sx={{ textAlign: 'center', py: 4 }}>
+      <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <Typography variant="h6" gutterBottom>
+          Top Releases
+        </Typography>
+        <Box sx={{ textAlign: 'center', py: 4, flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <LoadingSpinner />
         </Box>
-      </Paper>
+      </Box>
     );
   }
 
   if (error) {
     return (
-      <Paper elevation={3} sx={{ p: 2, bgcolor: 'background.paper', borderRadius: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-          <PlayArrow />
-          <QueueMusic sx={{ mx: 1 }} />
-          <Add />
-          <Typography variant="h6" sx={{ ml: 1 }}>
-            {title}
-          </Typography>
-        </Box>
+      <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <Typography variant="h6" gutterBottom>
+          Top Releases
+        </Typography>
         <Alert severity="error" sx={{ mt: 2 }}>
           {error}
         </Alert>
-      </Paper>
+      </Box>
     );
   }
 
   if (!topReleases.length) {
     return (
-      <Paper elevation={3} sx={{ p: 2, bgcolor: 'background.paper', borderRadius: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-          <PlayArrow />
-          <QueueMusic sx={{ mx: 1 }} />
-          <Add />
-          <Typography variant="h6" sx={{ ml: 1 }}>
-            {title}
-          </Typography>
-        </Box>
+      <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <Typography variant="h6" gutterBottom>
+          Top Releases
+        </Typography>
         <Alert severity="info" sx={{ mt: 2 }}>
           No releases found
         </Alert>
-      </Paper>
+      </Box>
     );
   }
 
   return (
-    <Paper elevation={3} sx={{ p: 2, bgcolor: 'background.paper', borderRadius: 2 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-        <PlayArrow />
-        <QueueMusic sx={{ mx: 1 }} />
-        <Add />
-        <Typography variant="h6" sx={{ ml: 1 }}>
-          {title}
-        </Typography>
-      </Box>
-
-      <List sx={{ width: '100%' }}>
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Typography variant="h6" gutterBottom>
+        Various Artists
+      </Typography>
+      
+      <Box sx={{ overflow: 'auto', flexGrow: 1 }}>
         {topReleases.map((release, index) => (
-          <StyledListItem
-            key={release.id}
-            secondaryAction={
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <IconButton edge="end" aria-label="play" size="small" sx={{ ml: 1 }}>
-                  <PlayArrow />
-                </IconButton>
-                <IconButton edge="end" aria-label="add to queue" size="small">
-                  <Add />
-                </IconButton>
-              </Box>
-            }
+          <Box 
+            key={release.id} 
+            sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              mb: 2,
+              '&:hover': {
+                backgroundColor: 'rgba(255, 255, 255, 0.05)',
+              },
+              borderRadius: 1,
+              padding: 1
+            }}
           >
-            <AlbumArt
-              src={release.artwork_url || release.images?.[0]?.url}
-              variant="square"
-              alt={release.name}
-            />
-            <ListItemText
-              primary={release.name}
-              secondary={release.artists?.map(artist => artist.name).join(', ')}
-              sx={{
-                '& .MuiListItemText-primary': {
-                  fontWeight: 500,
-                },
-                '& .MuiListItemText-secondary': {
-                  color: 'text.secondary',
-                },
-              }}
-            />
-          </StyledListItem>
+            <Box sx={{ mr: 2 }}>
+              <AlbumArt
+                src={release.artwork_url || release.images?.[0]?.url}
+                variant="square"
+                alt={release.title}
+              />
+            </Box>
+            
+            <Box sx={{ flexGrow: 1 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 'medium' }}>
+                {release.artists?.map(artist => artist.name).join(', ')}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {release.tracks?.[0]?.title || release.title}
+              </Typography>
+            </Box>
+            
+            <Tooltip title="Play on Spotify">
+              <PlayIconButton
+                onClick={() => openSpotifyUrl(release.spotify_url || release.external_urls?.spotify || '')}
+                aria-label="play on spotify"
+              >
+                <PlayArrow fontSize="small" />
+              </PlayIconButton>
+            </Tooltip>
+          </Box>
         ))}
-      </List>
-    </Paper>
+      </Box>
+    </Box>
   );
 };

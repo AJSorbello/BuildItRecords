@@ -16,11 +16,13 @@ export interface Release {
   external_urls: SpotifyExternalUrls;
   uri: string;
   label?: RecordLabelId;
+  labelId?: RecordLabelId;
   total_tracks: number;
   spotifyUrl?: string;
   spotify_url?: string;
   spotify_uri?: string;
   status?: 'active' | 'draft' | 'archived';
+  name?: string; // For backward compatibility
 }
 
 export interface ReleaseDetails extends Release {

@@ -7,7 +7,6 @@ import {
   Box,
   CircularProgress,
   Alert,
-  Pagination,
   Button,
   Skeleton,
   useTheme
@@ -23,11 +22,10 @@ import { Artist } from '../types/artist';
 import { Refresh as RefreshIcon } from '@mui/icons-material';
 import { RECORD_LABELS } from '../constants/labels';
 
-const ITEMS_PER_PAGE = 12;
+// Removed ITEMS_PER_PAGE constant as we're showing all artists
 
 interface SearchState {
   total: number;
-  page: number;
 }
 
 interface ArtistsPageProps {
@@ -49,12 +47,11 @@ const ArtistSection: React.FC<{ artist: Artist; onArtistClick: (artist: Artist) 
 };
 
 // Wrapper component to handle hooks
-const ArtistsPageWrapper: React.FC<Omit<ArtistsPageProps, 'location'>> = (props) => {
+function ArtistsPageWrapper(props: ArtistsPageProps) {
   const location = useLocation();
   const theme = useTheme();
-  
-  return <ArtistsPageClass {...props} location={location} />;
-};
+  return <ArtistsPage {...props} location={location} />;
+}
 
 interface ArtistsPageState {
   artists: Artist[];
@@ -66,7 +63,7 @@ interface ArtistsPageState {
   modalOpen: boolean;
 }
 
-class ArtistsPageClass extends Component<ArtistsPageProps, ArtistsPageState> {
+class ArtistsPage extends Component<ArtistsPageProps, ArtistsPageState> {
   debouncedSearch: any;
 
   constructor(props: ArtistsPageProps) {
@@ -78,15 +75,13 @@ class ArtistsPageClass extends Component<ArtistsPageProps, ArtistsPageState> {
       searchTerm: '',
       selectedArtist: null,
       searchState: {
-        total: 0,
-        page: 1,
+        total: 0
       },
       modalOpen: false
     };
 
     this.debouncedSearch = debounce(this.fetchArtists, 500);
     this.handleSearchChange = this.handleSearchChange.bind(this);
-    this.handlePageChange = this.handlePageChange.bind(this);
     this.handleArtistClick = this.handleArtistClick.bind(this);
     this.handleModalClose = this.handleModalClose.bind(this);
     this.handleRefresh = this.handleRefresh.bind(this);
@@ -103,46 +98,39 @@ class ArtistsPageClass extends Component<ArtistsPageProps, ArtistsPageState> {
   }
 
   getLabelId() {
-    const labelKey = this.props.label;
-    // Map the short label name to the full label ID
-    switch(labelKey) {
-      case 'tech':
-        return 'buildit-tech';
-      case 'deep':
-        return 'buildit-deep';
-      case 'records':
-      default:
-        return 'buildit-records';
-    }
+    const { label } = this.props;
+    // Map route label names to full label IDs
+    const labelMap: Record<string, string> = {
+      'records': 'buildit-records',
+      'tech': 'buildit-tech',
+      'deep': 'buildit-deep'
+    };
+    
+    return labelMap[label] || 'buildit-tech';
   }
 
   getTitle() {
-    switch (this.props.label) {
-      case 'tech':
-        return 'BuildIt Tech Artists';
-      case 'deep':
-        return 'BuildIt Deep Artists';
-      default:
-        return 'BuildIt Records Artists';
-    }
+    const { label } = this.props;
+    const titleMap: Record<string, string> = {
+      'records': 'BuildIt Records Artists',
+      'tech': 'BuildIt Tech Artists',
+      'deep': 'BuildIt Deep Artists'
+    };
+    
+    return titleMap[label] || 'BuildIt Tech Artists';
   }
 
   getFilteredArtists() {
     const { artists, searchTerm } = this.state;
-    if (!searchTerm.trim()) return artists;
     
-    const term = searchTerm.toLowerCase();
+    if (!searchTerm.trim()) {
+      return artists;
+    }
+    
+    const lowerSearchTerm = searchTerm.toLowerCase();
     return artists.filter(artist => 
-      artist.name.toLowerCase().includes(term) || 
-      (artist.genres && artist.genres.some(genre => genre.toLowerCase().includes(term)))
+      artist.name?.toLowerCase().includes(lowerSearchTerm)
     );
-  }
-
-  getPaginatedArtists() {
-    const filteredArtists = this.getFilteredArtists();
-    const { page } = this.state.searchState;
-    const startIndex = (page - 1) * ITEMS_PER_PAGE;
-    return filteredArtists.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   }
 
   async fetchArtists() {
@@ -159,7 +147,6 @@ class ArtistsPageClass extends Component<ArtistsPageProps, ArtistsPageState> {
         artists,
         loading: false,
         searchState: {
-          ...this.state.searchState,
           total: artists.length
         }
       });
@@ -186,22 +173,9 @@ class ArtistsPageClass extends Component<ArtistsPageProps, ArtistsPageState> {
   handleSearchChange(event: React.ChangeEvent<HTMLInputElement>) {
     const searchTerm = event.target.value;
     this.setState({ 
-      searchTerm,
-      searchState: {
-        ...this.state.searchState,
-        page: 1
-      }
+      searchTerm
     });
     this.debouncedSearch();
-  }
-
-  handlePageChange(event: React.ChangeEvent<unknown>, page: number) {
-    this.setState({
-      searchState: {
-        ...this.state.searchState,
-        page
-      }
-    });
   }
 
   handleArtistClick(artist: Artist) {
@@ -217,11 +191,7 @@ class ArtistsPageClass extends Component<ArtistsPageProps, ArtistsPageState> {
 
   handleRefresh() {
     this.setState({
-      searchTerm: '',
-      searchState: {
-        ...this.state.searchState,
-        page: 1
-      }
+      searchTerm: ''
     });
     this.fetchArtists();
   }
@@ -261,8 +231,6 @@ class ArtistsPageClass extends Component<ArtistsPageProps, ArtistsPageState> {
     }
 
     const filteredArtists = this.getFilteredArtists();
-    const paginatedArtists = this.getPaginatedArtists();
-    const totalPages = Math.ceil(filteredArtists.length / ITEMS_PER_PAGE);
 
     if (filteredArtists.length === 0) {
       return (
@@ -291,7 +259,7 @@ class ArtistsPageClass extends Component<ArtistsPageProps, ArtistsPageState> {
     return (
       <>
         <Grid container spacing={3}>
-          {paginatedArtists.map(artist => (
+          {filteredArtists.map(artist => (
             <Grid item xs={12} sm={6} md={4} lg={3} key={artist.id}>
               <ArtistSection 
                 artist={artist} 
@@ -300,18 +268,6 @@ class ArtistsPageClass extends Component<ArtistsPageProps, ArtistsPageState> {
             </Grid>
           ))}
         </Grid>
-
-        {totalPages > 1 && (
-          <Box display="flex" justifyContent="center" mt={4}>
-            <Pagination 
-              count={totalPages} 
-              page={this.state.searchState.page} 
-              onChange={this.handlePageChange} 
-              color="primary" 
-              size="large"
-            />
-          </Box>
-        )}
       </>
     );
   }
@@ -350,16 +306,37 @@ class ArtistsPageClass extends Component<ArtistsPageProps, ArtistsPageState> {
               }
             }}
           />
+          
+          {this.state.loading && this.state.artists.length > 0 && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
+              <CircularProgress size={24} sx={{ mr: 1 }} />
+              <Typography variant="body2" color="textSecondary">
+                Updating artists...
+              </Typography>
+            </Box>
+          )}
+          
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="body2" color="textSecondary">
+              {this.getFilteredArtists().length} artists found
+            </Typography>
+            <Button 
+              size="small" 
+              startIcon={<RefreshIcon />} 
+              onClick={this.handleRefresh}
+            >
+              Refresh
+            </Button>
+          </Box>
         </Box>
-
+        
         {this.renderContent()}
-
+        
         {selectedArtist && (
           <ArtistModal
             open={modalOpen}
-            artist={selectedArtist}
             onClose={this.handleModalClose}
-            label={this.props.label}
+            artist={selectedArtist}
           />
         )}
       </Container>
