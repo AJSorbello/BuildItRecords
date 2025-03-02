@@ -107,7 +107,6 @@
     "eslint-plugin-react": "^7.33.2",
     "http-proxy-middleware": "^3.0.3",
     "husky": "^9.1.7",
-    "pg-hstore": "^2.3.4",
     "sequelize-cli": "^6.6.2",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
