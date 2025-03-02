@@ -1,15 +1,17 @@
 {
   "version": 2,
-  "buildCommand": "rm -f pnpm-lock.yaml && node ./scripts/ci-mode-patch.js && node ./scripts/fix-package-json.js && node ./scripts/bypass-vercel-check.js && node ./scripts/vercel-build-patch.js && pnpm install --force && pnpm run build",
-  "installCommand": "rm -f pnpm-lock.yaml && node ./scripts/ci-mode-patch.js && pnpm install --force",
-  "ignoreCommand": "",
+  "build": {
+    "env": {
+      "CI": "true",
+      "VERCEL": "true"
+    }
+  },
   "builds": [
     {
-      "src": "package.json",
+      "src": "build-script.sh",
       "use": "@vercel/static-build",
       "config": {
-        "zeroConfig": true,
-        "skipInstall": false
+        "distDir": "dist"
       }
     },
     {
@@ -27,11 +29,11 @@
     },
     {
       "src": "/(.*\\.(js|css|png|jpg|jpeg|svg|ico|json))",
-      "dest": "/dist/$1"
+      "dest": "/$1"
     },
     {
       "src": "/(.*)",
-      "dest": "/dist/index.html"
+      "dest": "/index.html"
     }
   ],
   "git": {
@@ -39,10 +41,5 @@
       "main": true,
       "vercel-deploy-fix": true
     }
-  },
-  "github": {
-    "enabled": true,
-    "silent": false,
-    "autoJobCancelation": true
   }
 }
