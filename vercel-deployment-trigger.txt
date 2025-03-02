@@ -1,0 +1,8 @@
+# Vercel Deployment Trigger
+This file is used to trigger new deployments on Vercel.
+Current timestamp: 2025-03-02T03:52:00-08:00
+
+# Deployment Notes
+- Force using latest commit (d94dfb8) for deployment
+- Make sure build process runs with --no-frozen-lockfile --force flags
+- Check commit and file information before starting the build
