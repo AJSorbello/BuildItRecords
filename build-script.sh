@@ -16,6 +16,10 @@ rm -f pnpm-lock.yaml package-lock.json yarn.lock
 echo "📦 Installing dependencies with NPM"
 npm install --no-package-lock
 
+# Install TailwindCSS and PostCSS dependencies
+echo "🌈 Installing TailwindCSS and related dependencies"
+npm install --no-package-lock tailwindcss@latest postcss@latest autoprefixer@latest
+
 # The package.json modifications to handle PostgreSQL dependencies
 echo "🔧 Patching package.json for Vercel compatibility"
 node << EOF
@@ -34,9 +38,29 @@ packageJson.overrides['pg'] = '@vercel/noop';
 packageJson.overrides['pg-native'] = '@vercel/noop';
 packageJson.overrides['pg-hstore'] = '@vercel/noop';
 
+// Add TailwindCSS to devDependencies if not present
+if (!packageJson.devDependencies) {
+  packageJson.devDependencies = {};
+}
+if (!packageJson.devDependencies.tailwindcss) {
+  packageJson.devDependencies.tailwindcss = "^3.4.0";
+}
+if (!packageJson.devDependencies.autoprefixer) {
+  packageJson.devDependencies.autoprefixer = "^10.4.16";
+}
+if (!packageJson.devDependencies.postcss) {
+  packageJson.devDependencies.postcss = "^8.4.32";
+}
+
 fs.writeFileSync('./package.json', JSON.stringify(packageJson, null, 2));
 console.log('✅ Successfully patched package.json');
 EOF
+
+# Create a basic tailwind config if it doesn't exist
+if [ ! -f "tailwind.config.js" ]; then
+  echo "📝 Creating TailwindCSS configuration file"
+  npx tailwindcss init
+fi
 
 # Create mock implementations for PostgreSQL modules
 echo "🔧 Creating mock implementations for PostgreSQL modules"
