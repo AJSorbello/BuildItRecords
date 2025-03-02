@@ -1,0 +1,55 @@
+[2025-03-02T11:00:25.047Z] Migrating labels...
+[2025-03-02T11:00:25.056Z] Found 3 labels to migrate
+[2025-03-02T11:00:25.539Z] All labels already exist in Supabase
+[2025-03-02T11:00:25.539Z] Migrating artists...
+[2025-03-02T11:00:25.556Z] Found 203 artists to migrate
+[2025-03-02T11:00:26.209Z] Error migrating artists: Error inserting artists: Could not find the 'apple_music_url' column of 'artists' in the schema cache
+[2025-03-02T11:01:44.551Z] Migrating labels...
+[2025-03-02T11:01:44.558Z] Found 3 labels to migrate
+[2025-03-02T11:01:45.104Z] All labels already exist in Supabase
+[2025-03-02T11:01:45.105Z] Migrating artists...
+[2025-03-02T11:01:45.117Z] Found 203 artists to migrate
+[2025-03-02T11:01:45.595Z] Error migrating artists: Error inserting artists batch 1: Could not find the 'profile_image_large_url' column of 'artists' in the schema cache
+[2025-03-02T11:03:54.825Z] Migrating labels...
+[2025-03-02T11:03:54.831Z] Found 3 labels to migrate
+[2025-03-02T11:03:55.588Z] All labels already exist in Supabase
+[2025-03-02T11:03:55.589Z] Migrating artists...
+[2025-03-02T11:03:55.602Z] Found 203 artists to migrate
+[2025-03-02T11:03:56.122Z] Error migrating artists: Error inserting artists batch 1: Could not find the 'profile_image_large_url' column of 'artists' in the schema cache
+[2025-03-02T11:06:09.667Z] Migrating labels...
+[2025-03-02T11:06:09.675Z] Found 3 labels to migrate
+[2025-03-02T11:06:10.350Z] All labels already exist in Supabase
+[2025-03-02T11:06:10.351Z] Migrating artists...
+[2025-03-02T11:06:10.364Z] Found 203 artists to migrate
+[2025-03-02T11:06:11.009Z] Error inserting artists batch 1: Could not find the 'profile_image_url' column of 'artists' in the schema cache
+[2025-03-02T11:06:11.125Z] Error inserting artists batch 2: Could not find the 'profile_image_url' column of 'artists' in the schema cache
+[2025-03-02T11:06:11.241Z] Error inserting artists batch 3: Could not find the 'profile_image_url' column of 'artists' in the schema cache
+[2025-03-02T11:06:11.557Z] Error inserting artists batch 4: Could not find the 'profile_image_url' column of 'artists' in the schema cache
+[2025-03-02T11:06:11.662Z] Error inserting artists batch 5: Could not find the 'profile_image_url' column of 'artists' in the schema cache
+[2025-03-02T11:06:11.662Z] Successfully migrated artists
+[2025-03-02T11:06:11.662Z] Migrating releases...
+[2025-03-02T11:06:11.671Z] Found 174 releases to migrate
+[2025-03-02T11:06:12.139Z] Error inserting releases batch 1: Could not find the 'status' column of 'releases' in the schema cache
+[2025-03-02T11:06:12.246Z] Error inserting releases batch 2: Could not find the 'status' column of 'releases' in the schema cache
+[2025-03-02T11:06:12.357Z] Error inserting releases batch 3: Could not find the 'status' column of 'releases' in the schema cache
+[2025-03-02T11:06:12.456Z] Error inserting releases batch 4: Could not find the 'status' column of 'releases' in the schema cache
+[2025-03-02T11:06:12.456Z] Successfully migrated releases
+[2025-03-02T11:06:12.457Z] Migrating tracks...
+[2025-03-02T11:06:12.465Z] Found 319 tracks to migrate
+[2025-03-02T11:06:12.688Z] Error inserting tracks batch 1: new row violates row-level security policy for table "tracks"
+[2025-03-02T11:06:12.806Z] Error inserting tracks batch 2: new row violates row-level security policy for table "tracks"
+[2025-03-02T11:06:12.918Z] Error inserting tracks batch 3: new row violates row-level security policy for table "tracks"
+[2025-03-02T11:06:13.058Z] Error inserting tracks batch 4: new row violates row-level security policy for table "tracks"
+[2025-03-02T11:06:13.167Z] Error inserting tracks batch 5: new row violates row-level security policy for table "tracks"
+[2025-03-02T11:06:13.282Z] Error inserting tracks batch 6: new row violates row-level security policy for table "tracks"
+[2025-03-02T11:06:13.380Z] Error inserting tracks batch 7: new row violates row-level security policy for table "tracks"
+[2025-03-02T11:06:13.380Z] Successfully migrated tracks
+[2025-03-02T11:06:13.380Z] Migrating track_artists...
+[2025-03-02T11:06:13.386Z] Found 400 track_artists to migrate
+[2025-03-02T11:06:13.387Z] Error migrating track_artists: supabase.from(...).insert(...).onConflict is not a function
+[2025-03-02T11:06:13.388Z] Migrating release_artists...
+[2025-03-02T11:06:13.391Z] Found 203 release_artists to migrate
+[2025-03-02T11:06:13.392Z] Error migrating release_artists: supabase.from(...).insert(...).onConflict is not a function
+[2025-03-02T11:06:13.392Z] Migrating import_logs...
+[2025-03-02T11:06:13.396Z] No import_logs to migrate
+[2025-03-02T11:06:13.396Z] Migration completed successfully!

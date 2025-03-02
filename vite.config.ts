@@ -21,8 +21,29 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      'react': path.resolve(__dirname, './node_modules/react'),
-      'react-dom': path.resolve(__dirname, './node_modules/react-dom')
-    }
+    },
+  },
+  build: {
+    outDir: 'dist',
+    assetsDir: 'assets',
+    emptyOutDir: true,
+    sourcemap: false,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: [
+            'react', 
+            'react-dom', 
+            'react-router-dom',
+            '@mui/material',
+            '@emotion/react',
+            '@emotion/styled'
+          ],
+        },
+      },
+    },
+  },
+  optimizeDeps: {
+    exclude: ['pg', 'pg-native', 'pg-hstore', 'libpq']
   }
-})
+});

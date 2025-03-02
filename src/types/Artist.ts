@@ -1,17 +1,18 @@
 import type { SpotifyImage, SpotifyExternalUrls, SpotifyFollowers } from './spotify';
 import type { Track } from './track';
 import type { Album } from './album';
-import type { RecordLabelId } from './labels';
+import type { RecordLabelId, Label } from './labels';
 
 export interface Artist {
   id: string;
   name: string;
+  bio?: string;
   spotify_url?: string;
   spotify_uri?: string;
-  image_url?: string;
-  profile_image_url?: string;
-  profile_image_small_url?: string;
-  profile_image_large_url?: string;
+  // Image fields - any or all might be present depending on migration state
+  profile_image_url?: string;    // Main image URL
+  profile_image_small_url?: string; // Small image version
+  profile_image_large_url?: string; // Large image version, might be missing in Supabase
   images?: Array<{
     url: string;
     height?: number;
@@ -30,7 +31,8 @@ export interface Artist {
   uri: string;
   type: 'artist';
   popularity: number;
-  label?: RecordLabelId;
+  label_id?: string;
+  label?: Label;
 }
 
 export interface ArtistDetails extends Artist {
@@ -128,8 +130,36 @@ export function formatSpotifyArtist(artist: any): Artist {
   };
 }
 
-export function getArtistImage(artist: Artist): string {
-  return artist.images?.[0]?.url || '';
+export function getArtistImage(artist: Artist | null | undefined): string | null {
+  if (!artist) return null;
+  
+  // First try the Supabase fields with fallback logic
+  if (artist.profile_image_url || artist.profile_image_large_url || artist.profile_image_small_url) {
+    return artist.profile_image_url || artist.profile_image_large_url || artist.profile_image_small_url || '';
+  }
+  
+  // Then try the Spotify image format if available
+  return artist.images?.[0]?.url || '/images/placeholder-artist.jpg';
+}
+
+export function getArtistSmallImage(artist: Artist | null | undefined): string | null {
+  if (!artist) return null;
+  
+  // Prefer small image if available, otherwise fall back to other options
+  return artist.profile_image_small_url || 
+         artist.profile_image_url || 
+         artist.profile_image_large_url || 
+         artist.images?.[0]?.url || '/images/placeholder-artist.jpg';
+}
+
+export function getArtistLargeImage(artist: Artist | null | undefined): string | null {
+  if (!artist) return null;
+  
+  // Prefer large image if available, otherwise fall back to other options
+  return artist.profile_image_large_url || 
+         artist.profile_image_url || 
+         artist.profile_image_small_url || 
+         artist.images?.[0]?.url || '/images/placeholder-artist.jpg';
 }
 
 export function getArtistGenres(artist: Artist): string[] {

@@ -16,18 +16,22 @@
       "src": "server/server.js",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": ["server/package.json"]
+        "includeFiles": ["server/**"]
       }
     }
   ],
-  "rewrites": [
+  "routes": [
     {
-      "source": "/api/(.*)",
-      "destination": "/server/server.js"
+      "src": "/api/(.*)",
+      "dest": "/server/server.js"
     },
     {
-      "source": "/(.*)",
-      "destination": "/"
+      "src": "/(.*\\.(js|css|png|jpg|jpeg|svg|ico|json))",
+      "dest": "/dist/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/dist/index.html"
     }
   ],
   "git": {

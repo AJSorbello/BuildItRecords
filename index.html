@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Security-Policy" content="default-src * 'self' data: 'unsafe-inline' 'unsafe-eval';">
     <title>Build It Records</title>
   </head>
   <body>
@@ -12,7 +13,11 @@
     <script>
       window.global = window;
       window.process = {
-        env: { NODE_ENV: '%MODE%' }
+        env: { 
+          NODE_ENV: import.meta.env.MODE || 'production',
+          SUPABASE_URL: import.meta.env.VITE_SUPABASE_URL,
+          SUPABASE_KEY: import.meta.env.VITE_SUPABASE_KEY
+        }
       }
     </script>
   </body>
