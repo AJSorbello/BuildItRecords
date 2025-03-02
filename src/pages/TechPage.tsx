@@ -42,7 +42,7 @@ const TechPage: React.FC = () => {
         <Typography paragraph>
           Build It Tech stands at the forefront of modern electronic music innovation. Launched as
           a sister label to Build It Deep, we focus on the cutting edge of tech house, techno,
-          and progressive electronic music. Our mission is to push the boundaries of what's possible
+          and progressive electronic music. Our mission is to push the boundaries of what&apos;s possible
           in electronic music while maintaining the highest production standards.
         </Typography>
       </Box>
@@ -65,10 +65,10 @@ const TechPage: React.FC = () => {
           Innovation & Technology
         </Typography>
         <Typography paragraph>
-          True to our name, we're constantly exploring new technologies and production methods.
+          True to our name, we&apos;re constantly exploring new technologies and production methods.
           From cutting-edge synthesizers to innovative mixing techniques, Build It Tech embraces
           the latest advancements in music technology. We encourage our artists to experiment
-          with new tools and techniques, pushing the boundaries of what's possible in electronic
+          with new tools and techniques, pushing the boundaries of what&apos;s possible in electronic
           music production.
         </Typography>
       </Box>
@@ -81,7 +81,7 @@ const TechPage: React.FC = () => {
           While our sound is firmly rooted in tech house, our influence extends across the
           electronic music spectrum. Our releases regularly feature in sets by leading DJs
           and receive support from major players in the industry. Through our commitment to
-          innovation and quality, we've established ourselves as a trusted source for
+          innovation and quality, we&apos;ve established ourselves as a trusted source for
           forward-thinking electronic music that consistently delivers on the dance floor.
         </Typography>
       </Box>

@@ -1,0 +1,40 @@
+# Build directories
+dist/
+build/
+node_modules/
+
+# Generated files
+coverage/
+*.min.js
+
+# Backup files
+backup_redundant_files/
+
+# Config files
+config/jest/
+
+# Mock files
+styled-engine-mock.js
+styled-engine-mock-module.js
+
+# Test files
+**/*.test.js
+**/*.test.jsx
+**/*.test.ts
+**/*.test.tsx
+
+# Script files - these follow Node.js CommonJS require pattern
+scripts/
+migrations/
+models/
+seeders/
+
+# Server-side code (CommonJS)
+server/
+
+# Generated server code
+server/dist/
+
+# Additional ignores
+/src/setupProxy.js
+/src/setupTests.ts

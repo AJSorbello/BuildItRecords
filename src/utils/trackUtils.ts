@@ -1,4 +1,4 @@
-import type { Track, TrackDetails, Artist as TrackArtist } from '../types/track';
+import type { Track } from '../types/track';
 import type { Artist } from '../types/artist';
 import type { Album } from '../types/album';
 import type { SpotifyTrack, SpotifyArtist, SpotifyAlbum } from '../types/spotify';
@@ -16,19 +16,12 @@ function log(message: string, level: 'info' | 'error' = 'info') {
 
 export const PLACEHOLDER_IMAGE = '/placeholder-track.png';
 
-export const isTrack = (obj: any): obj is Track => {
+export const isTrack = (obj: unknown): obj is Track => {
   return obj && typeof obj === 'object' && 
     'id' in obj && 
     'title' in obj && 
     'artists' in obj && 
     Array.isArray(obj.artists);
-};
-
-export const formatDuration = (ms: number): string => {
-  if (ms <= 0) return '0:00';
-  const minutes = Math.floor(ms / 60000);
-  const seconds = Math.floor((ms % 60000) / 1000);
-  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 };
 
 const convertSpotifyTrackToTrack = (spotifyTrack: SpotifyTrack): Track => {
@@ -50,9 +43,9 @@ const convertSpotifyTrackToTrack = (spotifyTrack: SpotifyTrack): Track => {
     track_number: spotifyTrack.track_number,
     disc_number: spotifyTrack.disc_number,
     preview_url: spotifyTrack.preview_url,
-    spotify_url: spotifyTrack.external_urls.spotify,
-    spotify_uri: spotifyTrack.uri,
-    release: {
+    external_urls: spotifyTrack.external_urls,
+    uri: spotifyTrack.uri,
+    album: {
       id: spotifyTrack.album.id,
       title: spotifyTrack.album.name,
       release_date: spotifyTrack.album.release_date,
@@ -113,7 +106,7 @@ export const formatSpotifyAlbum = (album: SpotifyAlbum): Album => ({
 });
 
 export const getTrackLabel = (track: Track): RecordLabelId | undefined => {
-  return track.release?.label_id as RecordLabelId;
+  return track.album?.label_id as RecordLabelId;
 };
 
 export const getTracksByLabel = async (labelId: RecordLabelId): Promise<Track[]> => {
@@ -172,7 +165,7 @@ export const getTracksByArtist = (artistId: string): Track[] => {
 };
 
 export const getTracksByAlbumId = (releaseId: string): Track[] => {
-  return getAllTracks().filter(track => track.release?.id === releaseId);
+  return getAllTracks().filter(track => track.album?.id === releaseId);
 };
 
 export const getTrackArtists = (track: Track): string => {
@@ -180,18 +173,17 @@ export const getTrackArtists = (track: Track): string => {
 };
 
 export const getTrackImage = (track: Track): string => {
-  if (!track.release) return PLACEHOLDER_IMAGE;
-  const release = track.release;
-  return release.images?.[0]?.url || PLACEHOLDER_IMAGE;
+  if (!track.album) return PLACEHOLDER_IMAGE;
+  const album = track.album;
+  return album.images?.[0]?.url || PLACEHOLDER_IMAGE;
 };
 
-export const getTrackSpotifyUrl = (track: any): string => {
-  return track?.spotify_url || track?.external_urls?.spotify || '';
+export const getTrackSpotifyUrl = (track: Track): string => {
+  return track.external_urls?.spotify || '#';
 };
 
-export const getTrackReleaseDate = (track: any): string => {
-  if (!track?.release?.release_date) return '';
-  return new Date(track.release.release_date).toLocaleDateString();
+export const getTrackReleaseDate = (track: Track): string => {
+  return track.album?.release_date || '';
 };
 
 export const initializeTrackCache = async (): Promise<void> => {

@@ -266,7 +266,7 @@ export const ReleasesPage = ({ label: propLabel }: ReleasesPageProps) => {
                 <ReleaseSection 
                   release={latestRelease}
                   ranking={1} 
-                  onClick={() => {}} 
+                  onClick={() => { /* No operation needed */ }} 
                 />
               </Paper>
             </Grid>

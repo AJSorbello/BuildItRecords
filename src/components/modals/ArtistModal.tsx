@@ -148,7 +148,7 @@ class ArtistModalClass extends Component<ArtistModalProps, ArtistModalState> {
              new Set(release.tracks.flatMap(t => t.artists?.map(a => a.id) || [])).size > 3));
   };
 
-  getReleaseArtistImage = (release: Release, trackIndex: number = 0): string => {
+  getReleaseArtistImage = (release: Release, trackIndex = 0): string => {
     if (this.isCompilation(release)) {
       // For compilations, use the album artwork
       return release.artwork_url || '/images/placeholder-release.jpg';

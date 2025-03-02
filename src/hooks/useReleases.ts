@@ -77,7 +77,7 @@ export function useReleases(label?: string): UseReleasesResult {
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
-  const fetchReleases = useCallback(async (page: number = 1, isLoadingMore: boolean = false) => {
+  const fetchReleases = useCallback(async (page = 1, isLoadingMore = false) => {
     if (!label) {
       setReleases([]);
       setLoading(false);

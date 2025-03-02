@@ -3,10 +3,6 @@
  * @module types/spotify
  */
 
-import type { Track } from './track';
-import type { Artist } from './artist';
-import type { Album } from './album';
-
 export interface SpotifyError {
   status: number;
   message: string;

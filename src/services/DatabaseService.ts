@@ -114,8 +114,8 @@ class DatabaseService {
 
   public async getReleasesByLabelId(
     labelId: string,
-    page: number = 1,
-    limit: number = 50
+    page = 1,
+    limit = 50
   ): Promise<{
     releases: Release[];
     totalReleases: number;

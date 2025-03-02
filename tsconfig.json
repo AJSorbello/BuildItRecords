@@ -35,6 +35,7 @@
     "dist",
     "build",
     "coverage",
-    "server"
+    "server",
+    "node_modules/@spotify/**/*.d.ts"
   ]
 }

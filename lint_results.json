@@ -1,0 +1,5 @@
+
+> builditrecords@0.1.0 lint /Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords
+> eslint . --ext .js,.jsx,.ts,.tsx -- --format json
+
+ ELIFECYCLE  Command failed with exit code 2.

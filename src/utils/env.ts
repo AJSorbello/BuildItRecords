@@ -6,7 +6,7 @@ export const getRequiredEnvVar = (key: string): string => {
   return value;
 };
 
-export const getOptionalEnvVar = (key: string, defaultValue: string = ''): string => {
+export const getOptionalEnvVar = (key: string, defaultValue = ''): string => {
   return process.env[key] || defaultValue;
 };
 

@@ -40,8 +40,8 @@ export interface ImportLog {
 export const getTracks = async (
   token: string,
   labelId: string,
-  page: number = 1,
-  limit: number = 50
+  page = 1,
+  limit = 50
 ): Promise<{ tracks: Track[]; total: number; offset: number; limit: number }> => {
   const offset = (page - 1) * limit;
   const response = await fetch(
@@ -104,7 +104,7 @@ export const getTrackImports = async (
 export const searchTracks = async (
   token: string,
   query: string,
-  limit: number = 20
+  limit = 20
 ): Promise<{ tracks: Track[]; total: number }> => {
   const params = new URLSearchParams({
     q: query,

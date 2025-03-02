@@ -65,7 +65,7 @@ class SpotifyService {
     return response.json();
   }
 
-  public async searchTracks(query: string, limit: number = 20): Promise<Track[]> {
+  public async searchTracks(query: string, limit = 20): Promise<Track[]> {
     try {
       interface SearchResponse {
         tracks: SpotifyPaging<SpotifyTrack>;
@@ -133,7 +133,7 @@ class SpotifyService {
     }
   }
 
-  public async getRecommendations(seedTracks: string[], limit: number = 20): Promise<Track[]> {
+  public async getRecommendations(seedTracks: string[], limit = 20): Promise<Track[]> {
     try {
       interface RecommendationsResponse {
         tracks: SpotifyTrack[];
@@ -157,8 +157,9 @@ class SpotifyService {
       const allTracks: SpotifyTrack[] = [];
       let offset = 0;
       const limit = 100; // Maximum allowed by Spotify API
+      let hasMoreItems = true;
       
-      while (true) {
+      while (hasMoreItems) {
         const response = await this.fetchFromSpotify<SpotifyPaging<{ track: SpotifyTrack }>>(
           `/playlists/${playlistId}/tracks?offset=${offset}&limit=${limit}`
         );
@@ -182,9 +183,10 @@ class SpotifyService {
         );
         
         allTracks.push(...tracksWithArtistDetails);
-
-        if (!response.next) break; // No more tracks to fetch
+        
+        // Update offset and check if we need to fetch more
         offset += limit;
+        hasMoreItems = response.next !== null;
       }
 
       return allTracks;
@@ -199,11 +201,12 @@ class SpotifyService {
       const allTracks: SpotifyTrack[] = [];
       let offset = 0;
       const limit = 50;
+      let hasMoreItems = true;
 
       // First get the full album details to get artist images
       const albumDetails = await this.fetchFromSpotify<SpotifyAlbum>(`/albums/${albumId}`);
       
-      while (true) {
+      while (hasMoreItems) {
         const response = await this.fetchFromSpotify<SpotifyPaging<SpotifyTrack>>(
           `/albums/${albumId}/tracks?offset=${offset}&limit=${limit}`
         );
@@ -217,16 +220,17 @@ class SpotifyService {
             const fullArtists = await Promise.all(artistPromises);
             return {
               ...track,
-              album: albumDetails, // Include full album details with each track
-              artists: fullArtists
+              artists: fullArtists,
+              album: albumDetails
             };
           })
         );
         
         allTracks.push(...tracksWithArtistDetails);
-
-        if (!response.next) break;
+        
+        // Update offset and check if we need to fetch more
         offset += limit;
+        hasMoreItems = response.next !== null;
       }
 
       return allTracks;
@@ -280,6 +284,62 @@ class SpotifyService {
       return await response.json();
     } catch (error) {
       console.error('Error checking import status:', error);
+      throw error;
+    }
+  }
+
+  // Import tracks for a label
+  async importLabelTracks(label: RecordLabelId): Promise<{ tracks: Track[], total: number }> {
+    try {
+      const apiKey = await this.getAccessToken();
+      if (!apiKey) {
+        throw new Error('No API key available');
+      }
+      
+      const url = `${this.apiBaseUrl}/spotify/tracks?label=${label}`;
+      
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to import tracks for label ${label}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error importing label tracks:', error);
+      throw error;
+    }
+  }
+
+  // Import artists for a label
+  async importLabelArtists(label: RecordLabelId): Promise<{ artists: Artist[], total: number }> {
+    try {
+      const apiKey = await this.getAccessToken();
+      if (!apiKey) {
+        throw new Error('No API key available');
+      }
+      
+      const url = `${this.apiBaseUrl}/spotify/artists?label=${label}`;
+      
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to import artists for label ${label}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error importing label artists:', error);
       throw error;
     }
   }

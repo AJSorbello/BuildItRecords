@@ -26,7 +26,11 @@ class CSVService {
   private static instance: CSVService;
   private releases: SymphonicRelease[] = [];
 
-  private constructor() {}
+  // Private constructor to prevent direct instantiation
+  private constructor() {
+    // Initialization logic if needed
+    console.log('CSV Service initialized');
+  }
 
   public static getInstance(): CSVService {
     if (!CSVService.instance) {

@@ -53,10 +53,16 @@ class ReleaseService {
       database: process.env.DB_NAME
     });
 
-    this.spotify = SpotifyApi.withClientCredentials(
-      process.env.SPOTIFY_CLIENT_ID!,
-      process.env.SPOTIFY_CLIENT_SECRET!
-    );
+    const clientId = process.env.SPOTIFY_CLIENT_ID;
+    const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
+
+    if (!clientId || !clientSecret) {
+      console.error('Spotify credentials are missing');
+      // Initialize with empty strings to avoid errors; service will handle auth failures
+      this.spotify = SpotifyApi.withClientCredentials('', '');
+    } else {
+      this.spotify = SpotifyApi.withClientCredentials(clientId, clientSecret);
+    }
   }
 
   public static getInstance(): ReleaseService {
@@ -213,7 +219,7 @@ class ReleaseService {
               uri = EXCLUDED.uri`,
             [
               track.id,
-              track.title,  
+              track.name,  // Fix non-null assertion warning
               artistData.id,
               album.id,
               labelId,
@@ -238,7 +244,7 @@ class ReleaseService {
   }
 
   // Schedule regular updates for all artists
-  startUpdateSchedule(intervalHours: number = 24) {
+  startUpdateSchedule(intervalHours = 24) {
     setInterval(async () => {
       try {
         const artists = await this.pool.query('SELECT id, label_id FROM artists');

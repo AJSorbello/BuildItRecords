@@ -14,9 +14,13 @@ interface SpotifySearchParams {
 class SpotifyService {
   private static instance: SpotifyService;
   private accessToken: string | null = null;
-  private tokenExpiresAt: number = 0;
+  private tokenExpiresAt = 0;
 
-  private constructor() {}
+  // Private constructor for singleton pattern
+  private constructor() {
+    // Initialization logic
+    console.log('Spotify Service initialized');
+  }
 
   public static getInstance(): SpotifyService {
     if (!SpotifyService.instance) {
@@ -101,7 +105,7 @@ class SpotifyService {
     return data.items.map(formatSpotifyAlbum);
   }
 
-  async getArtistTopTracks(id: string, market: string = 'US'): Promise<Track[]> {
+  async getArtistTopTracks(id: string, market = 'US'): Promise<Track[]> {
     const data = await this.fetchFromSpotify(`/artists/${id}/top-tracks?market=${market}`);
     return data.tracks.map(formatSpotifyTrack);
   }
