@@ -11,6 +11,7 @@ import {
   Skeleton,
   useTheme
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import { debounce } from 'lodash';
 import { useLocation, Location } from 'react-router-dom';
 import { databaseService } from '../services/DatabaseService';
@@ -22,7 +23,6 @@ import { Artist } from '../types/artist';
 import { Refresh as RefreshIcon } from '@mui/icons-material';
 import { RECORD_LABELS } from '../constants/labels';
 import { labelColors } from '../theme/theme';
-import { alpha } from '@mui/material/styles';
 
 // Removed ITEMS_PER_PAGE constant as we're showing all artists
 
@@ -325,6 +325,21 @@ class ArtistsPage extends Component<ArtistsPageProps, ArtistsPageState> {
               '& .MuiOutlinedInput-root': {
                 borderRadius: '8px',
                 bgcolor: 'background.paper',
+                '& fieldset': {
+                  borderColor: 'rgba(255, 255, 255, 0.23)'
+                },
+                '&:hover fieldset': {
+                  borderColor: `${alpha(labelColor, 0.5)}`
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: labelColor
+                }
+              },
+              '& .MuiInputLabel-root.Mui-focused': {
+                color: labelColor
+              },
+              '& .MuiInputBase-input': {
+                color: '#ffffff'
               }
             }}
           />
@@ -338,10 +353,7 @@ class ArtistsPage extends Component<ArtistsPageProps, ArtistsPageState> {
             </Box>
           )}
           
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Typography variant="body2" color="textSecondary">
-              {this.getFilteredArtists().length} artists found
-            </Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mb: 2 }}>
             <Button 
               size="small" 
               startIcon={<RefreshIcon />} 

@@ -8,7 +8,10 @@ import {
   Tabs,
   Paper,
   Grid,
+  useTheme
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
+import { useLocation } from 'react-router-dom';
 import { useSpotifySearch } from '../hooks/useSpotifySearch';
 import { useSpotifyArtist } from '../hooks/useSpotifyArtist';
 import { useSpotifyTracks } from '../hooks/useSpotifyTracks';
@@ -16,6 +19,7 @@ import { ArtistProfile } from '../components/ArtistProfile';
 import { TrackList } from '../components/TrackList';
 import { TrackDetails } from '../components/TrackDetails';
 import { Track } from '../types/track';
+import { labelColors } from '../theme/theme';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -43,6 +47,14 @@ export const MusicCatalog: React.FC = () => {
   const [selectedTab, setSelectedTab] = useState(0);
   const [selectedTrack, setSelectedTrack] = useState<Track | null>(null);
 
+  const theme = useTheme();
+  const location = useLocation();
+
+  const pathParts = location.pathname.split('/');
+  const currentPath = pathParts[1]?.toLowerCase() || 'records';
+
+  const labelColor = labelColors[currentPath as keyof typeof labelColors] || labelColors.records;
+
   const { tracks, artists, loading, error } = useSpotifySearch(
     searchQuery,
     ['track', 'artist'],
@@ -69,7 +81,28 @@ export const MusicCatalog: React.FC = () => {
         variant="outlined"
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
-        sx={{ mb: 4 }}
+        sx={{ 
+          mb: 4,
+          '& .MuiOutlinedInput-root': {
+            borderRadius: '8px',
+            bgcolor: 'background.paper',
+            '& fieldset': {
+              borderColor: 'rgba(255, 255, 255, 0.23)'
+            },
+            '&:hover fieldset': {
+              borderColor: `${alpha(labelColor, 0.5)}`
+            },
+            '&.Mui-focused fieldset': {
+              borderColor: labelColor
+            }
+          },
+          '& .MuiInputLabel-root.Mui-focused': {
+            color: labelColor
+          },
+          '& .MuiInputBase-input': {
+            color: '#ffffff'
+          }
+        }}
       />
 
       {error && (

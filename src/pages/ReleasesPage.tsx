@@ -242,9 +242,6 @@ export const ReleasesPage = ({ label: propLabel }: ReleasesPageProps) => {
           >
             {labelConfig.displayName} Releases
           </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {totalReleases} releases
-          </Typography>
         </Box>
         
         {validReleases.length > 0 && (

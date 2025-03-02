@@ -96,6 +96,23 @@ export const darkTheme = createTheme({
         },
       },
     },
+    MuiDrawer: {
+      styleOverrides: {
+        root: {
+          '& .MuiDrawer-paper': {
+            backgroundColor: '#000000',
+            backgroundImage: 'none',
+          },
+          '& .MuiBackdrop-root': {
+            backgroundColor: 'rgba(0, 0, 0, 0.7)'
+          },
+        },
+        paper: {
+          backgroundColor: '#000000',
+          backgroundImage: 'none',
+        },
+      },
+    },
     MuiButton: {
       styleOverrides: {
         root: {

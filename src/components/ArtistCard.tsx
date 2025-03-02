@@ -37,17 +37,31 @@ const ArtistCard: React.FC<ArtistCardProps> = ({ artist, onClick, background }) 
       }}
       onClick={handleClick}
     >
-      <CardMedia
-        component="img"
-        height="200"
-        image={artistImage}
-        alt={artist.name || 'Unknown Artist'}
-        onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
-          // Fallback to placeholder if image fails to load
-          const target = e.target as HTMLImageElement;
-          target.src = '/images/placeholder-artist.jpg';
-        }}
-      />
+      <Box sx={{ 
+        position: 'relative',
+        paddingTop: '100%', // This creates a 1:1 aspect ratio container
+        width: '100%',
+        overflow: 'hidden'
+      }}>
+        <CardMedia
+          component="img"
+          sx={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+          }}
+          image={artistImage}
+          alt={artist.name || 'Unknown Artist'}
+          onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
+            // Fallback to placeholder if image fails to load
+            const target = e.target as HTMLImageElement;
+            target.src = '/images/placeholder-artist.jpg';
+          }}
+        />
+      </Box>
       <CardContent sx={{ flexGrow: 1 }}>
         <Typography gutterBottom variant="h6" component="div">
           {artist.name || 'Unknown Artist'}

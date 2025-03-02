@@ -114,10 +114,34 @@ class TechSidebar extends Component<TechSidebarProps, TechSidebarState> {
         ModalProps={{
           keepMounted: true,
         }}
+        sx={{
+          display: { xs: isMobile ? 'block' : 'none', md: 'block' },
+          '& .MuiDrawer-paper': {
+            boxSizing: 'border-box',
+            width: drawerWidth,
+            marginTop: isMobile ? '64px' : '180px',
+            height: isMobile ? 'calc(100% - 64px)' : 'calc(100% - 180px)',
+            zIndex: isMobile ? 1200 : 1100,
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)',
+            backgroundColor: '#000000', // Force black background
+            backgroundImage: 'none', // Remove any background image
+          },
+          '& .MuiBackdrop-root': {
+            backgroundColor: 'rgba(0, 0, 0, 0.7)'
+          },
+          '& .MuiPaper-root': {
+            backgroundColor: '#000000', // Force black on the paper element
+            backgroundImage: 'none',
+          },
+          '& .MuiModal-root': {
+            backgroundColor: '#000000',
+          }
+        }}
         PaperProps={{
           sx: {
             width: drawerWidth,
-            backgroundColor: '#000000',
+            backgroundColor: '#000000', // Force black background
+            backgroundImage: 'none', // Remove any background image
             borderRight: '1px solid rgba(255, 255, 255, 0.12)',
             display: 'flex',
             flexDirection: 'column',
@@ -136,17 +160,6 @@ class TechSidebar extends Component<TechSidebarProps, TechSidebarState> {
             },
             ...sx
           }
-        }}
-        sx={{
-          display: { xs: isMobile ? 'block' : 'none', md: 'block' },
-          '& .MuiDrawer-paper': {
-            boxSizing: 'border-box',
-            width: drawerWidth,
-            marginTop: isMobile ? '64px' : '180px',
-            height: isMobile ? 'calc(100% - 64px)' : 'calc(100% - 180px)',
-            zIndex: isMobile ? 1200 : 1100,
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)'
-          },
         }}
       >
         {isMobile && (
