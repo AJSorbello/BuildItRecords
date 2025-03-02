@@ -174,6 +174,31 @@ class DatabaseService {
           height: img.height !== null ? img.height : 0,
           width: img.width !== null ? img.width : 0
         }));
+        
+        // Log artists information for debugging
+        console.log('Processing release:', release.title);
+        console.log('  Release artists:', release.artists?.length || 0);
+        if (release.artists && release.artists.length > 0) {
+          console.log('  Release artists details:');
+          release.artists.forEach((artist, i) => {
+            console.log(`    Artist ${i+1}: ${artist.name} (${artist.id})`);
+            console.log(`      Image URLs: ${artist.profile_image_url ? 'Yes' : 'No'}, ${artist.profile_image_small_url ? 'Yes' : 'No'}, ${artist.profile_image_large_url ? 'Yes' : 'No'}`);
+          });
+        }
+        console.log('  Release tracks:', release.tracks?.length || 0);
+        
+        if (release.tracks && release.tracks.length > 0) {
+          console.log('  Track artists:');
+          release.tracks.forEach((track, i) => {
+            console.log(`    Track ${i+1}: ${track.title} has ${track.artists?.length || 0} artists`);
+            if (track.artists && track.artists.length > 0) {
+              track.artists.forEach((artist, j) => {
+                console.log(`      Artist ${j+1}: ${artist.name} (${artist.id})`);
+                console.log(`        Image URLs: ${artist.profile_image_url ? 'Yes' : 'No'}, ${artist.profile_image_small_url ? 'Yes' : 'No'}, ${artist.profile_image_large_url ? 'Yes' : 'No'}`);
+              });
+            }
+          });
+        }
 
         return {
           id: release.id,
@@ -333,6 +358,111 @@ class DatabaseService {
     } catch (error) {
       console.error('Token verification error:', error);
       throw error;
+    }
+  }
+
+  public async getTracksByArtist(artistId: string): Promise<Track[]> {
+    try {
+      console.log(`Fetching tracks for artist: ${artistId}`);
+      const response = await this.fetchApi<{
+        artist: Artist,
+        tracks: Track[]
+      }>(`/artists/${artistId}/tracks`);
+      
+      if (!response.tracks) {
+        throw new DatabaseError('No tracks found in response');
+      }
+
+      console.log(`Found ${response.tracks.length} tracks for artist: ${response.artist.name}`);
+      
+      // Process the tracks to ensure they match the Track interface format
+      const processedTracks = response.tracks.map(track => {
+        return {
+          id: track.id,
+          title: track.title || 'Unknown Track',
+          name: track.title || 'Unknown Track',
+          duration: track.duration_ms || 0,
+          track_number: 1,
+          disc_number: 1,
+          preview_url: track.preview_url,
+          spotify_url: track.spotify_url || '',
+          spotify_uri: '',
+          release: track.release ? {
+            id: track.release.id,
+            name: track.release.title || 'Unknown Album',
+            title: track.release.title || 'Unknown Album',
+            type: 'album',
+            artists: [],
+            tracks: [],
+            images: [],
+            artwork_url: track.release.artwork_url,
+            release_date: track.release.release_date,
+            spotify_url: '',
+            spotify_uri: '',
+            label_id: track.release.label?.id || '',
+            total_tracks: 0,
+            label: track.release.label ? {
+              id: track.release.label.id,
+              name: track.release.label.name,
+              display_name: track.release.label.display_name
+            } : undefined
+          } : undefined,
+          artists: track.artists || [],
+          remixer: track.remixer,
+          isrc: track.isrc || '',
+          external_urls: { spotify: track.spotify_url || '' },
+          type: 'track',
+          is_remixer: track.is_remixer
+        } satisfies Track;
+      });
+
+      return processedTracks;
+    } catch (error) {
+      console.error('Error fetching tracks by artist:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all releases associated with a specific artist across all labels
+   * @param artistId The ID of the artist
+   */
+  public async getReleasesByArtist(artistId: string): Promise<Release[]> {
+    console.log(`DatabaseService.getReleasesByArtist - Fetching releases for artist ID: ${artistId}`);
+    try {
+      const response = await this.fetchApi<{
+        releases: Release[];
+      }>(`/artists/${artistId}/all-releases`);
+      
+      if (!response || !response.releases) {
+        console.log('DatabaseService.getReleasesByArtist - No releases found in response:', response);
+        return [];
+      }
+      
+      console.log(`DatabaseService.getReleasesByArtist - Found ${response.releases.length} releases`);
+      
+      const processedReleases = response.releases.map(release => {
+        return {
+          id: release.id,
+          title: release.title,
+          artwork_url: release.artwork_url,
+          release_date: release.release_date,
+          catalog_number: release.catalog_number,
+          label_id: release.label_id,
+          spotify_url: release.spotify_url,
+          spotify_id: release.spotify_id,
+          spotify_uri: release.spotify_uri,
+          label: release.label,
+          tracks: release.tracks || [],
+          tracks_count: release.tracks_count
+        } as Release;
+      });
+      
+      console.log('DatabaseService.getReleasesByArtist - Processed releases:', processedReleases);
+      return processedReleases;
+    } catch (error) {
+      console.error('DatabaseService.getReleasesByArtist - Error:', error);
+      return [];
     }
   }
 }

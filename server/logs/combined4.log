@@ -1592,3 +1592,101 @@
 {"level":"info","message":"Email configuration verified successfully","timestamp":"2025-02-21T04:05:05.476Z"}
 {"level":"info","message":"Server is running on port 3001","timestamp":"2025-02-21T04:05:05.479Z"}
 {"CORS_ORIGIN":"http://localhost:3000","NODE_ENV":"development","PORT":"3001","dbConnected":true,"hasAdminPasswordHash":true,"hasAdminUsername":true,"hasJwtSecret":true,"level":"info","message":"Environment configuration:","timestamp":"2025-02-21T04:05:05.480Z"}
+{"adminEmails":["aj@builditrecords.com","anmol@builditrecords.com"],"from":"aj@builditrecords.com","hasPass":true,"hasUser":true,"host":"smtp.gmail.com","level":"info","message":"Email service configuration:","port":587,"timestamp":"2025-02-21T05:10:11.418Z","user":"aj@builditrecords.com"}
+{"NODE_ENV":"development","hasJwtSecret":true,"hasPasswordHash":true,"hasSmtpPass":true,"hasSmtpUser":true,"hasUsername":true,"level":"info","message":"Server starting with environment:","smtpUser":"aj@builditrecords.com","timestamp":"2025-02-21T05:10:11.433Z"}
+{"environment":"development","level":"info","message":"CORS configuration:","origin":"http://localhost:3000","timestamp":"2025-02-21T05:10:11.436Z"}
+{"level":"debug","message":"Executing (default): SELECT 1+1 AS result","timestamp":"2025-02-21T05:10:11.542Z"}
+{"level":"info","message":"Database connection established successfully","timestamp":"2025-02-21T05:10:11.544Z"}
+{"level":"info","message":"Email service is ready","timestamp":"2025-02-21T05:10:11.959Z"}
+{"level":"info","message":"Email configuration verified successfully","timestamp":"2025-02-21T05:10:11.960Z"}
+{"level":"info","message":"Server is running on port 3001","timestamp":"2025-02-21T05:10:11.964Z"}
+{"CORS_ORIGIN":"http://localhost:3000","NODE_ENV":"development","PORT":"3001","dbConnected":true,"hasAdminPasswordHash":true,"hasAdminUsername":true,"hasJwtSecret":true,"level":"info","message":"Environment configuration:","timestamp":"2025-02-21T05:10:11.964Z"}
+{"headers":{"authorization":"present","content-type":"application/json"},"level":"info","message":"Incoming request:","method":"GET","query":{"label":"buildit-deep","limit":"50","offset":"0"},"timestamp":"2025-02-21T05:10:58.521Z","url":"/api/releases?label=buildit-deep&offset=0&limit=50"}
+{"label":"buildit-deep","level":"info","limit":50,"message":"GET /releases request:","offset":0,"order":"desc","sort":"release_date","timestamp":"2025-02-21T05:10:58.532Z"}
+{"headers":{"authorization":"present","content-type":"application/json"},"level":"info","message":"Incoming request:","method":"GET","query":{"label":"buildit-deep","limit":"50","offset":"0"},"timestamp":"2025-02-21T05:10:58.988Z","url":"/api/releases?label=buildit-deep&offset=0&limit=50"}
+{"label":"buildit-deep","level":"info","limit":50,"message":"GET /releases request:","offset":0,"order":"desc","sort":"release_date","timestamp":"2025-02-21T05:10:58.999Z"}
+{"headers":{"authorization":"present","content-type":"application/json"},"level":"info","message":"Incoming request:","method":"GET","query":{"label":"buildit-deep","limit":"50","offset":"0"},"timestamp":"2025-02-21T05:10:59.044Z","url":"/api/releases?label=buildit-deep&offset=0&limit=50"}
+{"label":"buildit-deep","level":"info","limit":50,"message":"GET /releases request:","offset":0,"order":"desc","sort":"release_date","timestamp":"2025-02-21T05:10:59.050Z"}
+{"headers":{"authorization":"present","content-type":"application/json"},"level":"info","message":"Incoming request:","method":"GET","query":{"sort":"created_at"},"timestamp":"2025-02-21T05:10:59.065Z","url":"/api/tracks/all/buildit-deep?sort=created_at"}
+{"count":21,"labelId":"buildit-deep","level":"info","message":"Found tracks:","timestamp":"2025-02-21T05:10:59.122Z"}
+{"difference":0,"formattedCount":21,"level":"info","message":"Formatted tracks:","originalCount":21,"timestamp":"2025-02-21T05:10:59.124Z"}
+{"headers":{"authorization":"present","content-type":"application/json"},"level":"info","message":"Incoming request:","method":"GET","query":{"sort":"created_at"},"timestamp":"2025-02-21T05:10:59.131Z","url":"/api/tracks/all/buildit-deep?sort=created_at"}
+{"count":21,"labelId":"buildit-deep","level":"info","message":"Found tracks:","timestamp":"2025-02-21T05:10:59.151Z"}
+{"difference":0,"formattedCount":21,"level":"info","message":"Formatted tracks:","originalCount":21,"timestamp":"2025-02-21T05:10:59.151Z"}
+{"headers":{"authorization":"present","content-type":"application/json"},"level":"info","message":"Incoming request:","method":"GET","query":{"label":"buildit-records","limit":"50","offset":"0"},"timestamp":"2025-02-21T05:14:18.712Z","url":"/api/releases?label=buildit-records&offset=0&limit=50"}
+{"label":"buildit-records","level":"info","limit":50,"message":"GET /releases request:","offset":0,"order":"desc","sort":"release_date","timestamp":"2025-02-21T05:14:18.714Z"}
+{"headers":{"authorization":"present","content-type":"application/json"},"level":"info","message":"Incoming request:","method":"GET","query":{"sort":"created_at"},"timestamp":"2025-02-21T05:14:19.001Z","url":"/api/tracks/all/buildit-records?sort=created_at"}
+{"count":217,"labelId":"buildit-records","level":"info","message":"Found tracks:","timestamp":"2025-02-21T05:14:19.064Z"}
+{"difference":0,"formattedCount":217,"level":"info","message":"Formatted tracks:","originalCount":217,"timestamp":"2025-02-21T05:14:19.066Z"}
+{"headers":{"authorization":"present","content-type":"application/json"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-02-21T05:16:07.971Z","url":"/api/artists/label/buildit-records"}
+{"headers":{"authorization":"present","content-type":"application/json"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-02-21T05:16:08.037Z","url":"/api/artists/label/buildit-records"}
+{"headers":{"authorization":"present","content-type":"application/json"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-02-21T05:16:18.003Z","url":"/api/artists/label/buildit-records"}
+{"headers":{"authorization":"present","content-type":"application/json"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-02-21T05:16:18.109Z","url":"/api/artists/label/buildit-records"}
+{"headers":{"authorization":"present","content-type":"application/json"},"level":"info","message":"Incoming request:","method":"GET","query":{"label":"buildit-deep","limit":"50","offset":"0"},"timestamp":"2025-02-21T05:16:19.667Z","url":"/api/releases?label=buildit-deep&offset=0&limit=50"}
+{"label":"buildit-deep","level":"info","limit":50,"message":"GET /releases request:","offset":0,"order":"desc","sort":"release_date","timestamp":"2025-02-21T05:16:19.669Z"}
+{"headers":{"authorization":"present","content-type":"application/json"},"level":"info","message":"Incoming request:","method":"GET","query":{"label":"buildit-deep","limit":"50","offset":"0"},"timestamp":"2025-02-21T05:16:19.719Z","url":"/api/releases?label=buildit-deep&offset=0&limit=50"}
+{"label":"buildit-deep","level":"info","limit":50,"message":"GET /releases request:","offset":0,"order":"desc","sort":"release_date","timestamp":"2025-02-21T05:16:19.720Z"}
+{"headers":{"authorization":"present","content-type":"application/json"},"level":"info","message":"Incoming request:","method":"GET","query":{"sort":"created_at"},"timestamp":"2025-02-21T05:16:19.800Z","url":"/api/tracks/all/buildit-deep?sort=created_at"}
+{"count":21,"labelId":"buildit-deep","level":"info","message":"Found tracks:","timestamp":"2025-02-21T05:16:19.834Z"}
+{"difference":0,"formattedCount":21,"level":"info","message":"Formatted tracks:","originalCount":21,"timestamp":"2025-02-21T05:16:19.835Z"}
+{"headers":{"authorization":"present","content-type":"application/json"},"level":"info","message":"Incoming request:","method":"GET","query":{"sort":"created_at"},"timestamp":"2025-02-21T05:16:19.837Z","url":"/api/tracks/all/buildit-deep?sort=created_at"}
+{"count":21,"labelId":"buildit-deep","level":"info","message":"Found tracks:","timestamp":"2025-02-21T05:16:19.854Z"}
+{"difference":0,"formattedCount":21,"level":"info","message":"Formatted tracks:","originalCount":21,"timestamp":"2025-02-21T05:16:19.854Z"}
+{"headers":{"authorization":"present","content-type":"application/json"},"level":"info","message":"Incoming request:","method":"GET","query":{"label":"buildit-deep","limit":"50","offset":"0"},"timestamp":"2025-02-21T05:19:08.434Z","url":"/api/releases?label=buildit-deep&offset=0&limit=50"}
+{"label":"buildit-deep","level":"info","limit":50,"message":"GET /releases request:","offset":0,"order":"desc","sort":"release_date","timestamp":"2025-02-21T05:19:08.435Z"}
+{"headers":{"authorization":"present","content-type":"application/json"},"level":"info","message":"Incoming request:","method":"GET","query":{"label":"buildit-deep","limit":"50","offset":"0"},"timestamp":"2025-02-21T05:19:08.494Z","url":"/api/releases?label=buildit-deep&offset=0&limit=50"}
+{"label":"buildit-deep","level":"info","limit":50,"message":"GET /releases request:","offset":0,"order":"desc","sort":"release_date","timestamp":"2025-02-21T05:19:08.495Z"}
+{"headers":{"authorization":"present","content-type":"application/json"},"level":"info","message":"Incoming request:","method":"GET","query":{"sort":"created_at"},"timestamp":"2025-02-21T05:19:08.734Z","url":"/api/tracks/all/buildit-deep?sort=created_at"}
+{"count":21,"labelId":"buildit-deep","level":"info","message":"Found tracks:","timestamp":"2025-02-21T05:19:08.782Z"}
+{"difference":0,"formattedCount":21,"level":"info","message":"Formatted tracks:","originalCount":21,"timestamp":"2025-02-21T05:19:08.783Z"}
+{"headers":{"authorization":"present","content-type":"application/json"},"level":"info","message":"Incoming request:","method":"GET","query":{"sort":"created_at"},"timestamp":"2025-02-21T05:19:08.786Z","url":"/api/tracks/all/buildit-deep?sort=created_at"}
+{"count":21,"labelId":"buildit-deep","level":"info","message":"Found tracks:","timestamp":"2025-02-21T05:19:08.800Z"}
+{"difference":0,"formattedCount":21,"level":"info","message":"Formatted tracks:","originalCount":21,"timestamp":"2025-02-21T05:19:08.800Z"}
+{"headers":{"authorization":"present","content-type":"application/json"},"level":"info","message":"Incoming request:","method":"GET","query":{"label":"buildit-deep","limit":"50","offset":"0"},"timestamp":"2025-02-21T05:20:27.418Z","url":"/api/releases?label=buildit-deep&offset=0&limit=50"}
+{"label":"buildit-deep","level":"info","limit":50,"message":"GET /releases request:","offset":0,"order":"desc","sort":"release_date","timestamp":"2025-02-21T05:20:27.424Z"}
+{"headers":{"authorization":"present","content-type":"application/json"},"level":"info","message":"Incoming request:","method":"GET","query":{"label":"buildit-deep","limit":"50","offset":"0"},"timestamp":"2025-02-21T05:20:27.521Z","url":"/api/releases?label=buildit-deep&offset=0&limit=50"}
+{"label":"buildit-deep","level":"info","limit":50,"message":"GET /releases request:","offset":0,"order":"desc","sort":"release_date","timestamp":"2025-02-21T05:20:27.522Z"}
+{"headers":{"authorization":"present","content-type":"application/json"},"level":"info","message":"Incoming request:","method":"GET","query":{"sort":"created_at"},"timestamp":"2025-02-21T05:20:27.728Z","url":"/api/tracks/all/buildit-deep?sort=created_at"}
+{"count":21,"labelId":"buildit-deep","level":"info","message":"Found tracks:","timestamp":"2025-02-21T05:20:27.750Z"}
+{"difference":0,"formattedCount":21,"level":"info","message":"Formatted tracks:","originalCount":21,"timestamp":"2025-02-21T05:20:27.752Z"}
+{"headers":{"authorization":"present","content-type":"application/json"},"level":"info","message":"Incoming request:","method":"GET","query":{"sort":"created_at"},"timestamp":"2025-02-21T05:20:27.756Z","url":"/api/tracks/all/buildit-deep?sort=created_at"}
+{"count":21,"labelId":"buildit-deep","level":"info","message":"Found tracks:","timestamp":"2025-02-21T05:20:27.771Z"}
+{"difference":0,"formattedCount":21,"level":"info","message":"Formatted tracks:","originalCount":21,"timestamp":"2025-02-21T05:20:27.771Z"}
+{"headers":{"authorization":"present","content-type":"application/json"},"level":"info","message":"Incoming request:","method":"GET","query":{"label":"buildit-records","limit":"50","offset":"0"},"timestamp":"2025-02-21T05:21:20.372Z","url":"/api/releases?label=buildit-records&offset=0&limit=50"}
+{"label":"buildit-records","level":"info","limit":50,"message":"GET /releases request:","offset":0,"order":"desc","sort":"release_date","timestamp":"2025-02-21T05:21:20.375Z"}
+{"headers":{"authorization":"present","content-type":"application/json"},"level":"info","message":"Incoming request:","method":"GET","query":{"label":"buildit-records","limit":"50","offset":"0"},"timestamp":"2025-02-21T05:21:20.551Z","url":"/api/releases?label=buildit-records&offset=0&limit=50"}
+{"label":"buildit-records","level":"info","limit":50,"message":"GET /releases request:","offset":0,"order":"desc","sort":"release_date","timestamp":"2025-02-21T05:21:20.560Z"}
+{"headers":{"authorization":"present","content-type":"application/json"},"level":"info","message":"Incoming request:","method":"GET","query":{"label":"buildit-records"},"timestamp":"2025-02-21T05:21:21.284Z","url":"/api/releases/top?label=buildit-records"}
+{"headers":{"authorization":"present","content-type":"application/json"},"level":"info","message":"Incoming request:","method":"GET","query":{"label":"buildit-records"},"timestamp":"2025-02-21T05:21:21.334Z","url":"/api/releases/top?label=buildit-records"}
+{"headers":{"authorization":"present","content-type":"application/json"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-02-21T05:21:45.142Z","url":"/api/artists/label/buildit-deep"}
+{"headers":{"authorization":"present","content-type":"application/json"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-02-21T05:21:45.259Z","url":"/api/artists/label/buildit-deep"}
+{"headers":{"authorization":"present","content-type":"application/json"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-02-21T05:22:28.415Z","url":"/api/artists/label/buildit-deep"}
+{"headers":{"authorization":"present","content-type":"application/json"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-02-21T05:22:28.532Z","url":"/api/artists/label/buildit-deep"}
+{"headers":{"authorization":"present","content-type":"application/json"},"level":"info","message":"Incoming request:","method":"GET","query":{"label":"buildit-deep","limit":"50","offset":"0"},"timestamp":"2025-02-21T05:22:29.694Z","url":"/api/releases?label=buildit-deep&offset=0&limit=50"}
+{"label":"buildit-deep","level":"info","limit":50,"message":"GET /releases request:","offset":0,"order":"desc","sort":"release_date","timestamp":"2025-02-21T05:22:29.696Z"}
+{"headers":{"authorization":"present","content-type":"application/json"},"level":"info","message":"Incoming request:","method":"GET","query":{"label":"buildit-deep","limit":"50","offset":"0"},"timestamp":"2025-02-21T05:22:29.937Z","url":"/api/releases?label=buildit-deep&offset=0&limit=50"}
+{"label":"buildit-deep","level":"info","limit":50,"message":"GET /releases request:","offset":0,"order":"desc","sort":"release_date","timestamp":"2025-02-21T05:22:29.939Z"}
+{"headers":{"authorization":"present","content-type":"application/json"},"level":"info","message":"Incoming request:","method":"GET","query":{"sort":"created_at"},"timestamp":"2025-02-21T05:22:30.215Z","url":"/api/tracks/all/buildit-deep?sort=created_at"}
+{"count":21,"labelId":"buildit-deep","level":"info","message":"Found tracks:","timestamp":"2025-02-21T05:22:30.257Z"}
+{"difference":0,"formattedCount":21,"level":"info","message":"Formatted tracks:","originalCount":21,"timestamp":"2025-02-21T05:22:30.257Z"}
+{"headers":{"authorization":"present","content-type":"application/json"},"level":"info","message":"Incoming request:","method":"GET","query":{"sort":"created_at"},"timestamp":"2025-02-21T05:22:30.259Z","url":"/api/tracks/all/buildit-deep?sort=created_at"}
+{"count":21,"labelId":"buildit-deep","level":"info","message":"Found tracks:","timestamp":"2025-02-21T05:22:30.267Z"}
+{"difference":0,"formattedCount":21,"level":"info","message":"Formatted tracks:","originalCount":21,"timestamp":"2025-02-21T05:22:30.268Z"}
+{"adminEmails":["aj@builditrecords.com","anmol@builditrecords.com"],"from":"aj@builditrecords.com","hasPass":true,"hasUser":true,"host":"smtp.gmail.com","level":"info","message":"Email service configuration:","port":587,"timestamp":"2025-02-21T05:25:11.805Z","user":"aj@builditrecords.com"}
+{"NODE_ENV":"development","hasJwtSecret":true,"hasPasswordHash":true,"hasSmtpPass":true,"hasSmtpUser":true,"hasUsername":true,"level":"info","message":"Server starting with environment:","smtpUser":"aj@builditrecords.com","timestamp":"2025-02-21T05:25:11.822Z"}
+{"environment":"development","level":"info","message":"CORS configuration:","origin":"http://localhost:3000","timestamp":"2025-02-21T05:25:11.829Z"}
+{"level":"debug","message":"Executing (default): SELECT 1+1 AS result","timestamp":"2025-02-21T05:25:11.938Z"}
+{"level":"info","message":"Database connection established successfully","timestamp":"2025-02-21T05:25:11.940Z"}
+{"level":"info","message":"Email service is ready","timestamp":"2025-02-21T05:25:12.349Z"}
+{"level":"info","message":"Email configuration verified successfully","timestamp":"2025-02-21T05:25:12.349Z"}
+{"level":"info","message":"Server is running on port 3001","timestamp":"2025-02-21T05:25:12.352Z"}
+{"CORS_ORIGIN":"http://localhost:3000","NODE_ENV":"development","PORT":"3001","dbConnected":true,"hasAdminPasswordHash":true,"hasAdminUsername":true,"hasJwtSecret":true,"level":"info","message":"Environment configuration:","timestamp":"2025-02-21T05:25:12.353Z"}
+{"adminEmails":["aj@builditrecords.com","anmol@builditrecords.com"],"from":"aj@builditrecords.com","hasPass":true,"hasUser":true,"host":"smtp.gmail.com","level":"info","message":"Email service configuration:","port":587,"timestamp":"2025-02-21T05:35:36.102Z","user":"aj@builditrecords.com"}
+{"NODE_ENV":"development","hasJwtSecret":true,"hasPasswordHash":true,"hasSmtpPass":true,"hasSmtpUser":true,"hasUsername":true,"level":"info","message":"Server starting with environment:","smtpUser":"aj@builditrecords.com","timestamp":"2025-02-21T05:35:36.117Z"}
+{"environment":"development","level":"info","message":"CORS configuration:","origin":"http://localhost:3000","timestamp":"2025-02-21T05:35:36.119Z"}
+{"level":"debug","message":"Executing (default): SELECT 1+1 AS result","timestamp":"2025-02-21T05:35:36.237Z"}
+{"level":"info","message":"Database connection established successfully","timestamp":"2025-02-21T05:35:36.238Z"}
+{"level":"info","message":"Email service is ready","timestamp":"2025-02-21T05:35:36.610Z"}
+{"level":"info","message":"Email configuration verified successfully","timestamp":"2025-02-21T05:35:36.611Z"}
+{"level":"info","message":"Server is running on port 3001","timestamp":"2025-02-21T05:35:36.615Z"}
+{"CORS_ORIGIN":"http://localhost:3000","NODE_ENV":"development","PORT":"3001","dbConnected":true,"hasAdminPasswordHash":true,"hasAdminUsername":true,"hasJwtSecret":true,"level":"info","message":"Environment configuration:","timestamp":"2025-02-21T05:35:36.615Z"}

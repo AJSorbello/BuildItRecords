@@ -23,7 +23,7 @@ const StyledAppBar = styled(AppBar)(({ theme }) => ({
   }
 }));
 
-const StyledTabs = styled(Tabs)({
+const StyledTabs = styled(Tabs)(({ theme }) => ({
   flex: 1,
   height: '64px',
   backgroundColor: 'transparent',
@@ -36,9 +36,14 @@ const StyledTabs = styled(Tabs)({
     alignItems: 'center',
     backgroundColor: 'transparent',
   },
-});
+  [theme.breakpoints.down('md')]: {
+    '& .MuiTabs-flexContainer': {
+      paddingLeft: '48px', // Make space for the menu button on the left
+    }
+  }
+}));
 
-const StyledTab = styled(Tab)<{ tabtype: string }>(({ tabtype }) => ({
+const StyledTab = styled(Tab)<{ tabtype: string }>(({ theme, tabtype }) => ({
   flex: 1,
   maxWidth: 'none',
   color: '#FFFFFF',
@@ -56,6 +61,10 @@ const StyledTab = styled(Tab)<{ tabtype: string }>(({ tabtype }) => ({
            '#00BFFF',
     opacity: 1,
   },
+  [theme.breakpoints.down('md')]: {
+    minWidth: '80px', // Reduce tab width on mobile
+    fontSize: '12px', // Smaller font on mobile
+  }
 }));
 
 const Logo = styled('img')<{ tabtype: string }>(({ tabtype }) => ({
@@ -122,7 +131,9 @@ const TopNavigation: React.FC<TopNavigationProps> = ({ onMenuClick, isMobile, lo
         alignItems: 'center', 
         width: '100%', 
         px: 2,
-        background: 'transparent' 
+        background: 'transparent',
+        position: 'relative',
+        minWidth: { xs: '360px' } // Minimum width for mobile
       }}>
         {isMobile && onMenuClick && (
           <IconButton
@@ -130,7 +141,17 @@ const TopNavigation: React.FC<TopNavigationProps> = ({ onMenuClick, isMobile, lo
             aria-label="open drawer"
             edge="start"
             onClick={onMenuClick}
-            sx={{ mr: 2 }}
+            sx={{ 
+              position: 'absolute',
+              left: 8,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              zIndex: 1400,
+              backgroundColor: 'rgba(0,0,0,0.5)',
+              '&:hover': {
+                backgroundColor: 'rgba(0,0,0,0.7)'
+              }
+            }}
           >
             <MenuIcon />
           </IconButton>

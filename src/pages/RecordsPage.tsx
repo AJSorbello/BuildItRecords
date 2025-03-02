@@ -1,95 +1,181 @@
 import React from 'react';
-import { Container, Typography, Box, Paper, Grid } from '@mui/material';
-import { useTheme } from '@mui/material/styles';
+import {
+  Container,
+  Typography,
+  Box,
+  Grid,
+  Paper,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  useTheme,
+  useMediaQuery,
+} from '@mui/material';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import { alpha } from '@mui/material/styles';
 
 const RecordsPage: React.FC = () => {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   return (
-    <Container maxWidth="lg" sx={{ py: 8 }}>
-      <Paper 
-        elevation={3} 
-        sx={{ 
-          p: 4, 
-          background: 'rgba(0, 0, 0, 0.8)',
+    <Container maxWidth="lg" sx={{ py: 6 }}>
+      {/* Hero Section */}
+      <Box
+        sx={{
+          textAlign: 'center',
+          mb: 8,
+          p: 4,
           borderRadius: 2,
-          backdropFilter: 'blur(10px)'
+          background: `linear-gradient(45deg, ${alpha(theme.palette.primary.main, 0.1)}, ${alpha(
+            theme.palette.secondary.main,
+            0.1
+          )})`,
         }}
       >
-        <Typography variant="h2" component="h1" gutterBottom align="center" sx={{ mb: 4 }}>
-          Build It Records
+        <Typography variant="h2" component="h1" gutterBottom>
+          Welcome to Build It Records
         </Typography>
+        <Typography variant="h5" color="text.secondary" sx={{ mb: 4 }}>
+          Where Underground House Music Thrives
+        </Typography>
+      </Box>
 
-        <Box sx={{ mb: 6 }}>
-          <Typography variant="h5" gutterBottom sx={{ color: theme.palette.primary.main }}>
-            Our Story
-          </Typography>
-          <Typography variant="body1" paragraph>
-            Build It Records was established in 2023 with a clear vision: to create a home for
-            exceptional electronic music across multiple genres. As the parent company of Build It Deep
-            and Build It Tech, we've cultivated a diverse ecosystem of musical talent, fostering
-            creativity and innovation in electronic music production.
-          </Typography>
-        </Box>
+      {/* Our Story Section */}
+      <Box sx={{ mb: 8 }}>
+        <Typography variant="h4" component="h2" gutterBottom>
+          Our Story
+        </Typography>
+        <Typography paragraph>
+          Founded in 2015, Build It Records has been a driving force in underground electronic music,
+          dedicated to curating forward-thinking sounds and nurturing top-tier talent. Our journey began
+          with our first release on March 3rd, 2015, marking the start of a movement that continues to
+          grow.
+        </Typography>
+        <Typography paragraph>
+          As the parent label of Build It Deep and Build It Tech, we embrace a wide spectrum of
+          underground music, from hypnotic deep house to peak-time techno. We don't just release
+          music—we shape the future of the underground scene.
+        </Typography>
+      </Box>
 
-        <Box sx={{ mb: 6 }}>
-          <Typography variant="h5" gutterBottom sx={{ color: theme.palette.primary.main }}>
-            Our Labels
-          </Typography>
-          <Grid container spacing={4}>
-            <Grid item xs={12} md={6}>
-              <Box sx={{ mb: 3 }}>
-                <Typography variant="h6" gutterBottom color="secondary">
-                  Build It Deep
-                </Typography>
-                <Typography variant="body1">
-                  Focused on deep, soulful house music that emphasizes emotion and atmosphere.
-                  Build It Deep represents the more introspective side of our catalog, where
-                  melody and mood take center stage.
-                </Typography>
-              </Box>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <Box sx={{ mb: 3 }}>
-                <Typography variant="h6" gutterBottom color="secondary">
-                  Build It Tech
-                </Typography>
-                <Typography variant="body1">
-                  Our platform for cutting-edge tech house and techno. Build It Tech showcases
-                  innovative production techniques and peak-time energy, perfect for the
-                  modern dance floor.
-                </Typography>
-              </Box>
-            </Grid>
+      {/* Our Labels Section */}
+      <Box sx={{ mb: 8 }}>
+        <Typography variant="h4" component="h2" gutterBottom>
+          Our Labels
+        </Typography>
+        <Grid container spacing={4}>
+          <Grid item xs={12} md={6}>
+            <Paper
+              elevation={3}
+              sx={{
+                p: 3,
+                height: '100%',
+                background: `linear-gradient(45deg, ${alpha(theme.palette.primary.main, 0.05)}, ${alpha(
+                  theme.palette.primary.main,
+                  0.1
+                )})`,
+              }}
+            >
+              <Typography variant="h5" gutterBottom>
+                Build It Deep
+              </Typography>
+              <Typography>
+                A sanctuary for deep, emotive, and soulful house music. Build It Deep is where melody
+                and atmosphere take center stage, delivering immersive sounds that connect on a deeper
+                level.
+              </Typography>
+            </Paper>
           </Grid>
-        </Box>
+          <Grid item xs={12} md={6}>
+            <Paper
+              elevation={3}
+              sx={{
+                p: 3,
+                height: '100%',
+                background: `linear-gradient(45deg, ${alpha(theme.palette.secondary.main, 0.05)}, ${alpha(
+                  theme.palette.secondary.main,
+                  0.1
+                )})`,
+              }}
+            >
+              <Typography variant="h5" gutterBottom>
+                Build It Tech
+              </Typography>
+              <Typography>
+                A powerhouse for cutting-edge tech house, minimal, and techno. Build It Tech is where
+                high-energy grooves and intricate production meet, designed for peak-time moments on the
+                dance floor.
+              </Typography>
+            </Paper>
+          </Grid>
+        </Grid>
+      </Box>
 
-        <Box sx={{ mb: 6 }}>
-          <Typography variant="h5" gutterBottom sx={{ color: theme.palette.primary.main }}>
-            Our Philosophy
-          </Typography>
-          <Typography variant="body1" paragraph>
-            At Build It Records, we believe in quality over quantity. Each release is carefully
-            selected and curated to maintain our high standards. We work closely with our artists,
-            providing them with the support and platform they need to realize their creative vision.
-            Our commitment to excellence extends beyond just the music - we pride ourselves on
-            professional mastering, striking artwork, and strategic promotion for every release.
-          </Typography>
-        </Box>
+      {/* Our Philosophy Section */}
+      <Box sx={{ mb: 8 }}>
+        <Typography variant="h4" component="h2" gutterBottom>
+          Our Philosophy
+        </Typography>
+        <Typography paragraph>
+          At Build It Records, we prioritize quality over quantity. Every release is a carefully
+          curated experience, ensuring that our artists receive the best platform to showcase their
+          work.
+        </Typography>
+        <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
+          Our commitment goes beyond just music:
+        </Typography>
+        <List>
+          <ListItem>
+            <ListItemIcon>
+              <CheckCircleOutlineIcon color="primary" />
+            </ListItemIcon>
+            <ListItemText primary="Professional mastering to ensure top-tier sound" />
+          </ListItem>
+          <ListItem>
+            <ListItemIcon>
+              <CheckCircleOutlineIcon color="primary" />
+            </ListItemIcon>
+            <ListItemText primary="Striking artwork that reflects each release's identity" />
+          </ListItem>
+          <ListItem>
+            <ListItemIcon>
+              <CheckCircleOutlineIcon color="primary" />
+            </ListItemIcon>
+            <ListItemText primary="Strategic promotion to give our artists the exposure they deserve" />
+          </ListItem>
+        </List>
+        <Typography paragraph sx={{ mt: 2 }}>
+          We work closely with every artist, providing support, guidance, and a space where creativity
+          flourishes.
+        </Typography>
+      </Box>
 
-        <Box>
-          <Typography variant="h5" gutterBottom sx={{ color: theme.palette.primary.main }}>
-            Looking Forward
-          </Typography>
-          <Typography variant="body1" paragraph>
-            As we continue to grow, our focus remains on discovering and nurturing talented artists
-            who share our passion for quality electronic music. We're constantly exploring new
-            sounds and pushing boundaries while staying true to our core values. Through our
-            labels, events, and community engagement, we're building more than just a record
-            company - we're creating a movement in electronic music.
-          </Typography>
-        </Box>
-      </Paper>
+      {/* Looking Forward Section */}
+      <Box
+        sx={{
+          p: 4,
+          borderRadius: 2,
+          background: `linear-gradient(45deg, ${alpha(theme.palette.primary.main, 0.05)}, ${alpha(
+            theme.palette.secondary.main,
+            0.05
+          )})`,
+        }}
+      >
+        <Typography variant="h4" component="h2" gutterBottom>
+          Looking Forward
+        </Typography>
+        <Typography paragraph>
+          With nearly a decade of releases, Build It Records continues to push boundaries while staying
+          true to its underground roots. We remain focused on discovering fresh talent, fostering
+          collaborations, and bringing cutting-edge sounds to the world.
+        </Typography>
+        <Typography>
+          Through our labels, events, and community-driven projects, we are not just building a record
+          label—we are shaping the next wave of electronic music culture.
+        </Typography>
+      </Box>
     </Container>
   );
 };

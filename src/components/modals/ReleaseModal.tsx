@@ -20,7 +20,8 @@ import {
   useMediaQuery,
   Card,
   CardContent,
-  CardMedia
+  CardMedia,
+  Avatar
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { Release } from '../../types/release';
@@ -30,34 +31,63 @@ import { useNavigate } from 'react-router-dom';
 interface ReleaseModalProps {
   open: boolean;
   onClose: () => void;
-  release: Release | null;
+  release: Release;
 }
 
-const ArtistPreview: React.FC<{ artist: Artist }> = ({ artist }) => {
+interface ArtistPreviewProps {
+  artist: Artist;
+}
+
+const ArtistPreview: React.FC<ArtistPreviewProps> = ({ artist }) => {
   const navigate = useNavigate();
   
+  // Get the best available image URL
+  const getArtistImage = (artist: any): string => {
+    // Check all possible image URL fields in order of preference
+    return artist.profile_image_url || 
+           artist.profile_image_small_url || 
+           artist.profile_image_large_url ||
+           (artist.images && artist.images[0]?.url) ||
+           '/images/placeholder-artist.jpg';
+  };
+  
   const handleArtistClick = () => {
+    console.log('Navigating to artist:', artist.id);
     navigate(`/artists/${artist.id}`);
   };
 
   return (
-    <Card sx={{ cursor: 'pointer', mb: 1 }} onClick={handleArtistClick}>
-      <Box sx={{ display: 'flex', alignItems: 'center', p: 1 }}>
-        <CardMedia
-          component="img"
-          sx={{ width: 50, height: 50, borderRadius: 1, mr: 2 }}
-          image={artist.image_url || '/default-artist.png'}
-          alt={artist.name}
-        />
-        <CardContent sx={{ flex: '1 1 auto', py: 1, '&:last-child': { pb: 1 } }}>
-          <Typography variant="subtitle1">{artist.name}</Typography>
-        </CardContent>
-      </Box>
+    <Card 
+      onClick={handleArtistClick} 
+      sx={{ 
+        display: 'flex', 
+        flexDirection: 'row',
+        alignItems: 'center', 
+        mb: 2, 
+        borderRadius: 2,
+        cursor: 'pointer',
+        padding: 1,
+        '&:hover': {
+          backgroundColor: 'rgba(0, 0, 0, 0.04)'
+        }
+      }}
+    >
+      <Avatar
+        src={getArtistImage(artist)}
+        alt={artist.name}
+        sx={{ 
+          width: 50, 
+          height: 50, 
+          mr: 2,
+          border: '1px solid rgba(0, 0, 0, 0.1)'
+        }}
+      />
+      <Typography variant="subtitle1">{artist.name}</Typography>
     </Card>
   );
 };
 
-const ReleaseModal: React.FC<ReleaseModalProps> = ({ open, onClose, release }) => {
+export const ReleaseModal = ({ open, onClose, release }: ReleaseModalProps) => {
   const theme = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down('md'));
   const navigate = useNavigate();
@@ -73,7 +103,92 @@ const ReleaseModal: React.FC<ReleaseModalProps> = ({ open, onClose, release }) =
     navigate(`/artists/${artist.id}`);
   };
 
-  if (!release) return null;
+  // Log the release for debugging
+  console.log('Rendering ReleaseModal with release:', release);
+  console.log('Artists in release:', release.artists);
+  console.log('Artists array type:', Array.isArray(release.artists));
+  console.log('Artists array length:', release.artists?.length);
+  
+  // Ensure we have an artists array
+  let artists = release.artists || [];
+  let hasArtists = Array.isArray(artists) && artists.length > 0;
+  
+  // Check if tracks have artist information we can use
+  if (!hasArtists && release.tracks && release.tracks.length > 0) {
+    console.log('Trying to extract artists from tracks');
+    
+    // Create a map to avoid duplicates
+    const artistMap = new Map();
+    
+    release.tracks.forEach(track => {
+      if (track.artists && Array.isArray(track.artists)) {
+        track.artists.forEach(artist => {
+          if (artist && artist.id && !artistMap.has(artist.id)) {
+            artistMap.set(artist.id, artist);
+          }
+        });
+      }
+    });
+    
+    if (artistMap.size > 0) {
+      console.log('Found artists in tracks:', artistMap.size);
+      artists = Array.from(artistMap.values());
+      hasArtists = true;
+    }
+  }
+  
+  // Create default artist if none exists
+  // This is a temporary solution to handle missing data
+  if (!hasArtists) {
+    console.log('Creating default artist for release:', release.title);
+    
+    // Try to extract artist name and image from release data
+    let artistName = 'Unknown Artist';
+    let artistImageUrl = 'https://via.placeholder.com/50?text=Artist';
+    
+    // Check if we have any artist information from tracks
+    if (release.tracks && release.tracks.length > 0) {
+      const trackWithArtist = release.tracks.find(track => 
+        track.artists && track.artists.length > 0 && track.artists[0].name);
+      
+      if (trackWithArtist && trackWithArtist.artists && trackWithArtist.artists.length > 0) {
+        const artist = trackWithArtist.artists[0];
+        artistName = artist.name || artistName;
+        artistImageUrl = getTrackArtistImage(artist);
+      }
+    }
+    
+    const defaultArtist = {
+      id: 'unknown',
+      name: artistName,
+      uri: '',
+      type: 'artist',
+      profile_image_url: artistImageUrl
+    };
+    
+    artists = [defaultArtist];
+    hasArtists = true;
+  }
+
+  // Helper function to get the best available image URL for an artist
+  const getArtistImage = (artist: any): string => {
+    // Check all possible image URL fields in order of preference
+    return artist.profile_image_url || 
+           artist.profile_image_small_url || 
+           artist.profile_image_large_url ||
+           (artist.images && artist.images[0]?.url) ||
+           '/images/placeholder-artist.jpg';
+  };
+
+  const getTrackArtistImage = (artist: any): string => {
+    return artist.profile_image_url || 
+           artist.profile_image_small_url || 
+           artist.profile_image_large_url || 
+           (artist.images && artist.images[0]?.url) || 
+           '/images/placeholder-artist.jpg';
+  };
+
+  const [state, setState] = React.useState({});
 
   return (
     <Dialog
@@ -114,18 +229,63 @@ const ReleaseModal: React.FC<ReleaseModalProps> = ({ open, onClose, release }) =
               {release.title}
             </Typography>
             <Typography variant="subtitle1" color="text.secondary" gutterBottom>
-              {release.artists?.map(artist => artist.name).join(', ')}
+              {hasArtists ? (
+                artists.map((artist, i) => (
+                  <Box 
+                    component="span" 
+                    key={artist.id} 
+                    sx={{ 
+                      display: 'inline-flex', 
+                      alignItems: 'center',
+                      mr: 1 
+                    }}
+                  >
+                    <Avatar
+                      src={getArtistImage(artist)}
+                      alt={artist.name}
+                      sx={{
+                        width: 24,
+                        height: 24,
+                        mr: 0.5,
+                        cursor: 'pointer'
+                      }}
+                      onClick={() => handleArtistClick(artist)}
+                    />
+                    <Box 
+                      component="span" 
+                      sx={{ 
+                        cursor: 'pointer',
+                        '&:hover': { textDecoration: 'underline' }
+                      }}
+                      onClick={() => handleArtistClick(artist)}
+                    >
+                      {artist.name}
+                    </Box>
+                    {i < (artists.length || 0) - 1 && ", "}
+                  </Box>
+                ))
+              ) : (
+                <Typography variant="body2" color="text.secondary">
+                  No artist information available
+                </Typography>
+              )}
             </Typography>
             <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
               Artists
             </Typography>
             <Box>
-              {release.artists?.map((artist) => (
-                <ArtistPreview
-                  key={artist.id}
-                  artist={artist}
-                />
-              ))}
+              {hasArtists ? (
+                artists.map((artist) => (
+                  <ArtistPreview
+                    key={artist.id}
+                    artist={artist}
+                  />
+                ))
+              ) : (
+                <Typography variant="body2" color="text.secondary">
+                  No artist information available
+                </Typography>
+              )}
             </Box>
             <Typography variant="body2" color="text.secondary" gutterBottom sx={{ mt: 2 }}>
               Release Date: {new Date(release.release_date).toLocaleDateString()}
@@ -176,7 +336,46 @@ const ReleaseModal: React.FC<ReleaseModalProps> = ({ open, onClose, release }) =
                           <TableCell>{index + 1}</TableCell>
                           <TableCell>{track.title}</TableCell>
                           <TableCell>
-                            {track.artists?.map(artist => artist.name).join(', ')}
+                            {track.artists?.map((artist, i) => (
+                              <Box 
+                                component="span" 
+                                key={artist.id} 
+                                sx={{ 
+                                  display: 'inline-flex', 
+                                  alignItems: 'center',
+                                  mr: 0.5 
+                                }}
+                              >
+                                <Avatar
+                                  src={getTrackArtistImage(artist)}
+                                  alt={artist.name}
+                                  sx={{
+                                    width: 20,
+                                    height: 20,
+                                    mr: 0.5,
+                                    cursor: 'pointer'
+                                  }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleArtistClick(artist);
+                                  }}
+                                />
+                                <Box 
+                                  component="span" 
+                                  sx={{ 
+                                    cursor: 'pointer',
+                                    '&:hover': { textDecoration: 'underline' }
+                                  }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleArtistClick(artist);
+                                  }}
+                                >
+                                  {artist.name}
+                                </Box>
+                                {i < (track.artists?.length || 0) - 1 && ", "}
+                              </Box>
+                            ))}
                             {isRemix && remixArtist && ` (${remixArtist} Remix)`}
                           </TableCell>
                           <TableCell>{track.duration ? formatDuration(track.duration) : '--:--'}</TableCell>
@@ -219,5 +418,3 @@ const ReleaseModal: React.FC<ReleaseModalProps> = ({ open, onClose, release }) =
     </Dialog>
   );
 };
-
-export default ReleaseModal;

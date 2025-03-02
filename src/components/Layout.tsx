@@ -26,7 +26,7 @@ const getLogo = (label: string) => {
 const Layout: React.FC = () => {
   const location = useLocation();
   const theme = useTheme();
-  const isMobile = useMediaQuery('(max-width:900px)');
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const path = location.pathname;
   const pathLabel = (path.split('/')[1] || 'records').toUpperCase();
@@ -48,11 +48,10 @@ const Layout: React.FC = () => {
   const renderSidebar = () => {
     if (isAdminRoute) return null;
 
-    const drawerVariant = isMobile ? "temporary" as const : "permanent" as const;
     const sidebarProps = {
-      variant: drawerVariant,
-      open: isMobile ? mobileOpen : true,
-      onClose: handleDrawerToggle
+      mobileOpen,
+      onMobileClose: handleDrawerToggle,
+      label: currentLabel.toLowerCase() as 'records' | 'tech' | 'deep'
     };
 
     switch (currentLabel) {
@@ -71,24 +70,11 @@ const Layout: React.FC = () => {
       
       {!isAdminRoute && (
         <>
-          {isMobile && (
-            <IconButton
-              color="inherit"
-              aria-label="open drawer"
-              edge="start"
-              onClick={handleDrawerToggle}
-              sx={{
-                position: 'fixed',
-                top: '1rem',
-                left: '1rem',
-                zIndex: theme.zIndex.drawer + 2,
-                display: { sm: 'none' }
-              }}
-            >
-              <MenuIcon />
-            </IconButton>
-          )}
-          <TopNavigation logo={getLogo(currentLabel)} />
+          <TopNavigation 
+            logo={getLogo(currentLabel)} 
+            isMobile={isMobile}
+            onMenuClick={handleDrawerToggle}
+          />
           {!isMobile && <LogoHeader label={currentLabel} />}
           {renderSidebar()}
         </>
@@ -98,16 +84,18 @@ const Layout: React.FC = () => {
         component="main"
         sx={{
           flexGrow: 1,
-          width: '100%',
-          minHeight: '100vh',
-          bgcolor: 'background.default',
-          ...(isAdminRoute ? {
-            p: 3
-          } : {
-            width: { sm: `calc(100% - ${240}px)` },
-            ml: { sm: `${240}px` },
-            mt: '64px'
-          })
+          p: 3,
+          width: { xs: '100%' },
+          marginLeft: { 
+            xs: 0,
+            md: '240px' // Drawer width
+          },
+          marginTop: '64px', // Height of TopNavigation
+          minHeight: 'calc(100vh - 64px)',
+          overflow: 'auto',
+          backgroundColor: '#121212',
+          position: 'relative',
+          zIndex: 1
         }}
       >
         <Outlet />
