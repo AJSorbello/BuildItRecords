@@ -138,11 +138,12 @@
       "last 1 safari version"
     ]
   },
-  "vercelDeploymentTimestamp": "2025-03-02T12:07:39.104Z",
+  "vercelDeploymentTimestamp": "2025-03-02T12:10:55.084Z",
   "buildInfo": {
     "timestamp": "2025-03-02T12:07:39.105Z",
     "forcedUpdate": true,
     "reason": "Manual update to trigger new Vercel deployment",
     "commitHash": "unknown"
-  }
+  },
+  "vercelDeploymentId": "deploy-6250"
 }
