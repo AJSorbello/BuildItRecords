@@ -1,6 +1,6 @@
 {
   "name": "builditrecords",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "workspaces": [
     ".",
@@ -138,9 +138,9 @@
       "last 1 safari version"
     ]
   },
-  "vercelDeploymentTimestamp": "2025-03-02T12:05:44.624Z",
+  "vercelDeploymentTimestamp": "2025-03-02T12:07:39.104Z",
   "buildInfo": {
-    "timestamp": "2025-03-02T12:05:44.625Z",
+    "timestamp": "2025-03-02T12:07:39.105Z",
     "forcedUpdate": true,
     "reason": "Manual update to trigger new Vercel deployment",
     "commitHash": "unknown"
