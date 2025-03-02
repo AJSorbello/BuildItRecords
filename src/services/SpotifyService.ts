@@ -4,6 +4,7 @@ import type { Album } from '../types/album';
 import type { RecordLabelId } from '../types/labels';
 import type { SpotifyTrack, SpotifyArtist, SpotifyAlbum, SpotifyAuthResponse, SpotifyPaging } from '../types/spotify';
 import { formatSpotifyTrack, formatSpotifyArtist, formatSpotifyAlbum } from '../utils/trackUtils';
+import { getApiBaseUrl } from '../utils/apiConfig';
 
 class SpotifyService {
   private static instance: SpotifyService;
@@ -11,7 +12,7 @@ class SpotifyService {
   private clientId: string;
   private clientSecret: string;
   private baseUrl = 'https://api.spotify.com/v1';
-  private apiBaseUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
+  private apiBaseUrl = getApiBaseUrl();
 
   private constructor() {
     this.clientId = process.env.REACT_APP_SPOTIFY_CLIENT_ID || '';

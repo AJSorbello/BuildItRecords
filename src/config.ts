@@ -1,4 +1,6 @@
-export const API_URL = (process.env.REACT_APP_API_URL || 'http://localhost:3001').replace(/\/api$/, '');
+import { getApiBaseUrl } from './utils/apiConfig';
+
+export const API_URL = getApiBaseUrl().replace(/\/api$/, '');
 
 export const RECORD_LABELS = {
   'buildit-records': { 

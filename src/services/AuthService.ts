@@ -1,4 +1,5 @@
 import type { User } from '../hooks/useAuth';
+import { getApiBaseUrl } from '../utils/apiConfig';
 
 type AuthChangeCallback = (user: User | null) => void;
 
@@ -10,7 +11,7 @@ class AuthService {
   private baseUrl: string;
 
   private constructor() {
-    this.baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
+    this.baseUrl = getApiBaseUrl();
     // Try to restore session from localStorage
     const savedUser = localStorage.getItem('user');
     const savedToken = localStorage.getItem('token');

@@ -9,6 +9,7 @@ import { Artist } from '../types/artist';
 import { SpotifyImage } from '../types/spotify';
 import { DatabaseError } from '../utils/errors';
 import { Album } from '../types/track';
+import { getApiBaseUrl } from '../utils/apiConfig';
 
 interface ApiResponse<T = unknown> {
   success?: boolean;
@@ -68,8 +69,7 @@ class DatabaseService {
   private baseUrl: string;
 
   private constructor() {
-    const apiUrl = process.env.REACT_APP_API_URL;
-    this.baseUrl = apiUrl || 'http://localhost:3001/api';
+    this.baseUrl = getApiBaseUrl();
     console.log('DatabaseService initialized with baseUrl:', this.baseUrl);
   }
 
@@ -81,35 +81,40 @@ class DatabaseService {
   }
 
   private async fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const url = `${this.baseUrl}${endpoint}`;
+    const url = endpoint.startsWith('http') ? endpoint : `${this.baseUrl}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
     const token = localStorage.getItem('adminToken');
 
-    const defaultHeaders: HeadersInit = {
-      'Content-Type': 'application/json',
-    };
+    try {
+      const defaultHeaders: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
 
-    if (token) {
-      defaultHeaders.Authorization = `Bearer ${token}`;
+      if (token) {
+        defaultHeaders.Authorization = `Bearer ${token}`;
+      }
+
+      const response = await fetch(url, {
+        ...options,
+        headers: {
+          ...defaultHeaders,
+          ...options.headers,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new DatabaseError(
+          errorData.message || 'API request failed',
+          response.status,
+          errorData.details
+        );
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error(`API request failed for ${url}:`, error);
+      throw error;
     }
-
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        ...defaultHeaders,
-        ...options.headers,
-      },
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new DatabaseError(
-        errorData.message || 'API request failed',
-        response.status,
-        errorData.details
-      );
-    }
-
-    return response.json();
   }
 
   public async getReleasesByLabelId(
