@@ -1,9 +1,13 @@
 {
   "version": 2,
+  "installCommand": "pnpm install --production=false --frozen-lockfile",
   "builds": [
     {
       "src": "package.json",
-      "use": "@vercel/static-build"
+      "use": "@vercel/static-build",
+      "config": {
+        "buildCommand": "pnpm run build"
+      }
     },
     {
       "src": "server/server.js",
