@@ -7,7 +7,9 @@ interface Artist {
   label_id: string;
   spotify_url: string;
   images: any[];
-  image_url: string | null;
+  profile_image_url: string | null;
+  profile_image_small_url: string | null;
+  profile_image_large_url: string | null;
 }
 
 interface Release {
@@ -134,14 +136,16 @@ class ReleaseService {
       
       // Insert or update artist
       const artistResult = await client.query(
-        `INSERT INTO artists (id, name, label_id, spotify_url, images, image_url)
-         VALUES ($1, $2, $3, $4, $5, $6)
+        `INSERT INTO artists (id, name, label_id, spotify_url, images, profile_image_url, profile_image_small_url, profile_image_large_url)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
          ON CONFLICT (id) DO UPDATE SET
            name = EXCLUDED.name,
            label_id = EXCLUDED.label_id,
            spotify_url = EXCLUDED.spotify_url,
            images = EXCLUDED.images,
-           image_url = EXCLUDED.image_url
+           profile_image_url = EXCLUDED.profile_image_url,
+           profile_image_small_url = EXCLUDED.profile_image_small_url,
+           profile_image_large_url = EXCLUDED.profile_image_large_url
          RETURNING id`,
         [
           artistData.id,
@@ -149,7 +153,9 @@ class ReleaseService {
           labelId,
           artistData.external_urls.spotify,
           JSON.stringify(artistData.images),
-          artistData.images[0]?.url || null
+          artistData.images[0]?.url || null,
+          artistData.images[1]?.url || artistData.images[0]?.url || null,
+          artistData.images[2]?.url || artistData.images[0]?.url || null
         ]
       );
 
@@ -207,7 +213,7 @@ class ReleaseService {
               uri = EXCLUDED.uri`,
             [
               track.id,
-              track.title,  // Changed from name to title
+              track.title,  
               artistData.id,
               album.id,
               labelId,

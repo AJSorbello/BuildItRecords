@@ -1,7 +1,7 @@
-import React from 'react';
-import { AppBar, Tabs, Tab, Box, styled, useMediaQuery, useTheme, IconButton } from '@mui/material';
+import React, { Component } from 'react';
+import { AppBar, Tabs, Tab, Box, styled, useMediaQuery, useTheme, IconButton, Theme } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, Location, NavigateFunction } from 'react-router-dom';
 import RecordsSquareLogo from '../assets/png/records/BuildIt_Records_Square.png';
 import TechSquareLogo from '../assets/png/tech/BuildIt_Tech_Square.png';
 import DeepSquareLogo from '../assets/png/deep/BuildIt_Deep_Square.png';
@@ -28,7 +28,8 @@ const StyledTabs = styled(Tabs)(({ theme }) => ({
   height: '64px',
   backgroundColor: 'transparent',
   '& .MuiTabs-indicator': {
-    backgroundColor: '#02FF95',
+    backgroundColor: theme.palette.primary.main,
+    height: 3, 
   },
   '& .MuiTabs-flexContainer': {
     justifyContent: 'space-between',
@@ -37,33 +38,29 @@ const StyledTabs = styled(Tabs)(({ theme }) => ({
     backgroundColor: 'transparent',
   },
   [theme.breakpoints.down('md')]: {
-    '& .MuiTabs-flexContainer': {
-      paddingLeft: '48px', // Make space for the menu button on the left
-    }
+    display: 'none',
   }
 }));
 
 const StyledTab = styled(Tab)<{ tabtype: string }>(({ theme, tabtype }) => ({
-  flex: 1,
-  maxWidth: 'none',
-  color: '#FFFFFF',
-  height: '64px',
-  padding: 0,
-  textTransform: 'none',
-  fontSize: '14px',
-  fontWeight: 500,
+  fontSize: '1rem',
+  fontWeight: 600, 
+  letterSpacing: '0.01em',
+  color: theme.palette.text.primary,
   '&.Mui-selected': {
-    color: '#FFFFFF',
+    color: tabtype === 'records' ? '#02FF95' : tabtype === 'tech' ? '#FF0000' : '#00BFFF',
+    fontWeight: 700, 
   },
   '&:hover': {
-    color: tabtype === 'records' ? '#02FF95' : 
-           tabtype === 'tech' ? '#FF0000' : 
-           '#00BFFF',
+    color: tabtype === 'records' ? '#02FF95' : tabtype === 'tech' ? '#FF0000' : '#00BFFF',
     opacity: 1,
   },
+  textTransform: 'none',
+  minWidth: 120,
+  padding: '12px 16px',
   [theme.breakpoints.down('md')]: {
-    minWidth: '80px', // Reduce tab width on mobile
-    fontSize: '12px', // Smaller font on mobile
+    minWidth: 90,
+    padding: '8px 12px',
   }
 }));
 
@@ -93,99 +90,125 @@ interface TopNavigationProps {
   onMenuClick?: () => void;
   isMobile?: boolean;
   logo?: string;
+  location?: Location;
+  navigate?: NavigateFunction;
+  theme?: Theme;
 }
 
-const TopNavigation: React.FC<TopNavigationProps> = ({ onMenuClick, isMobile, logo }) => {
+// Wrapper component to handle hooks
+const TopNavigationWrapper: React.FC<Omit<TopNavigationProps, 'location' | 'navigate' | 'theme'>> = (props) => {
   const location = useLocation();
   const navigate = useNavigate();
   const theme = useTheme();
+  
+  return <TopNavigationClass {...props} location={location} navigate={navigate} theme={theme} />;
+};
 
-  const currentLabel = location.pathname.split('/')[1] || 'records';
+class TopNavigationClass extends Component<TopNavigationProps> {
+  constructor(props: TopNavigationProps) {
+    super(props);
+  }
 
-  const handleChange = (event: React.SyntheticEvent, newValue: string) => {
-    navigate(`/${newValue}`);
+  getCurrentLabel = () => {
+    const { location } = this.props;
+    return location?.pathname.split('/')[1] || 'records';
   };
 
-  const tabs = [
-    {
-      value: 'records',
-      logo: RecordsSquareLogo,
-      label: 'Records'
-    },
-    {
-      value: 'tech',
-      logo: TechSquareLogo,
-      label: 'Tech'
-    },
-    {
-      value: 'deep',
-      logo: DeepSquareLogo,
-      label: 'Deep'
+  handleChange = (event: React.SyntheticEvent, newValue: string) => {
+    const { navigate } = this.props;
+    if (navigate) {
+      navigate(`/${newValue}`);
     }
-  ];
+  };
 
-  return (
-    <StyledAppBar>
-      <Box sx={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        width: '100%', 
-        px: 2,
-        background: 'transparent',
-        position: 'relative',
-        minWidth: { xs: '360px' } // Minimum width for mobile
-      }}>
-        {isMobile && onMenuClick && (
-          <IconButton
-            color="inherit"
-            aria-label="open drawer"
-            edge="start"
-            onClick={onMenuClick}
-            sx={{ 
-              position: 'absolute',
-              left: 8,
-              top: '50%',
-              transform: 'translateY(-50%)',
-              zIndex: 1400,
-              backgroundColor: 'rgba(0,0,0,0.5)',
-              '&:hover': {
-                backgroundColor: 'rgba(0,0,0,0.7)'
+  getTabs = () => {
+    return [
+      {
+        value: 'records',
+        logo: RecordsSquareLogo,
+        label: 'Records'
+      },
+      {
+        value: 'tech',
+        logo: TechSquareLogo,
+        label: 'Tech'
+      },
+      {
+        value: 'deep',
+        logo: DeepSquareLogo,
+        label: 'Deep'
+      }
+    ];
+  };
+
+  render() {
+    const { onMenuClick, isMobile, theme } = this.props;
+    const currentLabel = this.getCurrentLabel();
+    const tabs = this.getTabs();
+
+    return (
+      <StyledAppBar>
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          width: '100%', 
+          px: 2,
+          background: 'transparent',
+          position: 'relative',
+          minWidth: { xs: '360px' } 
+        }}>
+          {isMobile && onMenuClick && (
+            <IconButton
+              color="inherit"
+              aria-label="open drawer"
+              edge="start"
+              onClick={onMenuClick}
+              sx={{ 
+                position: 'absolute',
+                left: 8,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                zIndex: 1400,
+                backgroundColor: 'rgba(0,0,0,0.5)',
+                '&:hover': {
+                  backgroundColor: 'rgba(0,0,0,0.7)'
+                }
+              }}
+            >
+              <MenuIcon />
+            </IconButton>
+          )}
+          <StyledTabs
+            value={currentLabel}
+            onChange={this.handleChange}
+            aria-label="label navigation"
+            TabIndicatorProps={{
+              style: {
+                backgroundColor: 
+                  currentLabel === 'records' ? '#02FF95' :
+                  currentLabel === 'tech' ? '#FF0000' :
+                  '#00BFFF'
               }
             }}
           >
-            <MenuIcon />
-          </IconButton>
-        )}
-        <StyledTabs
-          value={currentLabel}
-          onChange={handleChange}
-          aria-label="label navigation"
-          TabIndicatorProps={{
-            style: {
-              backgroundColor: 
-                currentLabel === 'records' ? '#02FF95' :
-                currentLabel === 'tech' ? '#FF0000' :
-                '#00BFFF'
-            }
-          }}
-        >
-          {tabs.map((tab) => (
-            <StyledTab
-              key={tab.value}
-              value={tab.value}
-              tabtype={tab.value}
-              label={
-                <TabContent>
-                  <Logo src={tab.logo} alt={tab.label} tabtype={tab.value} />
-                  <span>{tab.label}</span>
-                </TabContent>
-              }
-            />
-          ))}
-        </StyledTabs>
-      </Box>
-    </StyledAppBar>
-  );
-};
+            {tabs.map((tab) => (
+              <StyledTab
+                key={tab.value}
+                value={tab.value}
+                tabtype={tab.value}
+                label={
+                  <TabContent>
+                    <Logo src={tab.logo} alt={tab.label} tabtype={tab.value} />
+                    <span>{tab.label}</span>
+                  </TabContent>
+                }
+              />
+            ))}
+          </StyledTabs>
+        </Box>
+      </StyledAppBar>
+    );
+  }
+}
 
-export default TopNavigation;
+export default TopNavigationWrapper;

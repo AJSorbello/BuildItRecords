@@ -58,6 +58,10 @@ module.exports = (sequelize) => {
       type: DataTypes.STRING,
       allowNull: true
     },
+    spotify_uri: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
     total_tracks: {
       type: DataTypes.INTEGER,
       allowNull: false,

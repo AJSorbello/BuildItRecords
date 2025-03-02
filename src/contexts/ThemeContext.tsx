@@ -1,5 +1,6 @@
-import React, { createContext, useContext, ReactNode, useState } from 'react';
+import React, { createContext, useContext, ReactNode } from 'react';
 
+// Define the shape of our theme colors
 interface ThemeColors {
   primary: string;
   background: string;
@@ -11,13 +12,15 @@ interface ThemeColors {
   shadow: string;
 }
 
+// Define the shape of our context value
 interface ThemeContextType {
   colors: ThemeColors;
   isDark: boolean;
   toggleTheme: () => void;
 }
 
-const defaultColors: ThemeColors = {
+// Default dark theme colors
+const darkColors: ThemeColors = {
   primary: '#1DB954',
   background: '#121212',
   card: '#181818',
@@ -28,43 +31,55 @@ const defaultColors: ThemeColors = {
   shadow: 'rgba(0, 0, 0, 0.3)',
 };
 
+// Create the context with undefined initial value
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-export const useTheme = () => {
+// Custom hook to use the theme context
+export const useCustomTheme = (): ThemeContextType => {
   const context = useContext(ThemeContext);
   if (!context) {
-    throw new Error('useTheme must be used within a ThemeProvider');
+    throw new Error('useCustomTheme must be used within a ThemeProvider');
   }
   return context;
 };
 
+// Props type for the ThemeProvider component
 interface ThemeProviderProps {
   children: ReactNode;
 }
 
-export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
-  const [isDark, setIsDark] = useState(true); // Default to dark theme
+// ThemeProvider component class implementation instead of function to avoid hook issues
+export class ThemeProvider extends React.Component<ThemeProviderProps, { isDark: boolean }> {
+  constructor(props: ThemeProviderProps) {
+    super(props);
+    this.state = {
+      isDark: true // Default to dark theme
+    };
+    this.toggleTheme = this.toggleTheme.bind(this);
+  }
 
-  const toggleTheme = () => {
-    setIsDark(!isDark);
-  };
+  toggleTheme() {
+    this.setState(prevState => ({
+      isDark: !prevState.isDark
+    }));
+  }
 
-  const colors: ThemeColors = {
-    primary: '#1DB954',
-    background: '#121212',
-    card: '#1e1e1e',
-    text: '#FFFFFF',
-    textSecondary: 'rgba(255, 255, 255, 0.7)',
-    textTertiary: 'rgba(255, 255, 255, 0.5)',
-    border: 'rgba(255, 255, 255, 0.1)',
-    shadow: 'rgba(0, 0, 0, 0.3)',
-  };
+  render() {
+    // Use fixed dark colors for now
+    const colors = darkColors;
 
-  return (
-    <ThemeContext.Provider value={{ colors, isDark, toggleTheme }}>
-      {children}
-    </ThemeContext.Provider>
-  );
-};
+    const value = {
+      colors,
+      isDark: this.state.isDark,
+      toggleTheme: this.toggleTheme
+    };
+
+    return (
+      <ThemeContext.Provider value={value}>
+        {this.props.children}
+      </ThemeContext.Provider>
+    );
+  }
+}
 
 export default ThemeContext;

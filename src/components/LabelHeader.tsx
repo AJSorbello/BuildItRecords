@@ -3,7 +3,7 @@ import { Box, Button, Typography, Stack } from '@mui/material';
 import MusicNoteIcon from '@mui/icons-material/MusicNote';
 import CloudQueueIcon from '@mui/icons-material/CloudQueue';
 import PeopleIcon from '@mui/icons-material/People';
-import { useTheme } from '../contexts/ThemeContext';
+import { useCustomTheme } from '../contexts/ThemeContext';
 import { useNavigate } from 'react-router-dom';
 import BeatportIcon from '../assets/icons/BeatportIcon';
 
@@ -17,7 +17,7 @@ interface LabelHeaderProps {
 }
 
 const LabelHeader: React.FC<LabelHeaderProps> = ({ label, platformLinks }) => {
-  const { colors } = useTheme();
+  const { colors } = useCustomTheme();
   const navigate = useNavigate();
 
   const handlePlatformPress = (url: string) => {

@@ -1,5 +1,6 @@
-import React, { useState, useCallback } from 'react';
-import { Box, Container, styled, useTheme, useMediaQuery } from '@mui/material';
+import React, { useState, useCallback, ReactNode } from 'react';
+import { Box, Container, styled, useMediaQuery } from '@mui/material';
+import { useTheme as useMuiTheme } from '@mui/material/styles';
 import TopNavigation from './TopNavigation';
 import RecordsSidebar from './RecordsSidebar';
 import TechSidebar from './TechSidebar';
@@ -44,7 +45,7 @@ interface PageLayoutProps {
 }
 
 const PageLayout: React.FC<PageLayoutProps> = ({ children, label }) => {
-  const theme = useTheme();
+  const theme = useMuiTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [mobileOpen, setMobileOpen] = useState(false);
 

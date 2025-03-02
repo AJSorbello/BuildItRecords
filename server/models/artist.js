@@ -92,6 +92,11 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true,
       unique: true
     },
+    spotify_uri: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      unique: true
+    },
     spotify_url: {
       type: DataTypes.STRING,
       allowNull: true,

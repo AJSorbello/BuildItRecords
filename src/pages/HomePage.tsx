@@ -10,7 +10,7 @@ import { Track } from '../types/track';
 import { Release } from '../types/release';
 import { Artist } from '../types/artist';
 import { databaseService } from '../services/DatabaseService';
-import FeaturedRelease from '../components/FeaturedRelease';
+import { FeaturedRelease } from '../components/FeaturedRelease';
 import { ReleaseCard } from '../components/ReleaseCard';
 import { useNavigate } from 'react-router-dom';
 

@@ -1,0 +1,19 @@
+[install]
+# Use exact versions for dependencies
+exact = true
+peer-dependencies = true
+optional-dependencies = true
+
+[workspaces]
+# Configure workspaces
+client = "."
+server = "./server"
+
+[dev]
+port = 3000
+hot = true
+
+[build]
+target = "browser"
+outdir = "dist"
+sourcemap = true

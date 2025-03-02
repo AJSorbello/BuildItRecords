@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { Component } from 'react';
 import { 
   Drawer, 
   List, 
@@ -11,9 +11,9 @@ import {
   Typography,
   Divider,
   useMediaQuery,
-  useTheme
 } from '@mui/material';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useTheme } from '@mui/material/styles';
+import { useNavigate, useLocation, NavigateFunction, Location } from 'react-router-dom';
 import { labelColors } from '../theme/theme';
 import HomeIcon from '@mui/icons-material/Home';
 import AlbumIcon from '@mui/icons-material/Album';
@@ -42,21 +42,41 @@ interface RecordsSidebarProps {
   onMobileClose?: () => void;
   label: 'records' | 'tech' | 'deep';
   sx?: object;
+  navigate: NavigateFunction;
+  location: Location;
+  isMobile: boolean;
 }
 
-const RecordsSidebar: React.FC<RecordsSidebarProps> = ({ 
-  mobileOpen = false, 
-  onMobileClose, 
-  sx 
-}) => {
+interface RecordsSidebarState {
+  socialOpen: boolean;
+}
+
+// Wrapper to get hooks
+const RecordsSidebarWrapper: React.FC<Omit<RecordsSidebarProps, 'navigate' | 'location' | 'isMobile'>> = (props) => {
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const color = labelColors.records;
-  const [socialOpen, setSocialOpen] = useState(false);
+  
+  return <RecordsSidebar 
+    {...props} 
+    navigate={navigate} 
+    location={location}
+    isMobile={isMobile} 
+  />;
+};
 
-  const menuItems = [
+class RecordsSidebar extends Component<RecordsSidebarProps, RecordsSidebarState> {
+  constructor(props: RecordsSidebarProps) {
+    super(props);
+    this.state = {
+      socialOpen: false
+    };
+    this.handleNavigation = this.handleNavigation.bind(this);
+    this.toggleSocial = this.toggleSocial.bind(this);
+  }
+
+  menuItems = [
     { text: 'Home', icon: <HomeIcon />, path: '/' },
     { text: 'Artists', icon: <PeopleIcon />, path: '/records/artists' },
     { text: 'Releases', icon: <AlbumIcon />, path: '/records/releases' },
@@ -64,152 +84,170 @@ const RecordsSidebar: React.FC<RecordsSidebarProps> = ({
     { text: 'Submit', icon: <SendIcon />, path: '/records/submit' },
   ];
 
-  const socialLinks = [
+  socialLinks = [
     { icon: <FacebookIcon />, url: 'https://www.facebook.com/BuildItRecords/', label: 'Facebook' },
     { icon: <InstagramIcon />, url: 'https://www.instagram.com/builditrecords/', label: 'Instagram' },
     { icon: <YouTubeIcon />, url: 'https://www.youtube.com/builditrecords', label: 'YouTube' },
     { icon: <SoundCloudIcon />, url: 'https://soundcloud.com/builditrecords', label: 'SoundCloud' },
   ];
 
-  const handleNavigation = (path: string) => {
+  handleNavigation(path: string) {
+    const { navigate, isMobile, onMobileClose } = this.props;
     navigate(path);
     if (isMobile && onMobileClose) {
       onMobileClose();
     }
-  };
+  }
 
-  return (
-    <Drawer
-      variant={isMobile ? "temporary" : "permanent"}
-      open={isMobile ? mobileOpen : true}
-      onClose={onMobileClose}
-      ModalProps={{
-        keepMounted: true, // Better mobile performance
-      }}
-      PaperProps={{
-        sx: {
-          width: drawerWidth,
-          backgroundColor: '#121212',
-          borderRight: '1px solid rgba(255, 255, 255, 0.12)',
-          display: 'flex',
-          flexDirection: 'column',
-          '& .MuiListItemIcon-root': {
-            color: color,
-            minWidth: '40px',
-            marginLeft: '12px'
-          },
-          '& .MuiListItemText-root': {
-            color: '#ffffff',
-            '& .MuiTypography-root': {
-              fontSize: '0.875rem',
-              fontWeight: 500
-            }
-          },
-          ...sx
-        }
-      }}
-      sx={{
-        display: { xs: isMobile ? 'block' : 'none', md: 'block' },
-        '& .MuiDrawer-paper': {
-          boxSizing: 'border-box',
-          width: drawerWidth,
-          marginTop: isMobile ? '64px' : '180px',
-          height: isMobile ? 'calc(100% - 64px)' : 'calc(100% - 180px)',
-          zIndex: isMobile ? 1200 : 1100
-        },
-      }}
-    >
-      {isMobile && (
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'flex-end', 
-          p: 1,
-          position: 'fixed',
-          right: 0,
-          top: '12px',
-          zIndex: 1200
-        }}>
-          <IconButton 
-            onClick={onMobileClose} 
-            sx={{ 
+  toggleSocial() {
+    this.setState(prevState => ({
+      socialOpen: !prevState.socialOpen
+    }));
+  }
+
+  render() {
+    const { mobileOpen = false, onMobileClose, sx, isMobile } = this.props;
+    const { socialOpen } = this.state;
+    const color = labelColors.records;
+
+    return (
+      <Drawer
+        variant={isMobile ? "temporary" : "permanent"}
+        open={isMobile ? mobileOpen : true}
+        onClose={onMobileClose}
+        ModalProps={{
+          keepMounted: true,
+        }}
+        PaperProps={{
+          sx: {
+            width: drawerWidth,
+            backgroundColor: '#121212',
+            borderRight: '1px solid rgba(255, 255, 255, 0.12)',
+            display: 'flex',
+            flexDirection: 'column',
+            '& .MuiListItemIcon-root': {
+              color: color,
+              minWidth: '40px',
+              marginLeft: '12px'
+            },
+            '& .MuiListItemText-root': {
               color: '#ffffff',
-              backgroundColor: 'rgba(18, 18, 18, 0.95)',
-              '&:hover': {
-                backgroundColor: 'rgba(18, 18, 18, 0.85)',
+              '& .MuiTypography-root': {
+                fontSize: '1rem',
+                fontWeight: 700,
+                letterSpacing: '0.01em'
               }
-            }}
-          >
-            <CloseIcon />
-          </IconButton>
-        </Box>
-      )}
-      <List sx={{ flexGrow: 1, pt: 0 }}>
-        {menuItems.map((item) => (
+            },
+            ...sx
+          }
+        }}
+        sx={{
+          display: { xs: isMobile ? 'block' : 'none', md: 'block' },
+          '& .MuiDrawer-paper': {
+            boxSizing: 'border-box',
+            width: drawerWidth,
+            marginTop: isMobile ? '64px' : '180px',
+            height: isMobile ? 'calc(100% - 64px)' : 'calc(100% - 180px)',
+            zIndex: isMobile ? 1200 : 1100,
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)'
+          },
+        }}
+      >
+        {isMobile && (
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'flex-end', 
+            p: 1,
+            position: 'fixed',
+            right: 0,
+            top: '12px',
+            zIndex: 1200
+          }}>
+            <IconButton 
+              onClick={onMobileClose} 
+              sx={{ 
+                color: '#ffffff',
+                backgroundColor: 'rgba(18, 18, 18, 0.95)',
+                '&:hover': {
+                  backgroundColor: 'rgba(18, 18, 18, 0.85)',
+                }
+              }}
+            >
+              <CloseIcon />
+            </IconButton>
+          </Box>
+        )}
+        <List sx={{ flexGrow: 1, pt: 0 }}>
+          {this.menuItems.map((item) => (
+            <ListItem
+              button
+              key={item.text}
+              onClick={() => this.handleNavigation(item.path)}
+              sx={{
+                mb: 1,
+                padding: '12px 16px',
+                borderRadius: '6px',
+                transition: 'all 0.2s ease-in-out',
+                '&:hover': {
+                  backgroundColor: 'rgba(2, 255, 149, 0.15)',
+                  transform: 'translateX(3px)',
+                  '& .MuiListItemIcon-root': {
+                    color: '#02FF95'
+                  },
+                  '& .MuiListItemText-primary': {
+                    color: '#02FF95'
+                  }
+                }
+              }}
+            >
+              <ListItemIcon>{item.icon}</ListItemIcon>
+              <ListItemText primary={item.text} />
+            </ListItem>
+          ))}
+        </List>
+        
+        <Box sx={{ mt: 'auto', borderTop: '1px solid rgba(255, 255, 255, 0.12)', p: 2 }}>
           <ListItem
             button
-            key={item.text}
-            onClick={() => handleNavigation(item.path)}
-            sx={{
-              mb: 1,
-              borderRadius: '4px',
-              '&:hover': {
-                backgroundColor: 'rgba(2, 255, 149, 0.1)',
-                '& .MuiListItemIcon-root': {
-                  color: '#02FF95'
-                },
-                '& .MuiListItemText-primary': {
-                  color: '#02FF95'
-                }
-              }
-            }}
+            onClick={this.toggleSocial}
+            sx={{ borderRadius: '4px' }}
           >
-            <ListItemIcon>{item.icon}</ListItemIcon>
-            <ListItemText primary={item.text} />
+            <ListItemText 
+              primary={
+                <Typography color="white" variant="subtitle2">
+                  Social Media
+                </Typography>
+              } 
+            />
+            {socialOpen ? <ExpandLess sx={{ color: 'white' }} /> : <ExpandMore sx={{ color: 'white' }} />}
           </ListItem>
-        ))}
-      </List>
-      
-      <Box sx={{ mt: 'auto', borderTop: '1px solid rgba(255, 255, 255, 0.12)', p: 2 }}>
-        <ListItem
-          button
-          onClick={() => setSocialOpen(!socialOpen)}
-          sx={{ borderRadius: '4px' }}
-        >
-          <ListItemText 
-            primary={
-              <Typography color="white" variant="subtitle2">
-                Social Media
-              </Typography>
-            } 
-          />
-          {socialOpen ? <ExpandLess sx={{ color: 'white' }} /> : <ExpandMore sx={{ color: 'white' }} />}
-        </ListItem>
-        <Collapse in={socialOpen} timeout="auto" unmountOnExit>
-          <List component="div" disablePadding>
-            {socialLinks.map((link) => (
-              <ListItem
-                button
-                key={link.url}
-                onClick={() => window.open(link.url, '_blank')}
-                sx={{ pl: 4 }}
-              >
-                <ListItemIcon sx={{ color: 'white' }}>
-                  {link.icon}
-                </ListItemIcon>
-                <ListItemText 
-                  primary={
-                    <Typography color="white" variant="body2">
-                      {link.label}
-                    </Typography>
-                  }
-                />
-              </ListItem>
-            ))}
-          </List>
-        </Collapse>
-      </Box>
-    </Drawer>
-  );
-};
+          <Collapse in={socialOpen} timeout="auto" unmountOnExit>
+            <List component="div" disablePadding>
+              {this.socialLinks.map((link) => (
+                <ListItem
+                  button
+                  key={link.url}
+                  onClick={() => window.open(link.url, '_blank')}
+                  sx={{ pl: 4 }}
+                >
+                  <ListItemIcon sx={{ color: 'white' }}>
+                    {link.icon}
+                  </ListItemIcon>
+                  <ListItemText 
+                    primary={
+                      <Typography color="white" variant="body2">
+                        {link.label}
+                      </Typography>
+                    }
+                  />
+                </ListItem>
+              ))}
+            </List>
+          </Collapse>
+        </Box>
+      </Drawer>
+    );
+  }
+}
 
-export default RecordsSidebar;
+export default RecordsSidebarWrapper;

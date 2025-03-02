@@ -8,7 +8,7 @@ const router = express.Router();
 const rateLimit = require('express-rate-limit');
 const { Op } = require('sequelize');
 const { Track, Artist, Release, Label } = require('../models');
-const { LABEL_CONFIGS } = require('../config/labels');
+const LABEL_CONFIGS = require('../config/labels');
 const { getSpotifyService } = require('../services/SpotifyService');
 const logger = require('../utils/logger');
 
@@ -616,7 +616,10 @@ router.get('/', async (req, res) => {
           id: artist.id,
           name: artist.name,
           spotify_url: artist.spotify_url,
-          profile_image_url: artist.profile_image_url
+          spotify_uri: artist.spotify_uri,
+          profile_image_url: artist.profile_image_url,
+          profile_image_small_url: artist.profile_image_small_url,
+          profile_image_large_url: artist.profile_image_large_url
         })),
         created_at: track.created_at,
         updated_at: track.updated_at
@@ -678,7 +681,7 @@ router.get('/all/:labelId', async (req, res) => {
         model: Artist,
         as: 'artists',
         through: { attributes: [] },
-        attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
+        attributes: ['id', 'name', 'spotify_url', 'profile_image_url', 'profile_image_small_url', 'profile_image_large_url', 'spotify_uri']
       }],
       attributes: [
         'id', 'spotify_id', 'title', 'duration_ms', 'track_number', 
@@ -722,7 +725,10 @@ router.get('/all/:labelId', async (req, res) => {
         id: artist.id,
         name: artist.name,
         spotify_url: artist.spotify_url,
-        profile_image_url: artist.profile_image_url
+        spotify_uri: artist.spotify_uri,
+        profile_image_url: artist.profile_image_url,
+        profile_image_small_url: artist.profile_image_small_url,
+        profile_image_large_url: artist.profile_image_large_url
       })),
       created_at: track.created_at,
       updated_at: track.updated_at
@@ -842,7 +848,11 @@ router.get('/search', async (req, res) => {
                 artists: track.artists.map(artist => ({
                     id: artist.id,
                     name: artist.name,
-                    spotify_url: artist.spotify_url
+                    spotify_url: artist.spotify_url,
+                    spotify_uri: artist.spotify_uri,
+                    profile_image_url: artist.profile_image_url,
+                    profile_image_small_url: artist.profile_image_small_url,
+                    profile_image_large_url: artist.profile_image_large_url
                 }))
             };
             console.log('Formatted track:', formatted);
@@ -902,33 +912,42 @@ router.post('/import', async (req, res) => {
   
   try {
     const { labelId } = req.body;
+    
     if (!labelId) {
-      return res.status(400).json({ success: false, message: 'Label ID is required' });
+      return res.status(400).json({
+        success: false,
+        message: 'Label ID is required'
+      });
     }
-
-    // Get label name from config
+    
     const labelConfig = LABEL_CONFIGS[labelId];
     if (!labelConfig) {
-      return res.status(400).json({ success: false, message: 'Invalid label ID' });
+      return res.status(404).json({
+        success: false,
+        message: `Label configuration not found for ID: ${labelId}`
+      });
     }
-
-    // Initialize Spotify service
-    await spotifyService.initialize();
-
-    // Get the label from database
-    const label = await Label.findByPk(labelId);
-    if (!label) {
-      return res.status(404).json({ success: false, message: 'Label not found in database' });
-    }
-
-    logger.info('Starting import for label:', {
-      labelId,
-      labelName: labelConfig.spotifyLabel,
-      displayName: label.display_name
+    
+    // Get the label from the database
+    const label = await Label.findOne({
+      where: { 
+        slug: labelId 
+      }
     });
-
-    // Search for albums by label
-    const albums = await spotifyService.searchAlbumsByLabel(labelConfig.spotifyLabel);
+    
+    if (!label) {
+      return res.status(404).json({
+        success: false,
+        message: `Label not found with ID: ${labelId}`,
+        labelName: labelConfig.spotifyLabel,
+      });
+    }
+    
+    // Search for albums with label variations included
+    const albums = await spotifyService.searchAlbumsByLabel(
+      labelConfig.spotifyLabel, 
+      labelConfig.variations || []
+    );
     
     if (!albums || !albums.items || albums.items.length === 0) {
       return res.status(404).json({ 

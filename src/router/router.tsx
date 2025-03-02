@@ -9,7 +9,7 @@ import { Layout } from '../components/Layout';
 import RecordsHome from '../pages/labels/RecordsHome';
 import TechHome from '../pages/labels/TechHome';
 import DeepHome from '../pages/labels/DeepHome';
-import ReleasesPage from '../pages/ReleasesPage';
+import { ReleasesPage } from '../pages/ReleasesPage';
 import ArtistsPage from '../pages/ArtistsPage';
 import PlaylistsPage from '../pages/PlaylistsPage';
 import SubmitPage from '../pages/SubmitPage';
@@ -46,7 +46,7 @@ export const router = createBrowserRouter([
       },
       {
         path: '/records/releases',
-        element: <ReleasesPage label={RECORD_LABELS.RECORDS} />,
+        element: <ReleasesPage label="records" />,
       },
       {
         path: '/records/artists',
@@ -80,7 +80,7 @@ export const router = createBrowserRouter([
       },
       {
         path: '/deep/releases',
-        element: <ReleasesPage label={RECORD_LABELS.DEEP} />,
+        element: <ReleasesPage label="deep" />,
       },
       {
         path: '/deep/artists',
@@ -106,7 +106,7 @@ export const router = createBrowserRouter([
       },
       {
         path: '/tech/releases',
-        element: <ReleasesPage label={RECORD_LABELS.TECH} />,
+        element: <ReleasesPage label="tech" />,
       },
       {
         path: '/tech/artists',

@@ -41,21 +41,18 @@ const StyledDrawer = styled(Drawer)(({ theme }) => ({
   flexShrink: 0,
   '& .MuiDrawer-paper': {
     width: drawerWidth,
-    boxSizing: 'border-box',
     backgroundColor: '#121212',
-    borderRight: '1px solid rgba(255, 255, 255, 0.12)',
-    marginTop: theme.breakpoints.up('md') ? '180px' : '64px',
-    position: 'fixed',
-    height: theme.breakpoints.up('md') ? 'calc(100vh - 180px)' : 'calc(100vh - 64px)',
-    display: 'flex',
-    flexDirection: 'column',
-    [theme.breakpoints.down('md')]: {
-      marginTop: '64px',
-      zIndex: 1100, // Below TopNavigation
-    }
-  },
-  '& .MuiDrawer-docked': {
-    width: 0,
+    padding: theme.spacing(2),
+    border: 'none',
+    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)',
+    '& .MuiDivider-root': {
+      backgroundColor: 'rgba(255, 255, 255, 0.12)',
+      margin: theme.spacing(2, 0),
+    },
+    '& .MuiTypography-root': {
+      fontWeight: 600,
+      letterSpacing: '0.01em',
+    },
   },
 }));
 
@@ -65,16 +62,23 @@ interface StyledListButtonProps {
 
 const StyledListButton = styled(ListItemButton)<StyledListButtonProps>(({ active }) => ({
   marginBottom: '8px',
-  borderRadius: '4px',
-  backgroundColor: active ? 'rgba(2, 255, 149, 0.1)' : 'transparent',
+  borderRadius: '6px',
+  padding: '12px 16px',
+  backgroundColor: active ? 'rgba(2, 255, 149, 0.15)' : 'transparent',
+  transition: 'all 0.2s ease-in-out',
   '&:hover': {
-    backgroundColor: 'rgba(2, 255, 149, 0.1)',
+    backgroundColor: 'rgba(2, 255, 149, 0.15)',
+    transform: 'translateX(3px)',
   },
   '& .MuiListItemIcon-root': {
     color: active ? '#02FF95' : '#FFFFFF',
+    minWidth: '40px',
   },
   '& .MuiListItemText-primary': {
     color: active ? '#02FF95' : '#FFFFFF',
+    fontWeight: 700,
+    fontSize: '1rem',
+    letterSpacing: '0.01em',
   },
 }));
 
@@ -82,6 +86,21 @@ const SocialSection = styled(Box)(({ theme }) => ({
   marginTop: 'auto',
   padding: theme.spacing(2),
   borderTop: '1px solid rgba(255, 255, 255, 0.12)',
+  '& .MuiIconButton-root': {
+    margin: theme.spacing(0, 1),
+    color: theme.palette.text.primary,
+    transition: 'all 0.2s ease',
+    '&:hover': {
+      color: '#02FF95',
+      transform: 'translateY(-2px)',
+    },
+  },
+  '& .MuiTypography-root': {
+    fontWeight: 600,
+    fontSize: '0.9rem',
+    marginBottom: theme.spacing(1),
+    letterSpacing: '0.02em',
+  },
 }));
 
 interface SidebarProps {

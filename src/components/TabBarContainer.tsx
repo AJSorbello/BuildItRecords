@@ -1,13 +1,13 @@
 import React from 'react';
 import { Box } from '@mui/material';
-import { useTheme } from '../contexts/ThemeContext';
+import { useCustomTheme } from '../contexts/ThemeContext';
 
 interface TabBarContainerProps {
   children: React.ReactNode;
 }
 
 export function TabBarContainer({ children }: TabBarContainerProps) {
-  const { colors } = useTheme();
+  const { colors } = useCustomTheme();
 
   return (
     <Box

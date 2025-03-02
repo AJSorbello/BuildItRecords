@@ -10,10 +10,10 @@ interface ArtistCardProps {
 
 const ArtistCard: React.FC<ArtistCardProps> = ({ artist, onClick }) => {
   // Try all possible image fields
-  const artistImage = artist.image_url || 
-                     artist.profile_image_url || 
-                     (artist.images && artist.images[0]?.url) || 
-                     '/images/placeholder-artist.jpg';
+  const artistImage = artist.profile_image_url || 
+                      artist.profile_image_small_url || 
+                      artist.profile_image_large_url || 
+                      `https://via.placeholder.com/300x300?text=${encodeURIComponent(artist.name)}`;
                      
   const spotifyUrl = artist.spotify_url || artist.external_urls?.spotify;
 

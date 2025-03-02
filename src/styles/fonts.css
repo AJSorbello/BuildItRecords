@@ -41,12 +41,39 @@
 @font-face {
   font-family: 'Roboto';
   font-style: normal;
+  font-weight: 600; /* Added medium-bold weight */
+  font-display: swap;
+  src: local(-apple-system),
+       local(BlinkMacSystemFont),
+       local('Segoe UI Semibold'),
+       local('Helvetica Neue Bold'),
+       local('Arial Bold'),
+       local('sans-serif');
+}
+
+@font-face {
+  font-family: 'Roboto';
+  font-style: normal;
   font-weight: 700;
   font-display: swap;
   src: local(-apple-system),
        local(BlinkMacSystemFont),
-       local('Segoe UI'),
-       local('Helvetica Neue'),
-       local('Arial'),
+       local('Segoe UI Bold'),
+       local('Helvetica Neue Bold'),
+       local('Arial Bold'),
+       local('sans-serif');
+}
+
+@font-face {
+  font-family: 'Roboto';
+  font-style: normal;
+  font-weight: 800; /* Added extra-bold weight */
+  font-display: swap;
+  src: local(-apple-system),
+       local(BlinkMacSystemFont),
+       local('Segoe UI Black'),
+       local('Helvetica Neue Black'),
+       local('Arial Black'),
+       local('sans-serif-black'),
        local('sans-serif');
 }

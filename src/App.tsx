@@ -7,8 +7,9 @@ import {
   createRoutesFromElements,
   Navigate 
 } from 'react-router-dom';
-import { ThemeProvider as MuiThemeProvider } from './theme/ThemeContext';
+import { ThemeProvider as MuiThemeProvider, createTheme } from '@mui/material/styles';
 import { ThemeProvider as CustomThemeProvider } from './contexts/ThemeContext';
+import { SnackbarProvider } from 'notistack';
 
 // Components
 import ProtectedRoute from './components/ProtectedRoute';
@@ -20,7 +21,7 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import RecordsPage from './pages/RecordsPage';
 import TechPage from './pages/TechPage';
 import DeepPage from './pages/DeepPage';
-import ReleasesPage from './pages/ReleasesPage';
+import { ReleasesPage } from './pages/ReleasesPage';
 import ArtistsPage from './pages/ArtistsPage';
 import ArtistDetailPage from './pages/ArtistDetailPage';
 import PlaylistPage from './pages/PlaylistPage';
@@ -80,10 +81,23 @@ const router = createBrowserRouter(
 const App: React.FC = () => {
   return (
     <CustomThemeProvider>
-      <MuiThemeProvider>
-        <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-          <RouterProvider router={router} />
-        </Box>
+      <MuiThemeProvider theme={createTheme({
+        palette: {
+          mode: 'dark',
+          primary: {
+            main: '#1DB954',
+          },
+          background: {
+            default: '#121212',
+            paper: '#181818',
+          },
+        },
+      })}>
+        <SnackbarProvider maxSnack={3} anchorOrigin={{ vertical: 'top', horizontal: 'right' }}>
+          <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+            <RouterProvider router={router} />
+          </Box>
+        </SnackbarProvider>
       </MuiThemeProvider>
     </CustomThemeProvider>
   );

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Card,
   CardContent,
@@ -9,15 +9,24 @@ import {
   Link,
 } from '@mui/material';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
-import { useTheme } from '../contexts/ThemeContext';
+import { useCustomTheme } from '../contexts/ThemeContext';
 import { Track } from '../types/track';
 
 interface FeaturedReleaseProps {
   track: Track;
 }
 
-const FeaturedRelease: React.FC<FeaturedReleaseProps> = ({ track }) => {
-  const { colors } = useTheme();
+export const FeaturedRelease = ({ track }: FeaturedReleaseProps) => {
+  const { colors } = useCustomTheme();
+  const [modalOpen, setModalOpen] = React.useState(false);
+
+  const handleOpenModal = () => {
+    setModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setModalOpen(false);
+  };
 
   return (
     <Card
@@ -95,5 +104,3 @@ const FeaturedRelease: React.FC<FeaturedReleaseProps> = ({ track }) => {
     </Card>
   );
 };
-
-export default FeaturedRelease;

@@ -1,34 +1,33 @@
 import React, { useState } from 'react';
 import {
   Card,
+  CardActionArea,
   CardContent,
   CardMedia,
   Typography,
   Box,
+  Grid,
+  useTheme as useMuiTheme,
+  Avatar,
+  AvatarGroup,
   Chip,
-  CardActionArea,
-  IconButton,
-  Link
+  Link,
+  useMediaQuery
 } from '@mui/material';
-import { Album as AlbumIcon, PlayArrow as SpotifyIcon } from '@mui/icons-material';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import { Release } from '../types/release';
-import ReleaseModal from './modals/ReleaseModal';
-import { PlayButton } from './PlayButton';
+import { ReleaseModal } from './modals/ReleaseModal';
+import { formatDate } from '../utils/dateUtils';
 
 interface ReleaseCardProps {
-  release?: Release;
+  release: Release;
   ranking?: number;
   onClick?: () => void;
 }
 
-export const ReleaseCard: React.FC<ReleaseCardProps> = ({ release, ranking, onClick }) => {
-  const [modalOpen, setModalOpen] = useState(false);
-
-  // Early return if release is undefined or invalid
-  if (!release || typeof release !== 'object') {
-    console.error('Invalid release passed to ReleaseCard:', release);
-    return null;
-  }
+export const ReleaseCard = ({ release, ranking, onClick }: ReleaseCardProps) => {
+  const [modalOpen, setModalOpen] = React.useState(false);
+  const theme = useMuiTheme();
 
   const handleClick = () => {
     if (onClick) {
@@ -37,141 +36,195 @@ export const ReleaseCard: React.FC<ReleaseCardProps> = ({ release, ranking, onCl
     setModalOpen(true);
   };
 
-  const handleClose = () => {
+  const handleCloseModal = () => {
     setModalOpen(false);
   };
 
-  const previewUrl = release.tracks?.[0]?.preview_url;
-  const imageUrl = release.images?.[0]?.url || release.artwork_url;
-  const spotifyUrl = release.external_urls?.spotify;
-  const artists = Array.isArray(release.artists) 
-    ? release.artists.map(artist => artist?.name || '').filter(Boolean).join(', ') 
-    : '';
-  const title = release.title || 'Untitled Release';
-  const releaseDate = release.release_date || '';
+  // Get the best available artist image
+  const getArtistImage = (artist: any): string => {
+    return artist.profile_image_url || 
+           artist.profile_image_small_url || 
+           artist.profile_image_large_url || 
+           (artist.images && artist.images[0]?.url) || 
+           '/images/placeholder-artist.jpg';
+  };
+
+  // Extract artists from tracks if not available in release
+  const getArtistsFromRelease = (release: Release): any[] => {
+    if (release.artists && release.artists.length > 0) {
+      return release.artists;
+    }
+    
+    // Try to extract artists from tracks
+    if (release.tracks && release.tracks.length > 0) {
+      const artistsMap = new Map();
+      
+      release.tracks.forEach(track => {
+        if (track.artists && track.artists.length > 0) {
+          track.artists.forEach(artist => {
+            if (artist && artist.id && !artistsMap.has(artist.id)) {
+              artistsMap.set(artist.id, artist);
+            }
+          });
+        }
+      });
+      
+      if (artistsMap.size > 0) {
+        return Array.from(artistsMap.values());
+      }
+    }
+    
+    // Return a default artist if nothing else is available
+    return [{
+      id: 'unknown',
+      name: 'Unknown Artist',
+      profile_image_url: '/images/placeholder-artist.jpg'
+    }];
+  };
+
+  const artists = getArtistsFromRelease(release);
 
   return (
     <>
-      <Card 
-        sx={{ 
-          width: '100%',
+      <Card
+        sx={{
+          position: 'relative',
           height: '100%',
           display: 'flex',
           flexDirection: 'column',
-          position: 'relative',
-          backgroundColor: 'background.paper',
+          transition: 'transform 0.2s, box-shadow 0.2s',
+          '&:hover': {
+            transform: 'translateY(-5px)',
+            boxShadow: '0 8px 16px rgba(0, 0, 0, 0.2)',
+            '& .play-icon': {
+              opacity: 1,
+            },
+          },
+          cursor: 'pointer',
           borderRadius: 2,
           overflow: 'hidden',
-          '&:hover': {
-            transform: 'scale(1.02)',
-            transition: 'transform 0.2s ease-in-out'
-          }
         }}
+        onClick={handleClick}
       >
-        <CardActionArea onClick={handleClick}>
-          <Box sx={{ position: 'relative', paddingTop: '100%' }}>
-            {imageUrl ? (
-              <CardMedia
-                component="img"
-                image={imageUrl}
-                alt={title}
-                sx={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'cover'
-                }}
-              />
-            ) : (
-              <Box
-                sx={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: '100%',
-                  height: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  bgcolor: 'grey.300'
-                }}
-              >
-                <AlbumIcon sx={{ fontSize: 60, color: 'grey.500' }} />
-              </Box>
-            )}
-          </Box>
-
-          <CardContent sx={{ flexGrow: 1, p: 2 }}>
-            <Typography variant="subtitle1" component="div" noWrap>
-              {title}
-            </Typography>
-            <Typography variant="body2" color="text.secondary" noWrap>
-              {artists}
-            </Typography>
-            <Typography variant="caption" color="text.secondary" display="block">
-              {releaseDate}
-            </Typography>
-          </CardContent>
-        </CardActionArea>
-
-        {/* Spotify and Preview Controls */}
-        <Box sx={{ 
-          position: 'absolute', 
-          top: 8, 
-          right: 8, 
-          display: 'flex', 
-          gap: 1,
-          backgroundColor: 'rgba(0, 0, 0, 0.6)',
-          borderRadius: 1,
-          padding: '4px'
-        }}>
-          {spotifyUrl && (
-            <IconButton
+        <Box sx={{ position: 'relative' }}>
+          {ranking && (
+            <Chip
+              label={`#${ranking}`}
               size="small"
-              href={spotifyUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              sx={{ 
-                color: 'white',
-                '&:hover': { color: '#1DB954' }
+              color="primary"
+              sx={{
+                position: 'absolute',
+                top: 8,
+                right: 8,
+                zIndex: 2,
+                fontWeight: 'bold',
               }}
-            >
-              <SpotifyIcon />
-            </IconButton>
-          )}
-          {previewUrl && (
-            <PlayButton 
-              previewUrl={previewUrl}
-              size="small"
-              sx={{ color: 'white' }}
             />
           )}
-        </Box>
 
-        {/* Ranking Badge */}
-        {ranking && (
-          <Chip
-            label={`#${ranking}`}
-            size="small"
+          <CardMedia
+            component="img"
+            image={release.artwork_url || '/default-artwork.png'}
+            alt={release.title}
             sx={{
-              position: 'absolute',
-              top: 8,
-              left: 8,
-              backgroundColor: 'primary.main',
-              color: 'white',
-              fontWeight: 'bold'
+              aspectRatio: '1/1',
+              objectFit: 'cover',
             }}
           />
-        )}
+
+          <Box
+            className="play-icon"
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: 0,
+              transition: 'opacity 0.2s',
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            }}
+          >
+            <PlayArrowIcon
+              sx={{
+                fontSize: 64,
+                color: 'white',
+              }}
+            />
+          </Box>
+        </Box>
+
+        <CardContent sx={{ flexGrow: 1, p: 2 }}>
+          <Typography
+            variant="h6"
+            component="div"
+            gutterBottom
+            sx={{
+              fontWeight: 'bold',
+              fontSize: '1rem',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              minHeight: '2.5rem',
+              lineHeight: 1.25,
+            }}
+          >
+            {release.title}
+          </Typography>
+
+          {/* Artists with images */}
+          <Box sx={{ mb: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <AvatarGroup
+                max={3}
+                sx={{
+                  '& .MuiAvatar-root': {
+                    width: 24,
+                    height: 24,
+                    fontSize: '0.75rem',
+                    border: `1px solid ${theme.palette.background.paper}`,
+                  },
+                  mr: 1,
+                }}
+              >
+                {artists.map((artist, index) => (
+                  <Avatar 
+                    key={artist.id || index} 
+                    alt={artist.name} 
+                    src={getArtistImage(artist)}
+                    sx={{ 
+                      width: 24, 
+                      height: 24,
+                    }}
+                  />
+                ))}
+              </AvatarGroup>
+              <Typography variant="body2" color="text.secondary">
+                {artists.map(artist => artist.name).join(', ')}
+              </Typography>
+            </Box>
+          </Box>
+
+          {release.release_date && (
+            <Typography variant="caption" color="text.secondary">
+              Released: {formatDate(release.release_date)}
+            </Typography>
+          )}
+        </CardContent>
       </Card>
 
-      <ReleaseModal
-        open={modalOpen}
-        onClose={handleClose}
-        release={release}
-      />
+      {release && (
+        <ReleaseModal
+          open={modalOpen}
+          onClose={handleCloseModal}
+          release={release}
+        />
+      )}
     </>
   );
 };

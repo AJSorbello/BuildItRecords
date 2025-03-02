@@ -539,6 +539,271 @@ router.get('/:artistId/releases', [
     }
 });
 
+// Get all tracks by an artist across all labels
+router.get('/:artistId/tracks', async (req, res) => {
+  try {
+    const { artistId } = req.params;
+    console.log(`Getting all tracks for artist: ${artistId}`);
+
+    // First, verify the artist exists
+    const artist = await Artist.findByPk(artistId, {
+      attributes: [
+        'id', 
+        'name', 
+        'display_name',
+        'profile_image_url',
+        'profile_image_small_url',
+        'profile_image_large_url',
+        'spotify_url',
+        'spotify_id',
+        'external_urls'
+      ]
+    });
+
+    if (!artist) {
+      console.log(`Artist not found: ${artistId}`);
+      return res.status(404).json({ error: 'Artist not found' });
+    }
+
+    // Find all tracks where this artist is either a main artist or remixer
+    const tracks = await Track.findAll({
+      where: {
+        [Op.or]: [
+          sequelize.literal('"artists"."id" = :artistId'),
+          { remixer_id: artistId }
+        ]
+      },
+      replacements: { artistId },
+      include: [
+        {
+          model: Artist,
+          as: 'artists',
+          through: { attributes: [] },
+          attributes: ['id', 'name', 'profile_image_url', 'profile_image_small_url', 'profile_image_large_url'],
+          required: false
+        },
+        {
+          model: Artist,
+          as: 'remixer',
+          through: { attributes: [] },
+          attributes: ['id', 'name', 'profile_image_url', 'profile_image_small_url', 'profile_image_large_url'],
+          required: false
+        },
+        {
+          model: Release,
+          as: 'release',
+          attributes: [
+            'id', 
+            'title', 
+            'artwork_url', 
+            'release_date',
+            'label_id'
+          ],
+          include: [
+            {
+              model: sequelize.models.Label,
+              as: 'label',
+              attributes: ['id', 'name', 'display_name']
+            }
+          ]
+        },
+        {
+          model: sequelize.models.Genre,
+          as: 'genres',
+          through: { attributes: [] },
+          attributes: ['id', 'name'],
+          required: false
+        }
+      ],
+      order: [
+        ['created_at', 'DESC']
+      ]
+    });
+
+    console.log(`Found ${tracks.length} tracks for artist ${artist.name}`);
+
+    // Format the response
+    const formattedTracks = tracks.map(track => ({
+      id: track.id,
+      title: track.title,
+      duration_ms: track.duration_ms,
+      preview_url: track.preview_url,
+      spotify_url: track.spotify_url,
+      isrc: track.isrc,
+      release: track.release ? {
+        id: track.release.id,
+        title: track.release.title,
+        artwork_url: track.release.artwork_url,
+        release_date: track.release.release_date,
+        label: track.release.label ? {
+          id: track.release.label.id,
+          name: track.release.label.name,
+          display_name: track.release.label.display_name
+        } : null
+      } : null,
+      artists: track.artists.map(artist => ({
+        id: artist.id,
+        name: artist.name,
+        profile_image_url: artist.profile_image_url,
+        profile_image_small_url: artist.profile_image_small_url,
+        profile_image_large_url: artist.profile_image_large_url
+      })),
+      remixer: track.remixer ? {
+        id: track.remixer.id,
+        name: track.remixer.name,
+        profile_image_url: track.remixer.profile_image_url,
+        profile_image_small_url: track.remixer.profile_image_small_url,
+        profile_image_large_url: track.remixer.profile_image_large_url
+      } : null,
+      is_remixer: track.remixer_id === artistId
+    }));
+
+    return res.json({
+      artist,
+      tracks: formattedTracks
+    });
+  } catch (error) {
+    console.error('Error getting tracks for artist:', error);
+    return res.status(500).json({
+      error: 'Failed to get tracks',
+      details: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
+
+/**
+ * Get all releases associated with an artist across all labels
+ * Use database IDs, not Spotify IDs
+ */
+router.get('/:artistId/all-releases', async (req, res) => {
+  try {
+    const { artistId } = req.params;
+    console.log(`[DEBUG] Getting all releases for artist: ${artistId}`);
+
+    // First, verify the artist exists
+    const artist = await Artist.findByPk(artistId);
+    if (!artist) {
+      console.log(`[DEBUG] Artist not found: ${artistId}`);
+      return res.status(404).json({ error: 'Artist not found' });
+    }
+
+    console.log(`[DEBUG] Found artist: ${artist.name}`);
+
+    // Find all tracks associated with this artist
+    const artistTracks = await Track.findAll({
+      where: {
+        [Op.or]: [
+          sequelize.literal('"artists"."id" = :artistId'),
+          { remixer_id: artistId }
+        ]
+      },
+      replacements: { artistId },
+      include: [
+        {
+          model: Artist,
+          as: 'artists',
+          through: { attributes: [] },
+          required: false
+        },
+        {
+          model: Release,
+          as: 'release',
+          attributes: ['id'],
+          required: true
+        }
+      ],
+      attributes: ['id', 'release_id']
+    });
+
+    const releaseIds = artistTracks
+      .filter(track => track.release_id)
+      .map(track => track.release_id);
+
+    console.log(`[DEBUG] Found ${releaseIds.length} release IDs for artist ${artist.name}`);
+    
+    if (releaseIds.length === 0) {
+      console.log(`[DEBUG] No releases found for artist ${artist.name}`);
+      return res.json({ releases: [] });
+    }
+
+    // Remove duplicate release IDs
+    const uniqueReleaseIds = [...new Set(releaseIds)];
+    console.log(`[DEBUG] Unique release IDs: ${uniqueReleaseIds.join(', ')}`);
+
+    // Get the full release details
+    const releases = await Release.findAll({
+      where: {
+        id: uniqueReleaseIds
+      },
+      include: [
+        {
+          model: sequelize.models.Label,
+          as: 'label',
+          attributes: ['id', 'name', 'display_name']
+        },
+        {
+          model: Track,
+          as: 'tracks',
+          attributes: ['id', 'title', 'duration_ms', 'spotify_url', 'preview_url'],
+          include: [
+            {
+              model: Artist,
+              as: 'artists',
+              through: { attributes: [] },
+              attributes: ['id', 'name']
+            }
+          ]
+        }
+      ],
+      order: [['release_date', 'DESC']]
+    });
+
+    console.log(`[DEBUG] Found ${releases.length} releases for artist ${artist.name}`);
+
+    // Format the response
+    const formattedReleases = releases.map(release => ({
+      id: release.id,
+      title: release.title,
+      artwork_url: release.artwork_url,
+      release_date: release.release_date,
+      catalog_number: release.catalog_number,
+      label_id: release.label_id,
+      spotify_url: release.spotify_url,
+      spotify_id: release.spotify_id,
+      spotify_uri: release.spotify_uri,
+      label: release.label ? {
+        id: release.label.id,
+        name: release.label.name,
+        display_name: release.label.display_name
+      } : null,
+      tracks: release.tracks ? release.tracks.map(track => ({
+        id: track.id,
+        title: track.title,
+        duration_ms: track.duration_ms,
+        spotify_url: track.spotify_url,
+        preview_url: track.preview_url,
+        artists: track.artists ? track.artists.map(artist => ({
+          id: artist.id,
+          name: artist.name
+        })) : []
+      })) : [],
+      tracks_count: release.tracks.length
+    }));
+
+    return res.json({
+      releases: formattedReleases
+    });
+  } catch (error) {
+    console.error('Error getting releases for artist:', error);
+    return res.status(500).json({
+      error: 'Failed to get releases',
+      details: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
+
 // Get all artists for a label
 router.get('/label/:labelId', async (req, res) => {
   try {
@@ -584,9 +849,7 @@ router.get('/label/:labelId', async (req, res) => {
         'profile_image_large_url',
         'spotify_url',
         'spotify_id',
-        'external_urls',
-        'created_at',
-        'updated_at'
+        'external_urls'
       ],
       group: ['Artist.id'],
       order: [['name', 'ASC']]

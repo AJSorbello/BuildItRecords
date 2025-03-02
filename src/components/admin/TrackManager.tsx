@@ -101,14 +101,11 @@ const TrackManager: React.FC<TrackManagerProps> = ({
   };
 
   const getArtistImage = (artist: any): string => {
-    // Check all possible image URL fields in order of preference
     return artist.profile_image_url || 
            artist.profile_image_small_url || 
-           artist.profile_image_large_url ||
-           artist.image_url || 
-           (artist.images && artist.images[0]?.url) ||
-           (artist.external_urls?.spotify ? `https://i.scdn.co/image/${artist.id}` : '') ||
-           '';
+           artist.profile_image_large_url || 
+           (artist.images && artist.images[0]?.url) || 
+           '/images/placeholder-artist.jpg';
   };
 
   const getTrackImage = (track: Track | null): string => {

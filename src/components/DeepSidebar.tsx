@@ -1,26 +1,23 @@
-import React, { useState } from 'react';
+import React, { Component } from 'react';
 import { 
   Drawer, 
   List, 
   ListItem, 
   ListItemIcon, 
   ListItemText, 
-  IconButton, 
   Box,
   Collapse,
   Typography,
-  Divider,
-  useMediaQuery,
-  useTheme
+  useMediaQuery
 } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
+import { useTheme } from '@mui/material/styles';
+import { useNavigate, NavigateFunction } from 'react-router-dom';
 import { labelColors } from '../theme/theme';
 import HomeIcon from '@mui/icons-material/Home';
 import AlbumIcon from '@mui/icons-material/Album';
 import PeopleIcon from '@mui/icons-material/People';
 import QueueMusicIcon from '@mui/icons-material/QueueMusic';
 import SendIcon from '@mui/icons-material/Send';
-import CloseIcon from '@mui/icons-material/Close';
 import FacebookIcon from '@mui/icons-material/Facebook';
 import InstagramIcon from '@mui/icons-material/Instagram';
 import YouTubeIcon from '@mui/icons-material/YouTube';
@@ -42,20 +39,38 @@ interface DeepSidebarProps {
   onMobileClose?: () => void;
   label: 'records' | 'tech' | 'deep';
   sx?: object;
+  navigate: NavigateFunction;
+  isMobile: boolean;
 }
 
-const DeepSidebar: React.FC<DeepSidebarProps> = ({ 
-  mobileOpen = false, 
-  onMobileClose, 
-  sx 
-}) => {
+interface DeepSidebarState {
+  socialOpen: boolean;
+}
+
+// Wrapper to get hooks
+const DeepSidebarWrapper: React.FC<Omit<DeepSidebarProps, 'navigate' | 'isMobile'>> = (props) => {
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const color = labelColors.deep;
-  const [socialOpen, setSocialOpen] = useState(false);
+  
+  return <DeepSidebar 
+    {...props} 
+    navigate={navigate}
+    isMobile={isMobile} 
+  />;
+};
 
-  const menuItems = [
+class DeepSidebar extends Component<DeepSidebarProps, DeepSidebarState> {
+  constructor(props: DeepSidebarProps) {
+    super(props);
+    this.state = {
+      socialOpen: false
+    };
+    this.handleNavigation = this.handleNavigation.bind(this);
+    this.toggleSocial = this.toggleSocial.bind(this);
+  }
+
+  menuItems = [
     { text: 'Home', icon: <HomeIcon />, path: '/deep' },
     { text: 'Artists', icon: <PeopleIcon />, path: '/deep/artists' },
     { text: 'Releases', icon: <AlbumIcon />, path: '/deep/releases' },
@@ -63,128 +78,146 @@ const DeepSidebar: React.FC<DeepSidebarProps> = ({
     { text: 'Submit', icon: <SendIcon />, path: '/deep/submit' },
   ];
 
-  const socialLinks = [
+  socialLinks = [
     { icon: <FacebookIcon />, url: 'https://www.facebook.com/BuildItDeep/', label: 'Facebook' },
     { icon: <InstagramIcon />, url: 'https://www.instagram.com/builditdeep/', label: 'Instagram' },
     { icon: <YouTubeIcon />, url: 'https://www.youtube.com/builditdeep', label: 'YouTube' },
     { icon: <SoundCloudIcon />, url: 'https://soundcloud.com/builditdeep', label: 'SoundCloud' },
   ];
 
-  const handleNavigation = (path: string) => {
+  handleNavigation(path: string) {
+    const { navigate, isMobile, onMobileClose } = this.props;
     navigate(path);
     if (isMobile && onMobileClose) {
       onMobileClose();
     }
-  };
+  }
 
-  return (
-    <Drawer
-      variant={isMobile ? "temporary" : "permanent"}
-      open={isMobile ? mobileOpen : true}
-      onClose={onMobileClose}
-      ModalProps={{
-        keepMounted: true,
-      }}
-      PaperProps={{
-        sx: {
-          width: drawerWidth,
-          backgroundColor: '#121212',
-          borderRight: '1px solid rgba(255, 255, 255, 0.12)',
-          display: 'flex',
-          flexDirection: 'column',
-          '& .MuiListItemIcon-root': {
-            color: color,
-            minWidth: '40px',
-            marginLeft: '12px'
+  toggleSocial() {
+    this.setState(prevState => ({
+      socialOpen: !prevState.socialOpen
+    }));
+  }
+
+  render() {
+    const { mobileOpen = false, onMobileClose, sx, isMobile } = this.props;
+    const { socialOpen } = this.state;
+    const color = labelColors.deep;
+
+    return (
+      <Drawer
+        variant={isMobile ? "temporary" : "permanent"}
+        open={isMobile ? mobileOpen : true}
+        onClose={onMobileClose}
+        ModalProps={{
+          keepMounted: true,
+        }}
+        PaperProps={{
+          sx: {
+            width: drawerWidth,
+            backgroundColor: '#121212',
+            borderRight: '1px solid rgba(255, 255, 255, 0.12)',
+            display: 'flex',
+            flexDirection: 'column',
+            '& .MuiListItemIcon-root': {
+              color: color,
+              minWidth: '40px',
+              marginLeft: '12px'
+            },
+            '& .MuiListItemText-root': {
+              color: '#ffffff',
+              '& .MuiTypography-root': {
+                fontSize: '1rem',
+                fontWeight: 700,
+                letterSpacing: '0.01em'
+              }
+            },
+            ...sx
+          }
+        }}
+        sx={{
+          display: { xs: isMobile ? 'block' : 'none', md: 'block' },
+          '& .MuiDrawer-paper': {
+            boxSizing: 'border-box',
+            width: drawerWidth,
+            marginTop: isMobile ? '64px' : '180px',
+            height: isMobile ? 'calc(100% - 64px)' : 'calc(100% - 180px)',
+            zIndex: isMobile ? 1200 : 1100,
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)'
           },
-          '& .MuiListItemText-root': {
-            color: '#ffffff',
-            '& .MuiTypography-root': {
-              fontSize: '0.875rem',
-              fontWeight: 500
-            }
-          },
-          ...sx
-        }
-      }}
-      sx={{
-        display: { xs: isMobile ? 'block' : 'none', md: 'block' },
-        '& .MuiDrawer-paper': {
-          boxSizing: 'border-box',
-          width: drawerWidth,
-          marginTop: isMobile ? '64px' : '180px',
-          height: isMobile ? 'calc(100% - 64px)' : 'calc(100% - 180px)',
-          zIndex: isMobile ? 1200 : 1100
-        },
-      }}
-    >
-      <List sx={{ flexGrow: 1, pt: 0 }}>
-        {menuItems.map((item) => (
+        }}
+      >
+        <List sx={{ flexGrow: 1, pt: 0 }}>
+          {this.menuItems.map((item) => (
+            <ListItem
+              button
+              key={item.text}
+              onClick={() => this.handleNavigation(item.path)}
+              sx={{
+                mb: 1,
+                padding: '12px 16px',
+                borderRadius: '6px',
+                transition: 'all 0.2s ease-in-out',
+                '&:hover': {
+                  backgroundColor: 'rgba(0, 150, 255, 0.15)',
+                  transform: 'translateX(3px)',
+                  '& .MuiListItemIcon-root': {
+                    color: '#0096FF'
+                  },
+                  '& .MuiListItemText-primary': {
+                    color: '#0096FF'
+                  }
+                }
+              }}
+            >
+              <ListItemIcon>{item.icon}</ListItemIcon>
+              <ListItemText primary={item.text} />
+            </ListItem>
+          ))}
+        </List>
+        
+        <Box sx={{ mt: 'auto', borderTop: '1px solid rgba(255, 255, 255, 0.12)', p: 2 }}>
           <ListItem
             button
-            key={item.text}
-            onClick={() => handleNavigation(item.path)}
-            sx={{
-              mb: 1,
-              borderRadius: '4px',
-              '&:hover': {
-                backgroundColor: 'rgba(0, 191, 255, 0.1)',
-                '& .MuiListItemIcon-root': {
-                  color: '#00BFFF'
-                },
-                '& .MuiListItemText-primary': {
-                  color: '#00BFFF'
-                }
-              }
-            }}
+            onClick={this.toggleSocial}
+            sx={{ borderRadius: '4px' }}
           >
-            <ListItemIcon>{item.icon}</ListItemIcon>
-            <ListItemText primary={item.text} />
+            <ListItemText 
+              primary={
+                <Typography color="white" variant="subtitle2">
+                  Social Media
+                </Typography>
+              } 
+            />
+            {socialOpen ? <ExpandLess sx={{ color: 'white' }} /> : <ExpandMore sx={{ color: 'white' }} />}
           </ListItem>
-        ))}
-      </List>
-      
-      <Box sx={{ mt: 'auto', borderTop: '1px solid rgba(255, 255, 255, 0.12)', p: 2 }}>
-        <ListItem
-          button
-          onClick={() => setSocialOpen(!socialOpen)}
-          sx={{ borderRadius: '4px' }}
-        >
-          <ListItemText 
-            primary={
-              <Typography color="white" variant="subtitle2">
-                Social Media
-              </Typography>
-            } 
-          />
-          {socialOpen ? <ExpandLess sx={{ color: 'white' }} /> : <ExpandMore sx={{ color: 'white' }} />}
-        </ListItem>
-        <Collapse in={socialOpen} timeout="auto" unmountOnExit>
-          <List component="div" disablePadding>
-            {socialLinks.map((link) => (
-              <ListItem
-                button
-                key={link.url}
-                onClick={() => window.open(link.url, '_blank')}
-                sx={{ pl: 4 }}
-              >
-                <ListItemIcon sx={{ color: 'white' }}>
-                  {link.icon}
-                </ListItemIcon>
-                <ListItemText 
-                  primary={
-                    <Typography color="white" variant="body2">
-                      {link.label}
-                    </Typography>
-                  }
-                />
-              </ListItem>
-            ))}
-          </List>
-        </Collapse>
-      </Box>
-    </Drawer>
-  );
-};
+          <Collapse in={socialOpen} timeout="auto" unmountOnExit>
+            <List component="div" disablePadding>
+              {this.socialLinks.map((link) => (
+                <ListItem
+                  button
+                  key={link.url}
+                  onClick={() => window.open(link.url, '_blank')}
+                  sx={{ pl: 4 }}
+                >
+                  <ListItemIcon sx={{ color: 'white' }}>
+                    {link.icon}
+                  </ListItemIcon>
+                  <ListItemText 
+                    primary={
+                      <Typography color="white" variant="body2">
+                        {link.label}
+                      </Typography>
+                    }
+                  />
+                </ListItem>
+              ))}
+            </List>
+          </Collapse>
+        </Box>
+      </Drawer>
+    );
+  }
+}
 
-export default DeepSidebar;
+export default DeepSidebarWrapper;

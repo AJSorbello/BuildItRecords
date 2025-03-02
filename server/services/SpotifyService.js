@@ -2,6 +2,13 @@ const SpotifyWebApi = require('spotify-web-api-node');
 const { Label, Release, Artist, Track, sequelize } = require('../models');
 const logger = require('../utils/logger');
 
+// Add this helper function at the beginning of the file, after imports
+function isValidUuid(id) {
+  // Check if it's a valid UUID format (Spotify IDs might not always be UUIDs)
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(id);
+}
+
 let spotifyServiceInstance = null;
 
 class SpotifyService {
@@ -172,7 +179,7 @@ class SpotifyService {
     }
   }
 
-  async searchAlbumsByLabel(labelName) {
+  async searchAlbumsByLabel(labelName, variations = []) {
     try {
       logger.info('Searching albums for label:', labelName);
 
@@ -183,6 +190,15 @@ class SpotifyService {
           `label:"${labelName.toLowerCase()}"`,
           `label:"${labelName.replace(/records/i, '')}"`,
         ];
+        
+        // Add variations if provided
+        if (variations && variations.length > 0) {
+          for (const variation of variations) {
+            if (!queries.includes(`label:"${variation}"`)) {
+              queries.push(`label:"${variation}"`);
+            }
+          }
+        }
 
         let allAlbums = { items: [] };
 
@@ -648,18 +664,50 @@ class SpotifyService {
       totalReleasesImported: 0
     };
 
+    let outerTransaction = transaction;
+    
     try {
       // Start a transaction if one wasn't provided
-      const shouldCommit = !transaction;
-      transaction = transaction || await sequelize.transaction();
-
+      const shouldCommit = !outerTransaction;
+      if (shouldCommit) {
+        outerTransaction = await sequelize.transaction();
+      }
+      
       for (const album of albums.items) {
+        // Skip if the ID is not a valid UUID (if our schema requires UUIDs)
+        if (!isValidUuid(album.id)) {
+          logger.warn(`Skipping album ${album.name} - ID is not a valid UUID: ${album.id}`);
+          continue;
+        }
+        
+        // Use a separate transaction for each album to prevent cascading failures
+        const albumTransaction = await sequelize.transaction();
+        
         try {
           logger.info(`Processing album: ${album.name}`);
           
           // Get full album details
           const fullAlbum = await this.getAlbum(album.id);
-          if (!fullAlbum) continue;
+          if (!fullAlbum) {
+            await albumTransaction.commit();
+            continue;
+          }
+
+          // Filter by label - check if label name matches any variations
+          const labelConfig = require('../config/labels');
+          const labelVariations = Object.values(labelConfig)
+            .map(config => config.variations || [])
+            .flat();
+            
+          const matchesLabel = 
+            fullAlbum.label === label.name || 
+            labelVariations.includes(fullAlbum.label);
+            
+          if (!matchesLabel) {
+            logger.info(`Skipping album ${album.name} - label mismatch: ${fullAlbum.label}`);
+            await albumTransaction.commit();
+            continue;
+          }
 
           // Create or update release
           const [release, releaseCreated] = await Release.findOrCreate({
@@ -676,7 +724,7 @@ class SpotifyService {
               label_id: label.id,
               status: 'published'
             },
-            transaction
+            transaction: albumTransaction
           });
 
           if (releaseCreated) {
@@ -685,76 +733,106 @@ class SpotifyService {
 
           // Process all tracks
           for (const track of fullAlbum.tracks.items) {
-            const [trackRecord, trackCreated] = await Track.findOrCreate({
-              where: { id: track.id },
-              defaults: {
-                id: track.id,
-                title: track.name,
-                duration: track.duration_ms,
-                preview_url: track.preview_url,
-                spotify_url: track.external_urls?.spotify,
-                spotify_uri: track.uri,
-                release_id: release.id,
-                status: 'published'
-              },
-              transaction
-            });
-
-            if (trackCreated) {
-              stats.totalTracksImported++;
-            }
-
-            // Process artists for this track
-            for (const artist of track.artists) {
-              try {
-                // Get full artist details from Spotify
-                const artistInfo = await this.getArtist(artist.id);
-                if (!artistInfo) continue;
-
-                const [artistRecord, artistCreated] = await Artist.findOrCreate({
-                  where: { id: artist.id },
-                  defaults: {
-                    id: artist.id,
-                    name: artist.name,
-                    spotify_url: artist.external_urls?.spotify,
-                    spotify_uri: artist.uri,
-                    image_url: artistInfo.images?.[0]?.url,
-                    images: artistInfo.images
-                  },
-                  transaction
-                });
-
-                if (artistCreated) {
-                  stats.totalArtistsImported++;
-                } else if (!artistRecord.image_url && artistInfo.images?.[0]?.url) {
-                  // Update existing artist with images if they don't have any
-                  await artistRecord.update({
-                    image_url: artistInfo.images[0].url,
-                    images: artistInfo.images
-                  }, { transaction });
-                }
-
-                // Associate artist with track
-                await trackRecord.addArtist(artistRecord, { transaction });
-              } catch (error) {
-                logger.error(`Error processing artist ${artist.name}:`, error);
+            try {
+              // Skip tracks with non-UUID IDs
+              if (!isValidUuid(track.id)) {
+                logger.warn(`Skipping track ${track.name} - ID is not a valid UUID: ${track.id}`);
+                continue;
               }
+              
+              const [trackRecord, trackCreated] = await Track.findOrCreate({
+                where: { id: track.id },
+                defaults: {
+                  id: track.id,
+                  title: track.name,
+                  duration: track.duration_ms,
+                  preview_url: track.preview_url,
+                  spotify_url: track.external_urls?.spotify,
+                  spotify_uri: track.uri,
+                  release_id: release.id,
+                  status: 'published'
+                },
+                transaction: albumTransaction
+              });
+
+              if (trackCreated) {
+                stats.totalTracksImported++;
+              }
+
+              // Process artists for this track (with error handling for each artist)
+              for (const artist of track.artists) {
+                try {
+                  // Skip artists with non-UUID IDs
+                  if (!isValidUuid(artist.id)) {
+                    logger.warn(`Skipping artist ${artist.name} - ID is not a valid UUID: ${artist.id}`);
+                    continue;
+                  }
+                  
+                  // Get full artist details from Spotify
+                  const artistInfo = await this.getArtist(artist.id);
+                  if (!artistInfo) continue;
+
+                  const [artistRecord, artistCreated] = await Artist.findOrCreate({
+                    where: { id: artist.id },
+                    defaults: {
+                      id: artist.id,
+                      name: artist.name,
+                      spotify_url: artist.external_urls?.spotify,
+                      spotify_uri: artist.uri,
+                      image_url: artistInfo.images?.[0]?.url,
+                      images: artistInfo.images
+                    },
+                    transaction: albumTransaction
+                  });
+
+                  if (artistCreated) {
+                    stats.totalArtistsImported++;
+                  } else if (!artistRecord.image_url && artistInfo.images?.[0]?.url) {
+                    // Update existing artist with images if they don't have any
+                    await artistRecord.update({
+                      image_url: artistInfo.images[0].url,
+                      images: artistInfo.images
+                    }, { transaction: albumTransaction });
+                  }
+
+                  // Associate artist with track
+                  await trackRecord.addArtist(artistRecord, { transaction: albumTransaction });
+                } catch (artistError) {
+                  logger.error(`Error processing artist ${artist.name}:`, artistError);
+                  // Continue with next artist, don't fail the whole album
+                }
+              }
+            } catch (trackError) {
+              logger.error(`Error processing track ${track.name}:`, trackError);
+              // Continue with next track, don't fail the whole album
             }
           }
-        } catch (error) {
-          logger.error(`Error processing album ${album.name}:`, error);
+          
+          // Commit the album transaction - each album is a separate transaction
+          await albumTransaction.commit();
+          logger.info(`Successfully processed album: ${album.name}`);
+          
+        } catch (albumError) {
+          // Rollback just this album's transaction
+          await albumTransaction.rollback();
+          logger.error(`Error processing album ${album.name}:`, albumError);
+          // Continue with next album
         }
       }
 
       if (shouldCommit) {
-        await transaction.commit();
+        await outerTransaction.commit();
       }
 
       logger.info('Import completed with stats:', stats);
       return stats;
     } catch (error) {
-      if (transaction) {
-        await transaction.rollback();
+      if (outerTransaction && !transaction) {
+        try {
+          await outerTransaction.rollback();
+        } catch (rollbackError) {
+          logger.error('Error rolling back transaction:', rollbackError);
+        }
       }
       logger.error('Error in importReleases:', error);
       throw error;

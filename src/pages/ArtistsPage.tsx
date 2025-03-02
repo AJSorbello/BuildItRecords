@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { Component } from 'react';
 import {
   Container,
   Grid,
@@ -9,10 +9,11 @@ import {
   Alert,
   Pagination,
   Button,
-  Skeleton
+  Skeleton,
+  useTheme
 } from '@mui/material';
 import { debounce } from 'lodash';
-import { useLocation } from 'react-router-dom';
+import { useLocation, Location } from 'react-router-dom';
 import { databaseService } from '../services/DatabaseService';
 import { DatabaseError } from '../utils/errors';
 import ArtistCard from '../components/ArtistCard';
@@ -31,6 +32,7 @@ interface SearchState {
 
 interface ArtistsPageProps {
   label: keyof typeof RECORD_LABELS;
+  location?: Location;
 }
 
 const ArtistSection: React.FC<{ artist: Artist; onArtistClick: (artist: Artist) => void }> = ({ artist, onArtistClick }) => {
@@ -46,219 +48,323 @@ const ArtistSection: React.FC<{ artist: Artist; onArtistClick: (artist: Artist) 
   );
 };
 
-const ArtistsPage: React.FC<ArtistsPageProps> = ({ label }) => {
-  const [artists, setArtists] = useState<Artist[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedArtist, setSelectedArtist] = useState<Artist | null>(null);
-  const [searchState, setSearchState] = useState<SearchState>({
-    total: 0,
-    page: 1,
-  });
-  const [modalOpen, setModalOpen] = useState(false);
+// Wrapper component to handle hooks
+const ArtistsPageWrapper: React.FC<Omit<ArtistsPageProps, 'location'>> = (props) => {
+  const location = useLocation();
+  const theme = useTheme();
+  
+  return <ArtistsPageClass {...props} location={location} />;
+};
 
-  const labelId = useMemo(() => {
-    // Ensure label has the proper prefix
-    const labelStr = String(label);
-    if (!labelStr.startsWith('buildit-')) {
-      return `buildit-${labelStr}`;
+interface ArtistsPageState {
+  artists: Artist[];
+  loading: boolean;
+  error: string | null;
+  searchTerm: string;
+  selectedArtist: Artist | null;
+  searchState: SearchState;
+  modalOpen: boolean;
+}
+
+class ArtistsPageClass extends Component<ArtistsPageProps, ArtistsPageState> {
+  debouncedSearch: any;
+
+  constructor(props: ArtistsPageProps) {
+    super(props);
+    this.state = {
+      artists: [],
+      loading: false,
+      error: null,
+      searchTerm: '',
+      selectedArtist: null,
+      searchState: {
+        total: 0,
+        page: 1,
+      },
+      modalOpen: false
+    };
+
+    this.debouncedSearch = debounce(this.fetchArtists, 500);
+    this.handleSearchChange = this.handleSearchChange.bind(this);
+    this.handlePageChange = this.handlePageChange.bind(this);
+    this.handleArtistClick = this.handleArtistClick.bind(this);
+    this.handleModalClose = this.handleModalClose.bind(this);
+    this.handleRefresh = this.handleRefresh.bind(this);
+  }
+
+  componentDidMount() {
+    this.fetchArtists();
+  }
+
+  componentDidUpdate(prevProps: ArtistsPageProps) {
+    if (prevProps.label !== this.props.label) {
+      this.fetchArtists();
     }
-    return labelStr;
-  }, [label]);
+  }
 
-  const labelDisplayName = RECORD_LABELS[label]?.displayName || 'Artists';
-
-  const handleArtistClick = (artist: Artist) => {
-    if (artist) {
-      setSelectedArtist(artist);
-      setModalOpen(true);
+  getLabelId() {
+    const labelKey = this.props.label;
+    // Map the short label name to the full label ID
+    switch(labelKey) {
+      case 'tech':
+        return 'buildit-tech';
+      case 'deep':
+        return 'buildit-deep';
+      case 'records':
+      default:
+        return 'buildit-records';
     }
-  };
+  }
 
-  const handleCloseModal = () => {
-    setModalOpen(false);
-    setSelectedArtist(null);
-  };
-
-  const fetchArtists = async () => {
-    if (!labelId) {
-      setError('Invalid label');
-      return;
+  getTitle() {
+    switch (this.props.label) {
+      case 'tech':
+        return 'BuildIt Tech Artists';
+      case 'deep':
+        return 'BuildIt Deep Artists';
+      default:
+        return 'BuildIt Records Artists';
     }
+  }
 
-    try {
-      setLoading(true);
-      setError(null);
-      console.log('Fetching artists for label:', labelId);
-      const artists = await databaseService.getArtistsForLabel(labelId);
-      
-      if (Array.isArray(artists)) {
-        setArtists(artists);
-        setSearchState(prev => ({ ...prev, total: artists.length }));
-      } else {
-        console.error('Invalid artists data received:', artists);
-        setArtists([]);
-        setError('Invalid data received from server');
-      }
-    } catch (err) {
-      console.error('Error fetching artists:', err);
-      setArtists([]); // Ensure artists is always an array
-      if (err instanceof DatabaseError) {
-        setError(err.message);
-      } else {
-        setError('Failed to load artists');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Filtered artists based on search term
-  const filteredArtists = useMemo(() => {
-    if (!artists || !Array.isArray(artists)) return [];
+  getFilteredArtists() {
+    const { artists, searchTerm } = this.state;
+    if (!searchTerm.trim()) return artists;
     
-    if (!searchTerm) return artists;
-    
-    const searchTermLower = searchTerm.toLowerCase();
+    const term = searchTerm.toLowerCase();
     return artists.filter(artist => 
-      artist?.name?.toLowerCase().includes(searchTermLower)
+      artist.name.toLowerCase().includes(term) || 
+      (artist.genres && artist.genres.some(genre => genre.toLowerCase().includes(term)))
     );
-  }, [artists, searchTerm]);
+  }
 
-  // Calculate pagination
-  const paginatedArtists = useMemo(() => {
-    if (!filteredArtists || !Array.isArray(filteredArtists)) return [];
-    
-    const startIndex = (searchState.page - 1) * ITEMS_PER_PAGE;
+  getPaginatedArtists() {
+    const filteredArtists = this.getFilteredArtists();
+    const { page } = this.state.searchState;
+    const startIndex = (page - 1) * ITEMS_PER_PAGE;
     return filteredArtists.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  }, [filteredArtists, searchState.page]);
+  }
 
-  const handlePageChange = (_: React.ChangeEvent<unknown>, value: number) => {
-    setSearchState(prev => ({ ...prev, page: value }));
-  };
+  async fetchArtists() {
+    try {
+      this.setState({ loading: true, error: null });
+      
+      const labelId = this.getLabelId();
+      console.log('Fetching artists for label ID:', labelId);
+      
+      const artists = await databaseService.getArtistsForLabel(labelId);
+      console.log('Artists fetched successfully:', artists.length);
+      
+      this.setState({
+        artists,
+        loading: false,
+        searchState: {
+          ...this.state.searchState,
+          total: artists.length
+        }
+      });
+    } catch (error) {
+      console.error('Error fetching artists:', error);
+      
+      let errorMessage = 'Failed to fetch artists. Please try again.';
+      if (error instanceof DatabaseError) {
+        errorMessage = error.message;
+      } else if (error instanceof Error) {
+        errorMessage = `${error.name}: ${error.message}`;
+      }
+      
+      console.error('Detailed error:', errorMessage);
+      
+      this.setState({
+        loading: false,
+        error: errorMessage,
+        artists: [] // Ensure artists is set to an empty array on error
+      });
+    }
+  }
 
-  const handleRefresh = () => {
-    fetchArtists();
-  };
+  handleSearchChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const searchTerm = event.target.value;
+    this.setState({ 
+      searchTerm,
+      searchState: {
+        ...this.state.searchState,
+        page: 1
+      }
+    });
+    this.debouncedSearch();
+  }
 
-  useEffect(() => {
-    fetchArtists();
-  }, [labelId]);
+  handlePageChange(event: React.ChangeEvent<unknown>, page: number) {
+    this.setState({
+      searchState: {
+        ...this.state.searchState,
+        page
+      }
+    });
+  }
 
-  // Render loading state
-  if (loading) {
-    return (
-      <Container maxWidth="xl" sx={{ py: 4 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-          <Typography variant="h4" component="h1">
-            {labelDisplayName}
-          </Typography>
-          <Button
-            startIcon={<RefreshIcon />}
-            onClick={handleRefresh}
-            disabled={loading}
-          >
-            Refresh
-          </Button>
-        </Box>
+  handleArtistClick(artist: Artist) {
+    this.setState({
+      selectedArtist: artist,
+      modalOpen: true
+    });
+  }
+
+  handleModalClose() {
+    this.setState({ modalOpen: false });
+  }
+
+  handleRefresh() {
+    this.setState({
+      searchTerm: '',
+      searchState: {
+        ...this.state.searchState,
+        page: 1
+      }
+    });
+    this.fetchArtists();
+  }
+
+  renderContent() {
+    const { loading, error } = this.state;
+    
+    if (loading && this.state.artists.length === 0) {
+      return (
         <Grid container spacing={3}>
-          {[...Array(ITEMS_PER_PAGE)].map((_, index) => (
+          {Array.from(new Array(8)).map((_, index) => (
             <Grid item xs={12} sm={6} md={4} lg={3} key={index}>
-              <Skeleton variant="rectangular" height={200} />
+              <Skeleton variant="rectangular" height={250} sx={{ borderRadius: 2 }} />
+              <Skeleton variant="text" height={30} sx={{ mt: 1 }} />
+              <Skeleton variant="text" height={20} width="60%" />
             </Grid>
           ))}
         </Grid>
-      </Container>
-    );
-  }
+      );
+    }
 
-  // Render error state
-  if (error) {
-    return (
-      <Container maxWidth="xl" sx={{ py: 4 }}>
-        <Alert severity="error" sx={{ mb: 2 }}>
+    if (error) {
+      return (
+        <Alert 
+          severity="error" 
+          sx={{ mb: 3 }}
+          action={
+            <Button color="inherit" size="small" onClick={this.handleRefresh}>
+              <RefreshIcon sx={{ mr: 1 }} />
+              Retry
+            </Button>
+          }
+        >
           {error}
         </Alert>
-        <Button
-          startIcon={<RefreshIcon />}
-          onClick={handleRefresh}
-          variant="contained"
-          color="primary"
-        >
-          Try Again
-        </Button>
-      </Container>
+      );
+    }
+
+    const filteredArtists = this.getFilteredArtists();
+    const paginatedArtists = this.getPaginatedArtists();
+    const totalPages = Math.ceil(filteredArtists.length / ITEMS_PER_PAGE);
+
+    if (filteredArtists.length === 0) {
+      return (
+        <Box textAlign="center" py={5}>
+          <Typography variant="h6" gutterBottom>
+            No artists found
+          </Typography>
+          <Typography variant="body1" color="textSecondary">
+            {this.state.searchTerm 
+              ? "Try a different search term" 
+              : "No artists are available for this label yet"}
+          </Typography>
+          <Button 
+            variant="outlined" 
+            color="primary" 
+            sx={{ mt: 2 }}
+            onClick={this.handleRefresh}
+          >
+            <RefreshIcon sx={{ mr: 1 }} />
+            Refresh
+          </Button>
+        </Box>
+      );
+    }
+
+    return (
+      <>
+        <Grid container spacing={3}>
+          {paginatedArtists.map(artist => (
+            <Grid item xs={12} sm={6} md={4} lg={3} key={artist.id}>
+              <ArtistSection 
+                artist={artist} 
+                onArtistClick={this.handleArtistClick} 
+              />
+            </Grid>
+          ))}
+        </Grid>
+
+        {totalPages > 1 && (
+          <Box display="flex" justifyContent="center" mt={4}>
+            <Pagination 
+              count={totalPages} 
+              page={this.state.searchState.page} 
+              onChange={this.handlePageChange} 
+              color="primary" 
+              size="large"
+            />
+          </Box>
+        )}
+      </>
     );
   }
 
-  return (
-    <Container maxWidth="xl" sx={{ py: 4 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-        <Typography variant="h4" component="h1">
-          {labelDisplayName}
-        </Typography>
-        <Button
-          startIcon={<RefreshIcon />}
-          onClick={handleRefresh}
-          disabled={loading}
-        >
-          Refresh
-        </Button>
-      </Box>
+  render() {
+    const { selectedArtist, modalOpen } = this.state;
+    const labelId = this.getLabelId();
+    const labelColor = RECORD_LABELS[this.props.label]?.color || '#02FF95';
 
-      {/* Search input */}
-      <TextField
-        fullWidth
-        variant="outlined"
-        placeholder="Search artists..."
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        sx={{ mb: 4 }}
-      />
-
-      {/* Artist grid */}
-      <Grid container spacing={3}>
-        {paginatedArtists.map((artist) => (
-          <Grid item xs={12} sm={6} md={4} lg={3} key={artist?.id || 'unknown'}>
-            <ErrorBoundary>
-              <ArtistSection artist={artist} onArtistClick={handleArtistClick} />
-            </ErrorBoundary>
-          </Grid>
-        ))}
-      </Grid>
-
-      {/* Show message if no artists found */}
-      {filteredArtists.length === 0 && (
-        <Box sx={{ textAlign: 'center', my: 4 }}>
-          <Typography variant="h6" color="text.secondary">
-            {searchTerm ? 'No artists found matching your search' : 'No artists found'}
+    return (
+      <Container maxWidth="xl" sx={{ py: 4 }}>
+        <Box sx={{ mb: 4 }}>
+          <Typography 
+            variant="h3" 
+            component="h1" 
+            gutterBottom
+            sx={{ 
+              fontWeight: 700,
+              color: labelColor
+            }}
+          >
+            {this.getTitle()}
           </Typography>
-        </Box>
-      )}
-
-      {/* Pagination */}
-      {filteredArtists.length > ITEMS_PER_PAGE && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-          <Pagination
-            count={Math.ceil(filteredArtists.length / ITEMS_PER_PAGE)}
-            page={searchState.page}
-            onChange={handlePageChange}
-            color="primary"
+          
+          <TextField
+            fullWidth
+            variant="outlined"
+            placeholder="Search by artist name or genre..."
+            value={this.state.searchTerm}
+            onChange={this.handleSearchChange}
+            sx={{ 
+              mb: 3,
+              '& .MuiOutlinedInput-root': {
+                borderRadius: '8px',
+                bgcolor: 'background.paper',
+              }
+            }}
           />
         </Box>
-      )}
 
-      {/* Artist modal */}
-      {selectedArtist && (
-        <ArtistModal
-          open={modalOpen}
-          onClose={handleCloseModal}
-          artist={selectedArtist}
-        />
-      )}
-    </Container>
-  );
-};
+        {this.renderContent()}
 
-export default ArtistsPage;
+        {selectedArtist && (
+          <ArtistModal
+            open={modalOpen}
+            artist={selectedArtist}
+            onClose={this.handleModalClose}
+            label={this.props.label}
+          />
+        )}
+      </Container>
+    );
+  }
+}
+
+export default ArtistsPageWrapper;

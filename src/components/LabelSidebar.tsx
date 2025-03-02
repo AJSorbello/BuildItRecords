@@ -65,20 +65,27 @@ const LabelSidebar: React.FC<LabelSidebarProps> = ({
               if (onClose) onClose();
             }}
             sx={{
+              padding: '12px 16px',
+              borderRadius: '6px',
+              mb: 1,
+              transition: 'all 0.2s ease-in-out',
               '&:hover': {
-                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                transform: 'translateX(3px)',
               },
             }}
           >
-            <ListItemIcon sx={{ color: 'white' }}>
+            <ListItemIcon sx={{ color: 'white', minWidth: '40px' }}>
               {item.icon}
             </ListItemIcon>
             <ListItemText 
               primary={item.text}
-              sx={{ 
+              sx={{
                 '& .MuiListItemText-primary': { 
                   color: 'white',
-                  fontWeight: 500
+                  fontWeight: 700,
+                  fontSize: '1rem',
+                  letterSpacing: '0.01em'
                 }
               }} 
             />
@@ -107,7 +114,8 @@ const LabelSidebar: React.FC<LabelSidebarProps> = ({
           backgroundColor: color,
           marginTop: variant === 'temporary' ? 0 : '64px',
           border: 'none',
-          height: variant === 'temporary' ? '100%' : 'calc(100% - 64px)'
+          height: variant === 'temporary' ? '100%' : 'calc(100% - 64px)',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)'
         }
       }}
     >

@@ -54,7 +54,8 @@ module.exports = (sequelize) => {
     },
     spotify_uri: {
       type: DataTypes.STRING,
-      allowNull: true
+      allowNull: true,
+      unique: true
     },
     spotify_url: {
       type: DataTypes.STRING,

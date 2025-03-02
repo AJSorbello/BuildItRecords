@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Box, Typography, List, ListItem, ListItemText, Paper, Alert, IconButton, Avatar, Grid } from '@mui/material';
 import { PlayArrow, QueueMusic, Add } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
@@ -43,14 +43,14 @@ const getTopReleasesTitle = (labelId: string) => {
   }
 };
 
-const TopReleases: React.FC<TopReleasesProps> = ({ label }) => {
-  const [topReleases, setTopReleases] = useState<Release[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export const TopReleases = ({ label }: TopReleasesProps) => {
+  const [topReleases, setTopReleases] = React.useState<Release[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
 
   const title = getTopReleasesTitle(label.id);
 
-  useEffect(() => {
+  React.useEffect(() => {
     const fetchTopReleases = async () => {
       if (!label?.id) return;
 
@@ -174,5 +174,3 @@ const TopReleases: React.FC<TopReleasesProps> = ({ label }) => {
     </Paper>
   );
 };
-
-export default TopReleases;

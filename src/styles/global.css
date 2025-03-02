@@ -41,7 +41,13 @@
   --color-error: #FF4444;
   --color-error-hover: #CC0000;
   --color-text: #FFFFFF;
-  --color-text-secondary: rgba(255, 255, 255, 0.7);
+  --color-text-secondary: rgba(255, 255, 255, 0.85); /* Increased opacity for better readability */
+  
+  /* Font weights */
+  --font-weight-regular: 500; /* Increased from 400 */
+  --font-weight-medium: 600;  /* Increased from 500 */
+  --font-weight-bold: 700;
+  --font-weight-extra-bold: 800;
 }
 
 * {
@@ -53,14 +59,61 @@
 body {
   margin: 0;
   font-family: var(--font-primary);
+  font-size: 16px; /* Base font size */
+  font-weight: var(--font-weight-regular);
+  line-height: 1.6;
+  letter-spacing: 0.01em; /* Slight letter spacing for readability */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: var(--color-background);
   color: var(--color-text);
+  text-rendering: optimizeLegibility; /* Improve text rendering */
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: var(--font-weight-bold);
+  line-height: 1.2;
+  margin-bottom: 1rem;
+  letter-spacing: -0.01em; /* Tighter letter spacing for headings */
+}
+
+h1 {
+  font-size: 2.5rem;
+  font-weight: var(--font-weight-extra-bold);
+}
+
+h2 {
+  font-size: 2rem;
+}
+
+h3 {
+  font-size: 1.75rem;
+}
+
+h4 {
+  font-size: 1.5rem;
+}
+
+h5 {
+  font-size: 1.25rem;
+}
+
+h6 {
+  font-size: 1.1rem;
+}
+
+p {
+  margin-bottom: 1rem;
+  font-weight: var(--font-weight-regular);
+}
+
+strong, b {
+  font-weight: var(--font-weight-bold);
 }
 
 code {
   font-family: var(--font-mono);
+  font-weight: 500;
 }
 
 /* Scrollbar styles */
@@ -87,6 +140,7 @@ code {
 a {
   color: inherit;
   text-decoration: none;
+  font-weight: var(--font-weight-medium);
 }
 
 a:hover {
@@ -123,6 +177,7 @@ a:hover {
   background-color: var(--color-surface);
   border-radius: 8px;
   overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); /* Add shadow for better depth */
 }
 
 .table {
@@ -138,9 +193,13 @@ a:hover {
 }
 
 .table th {
-  font-weight: 600;
+  font-weight: var(--font-weight-bold);
   color: var(--color-text);
   background-color: rgba(255, 255, 255, 0.05);
+}
+
+.table td {
+  font-weight: var(--font-weight-regular);
 }
 
 .table tr:hover {
@@ -154,14 +213,16 @@ a:hover {
   justify-content: center;
   padding: 0.5rem 1rem;
   border-radius: 4px;
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
   cursor: pointer;
   transition: all 0.2s ease;
+  letter-spacing: 0.02em; /* Slight letter spacing for buttons */
 }
 
 .btn-primary {
   background-color: var(--color-primary);
   color: #000000;
+  font-weight: var(--font-weight-bold);
 }
 
 .btn-primary:hover {
@@ -171,6 +232,7 @@ a:hover {
 .btn-error {
   background-color: var(--color-error);
   color: var(--color-text);
+  font-weight: var(--font-weight-bold);
 }
 
 .btn-error:hover {

@@ -2,53 +2,40 @@
 export { TrackList } from './common/TrackList';
 
 // Admin Components
-import ReleaseFormComponent from './admin/ReleaseForm';
-import TrackManagerComponent from './admin/TrackManager';
+export { ReleaseFormComponent } from './admin/ReleaseFormComponent';
+export { TrackManagerComponent } from './admin/TrackManagerComponent';
 export { UpdateTracksHelper } from './admin/UpdateTracksHelper';
-export const ReleaseForm = ReleaseFormComponent;
-export const TrackManager = TrackManagerComponent;
 
 // Dialog Components
-import EditTrackDialogComponent from './dialogs/EditTrackDialog';
-export const EditTrackDialog = EditTrackDialogComponent;
+export { EditTrackDialogComponent } from './dialogs/EditTrackDialogComponent';
 
-// Feature Components
+// UI Components
 export { ArtistCard } from './ArtistCard';
 export { ArtistProfile } from './ArtistProfile';
 export { ErrorBoundary } from './ErrorBoundary';
-import FeaturedReleaseComponent from './FeaturedRelease';
-export const FeaturedRelease = FeaturedReleaseComponent;
+export { FeaturedRelease } from './FeaturedRelease';
 export { Layout } from './Layout';
-import LoadingSpinnerComponent from './LoadingSpinner';
-export const LoadingSpinner = LoadingSpinnerComponent;
 export { MultiArtistDisplay } from './MultiArtistDisplay';
 export { ReleaseCard } from './ReleaseCard';
-import ReleasesGridComponent from './ReleasesGrid';
-export const ReleasesGrid = ReleasesGridComponent;
+export { ReleaseModal } from './modals/ReleaseModal';
 export { SearchResults } from './SearchResults';
-import TopReleasesComponent from './TopReleases';
-export const TopReleases = TopReleasesComponent;
+export { TopReleases } from './TopReleases';
 export { TrackDetails } from './TrackDetails';
-import ErrorMessageComponent from './ErrorMessage';
-export const ErrorMessage = ErrorMessageComponent;
+export { LoadingSpinner } from './LoadingSpinner';
+
+// Feature Components
+export { LoadingAnimationComponent } from './LoadingAnimationComponent';
+export { TabBarContainer } from './TabBarContainer';
+export { PlayButtonComponent } from './PlayButtonComponent';
+
+// Utilities and helpers
+export { ReleasesGridComponent } from './ReleasesGridComponent';
+export { ErrorMessageComponent } from './ErrorMessageComponent';
 
 // Layout Components
-import PageLayoutComponent from './PageLayout';
-export const PageLayout = PageLayoutComponent;
-import NavigationComponent from './Navigation';
-export const Navigation = NavigationComponent;
-import TopNavigationComponent from './TopNavigation';
-export const TopNavigation = TopNavigationComponent;
-import DeepSidebarComponent from './DeepSidebar';
-export const DeepSidebar = DeepSidebarComponent;
-import RecordsSidebarComponent from './RecordsSidebar';
-export const RecordsSidebar = RecordsSidebarComponent;
-import TechSidebarComponent from './TechSidebar';
-export const TechSidebar = TechSidebarComponent;
-
-// UI Components
-import LoadingAnimationComponent from './LoadingAnimation';
-export const LoadingAnimation = LoadingAnimationComponent;
-export { TabBarContainer } from './TabBarContainer';
-import PlayButtonComponent from './PlayButton';
-export const PlayButton = PlayButtonComponent;
+export { PageLayoutComponent } from './PageLayoutComponent';
+export { NavigationComponent } from './NavigationComponent';
+export { TopNavigationComponent } from './TopNavigationComponent';
+export { DeepSidebarComponent } from './DeepSidebarComponent';
+export { RecordsSidebarComponent } from './RecordsSidebarComponent';
+export { TechSidebarComponent } from './TechSidebarComponent';

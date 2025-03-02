@@ -33,6 +33,7 @@ const SoundCloudIcon = (props: any) => (
 const StyledTabs = styled(Tabs)(({ theme }) => ({
   '& .MuiTabs-indicator': {
     backgroundColor: theme.palette.primary.main,
+    height: 3, // Make the indicator more visible
   },
   [theme.breakpoints.down('md')]: {
     display: 'none',
@@ -40,17 +41,22 @@ const StyledTabs = styled(Tabs)(({ theme }) => ({
 }));
 
 const StyledTab = styled(Tab)(({ theme }) => ({
+  fontSize: '1rem',
+  fontWeight: 600, // Increased from default
+  letterSpacing: '0.01em',
   color: theme.palette.text.primary,
   '&.Mui-selected': {
     color: theme.palette.primary.main,
+    fontWeight: 700, // Make selected tab even bolder
   },
   '&:hover': {
     color: theme.palette.primary.main,
     opacity: 1,
   },
-  minWidth: 100,
+  textTransform: 'none',
+  minWidth: 120,
   [theme.breakpoints.down('md')]: {
-    minWidth: 80,
+    minWidth: 90,
     padding: '6px 8px',
   },
 }));

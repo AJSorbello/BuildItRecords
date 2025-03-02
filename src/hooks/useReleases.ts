@@ -95,6 +95,7 @@ export function useReleases(label?: string): UseReleasesResult {
       console.log('Fetching releases for label:', label, 'page:', page);
       const data = await databaseService.getReleasesByLabelId(label, page);
       console.log('Raw API response:', data);
+      console.log('API Response data:', data); // Added logging
 
       if (!data) {
         throw new Error('No data received from server');
