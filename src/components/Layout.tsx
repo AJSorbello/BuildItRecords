@@ -129,7 +129,7 @@ class LayoutClass extends Component<LayoutProps, LayoutState> {
             paddingTop: { xs: '16px', md: '0' },
             minHeight: 'calc(100vh - 64px)',
             overflow: 'auto',
-            backgroundColor: '#121212',
+            backgroundColor: '#000000',
             position: 'relative',
             zIndex: 1
           }}

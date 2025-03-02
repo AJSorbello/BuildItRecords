@@ -88,8 +88,8 @@ const App: React.FC = () => {
             main: '#1DB954',
           },
           background: {
-            default: '#121212',
-            paper: '#181818',
+            default: '#000000',
+            paper: '#000000',
           },
         },
       })}>

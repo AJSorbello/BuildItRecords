@@ -121,7 +121,7 @@ class RecordsSidebar extends Component<RecordsSidebarProps, RecordsSidebarState>
         PaperProps={{
           sx: {
             width: drawerWidth,
-            backgroundColor: '#121212',
+            backgroundColor: '#000000',
             borderRight: '1px solid rgba(255, 255, 255, 0.12)',
             display: 'flex',
             flexDirection: 'column',
@@ -167,9 +167,9 @@ class RecordsSidebar extends Component<RecordsSidebarProps, RecordsSidebarState>
               onClick={onMobileClose} 
               sx={{ 
                 color: '#ffffff',
-                backgroundColor: 'rgba(18, 18, 18, 0.95)',
+                backgroundColor: 'rgba(0, 0, 0, 0.95)',
                 '&:hover': {
-                  backgroundColor: 'rgba(18, 18, 18, 0.85)',
+                  backgroundColor: 'rgba(0, 0, 0, 0.85)',
                 }
               }}
             >

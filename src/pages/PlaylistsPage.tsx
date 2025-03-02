@@ -1,9 +1,21 @@
 import React, { useState } from 'react';
-import { Box, Typography, Card, CardContent, CardMedia, Grid, Link, styled, Container } from '@mui/material';
+import { 
+  Box, 
+  Typography, 
+  Card, 
+  CardContent, 
+  CardMedia, 
+  Grid, 
+  Link, 
+  styled, 
+  Container,
+  useTheme
+} from '@mui/material';
 import { FaSpotify } from 'react-icons/fa';
 import { labelColors } from '../theme/theme';
 import PageLayout from '../components/PageLayout';
 import PlayableTrackList from '../components/common/PlayableTrackList';
+import { alpha } from '@mui/material/styles';
 
 interface Track {
   id: string
@@ -47,8 +59,8 @@ interface Playlist {
   coverImage: string;
   spotifyUrl: string;
   followers?: number;
-  trackCount?: number;  // rename from tracks to trackCount
-  tracks?: Track[];     // add this for the actual tracks array
+  trackCount?: number;  
+  tracks?: Track[];     
 }
 
 interface PlaylistPageProps {
@@ -65,7 +77,7 @@ const mockPlaylists: Record<string, Playlist[]> = {
       spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZF1DXa8NOEUWPn9W',
       followers: 5000,
       trackCount: 100,
-      tracks: [] // initialize with empty array or actual track data
+      tracks: [] 
     },
     {
       id: '2',
@@ -75,7 +87,7 @@ const mockPlaylists: Record<string, Playlist[]> = {
       spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZF1DX2TRYkJECvfC',
       followers: 5000,
       trackCount: 100,
-      tracks: [] // initialize with empty array or actual track data
+      tracks: [] 
     },
     {
       id: '3',
@@ -94,13 +106,14 @@ const mockPlaylists: Record<string, Playlist[]> = {
       spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZF1DX6J5NfMJS675',
       followers: 5000,
       trackCount: 100,
-      tracks: [] // initialize with empty array or actual track data
+      tracks: [] 
     },
     {
       id: '2',
       title: 'Industrial Techno',
       description: 'Dark and industrial techno cuts',
-      coverImage: 'https://via.placeholder.com/300x300?text=Industrial+Techno',      spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZF1DX1DWK5pyjPIb',
+      coverImage: 'https://via.placeholder.com/300x300?text=Industrial+Techno',     
+      spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZF1DX1DWK5pyjPIb',
     },
   ],
   deep: [
@@ -112,7 +125,7 @@ const mockPlaylists: Record<string, Playlist[]> = {
       spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZF1DX2TRYkJECvfC',
       followers: 5000,
       trackCount: 100,
-      tracks: [] // initialize with empty array or actual track data
+      tracks: [] 
     },
     {
       id: '2',
@@ -128,21 +141,44 @@ const PlaylistPage: React.FC<PlaylistPageProps> = ({ label }) => {
   const [selectedPlaylist, setSelectedPlaylist] = useState<Playlist | null>(null);
   const playlists = mockPlaylists[label] || [];
   const labelColor = labelColors[label];
+  const theme = useTheme();
+
+  const getLabelName = () => {
+    switch(label) {
+      case 'tech': return 'Build It Tech';
+      case 'deep': return 'Build It Deep';
+      default: return 'Build It Records';
+    }
+  };
 
   return (
     <PageLayout label={label}>
-      <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Typography variant="h4" gutterBottom sx={{ color: 'text.primary', textAlign: 'center' }}>
-          {label === 'tech' ? 'Build It Tech' : label === 'deep' ? 'Build It Deep' : 'Build It Records'}
-        </Typography>
-        <Typography variant="h6" sx={{ color: 'text.secondary', mb: 6, textAlign: 'center' }}>
-          {label === 'tech' ? 'Techno & Tech House' : label === 'deep' ? 'Deep House' : 'House Music'} Playlists
-        </Typography>
+      <Container maxWidth="lg" sx={{ py: 6 }}>
+        {/* Hero Section */}
+        <Box
+          sx={{
+            textAlign: 'center',
+            mb: 8,
+            p: 4,
+            borderRadius: 2,
+            background: `linear-gradient(45deg, ${alpha(labelColor, 0.1)}, ${alpha(
+              theme.palette.background.default,
+              0.2
+            )})`,
+          }}
+        >
+          <Typography variant="h2" component="h1" gutterBottom sx={{ color: labelColor, fontWeight: 700 }}>
+            {getLabelName()}
+          </Typography>
+          <Typography variant="h5" color="text.secondary" sx={{ mb: 4 }}>
+            {label === 'tech' ? 'Techno & Tech House' : label === 'deep' ? 'Deep House' : 'House Music'} Playlists
+          </Typography>
+        </Box>
 
         <Grid container spacing={4}>
           {/* Playlists Grid */}
           <Grid item xs={12} md={4}>
-            <Typography variant="h5" gutterBottom sx={{ mb: 3 }}>
+            <Typography variant="h4" component="h2" gutterBottom sx={{ mb: 3 }}>
               Playlists
             </Typography>
             <Grid container spacing={2}>
@@ -193,7 +229,7 @@ const PlaylistPage: React.FC<PlaylistPageProps> = ({ label }) => {
 
           {/* Track List */}
           <Grid item xs={12} md={8}>
-            <Typography variant="h5" gutterBottom sx={{ mb: 3 }}>
+            <Typography variant="h4" component="h2" gutterBottom sx={{ mb: 3 }}>
               {selectedPlaylist ? selectedPlaylist.title : 'Select a Playlist'}
             </Typography>
             {selectedPlaylist ? (

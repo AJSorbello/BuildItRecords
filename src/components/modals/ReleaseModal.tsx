@@ -228,9 +228,16 @@ export const ReleaseModal = ({ open, onClose, release, onArtistClick }: ReleaseM
     <Dialog
       open={open}
       onClose={onClose}
+      aria-labelledby="release-modal-title"
       fullScreen={fullScreen}
       maxWidth="lg"
       fullWidth
+      PaperProps={{
+        sx: {
+          backgroundColor: '#000000',
+          borderRadius: 2,
+        }
+      }}
     >
       <DialogTitle>
         <Box display="flex" alignItems="center" justifyContent="space-between">

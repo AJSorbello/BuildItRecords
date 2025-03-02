@@ -22,8 +22,8 @@ interface ThemeContextType {
 // Default dark theme colors
 const darkColors: ThemeColors = {
   primary: '#1DB954',
-  background: '#121212',
-  card: '#181818',
+  background: '#000000',
+  card: '#000000',
   text: '#FFFFFF',
   textSecondary: 'rgba(255, 255, 255, 0.7)',
   textTertiary: 'rgba(255, 255, 255, 0.5)',

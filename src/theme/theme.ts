@@ -13,8 +13,8 @@ export const darkTheme = createTheme({
       main: '#02FF95',
     },
     background: {
-      default: '#121212',
-      paper: '#1E1E1E',
+      default: '#000000',
+      paper: '#000000',
     },
     text: {
       primary: '#FFFFFF',
@@ -86,7 +86,7 @@ export const darkTheme = createTheme({
     MuiCssBaseline: {
       styleOverrides: {
         body: {
-          backgroundColor: '#121212',
+          backgroundColor: '#000000',
           color: '#FFFFFF',
           margin: 0,
           padding: 0,

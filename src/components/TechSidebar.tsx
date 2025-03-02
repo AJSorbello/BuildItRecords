@@ -8,7 +8,8 @@ import {
   Box,
   Collapse,
   Typography,
-  useMediaQuery
+  useMediaQuery,
+  IconButton
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { useNavigate, NavigateFunction } from 'react-router-dom';
@@ -18,6 +19,7 @@ import AlbumIcon from '@mui/icons-material/Album';
 import PeopleIcon from '@mui/icons-material/People';
 import QueueMusicIcon from '@mui/icons-material/QueueMusic';
 import SendIcon from '@mui/icons-material/Send';
+import CloseIcon from '@mui/icons-material/Close';
 import FacebookIcon from '@mui/icons-material/Facebook';
 import InstagramIcon from '@mui/icons-material/Instagram';
 import YouTubeIcon from '@mui/icons-material/YouTube';
@@ -115,7 +117,7 @@ class TechSidebar extends Component<TechSidebarProps, TechSidebarState> {
         PaperProps={{
           sx: {
             width: drawerWidth,
-            backgroundColor: '#121212',
+            backgroundColor: '#000000',
             borderRight: '1px solid rgba(255, 255, 255, 0.12)',
             display: 'flex',
             flexDirection: 'column',
@@ -147,6 +149,30 @@ class TechSidebar extends Component<TechSidebarProps, TechSidebarState> {
           },
         }}
       >
+        {isMobile && (
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'flex-end', 
+            p: 1,
+            position: 'fixed',
+            right: 0,
+            top: '12px',
+            zIndex: 1200
+          }}>
+            <IconButton 
+              onClick={onMobileClose} 
+              sx={{ 
+                color: '#ffffff',
+                backgroundColor: 'rgba(0, 0, 0, 0.95)',
+                '&:hover': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.85)',
+                }
+              }}
+            >
+              <CloseIcon />
+            </IconButton>
+          </Box>
+        )}
         <List sx={{ flexGrow: 1, pt: 0 }}>
           {this.menuItems.map((item) => (
             <ListItem

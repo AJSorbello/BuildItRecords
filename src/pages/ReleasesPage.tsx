@@ -12,6 +12,7 @@ import {
   Alert,
   Paper
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import { ReleaseCard } from '../components/ReleaseCard';
 import { useParams } from 'react-router-dom';
 import { Release } from '../types/release';
@@ -20,6 +21,7 @@ import { databaseService } from '../services/DatabaseService';
 import { formatDate } from '../utils/dateUtils';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { TopReleases } from '../components/TopReleases';
+import { labelColors } from '../theme/theme';
 
 // Map route labels to RECORD_LABELS keys
 const getLabelId = (label: string): string => {
@@ -157,6 +159,20 @@ export const ReleasesPage = ({ label: propLabel }: ReleasesPageProps) => {
   }, [labelId, propLabel]);
 
   const labelConfig = RECORD_LABELS[getLabelId(labelId || propLabel)];
+  const currentLabelKey = labelId || propLabel;
+  const labelColor = labelColors[currentLabelKey] || '#02FF95';
+
+  // Generate gradient background based on the label
+  const getGradientBackground = () => {
+    if (currentLabelKey === 'deep') {
+      return `linear-gradient(45deg, ${alpha(labelColor, 0.05)}, ${alpha(labelColor, 0.1)}, ${alpha(labelColor, 0.05)})`;
+    } else if (currentLabelKey === 'tech') {
+      return `linear-gradient(45deg, ${alpha(labelColor, 0.05)}, ${alpha(labelColor, 0.1)}, ${alpha(labelColor, 0.05)})`;
+    } else if (currentLabelKey === 'records') {
+      return `linear-gradient(45deg, ${alpha(labelColor, 0.05)}, ${alpha(labelColor, 0.1)}, ${alpha(labelColor, 0.05)})`;
+    }
+    return 'transparent';
+  };
 
   if (!labelConfig) {
     return (
@@ -213,9 +229,17 @@ export const ReleasesPage = ({ label: propLabel }: ReleasesPageProps) => {
 
   return (
     <ErrorBoundary>
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 8 }}>
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 8, background: getGradientBackground() }}>
         <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h4" component="h1" gutterBottom>
+          <Typography 
+            variant="h3" 
+            component="h1" 
+            gutterBottom
+            sx={{
+              fontWeight: 700,
+              color: labelColor
+            }}
+          >
             {labelConfig.displayName} Releases
           </Typography>
           <Typography variant="body2" color="text.secondary">
@@ -236,6 +260,7 @@ export const ReleasesPage = ({ label: propLabel }: ReleasesPageProps) => {
                   borderRadius: 2,
                   height: '100%',
                   transition: 'transform 0.3s ease-in-out',
+                  background: getGradientBackground(),
                   '&:hover': {
                     transform: 'translateY(-4px)'
                   }
@@ -258,7 +283,8 @@ export const ReleasesPage = ({ label: propLabel }: ReleasesPageProps) => {
                 sx={{ 
                   p: isMobile ? 2 : 3, 
                   borderRadius: 2,
-                  height: '100%'
+                  height: '100%',
+                  background: getGradientBackground()
                 }}
               >
                 <TopReleases label={labelConfig} />
@@ -274,7 +300,21 @@ export const ReleasesPage = ({ label: propLabel }: ReleasesPageProps) => {
           <Grid container spacing={3}>
             {validReleases.map((release, index) => (
               <Grid item xs={12} sm={6} md={4} key={release.id}>
-                <ReleaseSection release={release} ranking={index + 1} />
+                <Paper 
+                  elevation={3} 
+                  sx={{ 
+                    p: 2, 
+                    borderRadius: 2,
+                    background: getGradientBackground(),
+                    height: '100%',
+                    transition: 'transform 0.3s ease-in-out',
+                    '&:hover': {
+                      transform: 'translateY(-4px)'
+                    }
+                  }}
+                >
+                  <ReleaseSection release={release} ranking={index + 1} />
+                </Paper>
               </Grid>
             ))}
           </Grid>

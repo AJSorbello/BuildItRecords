@@ -1,21 +1,19 @@
 import React from 'react';
-import { Card, CardContent, CardMedia, Typography, IconButton, Box } from '@mui/material';
-import { MusicNote as MusicIcon } from '@mui/icons-material';
+import { Card, CardContent, CardMedia, Typography, Box } from '@mui/material';
 import { Artist } from '../types/artist';
 
 interface ArtistCardProps {
   artist: Artist;
   onClick?: () => void;
+  background?: string;
 }
 
-const ArtistCard: React.FC<ArtistCardProps> = ({ artist, onClick }) => {
+const ArtistCard: React.FC<ArtistCardProps> = ({ artist, onClick, background }) => {
   // Try all possible image fields
   const artistImage = artist.profile_image_url || 
                       artist.profile_image_small_url || 
                       artist.profile_image_large_url || 
                       `https://via.placeholder.com/300x300?text=${encodeURIComponent(artist.name)}`;
-                     
-  const spotifyUrl = artist.spotify_url || artist.external_urls?.spotify;
 
   const handleClick = () => {
     if (onClick) {
@@ -31,6 +29,7 @@ const ArtistCard: React.FC<ArtistCardProps> = ({ artist, onClick }) => {
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
+        background: background || undefined,
         '&:hover': onClick ? {
           transform: 'scale(1.02)',
           transition: 'transform 0.2s ease-in-out'
@@ -50,21 +49,9 @@ const ArtistCard: React.FC<ArtistCardProps> = ({ artist, onClick }) => {
         }}
       />
       <CardContent sx={{ flexGrow: 1 }}>
-        <Box display="flex" justifyContent="space-between" alignItems="center">
-          <Typography gutterBottom variant="h6" component="div">
-            {artist.name || 'Unknown Artist'}
-          </Typography>
-          {spotifyUrl && (
-            <IconButton 
-              href={spotifyUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <MusicIcon />
-            </IconButton>
-          )}
-        </Box>
+        <Typography gutterBottom variant="h6" component="div">
+          {artist.name || 'Unknown Artist'}
+        </Typography>
         {artist.genres && artist.genres.length > 0 && (
           <Typography variant="body2" color="text.secondary">
             {artist.genres.join(', ')}

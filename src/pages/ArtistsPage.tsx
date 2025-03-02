@@ -21,6 +21,8 @@ import { ErrorBoundary } from '../components/ErrorBoundary';
 import { Artist } from '../types/artist';
 import { Refresh as RefreshIcon } from '@mui/icons-material';
 import { RECORD_LABELS } from '../constants/labels';
+import { labelColors } from '../theme/theme';
+import { alpha } from '@mui/material/styles';
 
 // Removed ITEMS_PER_PAGE constant as we're showing all artists
 
@@ -33,7 +35,11 @@ interface ArtistsPageProps {
   location?: Location;
 }
 
-const ArtistSection: React.FC<{ artist: Artist; onArtistClick: (artist: Artist) => void }> = ({ artist, onArtistClick }) => {
+const ArtistSection: React.FC<{ 
+  artist: Artist; 
+  onArtistClick: (artist: Artist) => void;
+  background?: string;
+}> = ({ artist, onArtistClick, background }) => {
   if (!artist || typeof artist !== 'object') {
     console.error('Invalid artist passed to ArtistSection:', artist);
     return null;
@@ -41,7 +47,7 @@ const ArtistSection: React.FC<{ artist: Artist; onArtistClick: (artist: Artist) 
 
   return (
     <ErrorBoundary>
-      <ArtistCard artist={artist} onClick={() => onArtistClick(artist)} />
+      <ArtistCard artist={artist} onClick={() => onArtistClick(artist)} background={background} />
     </ErrorBoundary>
   );
 };
@@ -112,12 +118,12 @@ class ArtistsPage extends Component<ArtistsPageProps, ArtistsPageState> {
   getTitle() {
     const { label } = this.props;
     const titleMap: Record<string, string> = {
-      'records': 'BuildIt Records Artists',
-      'tech': 'BuildIt Tech Artists',
-      'deep': 'BuildIt Deep Artists'
+      'records': 'Build It Records Artists',
+      'tech': 'Build It Tech Artists',
+      'deep': 'Build It Deep Artists'
     };
     
-    return titleMap[label] || 'BuildIt Tech Artists';
+    return titleMap[label] || 'Build It Tech Artists';
   }
 
   getFilteredArtists() {
@@ -197,9 +203,26 @@ class ArtistsPage extends Component<ArtistsPageProps, ArtistsPageState> {
   }
 
   renderContent() {
-    const { loading, error } = this.state;
+    const { loading, error, artists } = this.state;
+    const filteredArtists = this.getFilteredArtists();
+    const labelColor = labelColors[this.props.label] || '#02FF95';
+
+    // Generate gradient background for artist cards
+    const getGradientBackground = () => {
+      const labelKey = this.props.label;
+      if (labelKey === 'deep') {
+        return `linear-gradient(45deg, ${alpha(labelColor, 0.05)}, ${alpha(labelColor, 0.1)}, ${alpha(labelColor, 0.05)})`;
+      } else if (labelKey === 'tech') {
+        return `linear-gradient(45deg, ${alpha(labelColor, 0.05)}, ${alpha(labelColor, 0.1)}, ${alpha(labelColor, 0.05)})`;
+      } else if (labelKey === 'records') {
+        return `linear-gradient(45deg, ${alpha(labelColor, 0.05)}, ${alpha(labelColor, 0.1)}, ${alpha(labelColor, 0.05)})`;
+      }
+      return 'transparent';
+    };
     
-    if (loading && this.state.artists.length === 0) {
+    const backgroundGradient = getGradientBackground();
+
+    if (loading && artists.length === 0) {
       return (
         <Grid container spacing={3}>
           {Array.from(new Array(8)).map((_, index) => (
@@ -229,8 +252,6 @@ class ArtistsPage extends Component<ArtistsPageProps, ArtistsPageState> {
         </Alert>
       );
     }
-
-    const filteredArtists = this.getFilteredArtists();
 
     if (filteredArtists.length === 0) {
       return (
@@ -263,7 +284,8 @@ class ArtistsPage extends Component<ArtistsPageProps, ArtistsPageState> {
             <Grid item xs={12} sm={6} md={4} lg={3} key={artist.id}>
               <ArtistSection 
                 artist={artist} 
-                onArtistClick={this.handleArtistClick} 
+                onArtistClick={this.handleArtistClick}
+                background={backgroundGradient}
               />
             </Grid>
           ))}
@@ -275,7 +297,7 @@ class ArtistsPage extends Component<ArtistsPageProps, ArtistsPageState> {
   render() {
     const { selectedArtist, modalOpen } = this.state;
     const labelId = this.getLabelId();
-    const labelColor = RECORD_LABELS[this.props.label]?.color || '#02FF95';
+    const labelColor = labelColors[this.props.label] || '#02FF95';
 
     return (
       <Container maxWidth="xl" sx={{ py: 4 }}>

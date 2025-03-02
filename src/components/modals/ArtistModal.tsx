@@ -403,6 +403,12 @@ class ArtistModalClass extends Component<ArtistModalProps, ArtistModalState> {
         onClose={onClose}
         fullWidth
         maxWidth="lg"
+        PaperProps={{
+          sx: {
+            backgroundColor: '#000000',
+            borderRadius: 2,
+          }
+        }}
       >
         <DialogTitle>
           <Box display="flex" alignItems="center" justifyContent="space-between">
