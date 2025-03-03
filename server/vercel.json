@@ -1,0 +1,30 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "server.js",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": ["**/*.js", "**/*.ts", "models/**", "routes/**"],
+        "bundle": true
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "server.js"
+    }
+  ],
+  "env": {
+    "NODE_ENV": "production",
+    "POSTGRES_URL": "postgres://postgres:postgres@liuaozuvkmvanmchndzl.supabase.co:5432/postgres?sslmode=require",
+    "DB_HOST": "liuaozuvkmvanmchndzl.supabase.co",
+    "DB_PORT": "5432", 
+    "DB_NAME": "postgres",
+    "DB_USER": "postgres",
+    "DB_PASSWORD": "postgres",
+    "DB_SSL": "true",
+    "DB_SSL_REJECT_UNAUTHORIZED": "false"
+  }
+}

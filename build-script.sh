@@ -90,6 +90,14 @@ npm install -g vite@4.5.0 @vitejs/plugin-react@4.2.0 path-browserify@1.0.1 pg@8.
 echo "📦 Installing all dependencies with npm"
 npm install --no-save --legacy-peer-deps
 
+# Directly install pg packages explicitly
+echo "📦 Installing pg and pg-hstore explicitly"
+npm install pg@8.11.3 pg-hstore@2.3.4 --no-save
+
+# Run the pg installation verification script
+echo "🧪 Running pg installation verification script"
+node install-pg.js
+
 # Check if vite is installed and available
 echo "🔍 Verifying vite installation"
 node -e "
@@ -122,6 +130,12 @@ try {
 }
 "
 
+# Copy pg module to server folder to ensure it's available
+echo "📦 Copying pg module to server folder"
+mkdir -p server/node_modules
+cp -r node_modules/pg server/node_modules/
+cp -r node_modules/pg-hstore server/node_modules/
+
 # Configure package.json scripts to include postbuild validation
 node -e "
 const fs = require('fs');
@@ -152,6 +166,13 @@ export DB_USER=postgres
 export DB_PASSWORD=postgres
 export DB_SSL=true
 export DB_SSL_REJECT_UNAUTHORIZED=false
+export POSTGRES_URL=postgres://postgres:postgres@liuaozuvkmvanmchndzl.supabase.co:5432/postgres?sslmode=require
+
+# Execute server vercel build script if it exists
+if [ -f "server/vercel-build.sh" ]; then
+  echo "🏗️ Running server vercel build script"
+  cd server && chmod +x vercel-build.sh && ./vercel-build.sh && cd ..
+fi
 
 # Try a different approach to run the build
 echo "🏗️ Running the build process"

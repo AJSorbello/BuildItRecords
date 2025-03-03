@@ -32,7 +32,15 @@
     },
     {
       "src": "server/server.js",
-      "use": "@vercel/node"
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": ["server/**/*.js", "server/**/*.ts", "server/models/**", "server/routes/**"],
+        "bundle": true,
+        "includeNodeModules": {
+          "pg": true,
+          "pg-hstore": true
+        }
+      }
     }
   ],
   "routes": [
