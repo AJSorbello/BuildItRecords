@@ -24,6 +24,13 @@ if (pkg.dependencies && pkg.dependencies.pg) {
   delete pkg.dependencies.pg;
 }
 
+// Add vite as a regular dependency to ensure it's available
+pkg.dependencies = {
+  ...pkg.dependencies,
+  'vite': '4.5.0',
+  '@vitejs/plugin-react': '4.2.0'
+};
+
 // Update overrides to use latest noop
 pkg.overrides = {
   ...pkg.overrides,
@@ -55,17 +62,29 @@ EOF
 echo "🔍 Validating vercel.json"
 node -e "try { const data = require('./vercel.json'); console.log('✅ vercel.json is valid'); } catch(e) { console.error('❌ Invalid vercel.json:', e.message); process.exit(1); }"
 
-# Install vite and related dependencies first to ensure they're available for imports
-echo "🔨 Installing vite and build dependencies"
-npm install vite@^4.5.3 @vitejs/plugin-react@^4.2.1 --save-dev --no-package-lock
-
 # Use npm instead of pnpm for more reliable package installation in CI environments
-echo "📦 Installing remaining dependencies with npm"
+echo "📦 Installing dependencies with npm"
 npm install --no-package-lock --legacy-peer-deps --no-fund --no-audit
 
 # Install TailwindCSS and PostCSS dependencies
 echo "🌈 Installing TailwindCSS and related dependencies"
 npm install tailwindcss@3.3.0 postcss@8.4.31 autoprefixer@10.4.15 --save-dev --no-package-lock
+
+# Check if vite is installed and available
+echo "🔍 Verifying vite installation"
+node -e "
+try {
+  const vitePath = require.resolve('vite');
+  console.log('✅ Vite found at:', vitePath);
+  
+  // Test that the vite module can be loaded
+  const vite = require('vite');
+  console.log('✅ Vite version:', vite.version || 'unknown');
+} catch (e) {
+  console.error('❌ Error finding/loading vite:', e.message);
+  process.exit(1);
+}
+"
 
 # Set environment variables for the build
 echo "🔧 Setting environment variables for production"
@@ -85,9 +104,9 @@ export DB_PASSWORD=postgres
 export DB_SSL=true
 export DB_SSL_REJECT_UNAUTHORIZED=false
 
-# Run the build using npx with local vite
+# Run the build using node_modules path to ensure we use our installed version
 echo "🏗️ Running the build process"
-npx vite build
+./node_modules/.bin/vite build
 
 # Log success message
 echo "✅ Build completed successfully!"
