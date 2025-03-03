@@ -61,16 +61,16 @@ if (!pkg.dependencies['postcss-url']) {
   pkg.dependencies['postcss-url'] = '^10.1.3';
 }
 
-// Make sure PostCSS loader is in devDependencies with correct version
-if (!pkg.devDependencies['postcss-loader'] || pkg.devDependencies['postcss-loader'] !== '^6.2.1') {
-  console.log('📦 Adding postcss-loader to devDependencies');
-  pkg.devDependencies['postcss-loader'] = '^6.2.1';
+// Make sure PostCSS loader is in dependencies with correct version
+if (!pkg.dependencies['postcss-loader'] || pkg.dependencies['postcss-loader'] !== '^6.2.1') {
+  console.log('📦 Adding postcss-loader to dependencies');
+  pkg.dependencies['postcss-loader'] = '^6.2.1';
 }
 
-// Remove postcss-loader from dependencies if it exists there
-if (pkg.dependencies['postcss-loader']) {
-  console.log('📦 Moving postcss-loader from dependencies to devDependencies');
-  delete pkg.dependencies['postcss-loader'];
+// Remove postcss-loader from devDependencies if it exists there
+if (pkg.devDependencies && pkg.devDependencies['postcss-loader']) {
+  console.log('📦 Moving postcss-loader from devDependencies to dependencies');
+  delete pkg.devDependencies['postcss-loader'];
 }
 
 // Update overrides to use latest noop
@@ -115,9 +115,9 @@ npm install vite@4.5.0 @vitejs/plugin-react@4.2.0 --save --no-package-lock
 echo "🌈 Installing TailwindCSS and related dependencies"
 npm install tailwindcss@3.3.0 postcss@8.4.31 autoprefixer@10.4.15 postcss-import@15.0.0 postcss-url@10.1.3 --save --no-package-lock
 
-# Install postcss-loader with the correct version
-echo "🛠️ Installing postcss-loader dev dependency"
-npm install postcss-loader@6.2.1 --save-dev --no-package-lock
+# Install postcss-loader with the correct version as a regular dependency
+echo "🛠️ Installing postcss-loader dependency"
+npm install postcss-loader@6.2.1 --save --no-package-lock
 
 # Use npm instead of pnpm for more reliable package installation in CI environments
 echo "📦 Installing all dependencies with npm"
