@@ -26,33 +26,27 @@
       "src": "build-script.sh",
       "use": "@vercel/static-build",
       "config": {
-        "distDir": "dist",
-        "zeroConfig": false
+        "distDir": "dist"
       }
     },
     {
       "src": "server/server.js",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": ["server/**"],
-        "maxLambdaSize": "15mb"
-      }
+      "use": "@vercel/node"
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "/server/server.js"
-    },
-    {
-      "src": "/(.*\\.(js|css|png|jpg|jpeg|svg|ico|json))",
-      "dest": "/$1"
+      "dest": "server/server.js"
     },
     {
       "src": "/(.*)",
-      "dest": "/index.html"
+      "dest": "dist/$1"
     }
   ],
+  "env": {
+    "NODE_ENV": "production"
+  },
   "git": {
     "deploymentEnabled": {
       "main": true,

@@ -3,18 +3,21 @@ const path = require('path');
 require('dotenv').config();
 
 // Create Sequelize instance
-const sequelize = new Sequelize(
-  process.env.DB_NAME || 'builditrecords',
-  process.env.DB_USER || 'postgres',
-  process.env.DB_PASSWORD || 'postgres',
-  {
-    host: process.env.DB_HOST || 'localhost',
-    port: process.env.DB_PORT || 5432,
+let sequelize;
+
+// First try to use connection string if available (for Vercel deployment)
+if (process.env.POSTGRES_URL || process.env.DATABASE_URL) {
+  const connectionString = process.env.POSTGRES_URL || process.env.DATABASE_URL;
+  console.log('Using connection string for database connection');
+  
+  sequelize = new Sequelize(connectionString, {
     dialect: 'postgres',
     logging: process.env.NODE_ENV === 'development' ? console.log : false,
     dialectOptions: {
-      ssl: false,
-      rejectUnauthorized: false,
+      ssl: {
+        require: true,
+        rejectUnauthorized: false
+      },
       connectTimeout: 60000
     },
     define: {
@@ -29,8 +32,40 @@ const sequelize = new Sequelize(
       acquire: 30000,
       idle: 10000
     }
-  }
-);
+  });
+} else {
+  // Fall back to individual params
+  sequelize = new Sequelize(
+    process.env.DB_NAME || 'builditrecords',
+    process.env.DB_USER || 'postgres',
+    process.env.DB_PASSWORD || 'postgres',
+    {
+      host: process.env.DB_HOST || 'localhost',
+      port: process.env.DB_PORT || 5432,
+      dialect: 'postgres',
+      logging: process.env.NODE_ENV === 'development' ? console.log : false,
+      dialectOptions: {
+        ssl: process.env.DB_SSL === 'true' ? {
+          require: true,
+          rejectUnauthorized: false
+        } : false,
+        connectTimeout: 60000
+      },
+      define: {
+        underscored: true,
+        underscoredAll: true,
+        createdAt: 'created_at',
+        updatedAt: 'updated_at'
+      },
+      pool: {
+        max: 5,
+        min: 0,
+        acquire: 30000,
+        idle: 10000
+      }
+    }
+  );
+}
 
 // Initialize models
 const Artist = require('./artist')(sequelize, DataTypes);

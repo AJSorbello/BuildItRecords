@@ -6,13 +6,28 @@ const { query, validationResult } = require('express-validator');
 const getSpotifyService = require('../services/SpotifyService');
 const logger = require('../utils/logger');
 
-// Error handling helper
+// Error handling helper with more detailed error information
 const handleError = (res, error) => {
   logger.error('Error in releases route:', error);
+  console.error('Full error details:', {
+    message: error.message,
+    stack: error.stack,
+    name: error.name,
+    code: error.code,
+    original: error.original ? {
+      message: error.original.message,
+      code: error.original.code,
+    } : null
+  });
+  
   res.status(500).json({
     success: false,
     error: error.message || 'Internal server error',
-    details: error.details || error
+    details: process.env.NODE_ENV === 'development' ? {
+      name: error.name,
+      stack: error.stack,
+      code: error.code
+    } : undefined
   });
 };
 
@@ -140,6 +155,10 @@ router.get('/top', [
     });
   } catch (error) {
     logger.error('Error in releases route:', error);
+    console.error('Database query failed:', error.message);
+    if (error.original) {
+      console.error('Original database error:', error.original);
+    }
     handleError(res, error);
   }
 });
@@ -157,6 +176,17 @@ router.get('/', [
         const { label, offset = 0, limit = 500, sort = 'release_date', order = 'desc' } = req.query;
         
         logger.info('GET /releases request:', { label, offset, limit, sort, order });
+        console.log('Database connection status:', sequelize.authenticate ? 'Ready' : 'Not initialized');
+
+        // Add diagnostic logging for Vercel environment
+        if (process.env.VERCEL) {
+          console.log('Vercel environment detected in releases route');
+          console.log('Database config:', {
+            host: process.env.DB_HOST || process.env.POSTGRES_HOST,
+            database: process.env.DB_NAME || process.env.POSTGRES_DATABASE,
+            usingConnectionString: !!process.env.POSTGRES_URL
+          });
+        }
 
         const where = {
           status: 'active'  // Only show active releases
@@ -164,6 +194,15 @@ router.get('/', [
         if (label) {
           where.label_id = label;
         }
+
+        // Log the query we're about to run
+        console.log('Running release query with:', {
+          where,
+          offset,
+          limit,
+          sort,
+          order
+        });
 
         const { count, rows } = await Release.findAndCountAll({
           where,
@@ -201,64 +240,26 @@ router.get('/', [
               ]
             }
           ],
-          distinct: true
-        });
-
-        // Process releases and calculate total popularity
-        const processedReleases = rows.map(release => {
-          const releaseData = release.toJSON();
-          const tracks = releaseData.tracks || [];
-          
-          // Calculate total popularity from track popularities
-          const totalPopularity = tracks.reduce((sum, track) => {
-            return sum + (track.spotify_popularity || 0);
-          }, 0);
-
-          // Calculate average popularity (avoiding division by zero)
-          const avgPopularity = tracks.length > 0 ? totalPopularity / tracks.length : 0;
-
-          return {
-            ...releaseData,
-            release_type: releaseData.release_type || 'single', // Ensure release_type is included
-            popularity: avgPopularity,
-            totalPopularity,
-            trackCount: tracks.length,
-            artwork_url: releaseData.artwork_url || releaseData.artwork_small_url || releaseData.artwork_large_url,
-            tracks: tracks.map(track => ({
-              ...track,
-              duration: track.duration_ms,
-              popularity: track.spotify_popularity
-            }))
-          };
-        });
-
-        // Sort releases
-        const sortedReleases = processedReleases.sort((a, b) => {
-          if (sort === 'popularity') {
-            return order === 'desc' ? 
-              b.totalPopularity - a.totalPopularity : 
-              a.totalPopularity - b.totalPopularity;
-          }
-          if (sort === 'release_date') {
-            const dateA = new Date(a.release_date || 0);
-            const dateB = new Date(b.release_date || 0);
-            return order === 'desc' ? dateB - dateA : dateA - dateB;
-          }
-          return 0;
-        });
-
-        const paginatedReleases = sortedReleases.slice(offset, offset + limit);
-
-        res.json({
-          success: true,
-          releases: paginatedReleases,
-          total: rows.length,
+          order: [[sort, order]],
           offset,
-          limit,
-          sort,
-          order
+          limit
+        });
+
+        console.log(`Query complete, found ${count} total releases, returning ${rows.length} releases`);
+
+        return res.json({
+          success: true,
+          releases: rows,
+          totalReleases: count,
+          offset,
+          limit
         });
     } catch (error) {
+        logger.error('Error fetching releases:', error);
+        console.error('Database query failed:', error.message);
+        if (error.original) {
+          console.error('Original database error:', error.original);
+        }
         handleError(res, error);
     }
 });
@@ -360,6 +361,10 @@ router.get('/:id', async (req, res) => {
     return res.json({ release });
   } catch (error) {
     logger.error('Error fetching release:', error);
+    console.error('Database query failed:', error.message);
+    if (error.original) {
+      console.error('Original database error:', error.original);
+    }
     handleError(res, error);
   }
 });
@@ -439,16 +444,18 @@ router.post('/:labelId/import', async (req, res) => {
       // Rollback transaction on error
       await t.rollback();
       console.error('Error importing releases:', error);
+      console.error('Database query failed:', error.message);
+      if (error.original) {
+        console.error('Original database error:', error.original);
+      }
       handleError(res, error);
     }
   } catch (error) {
     console.error('Error importing releases:', error);
-    console.error('Error stack:', error.stack);
-    console.error('Error details:', {
-      message: error.message,
-      name: error.name,
-      code: error.code
-    });
+    console.error('Database query failed:', error.message);
+    if (error.original) {
+      console.error('Original database error:', error.original);
+    }
     handleError(res, error);
   }
 });
@@ -595,7 +602,10 @@ router.get('/label/:labelId', async (req, res) => {
     });
   } catch (error) {
     logger.error('Error fetching releases:', error);
-    logger.error('Error stack:', error.stack);
+    console.error('Database query failed:', error.message);
+    if (error.original) {
+      console.error('Original database error:', error.original);
+    }
     handleError(res, error);
   }
 });
@@ -687,12 +697,10 @@ router.get('/:labelId', async (req, res) => {
     });
   } catch (error) {
     logger.error('Error fetching releases:', error);
-    logger.error('Error stack:', error.stack);
-    logger.error('Error details:', {
-      message: error.message,
-      name: error.name,
-      code: error.code
-    });
+    console.error('Database query failed:', error.message);
+    if (error.original) {
+      console.error('Original database error:', error.original);
+    }
     handleError(res, error);
   }
 });
@@ -740,6 +748,11 @@ router.get('/:labelId/:releaseId', async (req, res) => {
       release: release
     });
   } catch (error) {
+    logger.error('Error fetching release:', error);
+    console.error('Database query failed:', error.message);
+    if (error.original) {
+      console.error('Original database error:', error.original);
+    }
     handleError(res, error);
   }
 });
@@ -813,12 +826,10 @@ router.post('/', async (req, res) => {
     });
   } catch (error) {
     logger.error('Error in POST /releases:', error);
-    logger.error('Error stack:', error.stack);
-    logger.error('Error details:', {
-      message: error.message,
-      name: error.name,
-      code: error.code
-    });
+    console.error('Database query failed:', error.message);
+    if (error.original) {
+      console.error('Original database error:', error.original);
+    }
     await transaction.rollback();
     handleError(res, error);
   }
@@ -891,12 +902,10 @@ router.get('/featured', async (req, res) => {
     });
   } catch (error) {
     logger.error('Error in GET /releases/featured:', error);
-    logger.error('Error stack:', error.stack);
-    logger.error('Error details:', {
-      message: error.message,
-      name: error.name,
-      code: error.code
-    });
+    console.error('Database query failed:', error.message);
+    if (error.original) {
+      console.error('Original database error:', error.original);
+    }
     handleError(res, error);
   }
 });
@@ -954,6 +963,10 @@ router.get('/', async (req, res) => {
     });
   } catch (error) {
     logger.error('Error fetching releases:', error);
+    console.error('Database query failed:', error.message);
+    if (error.original) {
+      console.error('Original database error:', error.original);
+    }
     handleError(res, error);
   }
 });
@@ -997,6 +1010,10 @@ router.get('/:id', async (req, res) => {
     res.json(release);
   } catch (error) {
     logger.error('Error fetching release:', error);
+    console.error('Database query failed:', error.message);
+    if (error.original) {
+      console.error('Original database error:', error.original);
+    }
     handleError(res, error);
   }
 });
@@ -1021,6 +1038,10 @@ router.get('/:releaseId', async (req, res) => {
     res.json(rows[0]);
   } catch (error) {
     logger.error('Error fetching release:', error);
+    console.error('Database query failed:', error.message);
+    if (error.original) {
+      console.error('Original database error:', error.original);
+    }
     handleError(res, error);
   }
 });
@@ -1041,6 +1062,10 @@ router.get('/:releaseId/tracks', async (req, res) => {
     res.json({ tracks });
   } catch (error) {
     logger.error('Error fetching release tracks:', error);
+    console.error('Database query failed:', error.message);
+    if (error.original) {
+      console.error('Original database error:', error.original);
+    }
     handleError(res, error);
   }
 });
@@ -1114,6 +1139,11 @@ router.get('/top/:labelId', async (req, res) => {
       }))
     });
   } catch (error) {
+    logger.error('Error in GET /releases/top/:labelId:', error);
+    console.error('Database query failed:', error.message);
+    if (error.original) {
+      console.error('Original database error:', error.original);
+    }
     handleError(res, error);
   }
 });
@@ -1165,6 +1195,10 @@ router.get('/:labelId', async (req, res) => {
     res.json({ success: true, releases });
   } catch (error) {
     logger.error('Error in releases route:', error);
+    console.error('Database query failed:', error.message);
+    if (error.original) {
+      console.error('Original database error:', error.original);
+    }
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -1279,7 +1313,10 @@ router.get('/label/:labelId', async (req, res) => {
     });
   } catch (error) {
     logger.error('Error fetching releases:', error);
-    logger.error('Error stack:', error.stack);
+    console.error('Database query failed:', error.message);
+    if (error.original) {
+      console.error('Original database error:', error.original);
+    }
     handleError(res, error);
   }
 });
