@@ -67,9 +67,6 @@ fetch-retry-maxtimeout=120000
 strict-ssl=false
 node-options=--max-old-space-size=4096 --no-node-snapshot --no-warnings
 legacy-peer-deps=true
-shamefully-hoist=true
-strict-peer-dependencies=false
-auto-install-peers=true
 EOF
 
 # Validate vercel.json to prevent deployment errors
@@ -80,9 +77,9 @@ node -e "try { const data = require('./vercel.json'); console.log('✅ vercel.js
 echo "📦 Installing build dependencies globally"
 npm install -g vite@4.5.0 @vitejs/plugin-react@4.2.0 path-browserify@1.0.1
 
-# Use pnpm for local installation
-echo "📦 Installing all dependencies with pnpm"
-pnpm install --no-frozen-lockfile
+# Use npm for local installation due to pnpm connectivity issues
+echo "📦 Installing all dependencies with npm"
+npm install --no-save --legacy-peer-deps
 
 # Check if vite is installed and available
 echo "🔍 Verifying vite installation"

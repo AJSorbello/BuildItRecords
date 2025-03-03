@@ -50,3 +50,5 @@ out
 
 # System files
 Thumbs.db
+.vercel
+.env*.local
