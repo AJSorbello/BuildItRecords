@@ -11,10 +11,10 @@
     "react-dom": "^18.2.0"
   },
   "overrides": {
-    "pg": "@vercel/noop",
-    "pg-native": "@vercel/noop",
-    "pg-hstore": "@vercel/noop",
-    "libpq": "@vercel/noop",
+    "pg": "npm:@vercel/noop",
+    "pg-native": "npm:@vercel/noop",
+    "pg-hstore": "npm:@vercel/noop",
+    "libpq": "npm:@vercel/noop",
     "sequelize-pool": "^7.1.0"
   },
   "scripts": {

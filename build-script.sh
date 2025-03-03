@@ -20,7 +20,7 @@ fetch-retries=5
 fetch-retry-mintimeout=20000
 fetch-retry-maxtimeout=120000
 strict-ssl=false
-node-options=--max-old-space-size=4096 --no-node-snapshot
+node-options=--max-old-space-size=4096 --no-node-snapshot --no-warnings
 legacy-peer-deps=true
 node-linker=hoisted
 public-hoist-pattern[]=*pg*
@@ -34,9 +34,27 @@ EOF
 echo "🔍 Validating vercel.json"
 node -e "try { const data = require('./vercel.json'); console.log('✅ vercel.json is valid'); } catch(e) { console.error('❌ Invalid vercel.json:', e.message); process.exit(1); }"
 
+# Temporarily modify package.json to handle the pg dependency conflict
+echo "🔧 Preparing package.json for build"
+node -e "
+const fs = require('fs');
+const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
+
+// Remove direct pg dependency if it exists but keep in dependencies
+if (pkg.dependencies && pkg.dependencies.pg) {
+  console.log('📦 Handling pg dependency for Vercel deployment');
+  // Mark pg as a dev dependency to avoid conflict with overrides
+  if (!pkg.devDependencies) pkg.devDependencies = {};
+  pkg.devDependencies._pg_original = pkg.dependencies.pg;
+  delete pkg.dependencies.pg;
+}
+
+fs.writeFileSync('./package.json', JSON.stringify(pkg, null, 2));
+"
+
 # Use npm instead of pnpm for more reliable package installation in CI environments
 echo "📦 Installing dependencies with npm"
-npm install --no-package-lock --legacy-peer-deps
+npm install --no-package-lock --legacy-peer-deps --no-fund --no-audit
 
 # Install TailwindCSS and PostCSS dependencies
 echo "🌈 Installing TailwindCSS and related dependencies"
@@ -167,9 +185,29 @@ cat > node_modules/pg/package.json << EOF
 }
 EOF
 
-# Run the build using npm
-echo "🏗️ Building the application"
+# Run the build
+echo "🏗️ Running the build process"
 npm run build
+
+# Log success message
+echo "✅ Build completed successfully!"
+echo "📁 Build artifacts are in the dist directory"
+
+# Restore package.json if it was modified
+echo "🔄 Restoring package.json to original state"
+node -e "
+const fs = require('fs');
+const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
+
+// Restore pg dependency if it was moved
+if (pkg.devDependencies && pkg.devDependencies._pg_original) {
+  console.log('📦 Restoring pg dependency');
+  pkg.dependencies.pg = pkg.devDependencies._pg_original;
+  delete pkg.devDependencies._pg_original;
+}
+
+fs.writeFileSync('./package.json', JSON.stringify(pkg, null, 2));
+"
 
 # Copy the build output to the correct location
 echo "📁 Ensuring build output is in the correct location"
