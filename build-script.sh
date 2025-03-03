@@ -61,6 +61,18 @@ if (!pkg.dependencies['postcss-url']) {
   pkg.dependencies['postcss-url'] = '^10.1.3';
 }
 
+// Make sure PostCSS loader is in devDependencies with correct version
+if (!pkg.devDependencies['postcss-loader'] || pkg.devDependencies['postcss-loader'] !== '^6.2.1') {
+  console.log('📦 Adding postcss-loader to devDependencies');
+  pkg.devDependencies['postcss-loader'] = '^6.2.1';
+}
+
+// Remove postcss-loader from dependencies if it exists there
+if (pkg.dependencies['postcss-loader']) {
+  console.log('📦 Moving postcss-loader from dependencies to devDependencies');
+  delete pkg.dependencies['postcss-loader'];
+}
+
 // Update overrides to use latest noop
 pkg.overrides = {
   ...pkg.overrides,
@@ -102,6 +114,10 @@ npm install vite@4.5.0 @vitejs/plugin-react@4.2.0 --save --no-package-lock
 # Install TailwindCSS and related dependencies
 echo "🌈 Installing TailwindCSS and related dependencies"
 npm install tailwindcss@3.3.0 postcss@8.4.31 autoprefixer@10.4.15 postcss-import@15.0.0 postcss-url@10.1.3 --save --no-package-lock
+
+# Install postcss-loader with the correct version
+echo "🛠️ Installing postcss-loader dev dependency"
+npm install postcss-loader@6.2.1 --save-dev --no-package-lock
 
 # Use npm instead of pnpm for more reliable package installation in CI environments
 echo "📦 Installing all dependencies with npm"
@@ -164,6 +180,8 @@ try {
   console.log('✅ postcss-import found at:', require.resolve('postcss-import'));
   console.log('✅ postcss-url found at:', require.resolve('postcss-url'));
   console.log('✅ autoprefixer found at:', require.resolve('autoprefixer'));
+  console.log('✅ postcss-loader found at:', require.resolve('postcss-loader'));
+  console.log('✅ postcss-loader version:', require('postcss-loader/package.json').version || 'unknown');
 } catch (e) {
   console.error('❌ Error finding/loading PostCSS plugins:', e.message);
   process.exit(1);
