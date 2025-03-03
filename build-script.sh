@@ -24,12 +24,17 @@ if (pkg.dependencies && pkg.dependencies.pg) {
   delete pkg.dependencies.pg;
 }
 
-// Add vite as a regular dependency to ensure it's available
-pkg.dependencies = {
-  ...pkg.dependencies,
-  'vite': '4.5.0',
-  '@vitejs/plugin-react': '4.2.0'
-};
+// Ensure vite is at the correct version
+if (!pkg.dependencies.vite || pkg.dependencies.vite !== '^4.5.0') {
+  console.log('📦 Setting vite version to 4.5.0');
+  pkg.dependencies.vite = '^4.5.0';
+}
+
+// Ensure vite plugin is at the correct version
+if (!pkg.dependencies['@vitejs/plugin-react']) {
+  console.log('📦 Adding @vitejs/plugin-react dependency');
+  pkg.dependencies['@vitejs/plugin-react'] = '^4.2.0';
+}
 
 // Update overrides to use latest noop
 pkg.overrides = {
@@ -41,6 +46,9 @@ pkg.overrides = {
 };
 
 fs.writeFileSync('./package.json', JSON.stringify(pkg, null, 2));
+
+// Debug: Display the modified package.json content
+console.log('Modified package.json:', JSON.stringify(pkg, null, 2).substring(0, 500) + '... (truncated)');
 "
 
 # Create .npmrc file with registry fallbacks and configuration
@@ -62,13 +70,13 @@ EOF
 echo "🔍 Validating vercel.json"
 node -e "try { const data = require('./vercel.json'); console.log('✅ vercel.json is valid'); } catch(e) { console.error('❌ Invalid vercel.json:', e.message); process.exit(1); }"
 
-# Use npm instead of pnpm for more reliable package installation in CI environments
-echo "📦 Installing dependencies with npm"
-npm install --no-package-lock --legacy-peer-deps --no-fund --no-audit
+# Force install vite directly
+echo "🔨 Force installing vite directly"
+npm install vite@4.5.0 @vitejs/plugin-react@4.2.0 --save --no-package-lock
 
-# Install TailwindCSS and PostCSS dependencies
-echo "🌈 Installing TailwindCSS and related dependencies"
-npm install tailwindcss@3.3.0 postcss@8.4.31 autoprefixer@10.4.15 --save-dev --no-package-lock
+# Use npm instead of pnpm for more reliable package installation in CI environments
+echo "📦 Installing all dependencies with npm"
+npm install --no-package-lock --legacy-peer-deps --no-fund --no-audit
 
 # Check if vite is installed and available
 echo "🔍 Verifying vite installation"
@@ -80,8 +88,28 @@ try {
   // Test that the vite module can be loaded
   const vite = require('vite');
   console.log('✅ Vite version:', vite.version || 'unknown');
+  
+  // Debug: List all files in node_modules/vite
+  const fs = require('fs');
+  const path = require('path');
+  const viteDir = path.dirname(vitePath);
+  console.log('Vite directory contents:', fs.readdirSync(viteDir).slice(0, 10).join(', ') + '... (truncated)');
 } catch (e) {
   console.error('❌ Error finding/loading vite:', e.message);
+  
+  // Debug: Check if node_modules/vite exists at all
+  try {
+    const fs = require('fs');
+    if (fs.existsSync('./node_modules/vite')) {
+      console.log('✅ node_modules/vite directory exists');
+      console.log('Contents:', fs.readdirSync('./node_modules/vite').slice(0, 10).join(', ') + '... (truncated)');
+    } else {
+      console.log('❌ node_modules/vite directory does not exist');
+    }
+  } catch (innerErr) {
+    console.error('Error checking for vite directory:', innerErr.message);
+  }
+  
   process.exit(1);
 }
 "
@@ -104,9 +132,12 @@ export DB_PASSWORD=postgres
 export DB_SSL=true
 export DB_SSL_REJECT_UNAUTHORIZED=false
 
-# Run the build using node_modules path to ensure we use our installed version
+# Try a different approach to run the build
 echo "🏗️ Running the build process"
-./node_modules/.bin/vite build
+
+# First, use npx to run vite directly instead of using scripts
+export NODE_OPTIONS=--max-old-space-size=4096
+npx vite build
 
 # Log success message
 echo "✅ Build completed successfully!"
