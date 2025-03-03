@@ -2,6 +2,13 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 
+// Explicitly require all PostCSS-related packages
+const postcss = require('postcss');
+const postcssImport = require('postcss-import');
+const tailwindcss = require('tailwindcss');
+const autoprefixer = require('autoprefixer');
+const postcssUrl = require('postcss-url');
+
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
@@ -11,14 +18,22 @@ export default defineConfig({
     },
   },
   css: {
-    postcss: {
-      plugins: [
-        require('postcss-import'),
-        require('tailwindcss/nesting'),
-        require('tailwindcss'),
-        require('postcss-url'),
-        require('autoprefixer'),
-      ],
+    postcss: './postcss.config.cjs',
+    preprocessorOptions: {
+      // Ensure that custom loaders are explicitly available
+      loaderOptions: {
+        postcss: {
+          implementation: postcss,
+          postcssOptions: {
+            plugins: [
+              postcssImport,
+              tailwindcss,
+              autoprefixer,
+              postcssUrl,
+            ],
+          },
+        },
+      },
     },
   },
   build: {
