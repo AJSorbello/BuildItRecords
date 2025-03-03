@@ -12,6 +12,30 @@ echo "🚀 Starting custom build process for Vercel deployment"
 echo "🧹 Cleaning up lock files"
 rm -f pnpm-lock.yaml package-lock.json yarn.lock
 
+# Create temporary package.json without direct pg dependency
+echo "📝 Creating clean package.json for build"
+node -e "
+const fs = require('fs');
+const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
+
+// Store original pg version
+if (pkg.dependencies && pkg.dependencies.pg) {
+  console.log('📦 Temporarily removing pg dependency for build');
+  delete pkg.dependencies.pg;
+}
+
+// Update overrides to use latest noop
+pkg.overrides = {
+  ...pkg.overrides,
+  'pg': 'npm:@vercel/noop@latest',
+  'pg-native': 'npm:@vercel/noop@latest',
+  'pg-hstore': 'npm:@vercel/noop@latest',
+  'libpq': 'npm:@vercel/noop@latest'
+};
+
+fs.writeFileSync('./package.json', JSON.stringify(pkg, null, 2));
+"
+
 # Create .npmrc file with registry fallbacks and configuration
 echo "📝 Creating .npmrc file with registry configuration"
 cat > .npmrc << EOF
@@ -22,9 +46,6 @@ fetch-retry-maxtimeout=120000
 strict-ssl=false
 node-options=--max-old-space-size=4096 --no-node-snapshot --no-warnings
 legacy-peer-deps=true
-node-linker=hoisted
-public-hoist-pattern[]=*pg*
-public-hoist-pattern[]=*libpq*
 shamefully-hoist=true
 strict-peer-dependencies=false
 auto-install-peers=true
@@ -33,24 +54,6 @@ EOF
 # Validate vercel.json to prevent deployment errors
 echo "🔍 Validating vercel.json"
 node -e "try { const data = require('./vercel.json'); console.log('✅ vercel.json is valid'); } catch(e) { console.error('❌ Invalid vercel.json:', e.message); process.exit(1); }"
-
-# Temporarily modify package.json to handle the pg dependency conflict
-echo "🔧 Preparing package.json for build"
-node -e "
-const fs = require('fs');
-const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
-
-// Remove direct pg dependency if it exists but keep in dependencies
-if (pkg.dependencies && pkg.dependencies.pg) {
-  console.log('📦 Handling pg dependency for Vercel deployment');
-  // Mark pg as a dev dependency to avoid conflict with overrides
-  if (!pkg.devDependencies) pkg.devDependencies = {};
-  pkg.devDependencies._pg_original = pkg.dependencies.pg;
-  delete pkg.dependencies.pg;
-}
-
-fs.writeFileSync('./package.json', JSON.stringify(pkg, null, 2));
-"
 
 # Use npm instead of pnpm for more reliable package installation in CI environments
 echo "📦 Installing dependencies with npm"
@@ -78,113 +81,6 @@ export DB_PASSWORD=postgres
 export DB_SSL=true
 export DB_SSL_REJECT_UNAUTHORIZED=false
 
-# The package.json modifications to handle PostgreSQL dependencies
-echo "🔧 Patching package.json for Vercel compatibility"
-node << EOF
-const fs = require('fs');
-const packageJson = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
-
-// Add deployment timestamp
-packageJson.vercelDeploymentTimestamp = new Date().toISOString();
-
-// Handle PostgreSQL dependencies
-if (!packageJson.overrides) {
-  packageJson.overrides = {};
-}
-
-packageJson.overrides['pg'] = '@vercel/noop';
-packageJson.overrides['pg-native'] = '@vercel/noop';
-packageJson.overrides['pg-hstore'] = '@vercel/noop';
-
-// Add TailwindCSS to devDependencies if not present
-if (!packageJson.devDependencies) {
-  packageJson.devDependencies = {};
-}
-if (!packageJson.devDependencies.tailwindcss) {
-  packageJson.devDependencies.tailwindcss = "^3.3.0";
-}
-if (!packageJson.devDependencies.autoprefixer) {
-  packageJson.devDependencies.autoprefixer = "^10.4.15";
-}
-if (!packageJson.devDependencies.postcss) {
-  packageJson.devDependencies.postcss = "^8.4.31";
-}
-
-fs.writeFileSync('./package.json', JSON.stringify(packageJson, null, 2));
-console.log('✅ Successfully patched package.json');
-EOF
-
-# Create a basic tailwind config if it doesn't exist
-if [ ! -f "tailwind.config.js" ]; then
-  echo "📝 Creating TailwindCSS configuration file"
-  npx tailwindcss init
-fi
-
-# Create mock implementations for PostgreSQL modules
-echo "🔧 Creating mock implementations for PostgreSQL modules"
-mkdir -p node_modules/pg
-cat > node_modules/pg/index.js << EOF
-console.warn('Using mock pg implementation for Vercel deployment');
-      
-const Pool = class {
-  constructor() {
-    console.warn('Mock pg Pool instantiated');
-  }
-  
-  connect() {
-    console.warn('Mock pg Pool.connect called');
-    return Promise.resolve({
-      query: async () => ({ rows: [] }),
-      release: () => {}
-    });
-  }
-  
-  query() {
-    console.warn('Mock pg Pool.query called');
-    return Promise.resolve({ rows: [] });
-  }
-  
-  end() {
-    console.warn('Mock pg Pool.end called');
-    return Promise.resolve();
-  }
-};
-
-const Client = class {
-  constructor() {
-    console.warn('Mock pg Client instantiated');
-  }
-  
-  connect() {
-    console.warn('Mock pg Client.connect called');
-    return Promise.resolve(this);
-  }
-  
-  query() {
-    console.warn('Mock pg Client.query called');
-    return Promise.resolve({ rows: [] });
-  }
-  
-  end() {
-    console.warn('Mock pg Client.end called');
-    return Promise.resolve();
-  }
-};
-
-module.exports = {
-  Pool,
-  Client
-};
-EOF
-
-cat > node_modules/pg/package.json << EOF
-{
-  "name": "pg",
-  "version": "8.11.0",
-  "main": "index.js"
-}
-EOF
-
 # Run the build
 echo "🏗️ Running the build process"
 npm run build
@@ -193,29 +89,6 @@ npm run build
 echo "✅ Build completed successfully!"
 echo "📁 Build artifacts are in the dist directory"
 
-# Restore package.json if it was modified
-echo "🔄 Restoring package.json to original state"
-node -e "
-const fs = require('fs');
-const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
-
-// Restore pg dependency if it was moved
-if (pkg.devDependencies && pkg.devDependencies._pg_original) {
-  console.log('📦 Restoring pg dependency');
-  pkg.dependencies.pg = pkg.devDependencies._pg_original;
-  delete pkg.devDependencies._pg_original;
-}
-
-fs.writeFileSync('./package.json', JSON.stringify(pkg, null, 2));
-"
-
-# Copy the build output to the correct location
-echo "📁 Ensuring build output is in the correct location"
-if [ -d "dist" ]; then
-  echo "✅ Build complete and dist folder exists"
-else
-  echo "❌ Build failed or dist folder is missing"
-  exit 1
-fi
-
-echo "✅ Custom build process completed successfully"
+# Restore original package.json from git to prevent any unintended changes
+echo "🔄 Restoring original package.json"
+git checkout -- package.json
