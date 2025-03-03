@@ -1,7 +1,7 @@
 {
   "version": 2,
   "buildCommand": "./build-script.sh",
-  "installCommand": "npm i --no-package-lock --legacy-peer-deps",
+  "installCommand": "npm i --no-package-lock --legacy-peer-deps && cd api && npm i pg pg-hstore",
   "build": {
     "env": {
       "NODE_ENV": "production",
@@ -31,22 +31,34 @@
       }
     },
     {
-      "src": "server/server.js",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": ["server/**/*.js", "server/**/*.ts", "server/models/**", "server/routes/**"],
-        "bundle": true,
-        "includeNodeModules": {
-          "pg": true,
-          "pg-hstore": true
-        }
-      }
+      "src": "api/**/*.js",
+      "use": "@vercel/node"
     }
   ],
   "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "server/server.js"
+    { 
+      "src": "/api/health", 
+      "dest": "/api/index.js" 
+    },
+    { 
+      "src": "/api/artists/label/([^/]+)", 
+      "dest": "/api/artists/label/[labelId].js?labelId=$1" 
+    },
+    { 
+      "src": "/api/artist/([^/]+)", 
+      "dest": "/api/artist/[id].js?id=$1" 
+    },
+    { 
+      "src": "/api/tracks/label/([^/]+)", 
+      "dest": "/api/tracks/label/[labelId].js?labelId=$1" 
+    },
+    { 
+      "src": "/api/tracks", 
+      "dest": "/api/tracks/index.js" 
+    },
+    { 
+      "src": "/api/releases", 
+      "dest": "/api/releases/index.js" 
     },
     {
       "src": "/(.*)",
