@@ -113,21 +113,26 @@ EOF
 echo "🔍 Validating vercel.json"
 node -e "try { const data = require('./vercel.json'); console.log('✅ vercel.json is valid'); } catch(e) { console.error('❌ Invalid vercel.json:', e.message); process.exit(1); }"
 
-# Force install vite directly
-echo "🔨 Force installing vite directly"
-npm install vite@4.5.0 @vitejs/plugin-react@4.2.0 --save --no-package-lock
+# Create a simplified postcss.config.js for better compatibility
+echo "📝 Creating a simplified postcss.config.js"
+cat > postcss.config.js << EOF
+module.exports = {
+  plugins: [
+    require('postcss-import'),
+    require('tailwindcss'),
+    require('autoprefixer'),
+    require('postcss-url')
+  ]
+};
+EOF
 
-# Install TailwindCSS and related dependencies
-echo "🌈 Installing TailwindCSS and related dependencies"
-npm install tailwindcss@3.3.0 postcss@8.4.31 autoprefixer@10.4.15 postcss-import@15.0.0 postcss-url@10.1.3 --save --no-package-lock
+# Install all dependencies at once to ensure proper resolution
+echo "📦 Installing all build dependencies at once for better resolution"
+npm install vite@4.5.0 @vitejs/plugin-react@4.2.0 tailwindcss@3.3.0 postcss@8.4.31 autoprefixer@10.4.15 postcss-import@15.0.0 postcss-url@10.1.3 postcss-loader@6.2.1 path-browserify@1.0.1 --global --no-package-lock
 
-# Install postcss-loader with the correct version as a regular dependency
-echo "🛠️ Installing postcss-loader dependency"
-npm install postcss-loader@6.2.1 --save --no-package-lock
-
-# Install path-browserify for Vite compatibility
-echo "🛠️ Installing path-browserify dependency"
-npm install path-browserify@1.0.1 --save --no-package-lock
+# Make sure postcss-loader is available globally
+echo "🔧 Making sure postcss-loader is available globally"
+npm link postcss-loader
 
 # Use npm instead of pnpm for more reliable package installation in CI environments
 echo "📦 Installing all dependencies with npm"
@@ -182,19 +187,60 @@ try {
 }
 "
 
-# Check for PostCSS plugins
+# Check for PostCSS plugins with more detailed error handling
 echo "🔍 Verifying PostCSS plugins"
 node -e "
-try {
-  console.log('✅ postcss found at:', require.resolve('postcss'));
-  console.log('✅ postcss-import found at:', require.resolve('postcss-import'));
-  console.log('✅ postcss-url found at:', require.resolve('postcss-url'));
-  console.log('✅ autoprefixer found at:', require.resolve('autoprefixer'));
-  console.log('✅ postcss-loader found at:', require.resolve('postcss-loader'));
-  console.log('✅ postcss-loader version:', require('postcss-loader/package.json').version || 'unknown');
-  console.log('✅ path-browserify found at:', require.resolve('path-browserify'));
-} catch (e) {
-  console.error('❌ Error finding/loading PostCSS plugins:', e.message);
+const checkModule = (name) => {
+  try {
+    const modulePath = require.resolve(name);
+    console.log('✅ ' + name + ' found at:', modulePath);
+    let version = 'unknown';
+    try {
+      version = require(name + '/package.json').version || 'unknown';
+    } catch (err) {
+      console.log('⚠️ Could not determine version of ' + name + ': ' + err.message);
+    }
+    console.log('✅ ' + name + ' version:', version);
+    return true;
+  } catch (e) {
+    console.error('❌ Error finding/loading ' + name + ':', e.message);
+    // List the contents of node_modules to help debug
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const nodeModulesPath = path.resolve('./node_modules');
+      if (fs.existsSync(nodeModulesPath)) {
+        console.log('Contents of node_modules directory:');
+        const dirs = fs.readdirSync(nodeModulesPath);
+        console.log(dirs.slice(0, 20).join(', ') + (dirs.length > 20 ? '...' : ''));
+        
+        // Try to see if the package directory exists but module can't be resolved
+        const packagePath = path.join(nodeModulesPath, name);
+        if (fs.existsSync(packagePath)) {
+          console.log('📁 ' + name + ' directory exists in node_modules:');
+          console.log('Contents:', fs.readdirSync(packagePath).join(', '));
+        } else {
+          console.log('❌ ' + name + ' directory does not exist in node_modules');
+        }
+      }
+    } catch (fsErr) {
+      console.error('Error checking node_modules:', fsErr.message);
+    }
+    return false;
+  }
+};
+
+const modules = ['postcss', 'postcss-import', 'postcss-url', 'autoprefixer', 'postcss-loader', 'path-browserify', 'tailwindcss'];
+let allSuccessful = true;
+
+for (const module of modules) {
+  if (!checkModule(module)) {
+    allSuccessful = false;
+  }
+}
+
+if (!allSuccessful) {
+  console.error('❌ Not all required modules were found');
   process.exit(1);
 }
 "
@@ -233,9 +279,10 @@ export DB_SSL_REJECT_UNAUTHORIZED=false
 # Try a different approach to run the build
 echo "🏗️ Running the build process"
 
-# First, use npx to run vite directly instead of using scripts
+# Use Vite directly with a custom config path
+echo "📝 Using direct vite build with explicit postcss config"
 export NODE_OPTIONS=--max-old-space-size=4096
-npx vite build
+npx vite build --config vite.config.js
 
 # Run postbuild validation
 echo "🧪 Running postbuild validation"
