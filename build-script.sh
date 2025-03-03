@@ -24,6 +24,17 @@ if (pkg.dependencies && pkg.dependencies.pg) {
   delete pkg.dependencies.pg;
 }
 
+// Also remove pg-related dependencies that might conflict
+if (pkg.dependencies && pkg.dependencies['pg-native']) {
+  delete pkg.dependencies['pg-native'];
+}
+if (pkg.dependencies && pkg.dependencies['pg-hstore']) {
+  delete pkg.dependencies['pg-hstore'];
+}
+if (pkg.dependencies && pkg.dependencies['libpq']) {
+  delete pkg.dependencies['libpq'];
+}
+
 // Ensure vite is at the correct version
 if (!pkg.dependencies.vite || pkg.dependencies.vite !== '^4.5.0') {
   console.log('📦 Setting vite version to 4.5.0');
@@ -164,6 +175,19 @@ node postbuild.js
 echo "✅ Build completed successfully!"
 echo "📁 Build artifacts are in the dist directory"
 
-# Restore original package.json from git to prevent any unintended changes
-echo "🔄 Restoring original package.json"
-git checkout -- package.json
+# Don't restore the original package.json, as it contains conflicting dependencies
+# Just create a clean one without conflicts for the final deployment
+echo "📝 Creating clean final package.json without pg conflicts"
+node -e "
+const fs = require('fs');
+const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
+
+// Check if pg is in both dependencies and overrides
+if (pkg.dependencies && pkg.dependencies.pg && pkg.overrides && pkg.overrides.pg) {
+  // Remove pg from dependencies since it's in overrides
+  delete pkg.dependencies.pg;
+  console.log('📦 Removed pg from dependencies to avoid conflict with overrides');
+}
+
+fs.writeFileSync('./package.json', JSON.stringify(pkg, null, 2));
+"
