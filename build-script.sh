@@ -188,6 +188,19 @@ try {
 }
 "
 
+# Configure package.json scripts to include postbuild validation
+node -e "
+const fs = require('fs');
+const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
+
+// Add postbuild script if it doesn't exist
+if (!pkg.scripts.postbuild) {
+  pkg.scripts.postbuild = 'node postbuild.js';
+  console.log('📝 Added postbuild validation script to package.json');
+  fs.writeFileSync('./package.json', JSON.stringify(pkg, null, 2));
+}
+"
+
 # Set environment variables for the build
 echo "🔧 Setting environment variables for production"
 export NODE_ENV=production
@@ -212,6 +225,10 @@ echo "🏗️ Running the build process"
 # First, use npx to run vite directly instead of using scripts
 export NODE_OPTIONS=--max-old-space-size=4096
 npx vite build
+
+# Run postbuild validation
+echo "🧪 Running postbuild validation"
+node postbuild.js
 
 # Log success message
 echo "✅ Build completed successfully!"
