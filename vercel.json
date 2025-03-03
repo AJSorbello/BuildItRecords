@@ -1,9 +1,12 @@
 {
   "version": 2,
+  "buildCommand": "./build-script.sh",
+  "installCommand": "npm i --no-package-lock --legacy-peer-deps",
   "build": {
     "env": {
       "NODE_ENV": "production",
       "REACT_APP_ENV": "production",
+      "REACT_APP_API_URL": "/api",
       "VITE_SUPABASE_URL": "https://liuaozuvkmvanmchndzl.supabase.co",
       "VITE_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxpdWFvenV2a212YW5tY2huZHpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU4NDg0MzQsImV4cCI6MjA1MTQyNDQzNH0.tlHgYcid26cTNuDoKZkHacwfaJ7BWR9d35EtAxtTB_g",
       "DB_HOST": "liuaozuvkmvanmchndzl.supabase.co",
@@ -14,7 +17,8 @@
       "DB_SSL": "true",
       "DB_SSL_REJECT_UNAUTHORIZED": "false",
       "CI": "true",
-      "VERCEL": "true"
+      "VERCEL": "true",
+      "NPM_FLAGS": "--legacy-peer-deps --no-package-lock"
     }
   },
   "builds": [
@@ -22,14 +26,16 @@
       "src": "build-script.sh",
       "use": "@vercel/static-build",
       "config": {
-        "distDir": "dist"
+        "distDir": "dist",
+        "zeroConfig": false
       }
     },
     {
       "src": "server/server.js",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": ["server/**"]
+        "includeFiles": ["server/**"],
+        "maxLambdaSize": "15mb"
       }
     }
   ],
@@ -50,6 +56,7 @@
   "git": {
     "deploymentEnabled": {
       "main": true,
+      "master": true,
       "vercel-deploy-fix": true
     }
   }

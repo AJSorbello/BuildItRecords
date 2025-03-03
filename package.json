@@ -11,22 +11,22 @@
     "react-dom": "^18.2.0"
   },
   "overrides": {
-    "pg": "npm:@vercel/noop",
-    "pg-native": "npm:@vercel/noop",
-    "pg-hstore": "npm:@vercel/noop",
-    "libpq": "npm:@vercel/noop"
+    "pg": "@vercel/noop",
+    "pg-native": "@vercel/noop",
+    "pg-hstore": "@vercel/noop",
+    "libpq": "@vercel/noop",
+    "sequelize-pool": "^7.1.0"
   },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "serve": "vite preview",
-    "start": "pnpm run dev",
-    "server": "cd server && pnpm start",
-    "dev:all": "concurrently \"pnpm run server\" \"pnpm run dev\"",
+    "start": "npm run dev",
+    "server": "cd server && node server.js",
+    "dev:all": "concurrently \"npm run server\" \"npm run dev\"",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx --max-warnings=1000 || true",
     "type-check": "tsc --noEmit",
-    "vercel-build": "pnpm run build",
-    "prepare": "husky"
+    "vercel-build": "./build-script.sh"
   },
   "dependencies": {
     "@ant-design/icons": "^5.5.2",
@@ -141,10 +141,9 @@
   },
   "vercelDeploymentTimestamp": "2025-03-02T12:10:55.084Z",
   "buildInfo": {
-    "timestamp": "2025-03-02T12:07:39.105Z",
-    "forcedUpdate": true,
-    "reason": "Manual update to trigger new Vercel deployment",
-    "commitHash": "unknown"
+    "timestamp": "2025-03-03T18:47:39.105Z",
+    "reason": "Fix Vercel deployment registry connection issues",
+    "buildAuthor": "BuildIt Support"
   },
   "vercelDeploymentId": "deploy-6250"
 }

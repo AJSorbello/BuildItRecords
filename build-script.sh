@@ -12,13 +12,35 @@ echo "🚀 Starting custom build process for Vercel deployment"
 echo "🧹 Cleaning up lock files"
 rm -f pnpm-lock.yaml package-lock.json yarn.lock
 
-# Use pnpm instead of npm to avoid lockfile issues
-echo "📦 Installing dependencies with pnpm"
-pnpm install --no-frozen-lockfile
+# Create .npmrc file with registry fallbacks and configuration
+echo "📝 Creating .npmrc file with registry configuration"
+cat > .npmrc << EOF
+registry=https://registry.npmjs.org/
+fetch-retries=5
+fetch-retry-mintimeout=20000
+fetch-retry-maxtimeout=120000
+strict-ssl=false
+node-options=--max-old-space-size=4096 --no-node-snapshot
+legacy-peer-deps=true
+node-linker=hoisted
+public-hoist-pattern[]=*pg*
+public-hoist-pattern[]=*libpq*
+shamefully-hoist=true
+strict-peer-dependencies=false
+auto-install-peers=true
+EOF
+
+# Validate vercel.json to prevent deployment errors
+echo "🔍 Validating vercel.json"
+node -e "try { const data = require('./vercel.json'); console.log('✅ vercel.json is valid'); } catch(e) { console.error('❌ Invalid vercel.json:', e.message); process.exit(1); }"
+
+# Use npm instead of pnpm for more reliable package installation in CI environments
+echo "📦 Installing dependencies with npm"
+npm install --no-package-lock --legacy-peer-deps
 
 # Install TailwindCSS and PostCSS dependencies
 echo "🌈 Installing TailwindCSS and related dependencies"
-pnpm add tailwindcss@3.3.0 postcss@8.4.31 autoprefixer@10.4.15 -D
+npm install tailwindcss@3.3.0 postcss@8.4.31 autoprefixer@10.4.15 --save-dev --no-package-lock
 
 # Set environment variables for the build
 echo "🔧 Setting environment variables for production"
@@ -145,9 +167,9 @@ cat > node_modules/pg/package.json << EOF
 }
 EOF
 
-# Run the build using pnpm
+# Run the build using npm
 echo "🏗️ Building the application"
-pnpm run build
+npm run build
 
 # Copy the build output to the correct location
 echo "📁 Ensuring build output is in the correct location"
