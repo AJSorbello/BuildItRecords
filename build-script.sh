@@ -73,6 +73,12 @@ if (pkg.devDependencies && pkg.devDependencies['postcss-loader']) {
   delete pkg.devDependencies['postcss-loader'];
 }
 
+// Ensure path-browserify for Vite compatibility
+if (!pkg.dependencies['path-browserify']) {
+  console.log('📦 Adding path-browserify dependency');
+  pkg.dependencies['path-browserify'] = '^1.0.1';
+}
+
 // Update overrides to use latest noop
 pkg.overrides = {
   ...pkg.overrides,
@@ -118,6 +124,10 @@ npm install tailwindcss@3.3.0 postcss@8.4.31 autoprefixer@10.4.15 postcss-import
 # Install postcss-loader with the correct version as a regular dependency
 echo "🛠️ Installing postcss-loader dependency"
 npm install postcss-loader@6.2.1 --save --no-package-lock
+
+# Install path-browserify for Vite compatibility
+echo "🛠️ Installing path-browserify dependency"
+npm install path-browserify@1.0.1 --save --no-package-lock
 
 # Use npm instead of pnpm for more reliable package installation in CI environments
 echo "📦 Installing all dependencies with npm"
@@ -182,6 +192,7 @@ try {
   console.log('✅ autoprefixer found at:', require.resolve('autoprefixer'));
   console.log('✅ postcss-loader found at:', require.resolve('postcss-loader'));
   console.log('✅ postcss-loader version:', require('postcss-loader/package.json').version || 'unknown');
+  console.log('✅ path-browserify found at:', require.resolve('path-browserify'));
 } catch (e) {
   console.error('❌ Error finding/loading PostCSS plugins:', e.message);
   process.exit(1);
