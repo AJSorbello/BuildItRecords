@@ -2,7 +2,7 @@
 
 # =====================================================
 # Custom build script for Vercel deployment
-# This script completely bypasses pnpm lock file issues
+# This script ensures proper dependency installation
 # =====================================================
 
 set -e
@@ -12,28 +12,11 @@ echo "🚀 Starting custom build process for Vercel deployment"
 echo "🧹 Cleaning up lock files"
 rm -f pnpm-lock.yaml package-lock.json yarn.lock
 
-# Create temporary package.json without direct pg dependency
+# Create temporary package.json without conflicts
 echo "📝 Creating clean package.json for build"
 node -e "
 const fs = require('fs');
 const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
-
-// Store original pg version
-if (pkg.dependencies && pkg.dependencies.pg) {
-  console.log('📦 Temporarily removing pg dependency for build');
-  delete pkg.dependencies.pg;
-}
-
-// Also remove pg-related dependencies that might conflict
-if (pkg.dependencies && pkg.dependencies['pg-native']) {
-  delete pkg.dependencies['pg-native'];
-}
-if (pkg.dependencies && pkg.dependencies['pg-hstore']) {
-  delete pkg.dependencies['pg-hstore'];
-}
-if (pkg.dependencies && pkg.dependencies['libpq']) {
-  delete pkg.dependencies['libpq'];
-}
 
 // Ensure vite is at the correct version
 if (!pkg.dependencies.vite || pkg.dependencies.vite !== '^4.5.0') {
@@ -53,14 +36,29 @@ if (!pkg.dependencies['path-browserify']) {
   pkg.dependencies['path-browserify'] = '^1.0.1';
 }
 
-// Update overrides to use latest noop
-pkg.overrides = {
-  ...pkg.overrides,
-  'pg': 'npm:@vercel/noop@latest',
-  'pg-native': 'npm:@vercel/noop@latest',
-  'pg-hstore': 'npm:@vercel/noop@latest',
-  'libpq': 'npm:@vercel/noop@latest'
-};
+// Ensure pg and pg-hstore are included
+if (!pkg.dependencies.pg) {
+  console.log('📦 Adding pg dependency');
+  pkg.dependencies.pg = '^8.11.3';
+}
+
+if (!pkg.dependencies['pg-hstore']) {
+  console.log('📦 Adding pg-hstore dependency');
+  pkg.dependencies['pg-hstore'] = '^2.3.4';
+}
+
+// Remove any pg-related overrides
+if (pkg.overrides) {
+  delete pkg.overrides.pg;
+  delete pkg.overrides['pg-native'];
+  delete pkg.overrides['pg-hstore'];
+  delete pkg.overrides.libpq;
+  
+  // Remove overrides entirely if empty
+  if (Object.keys(pkg.overrides).length === 0) {
+    delete pkg.overrides;
+  }
+}
 
 fs.writeFileSync('./package.json', JSON.stringify(pkg, null, 2));
 
@@ -86,7 +84,7 @@ node -e "try { const data = require('./vercel.json'); console.log('✅ vercel.js
 
 # Install all dependencies at once to ensure proper resolution
 echo "📦 Installing build dependencies globally"
-npm install -g vite@4.5.0 @vitejs/plugin-react@4.2.0 path-browserify@1.0.1
+npm install -g vite@4.5.0 @vitejs/plugin-react@4.2.0 path-browserify@1.0.1 pg@8.11.3 pg-hstore@2.3.4
 
 # Use npm for local installation due to pnpm connectivity issues
 echo "📦 Installing all dependencies with npm"
@@ -102,28 +100,24 @@ try {
   // Test that the vite module can be loaded
   const vite = require('vite');
   console.log('✅ Vite version:', vite.version || 'unknown');
-  
-  // Debug: List all files in node_modules/vite
-  const fs = require('fs');
-  const path = require('path');
-  const viteDir = path.dirname(vitePath);
-  console.log('Vite directory contents:', fs.readdirSync(viteDir).slice(0, 10).join(', ') + '... (truncated)');
 } catch (e) {
   console.error('❌ Error finding/loading vite:', e.message);
+  process.exit(1);
+}
+"
+
+# Check if pg is installed and available
+echo "🔍 Verifying pg installation"
+node -e "
+try {
+  const pgPath = require.resolve('pg');
+  console.log('✅ pg found at:', pgPath);
   
-  // Debug: Check if node_modules/vite exists at all
-  try {
-    const fs = require('fs');
-    if (fs.existsSync('./node_modules/vite')) {
-      console.log('✅ node_modules/vite directory exists');
-      console.log('Contents:', fs.readdirSync('./node_modules/vite').slice(0, 10).join(', ') + '... (truncated)');
-    } else {
-      console.log('❌ node_modules/vite directory does not exist');
-    }
-  } catch (innerErr) {
-    console.error('Error checking for vite directory:', innerErr.message);
-  }
-  
+  // Test that the pg module can be loaded
+  const pg = require('pg');
+  console.log('✅ pg version available');
+} catch (e) {
+  console.error('❌ Error finding/loading pg:', e.message);
   process.exit(1);
 }
 "
@@ -174,20 +168,3 @@ node postbuild.js
 # Log success message
 echo "✅ Build completed successfully!"
 echo "📁 Build artifacts are in the dist directory"
-
-# Don't restore the original package.json, as it contains conflicting dependencies
-# Just create a clean one without conflicts for the final deployment
-echo "📝 Creating clean final package.json without pg conflicts"
-node -e "
-const fs = require('fs');
-const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
-
-// Check if pg is in both dependencies and overrides
-if (pkg.dependencies && pkg.dependencies.pg && pkg.overrides && pkg.overrides.pg) {
-  // Remove pg from dependencies since it's in overrides
-  delete pkg.dependencies.pg;
-  console.log('📦 Removed pg from dependencies to avoid conflict with overrides');
-}
-
-fs.writeFileSync('./package.json', JSON.stringify(pkg, null, 2));
-"

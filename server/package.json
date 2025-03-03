@@ -6,9 +6,7 @@
   "main": "index.js",
   "license": "MIT",
   "overrides": {
-    "pg": "npm:@vercel/noop",
     "pg-native": "npm:@vercel/noop",
-    "pg-hstore": "npm:@vercel/noop",
     "libpq": "npm:@vercel/noop"
   },
   "scripts": {
@@ -34,6 +32,8 @@
     "helmet": "^8.0.0",
     "jsonwebtoken": "^9.0.2",
     "nodemailer": "^6.9.16",
+    "pg": "^8.11.3",
+    "pg-hstore": "^2.3.4",
     "sequelize": "^6.37.5",
     "spotify-web-api-node": "^5.0.2",
     "swagger-jsdoc": "^6.2.8",
@@ -49,6 +49,7 @@
     "@types/express": "^5.0.0",
     "@types/jsonwebtoken": "^9.0.7",
     "@types/node": "^22.13.4",
+    "@types/pg": "^8.11.0",
     "@types/spotify-web-api-node": "^5.0.11",
     "@types/swagger-jsdoc": "^6",
     "nodemon": "^3.0.2",

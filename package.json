@@ -10,13 +10,6 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
-  "overrides": {
-    "pg": "npm:@vercel/noop@latest",
-    "pg-native": "npm:@vercel/noop@latest",
-    "pg-hstore": "npm:@vercel/noop@latest",
-    "libpq": "npm:@vercel/noop@latest",
-    "sequelize-pool": "^7.1.0"
-  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -81,7 +74,8 @@
     "notistack": "^3.0.2",
     "papaparse": "^5.4.1",
     "path-browserify": "^1.0.1",
-    "pg": "^8.13.3",
+    "pg": "^8.11.3",
+    "pg-hstore": "^2.3.4",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-icons": "^5.3.0",
@@ -111,6 +105,7 @@
     "@types/lodash": "^4.17.14",
     "@types/morgan": "^1.9.9",
     "@types/path-browserify": "^1",
+    "@types/pg": "^8.11.0",
     "@types/spotify-web-api-node": "^5.0.11",
     "@typescript-eslint/eslint-plugin": "^5.62.0",
     "@typescript-eslint/parser": "^5.62.0",
