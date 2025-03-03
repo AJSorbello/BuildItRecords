@@ -36,6 +36,22 @@ if (!pkg.dependencies['@vitejs/plugin-react']) {
   pkg.dependencies['@vitejs/plugin-react'] = '^4.2.0';
 }
 
+// Ensure TailwindCSS and related dependencies are available
+if (!pkg.dependencies.tailwindcss) {
+  console.log('📦 Adding TailwindCSS dependency');
+  pkg.dependencies.tailwindcss = '^3.3.0';
+}
+
+if (!pkg.dependencies.postcss) {
+  console.log('📦 Adding PostCSS dependency');
+  pkg.dependencies.postcss = '^8.4.31';
+}
+
+if (!pkg.dependencies.autoprefixer) {
+  console.log('📦 Adding Autoprefixer dependency');
+  pkg.dependencies.autoprefixer = '^10.4.15';
+}
+
 // Update overrides to use latest noop
 pkg.overrides = {
   ...pkg.overrides,
@@ -74,6 +90,10 @@ node -e "try { const data = require('./vercel.json'); console.log('✅ vercel.js
 echo "🔨 Force installing vite directly"
 npm install vite@4.5.0 @vitejs/plugin-react@4.2.0 --save --no-package-lock
 
+# Install TailwindCSS and related dependencies
+echo "🌈 Installing TailwindCSS and related dependencies"
+npm install tailwindcss@3.3.0 postcss@8.4.31 autoprefixer@10.4.15 --save --no-package-lock
+
 # Use npm instead of pnpm for more reliable package installation in CI environments
 echo "📦 Installing all dependencies with npm"
 npm install --no-package-lock --legacy-peer-deps --no-fund --no-audit
@@ -110,6 +130,19 @@ try {
     console.error('Error checking for vite directory:', innerErr.message);
   }
   
+  process.exit(1);
+}
+"
+
+# Check if tailwindcss is installed and available
+echo "🔍 Verifying TailwindCSS installation"
+node -e "
+try {
+  const tailwindPath = require.resolve('tailwindcss');
+  console.log('✅ TailwindCSS found at:', tailwindPath);
+  console.log('✅ TailwindCSS version:', require('tailwindcss/package.json').version || 'unknown');
+} catch (e) {
+  console.error('❌ Error finding/loading TailwindCSS:', e.message);
   process.exit(1);
 }
 "
