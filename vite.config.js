@@ -1,57 +1,47 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import path from 'path';
-
-// Explicitly require all PostCSS-related packages
-const postcss = require('postcss');
-const postcssImport = require('postcss-import');
-const tailwindcss = require('tailwindcss');
-const autoprefixer = require('autoprefixer');
-const postcssUrl = require('postcss-url');
+import { resolve } from 'path';
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, 'src'),
-    },
-  },
-  css: {
-    postcss: './postcss.config.cjs',
-    preprocessorOptions: {
-      // Ensure that custom loaders are explicitly available
-      loaderOptions: {
-        postcss: {
-          implementation: postcss,
-          postcssOptions: {
-            plugins: [
-              postcssImport,
-              tailwindcss,
-              autoprefixer,
-              postcssUrl,
-            ],
-          },
-        },
-      },
+      '@': resolve(__dirname, 'src'),
+      // Add browser compatibility for path
+      path: 'path-browserify',
     },
   },
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
-    sourcemap: process.env.NODE_ENV !== 'production',
-    minify: process.env.NODE_ENV === 'production',
-    emptyOutDir: true,
-    chunkSizeWarningLimit: 1500,
+    sourcemap: true,
+    chunkSizeWarningLimit: 1000,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router-dom'],
+          ui: ['@mui/material', '@mui/icons-material', '@emotion/react', '@emotion/styled'],
+        },
+      },
+    },
   },
   server: {
     port: 3000,
     proxy: {
       '/api': {
-        target: 'http://localhost:3001',
+        target: 'http://localhost:5000',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ''),
       },
     },
+  },
+  optimizeDeps: {
+    include: ['react', 'react-dom', 'react-router-dom', '@mui/material'],
+    esbuildOptions: {
+      target: 'es2020',
+    },
+  },
+  esbuild: {
+    target: 'es2020',
   },
 });

@@ -2,27 +2,51 @@
 
 import * as React from "react"
 import * as CollapsiblePrimitive from "@radix-ui/react-collapsible"
-
-import { cn } from "@/lib/utils"
+import styled from "styled-components"
 
 const Collapsible = CollapsiblePrimitive.Root
 
 const CollapsibleTrigger = CollapsiblePrimitive.Trigger
 
+const StyledContent = styled(CollapsiblePrimitive.Content)`
+  overflow: hidden;
+  &[data-state="closed"] {
+    animation: collapsibleUp 0.2s ease-out;
+  }
+  &[data-state="open"] {
+    animation: collapsibleDown 0.2s ease-out;
+  }
+  
+  @keyframes collapsibleUp {
+    from {
+      height: var(--radix-collapsible-content-height);
+    }
+    to {
+      height: 0;
+    }
+  }
+  
+  @keyframes collapsibleDown {
+    from {
+      height: 0;
+    }
+    to {
+      height: var(--radix-collapsible-content-height);
+    }
+  }
+`;
+
 const CollapsibleContent = React.forwardRef<
   React.ElementRef<typeof CollapsiblePrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof CollapsiblePrimitive.Content>
 >(({ className, children, ...props }, ref) => (
-  <CollapsiblePrimitive.Content
+  <StyledContent
     ref={ref}
-    className={cn(
-      "overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down",
-      className
-    )}
+    className={className}
     {...props}
   >
-    <div className="p-0">{children}</div>
-  </CollapsiblePrimitive.Content>
+    <div style={{ padding: 0 }}>{children}</div>
+  </StyledContent>
 ))
 CollapsibleContent.displayName = "CollapsibleContent"
 

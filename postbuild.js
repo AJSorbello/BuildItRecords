@@ -21,36 +21,44 @@ if (fs.existsSync(distPath)) {
   console.error('❌ Dist directory does not exist');
 }
 
-// Check if the main CSS file was generated with Tailwind styles
+// Check if the main CSS file was generated
 try {
   const cssFiles = fs.readdirSync(distPath).filter(file => file.endsWith('.css'));
   if (cssFiles.length > 0) {
     console.log('✅ CSS files found:', cssFiles.join(', '));
     
-    // Check the content of the first CSS file for Tailwind classes
+    // Check if the CSS file has content
     const cssContent = fs.readFileSync(path.join(distPath, cssFiles[0]), 'utf8');
-    if (cssContent.includes('flex') && cssContent.includes('grid')) {
-      console.log('✅ CSS file appears to contain Tailwind styles');
+    if (cssContent.length > 100) {
+      console.log(`✅ CSS file has content (${cssContent.length} bytes)`);
     } else {
-      console.log('⚠️ CSS file may not contain Tailwind styles');
+      console.warn(`⚠️ CSS file is suspiciously small (${cssContent.length} bytes)`);
     }
   } else {
-    console.log('⚠️ No CSS files found in dist directory');
+    console.error('❌ No CSS files found in dist directory');
   }
 } catch (err) {
   console.error('❌ Error checking CSS files:', err.message);
 }
 
-// Check for other build artifacts
+// Check for index.html
 try {
-  const indexHtmlPath = path.join(distPath, 'index.html');
-  if (fs.existsSync(indexHtmlPath)) {
-    console.log('✅ index.html exists in dist directory');
+  const indexPath = path.join(distPath, 'index.html');
+  if (fs.existsSync(indexPath)) {
+    console.log('✅ index.html exists');
+    
+    // Verify it contains expected content
+    const indexContent = fs.readFileSync(indexPath, 'utf8');
+    if (indexContent.includes('<div id="root"></div>')) {
+      console.log('✅ index.html contains root element');
+    } else {
+      console.warn('⚠️ index.html might be missing the root element');
+    }
   } else {
-    console.error('❌ index.html does not exist in dist directory');
+    console.error('❌ index.html not found');
   }
 } catch (err) {
-  console.error('❌ Error checking for index.html:', err.message);
+  console.error('❌ Error checking index.html:', err.message);
 }
 
-console.log('🏁 Postbuild verification complete');
+console.log('✅ Postbuild verification completed');
