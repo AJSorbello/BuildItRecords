@@ -10,29 +10,33 @@
  * Determines the base API URL depending on the current environment
  */
 export const getApiBaseUrl = (): string => {
+  // For debugging - log detection information
+  if (typeof window !== 'undefined') {
+    console.log('Environment detection:');
+    console.log('- NODE_ENV:', process.env.NODE_ENV);
+    console.log('- REACT_APP_API_URL:', process.env.REACT_APP_API_URL);
+    console.log('- Window location:', window.location.origin);
+    console.log('- Window hostname:', window.location.hostname);
+    console.log('- Is production build:', process.env.NODE_ENV === 'production');
+  }
+  
   // Check for explicit API URL from environment
   if (process.env.REACT_APP_API_URL) {
+    console.log('Using REACT_APP_API_URL:', process.env.REACT_APP_API_URL);
     return process.env.REACT_APP_API_URL;
   }
   
-  // In Vercel production environment
-  if (typeof window !== 'undefined' && process.env.NODE_ENV === 'production') {
-    // Check for window.origin to help with debugging
-    console.log('Current origin:', window.location.origin);
-    
-    // Determine if we're running on Vercel by checking the hostname
-    const isVercel = window.location.hostname.includes('vercel.app');
-    
-    if (isVercel) {
-      // For Vercel deployments, we know the API is configured through routes in vercel.json
+  // In browser environment
+  if (typeof window !== 'undefined') {
+    // Production environment (including Vercel)
+    if (process.env.NODE_ENV === 'production' || window.location.hostname.includes('vercel.app')) {
+      console.log('Using production API URL with origin:', window.location.origin);
       return `${window.location.origin}/api`;
     }
-    
-    // For other production environments, use relative URL
-    return '/api';
   }
   
   // Default for development
+  console.log('Using development API URL: http://localhost:3001/api');
   return 'http://localhost:3001/api';
 };
 

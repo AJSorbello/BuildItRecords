@@ -20,6 +20,13 @@ npm install --no-package-lock
 echo "🌈 Installing TailwindCSS and related dependencies"
 npm install --no-package-lock tailwindcss@3.3.0 postcss@8.4.31 autoprefixer@10.4.15
 
+# Set environment variables for the build
+echo "🔧 Setting environment variables for production"
+export NODE_ENV=production
+export REACT_APP_ENV=production
+# Empty REACT_APP_API_URL will make the app use the current origin for API calls
+export REACT_APP_API_URL=''
+
 # The package.json modifications to handle PostgreSQL dependencies
 echo "🔧 Patching package.json for Vercel compatibility"
 node << EOF

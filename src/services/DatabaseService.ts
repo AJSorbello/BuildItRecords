@@ -71,6 +71,14 @@ class DatabaseService {
   private constructor() {
     this.baseUrl = getApiBaseUrl();
     console.log('DatabaseService initialized with baseUrl:', this.baseUrl);
+    
+    // Additional environment checks
+    if (typeof window !== 'undefined') {
+      console.log('Current environment:');
+      console.log('- Window location:', window.location.toString());
+      console.log('- NODE_ENV:', process.env.NODE_ENV);
+      console.log('- Production mode:', process.env.NODE_ENV === 'production');
+    }
   }
 
   public static getInstance(): DatabaseService {
@@ -82,6 +90,7 @@ class DatabaseService {
 
   private async fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = endpoint.startsWith('http') ? endpoint : `${this.baseUrl}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+    console.log(`API request to: ${url}`);
     const token = localStorage.getItem('adminToken');
 
     try {
