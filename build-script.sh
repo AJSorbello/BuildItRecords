@@ -78,9 +78,9 @@ node -e "try { const data = require('./vercel.json'); console.log('✅ vercel.js
 
 # Install all dependencies at once to ensure proper resolution
 echo "📦 Installing build dependencies globally"
-pnpm add -g vite@4.5.0 @vitejs/plugin-react@4.2.0 path-browserify@1.0.1
+npm install -g vite@4.5.0 @vitejs/plugin-react@4.2.0 path-browserify@1.0.1
 
-# Use pnpm instead of npm for reliable package installation
+# Use pnpm for local installation
 echo "📦 Installing all dependencies with pnpm"
 pnpm install --no-frozen-lockfile
 
