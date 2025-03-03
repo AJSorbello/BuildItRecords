@@ -63,6 +63,10 @@ npm install --no-package-lock --legacy-peer-deps --no-fund --no-audit
 echo "🌈 Installing TailwindCSS and related dependencies"
 npm install tailwindcss@3.3.0 postcss@8.4.31 autoprefixer@10.4.15 --save-dev --no-package-lock
 
+# Install vite globally for build
+echo "🔨 Installing vite for build"
+npm install -g vite 
+
 # Set environment variables for the build
 echo "🔧 Setting environment variables for production"
 export NODE_ENV=production
@@ -81,9 +85,10 @@ export DB_PASSWORD=postgres
 export DB_SSL=true
 export DB_SSL_REJECT_UNAUTHORIZED=false
 
-# Run the build
+# Run the build using npx vite directly
 echo "🏗️ Running the build process"
-npm run build
+# Instead of npm run build which uses the vite command
+npx vite build
 
 # Log success message
 echo "✅ Build completed successfully!"
