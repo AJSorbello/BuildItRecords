@@ -23,6 +23,14 @@ export const getApiBaseUrl = (): string => {
   // Check for explicit API URL from environment
   if (process.env.REACT_APP_API_URL) {
     console.log('Using REACT_APP_API_URL:', process.env.REACT_APP_API_URL);
+    
+    // If it's a relative URL and we're in a browser context, prefix with origin
+    if (process.env.REACT_APP_API_URL.startsWith('/') && typeof window !== 'undefined') {
+      const fullUrl = `${window.location.origin}${process.env.REACT_APP_API_URL}`;
+      console.log('Expanded relative URL to:', fullUrl);
+      return fullUrl;
+    }
+    
     return process.env.REACT_APP_API_URL;
   }
   
@@ -39,6 +47,12 @@ export const getApiBaseUrl = (): string => {
   console.log('Using development API URL: http://localhost:3001/api');
   return 'http://localhost:3001/api';
 };
+
+/**
+ * The base API URL without the trailing /api
+ * This is useful for constructing URLs to static assets
+ */
+export const API_URL = getApiBaseUrl().replace(/\/api$/, '');
 
 /**
  * Constructs a complete API URL for a given endpoint

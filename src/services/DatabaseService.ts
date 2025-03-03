@@ -89,40 +89,63 @@ class DatabaseService {
   }
 
   private async fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const url = endpoint.startsWith('http') ? endpoint : `${this.baseUrl}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
-    console.log(`API request to: ${url}`);
-    const token = localStorage.getItem('adminToken');
-
+    const url = `${this.baseUrl}${endpoint}`;
+    console.log(`[DatabaseService] API Request: ${url}`);
+    
     try {
-      const defaultHeaders: HeadersInit = {
-        'Content-Type': 'application/json',
-      };
-
-      if (token) {
-        defaultHeaders.Authorization = `Bearer ${token}`;
-      }
-
       const response = await fetch(url, {
         ...options,
         headers: {
-          ...defaultHeaders,
+          'Content-Type': 'application/json',
           ...options.headers,
         },
       });
-
+      
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
+        const errorText = await response.text();
+        console.error(`[DatabaseService] API Error (${response.status}): ${errorText}`);
+        
         throw new DatabaseError(
-          errorData.message || 'API request failed',
-          response.status,
-          errorData.details
+          `API request failed with status ${response.status}: ${errorText}`,
+          response.status
         );
       }
-
-      return response.json();
+      
+      const contentType = response.headers.get('content-type');
+      
+      // Check if the response is JSON before trying to parse it
+      if (contentType && contentType.includes('application/json')) {
+        const data = await response.json();
+        console.log(`[DatabaseService] API Success: ${url}`, data ? `(${Array.isArray(data) ? data.length + ' items' : 'object'})` : '(empty)');
+        return data as T;
+      } else {
+        const text = await response.text();
+        console.warn(`[DatabaseService] API returned non-JSON response: ${contentType}`);
+        return text as unknown as T;
+      }
     } catch (error) {
-      console.error(`API request failed for ${url}:`, error);
-      throw error;
+      console.error(`[DatabaseService] API Request Failed: ${url}`, error);
+      
+      // Enhance error message for network errors
+      if (error instanceof Error) {
+        if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
+          throw new DatabaseError(
+            `Network error when connecting to API at ${url}. This could be due to CORS, network connectivity, or the server being unavailable.`,
+            500
+          );
+        }
+      }
+      
+      // Re-throw the original error if it's already a DatabaseError
+      if (error instanceof DatabaseError) {
+        throw error;
+      }
+      
+      // Otherwise, wrap it in a DatabaseError
+      throw new DatabaseError(
+        `API request to ${url} failed: ${error instanceof Error ? error.message : String(error)}`,
+        500
+      );
     }
   }
 

@@ -5531,3 +5531,180 @@
 {"label":"buildit-tech","level":"info","limit":50,"message":"GET /releases request:","offset":0,"order":"desc","sort":"release_date","timestamp":"2025-03-02T10:56:18.613Z"}
 {"headers":{"authorization":"present","content-type":"application/json"},"level":"info","message":"Incoming request:","method":"GET","query":{"label":"buildit-tech"},"timestamp":"2025-03-02T10:56:19.872Z","url":"/api/releases/top?label=buildit-tech"}
 {"headers":{"authorization":"present","content-type":"application/json"},"level":"info","message":"Incoming request:","method":"GET","query":{"label":"buildit-tech"},"timestamp":"2025-03-02T10:56:19.902Z","url":"/api/releases/top?label=buildit-tech"}
+{"adminEmails":["aj@builditrecords.com","anmol@builditrecords.com"],"from":"aj@builditrecords.com","hasPass":true,"hasUser":true,"host":"smtp.gmail.com","level":"info","message":"Email service configuration:","port":587,"timestamp":"2025-03-03T18:19:14.772Z","user":"aj@builditrecords.com"}
+{"NODE_ENV":"development","hasJwtSecret":true,"hasPasswordHash":true,"hasSmtpPass":true,"hasSmtpUser":true,"hasUsername":true,"level":"info","message":"Server starting with environment:","smtpUser":"aj@builditrecords.com","timestamp":"2025-03-03T18:19:14.786Z"}
+{"environment":"development","level":"info","message":"CORS configuration:","origin":"http://localhost:3000","timestamp":"2025-03-03T18:19:14.791Z"}
+{"level":"debug","message":"Executing (default): SELECT 1+1 AS result","timestamp":"2025-03-03T18:19:14.869Z"}
+{"level":"info","message":"Database connection established successfully","timestamp":"2025-03-03T18:19:14.871Z"}
+{"level":"info","message":"Email service is ready","timestamp":"2025-03-03T18:19:15.307Z"}
+{"level":"info","message":"Email configuration verified successfully","timestamp":"2025-03-03T18:19:15.307Z"}
+{"level":"info","message":"Server is running on port 3001","timestamp":"2025-03-03T18:19:15.309Z"}
+{"CORS_ORIGIN":"http://localhost:3000","NODE_ENV":"development","PORT":"3001","dbConnected":true,"hasAdminPasswordHash":true,"hasAdminUsername":true,"hasJwtSecret":true,"level":"info","message":"Environment configuration:","timestamp":"2025-03-03T18:19:15.310Z"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:19:29.954Z","url":"/api/artists"}
+{"headers":{"accept":"application/json, text/plain, */*","accept-encoding":"gzip, compress, deflate, br","connection":"keep-alive","host":"localhost:3001","user-agent":"axios/1.7.9"},"level":"warn","message":"404 Not Found:","method":"GET","timestamp":"2025-03-03T18:19:29.958Z","url":"/"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:22:00.764Z","url":"/api/health"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:22:00.777Z","url":"/api/artists/label/tech"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:22:00.833Z","url":"/api/artists/9a86b82d-8108-445d-bd92-c63a92e9f42f"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:22:52.398Z","url":"/api/health"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:22:52.410Z","url":"/api/artists/label/tech"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:22:52.440Z","url":"/api/artists/1e6Slp9egbeuYW1dXXZdHH"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:22:52.454Z","url":"/api/tracks"}
+{"level":"info","limit":100,"message":"GET /tracks request:","page":1,"sort":"created_at","timestamp":"2025-03-03T18:22:52.456Z"}
+{"include":[{"as":"artists","model":"Artist"},{"as":"release","model":"Release","required":false}],"level":"info","message":"Executing track query with:","order":[["created_at","DESC"]],"timestamp":"2025-03-03T18:22:52.457Z","where":{}}
+{"count":100,"level":"info","message":"Found tracks:","page":1,"timestamp":"2025-03-03T18:22:52.515Z","total":319,"totalPages":4}
+{"level":"error","message":"Database query error: Cannot read properties of null (reading 'id')","stack":"TypeError: Cannot read properties of null (reading 'id')\n    at /Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/server/routes/tracks.js:605:29\n    at Array.map (<anonymous>)\n    at /Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/server/routes/tracks.js:592:38\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)","timestamp":"2025-03-03T18:22:52.516Z"}
+{"level":"error","message":"Error fetching tracks: Cannot read properties of null (reading 'id')","stack":"TypeError: Cannot read properties of null (reading 'id')\n    at /Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/server/routes/tracks.js:605:29\n    at Array.map (<anonymous>)\n    at /Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/server/routes/tracks.js:592:38\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)","timestamp":"2025-03-03T18:22:52.517Z"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:22:52.522Z","url":"/api/releases"}
+{"level":"info","limit":500,"message":"GET /releases request:","offset":0,"order":"desc","sort":"release_date","timestamp":"2025-03-03T18:22:52.526Z"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:27:05.069Z","url":"/api/health"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:27:05.082Z","url":"/api/artists/label/tech"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:27:05.116Z","url":"/api/artists/1e6Slp9egbeuYW1dXXZdHH"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:27:05.129Z","url":"/api/tracks"}
+{"level":"info","limit":100,"message":"GET /tracks request:","page":1,"sort":"created_at","timestamp":"2025-03-03T18:27:05.130Z"}
+{"include":[{"as":"artists","model":"Artist"},{"as":"release","model":"Release","required":false}],"level":"info","message":"Executing track query with:","order":[["created_at","DESC"]],"timestamp":"2025-03-03T18:27:05.130Z","where":{}}
+{"count":100,"level":"info","message":"Found tracks:","page":1,"timestamp":"2025-03-03T18:27:05.181Z","total":319,"totalPages":4}
+{"level":"error","message":"Database query error: Cannot read properties of null (reading 'id')","stack":"TypeError: Cannot read properties of null (reading 'id')\n    at /Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/server/routes/tracks.js:605:29\n    at Array.map (<anonymous>)\n    at /Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/server/routes/tracks.js:592:38\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)","timestamp":"2025-03-03T18:27:05.182Z"}
+{"level":"error","message":"Error fetching tracks: Cannot read properties of null (reading 'id')","stack":"TypeError: Cannot read properties of null (reading 'id')\n    at /Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/server/routes/tracks.js:605:29\n    at Array.map (<anonymous>)\n    at /Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/server/routes/tracks.js:592:38\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)","timestamp":"2025-03-03T18:27:05.182Z"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:27:05.189Z","url":"/api/releases"}
+{"level":"info","limit":500,"message":"GET /releases request:","offset":0,"order":"desc","sort":"release_date","timestamp":"2025-03-03T18:27:05.192Z"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:31:00.882Z","url":"/api/health"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:31:00.899Z","url":"/api/artists/label/tech"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:31:00.934Z","url":"/api/artists/1e6Slp9egbeuYW1dXXZdHH"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:31:00.953Z","url":"/api/tracks"}
+{"level":"info","limit":100,"message":"GET /tracks request:","page":1,"sort":"created_at","timestamp":"2025-03-03T18:31:00.954Z"}
+{"include":[{"as":"artists","model":"Artist"},{"as":"release","model":"Release","required":false}],"level":"info","message":"Executing track query with:","order":[["created_at","DESC"]],"timestamp":"2025-03-03T18:31:00.954Z","where":{}}
+{"count":100,"level":"info","message":"Found tracks:","page":1,"timestamp":"2025-03-03T18:31:01.001Z","total":319,"totalPages":4}
+{"level":"error","message":"Database query error: Cannot read properties of null (reading 'id')","stack":"TypeError: Cannot read properties of null (reading 'id')\n    at /Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/server/routes/tracks.js:605:29\n    at Array.map (<anonymous>)\n    at /Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/server/routes/tracks.js:592:38\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)","timestamp":"2025-03-03T18:31:01.002Z"}
+{"level":"error","message":"Error fetching tracks: Cannot read properties of null (reading 'id')","stack":"TypeError: Cannot read properties of null (reading 'id')\n    at /Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/server/routes/tracks.js:605:29\n    at Array.map (<anonymous>)\n    at /Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/server/routes/tracks.js:592:38\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)","timestamp":"2025-03-03T18:31:01.002Z"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:31:01.009Z","url":"/api/releases"}
+{"level":"info","limit":500,"message":"GET /releases request:","offset":0,"order":"desc","sort":"release_date","timestamp":"2025-03-03T18:31:01.011Z"}
+{"adminEmails":["aj@builditrecords.com","anmol@builditrecords.com"],"from":"aj@builditrecords.com","hasPass":true,"hasUser":true,"host":"smtp.gmail.com","level":"info","message":"Email service configuration:","port":587,"timestamp":"2025-03-03T18:31:20.523Z","user":"aj@builditrecords.com"}
+{"NODE_ENV":"development","hasJwtSecret":true,"hasPasswordHash":true,"hasSmtpPass":true,"hasSmtpUser":true,"hasUsername":true,"level":"info","message":"Server starting with environment:","smtpUser":"aj@builditrecords.com","timestamp":"2025-03-03T18:31:20.536Z"}
+{"environment":"development","level":"info","message":"CORS configuration:","origin":"http://localhost:3000","timestamp":"2025-03-03T18:31:20.539Z"}
+{"level":"debug","message":"Executing (default): SELECT 1+1 AS result","timestamp":"2025-03-03T18:31:20.628Z"}
+{"level":"info","message":"Database connection established successfully","timestamp":"2025-03-03T18:31:20.629Z"}
+{"level":"info","message":"Email service is ready","timestamp":"2025-03-03T18:31:21.043Z"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:31:37.310Z","url":"/api/health"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:31:37.322Z","url":"/api/artists/label/tech"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:31:37.355Z","url":"/api/artists/1e6Slp9egbeuYW1dXXZdHH"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:31:37.366Z","url":"/api/tracks"}
+{"level":"info","limit":100,"message":"GET /tracks request:","page":1,"sort":"created_at","timestamp":"2025-03-03T18:31:37.367Z"}
+{"include":[{"as":"artists","model":"Artist"},{"as":"release","model":"Release","required":false}],"level":"info","message":"Executing track query with:","order":[["created_at","DESC"]],"timestamp":"2025-03-03T18:31:37.367Z","where":{}}
+{"count":100,"level":"info","message":"Found tracks:","page":1,"timestamp":"2025-03-03T18:31:37.415Z","total":319,"totalPages":4}
+{"level":"error","message":"Database query error: Cannot read properties of null (reading 'id')","stack":"TypeError: Cannot read properties of null (reading 'id')\n    at /Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/server/routes/tracks.js:605:29\n    at Array.map (<anonymous>)\n    at /Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/server/routes/tracks.js:592:38\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)","timestamp":"2025-03-03T18:31:37.416Z"}
+{"level":"error","message":"Error fetching tracks: Cannot read properties of null (reading 'id')","stack":"TypeError: Cannot read properties of null (reading 'id')\n    at /Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/server/routes/tracks.js:605:29\n    at Array.map (<anonymous>)\n    at /Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/server/routes/tracks.js:592:38\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)","timestamp":"2025-03-03T18:31:37.416Z"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:31:37.420Z","url":"/api/releases"}
+{"level":"info","limit":500,"message":"GET /releases request:","offset":0,"order":"desc","sort":"release_date","timestamp":"2025-03-03T18:31:37.421Z"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:32:04.809Z","url":"/api/health"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:32:04.829Z","url":"/api/artists/label/tech"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:32:04.857Z","url":"/api/artists/1e6Slp9egbeuYW1dXXZdHH"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:32:04.875Z","url":"/api/tracks/all/tech"}
+{"level":"warn","message":"Label not found:","timestamp":"2025-03-03T18:32:04.879Z"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:32:04.883Z","url":"/api/releases"}
+{"level":"info","limit":500,"message":"GET /releases request:","offset":0,"order":"desc","sort":"release_date","timestamp":"2025-03-03T18:32:04.885Z"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:37:00.469Z","url":"/api/health"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:37:00.481Z","url":"/api/artists/label/tech"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:37:00.514Z","url":"/api/tracks/all/buildit-tech"}
+{"count":80,"labelId":"buildit-tech","level":"info","message":"Found tracks:","timestamp":"2025-03-03T18:37:00.533Z"}
+{"difference":0,"formattedCount":80,"level":"info","message":"Formatted tracks:","originalCount":80,"timestamp":"2025-03-03T18:37:00.534Z"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:37:00.541Z","url":"/api/releases"}
+{"level":"info","limit":500,"message":"GET /releases request:","offset":0,"order":"desc","sort":"release_date","timestamp":"2025-03-03T18:37:00.543Z"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:39:23.949Z","url":"/api/health"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:39:23.961Z","url":"/api/artists/label/tech"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:39:23.992Z","url":"/api/tracks"}
+{"level":"info","limit":100,"message":"GET /tracks request:","page":1,"sort":"created_at","timestamp":"2025-03-03T18:39:23.993Z"}
+{"include":[{"as":"artists","model":"Artist"},{"as":"release","model":"Release","required":false}],"level":"info","message":"Executing track query with:","order":[["created_at","DESC"]],"timestamp":"2025-03-03T18:39:23.993Z","where":{}}
+{"count":100,"level":"info","message":"Found tracks:","page":1,"timestamp":"2025-03-03T18:39:24.028Z","total":319,"totalPages":4}
+{"level":"error","message":"Database query error: Cannot read properties of null (reading 'id')","stack":"TypeError: Cannot read properties of null (reading 'id')\n    at /Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/server/routes/tracks.js:605:29\n    at Array.map (<anonymous>)\n    at /Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/server/routes/tracks.js:592:38\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)","timestamp":"2025-03-03T18:39:24.029Z"}
+{"level":"error","message":"Error fetching tracks: Cannot read properties of null (reading 'id')","stack":"TypeError: Cannot read properties of null (reading 'id')\n    at /Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/server/routes/tracks.js:605:29\n    at Array.map (<anonymous>)\n    at /Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/server/routes/tracks.js:592:38\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)","timestamp":"2025-03-03T18:39:24.029Z"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:39:24.036Z","url":"/api/tracks/all/buildit-tech"}
+{"count":80,"labelId":"buildit-tech","level":"info","message":"Found tracks:","timestamp":"2025-03-03T18:39:24.055Z"}
+{"difference":0,"formattedCount":80,"level":"info","message":"Formatted tracks:","originalCount":80,"timestamp":"2025-03-03T18:39:24.057Z"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:39:24.063Z","url":"/api/releases"}
+{"level":"info","limit":500,"message":"GET /releases request:","offset":0,"order":"desc","sort":"release_date","timestamp":"2025-03-03T18:39:24.064Z"}
+{"adminEmails":["aj@builditrecords.com","anmol@builditrecords.com"],"from":"aj@builditrecords.com","hasPass":true,"hasUser":true,"host":"smtp.gmail.com","level":"info","message":"Email service configuration:","port":587,"timestamp":"2025-03-03T18:40:16.250Z","user":"aj@builditrecords.com"}
+{"NODE_ENV":"development","hasJwtSecret":true,"hasPasswordHash":true,"hasSmtpPass":true,"hasSmtpUser":true,"hasUsername":true,"level":"info","message":"Server starting with environment:","smtpUser":"aj@builditrecords.com","timestamp":"2025-03-03T18:40:16.264Z"}
+{"environment":"development","level":"info","message":"CORS configuration:","origin":"http://localhost:3000","timestamp":"2025-03-03T18:40:16.266Z"}
+{"level":"debug","message":"Executing (default): SELECT 1+1 AS result","timestamp":"2025-03-03T18:40:16.344Z"}
+{"level":"info","message":"Database connection established successfully","timestamp":"2025-03-03T18:40:16.345Z"}
+{"level":"info","message":"Email service is ready","timestamp":"2025-03-03T18:40:16.742Z"}
+{"level":"info","message":"Email configuration verified successfully","timestamp":"2025-03-03T18:40:16.743Z"}
+{"level":"info","message":"Server is running on port 3002","timestamp":"2025-03-03T18:40:16.745Z"}
+{"CORS_ORIGIN":"http://localhost:3000","NODE_ENV":"development","PORT":"3002","dbConnected":true,"hasAdminPasswordHash":true,"hasAdminUsername":true,"hasJwtSecret":true,"level":"info","message":"Environment configuration:","timestamp":"2025-03-03T18:40:16.746Z"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:41:19.997Z","url":"/api/health"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:41:20.126Z","url":"/api/artists/label/tech"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:41:20.159Z","url":"/api/tracks"}
+{"level":"info","limit":100,"message":"GET /tracks request:","page":1,"sort":"created_at","timestamp":"2025-03-03T18:41:20.160Z"}
+{"include":[{"as":"artists","model":"Artist"},{"as":"release","model":"Release","required":false}],"level":"info","message":"Executing track query with:","order":[["created_at","DESC"]],"timestamp":"2025-03-03T18:41:20.160Z","where":{}}
+{"count":100,"level":"info","message":"Found tracks:","page":1,"timestamp":"2025-03-03T18:41:20.202Z","total":319,"totalPages":4}
+{"level":"error","message":"Database query error: Cannot read properties of null (reading 'id')","stack":"TypeError: Cannot read properties of null (reading 'id')\n    at /Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/server/routes/tracks.js:605:29\n    at Array.map (<anonymous>)\n    at /Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/server/routes/tracks.js:592:38\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)","timestamp":"2025-03-03T18:41:20.202Z"}
+{"level":"error","message":"Error fetching tracks: Cannot read properties of null (reading 'id')","stack":"TypeError: Cannot read properties of null (reading 'id')\n    at /Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/server/routes/tracks.js:605:29\n    at Array.map (<anonymous>)\n    at /Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/server/routes/tracks.js:592:38\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)","timestamp":"2025-03-03T18:41:20.203Z"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:41:20.214Z","url":"/api/tracks/all/buildit-tech"}
+{"count":80,"labelId":"buildit-tech","level":"info","message":"Found tracks:","timestamp":"2025-03-03T18:41:20.239Z"}
+{"difference":0,"formattedCount":80,"level":"info","message":"Formatted tracks:","originalCount":80,"timestamp":"2025-03-03T18:41:20.240Z"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:41:20.249Z","url":"/api/releases"}
+{"level":"info","limit":500,"message":"GET /releases request:","offset":0,"order":"desc","sort":"release_date","timestamp":"2025-03-03T18:41:20.250Z"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:41:40.367Z","url":"/api/health"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:41:40.383Z","url":"/api/artists/label/tech"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:41:40.437Z","url":"/api/tracks"}
+{"level":"info","limit":100,"message":"GET /tracks request:","page":1,"sort":"created_at","timestamp":"2025-03-03T18:41:40.439Z"}
+{"include":[{"as":"artists","model":"Artist"},{"as":"release","model":"Release","required":false}],"level":"info","message":"Executing track query with:","order":[["created_at","DESC"]],"timestamp":"2025-03-03T18:41:40.440Z","where":{}}
+{"count":100,"level":"info","message":"Found tracks:","page":1,"timestamp":"2025-03-03T18:41:40.505Z","total":319,"totalPages":4}
+{"level":"info","message":"Request processed in 67ms","timestamp":"2025-03-03T18:41:40.507Z"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:41:40.515Z","url":"/api/tracks/all/buildit-tech"}
+{"count":80,"labelId":"buildit-tech","level":"info","message":"Found tracks:","timestamp":"2025-03-03T18:41:40.537Z"}
+{"difference":0,"formattedCount":80,"level":"info","message":"Formatted tracks:","originalCount":80,"timestamp":"2025-03-03T18:41:40.539Z"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:41:40.545Z","url":"/api/releases"}
+{"level":"info","limit":500,"message":"GET /releases request:","offset":0,"order":"desc","sort":"release_date","timestamp":"2025-03-03T18:41:40.549Z"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:42:34.701Z","url":"/api/health"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:42:34.713Z","url":"/api/artists/label/tech"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:42:34.745Z","url":"/api/tracks"}
+{"level":"info","limit":100,"message":"GET /tracks request:","page":1,"sort":"created_at","timestamp":"2025-03-03T18:42:34.746Z"}
+{"include":[{"as":"artists","model":"Artist"},{"as":"release","model":"Release","required":false}],"level":"info","message":"Executing track query with:","order":[["created_at","DESC"]],"timestamp":"2025-03-03T18:42:34.747Z","where":{}}
+{"count":100,"level":"info","message":"Found tracks:","page":1,"timestamp":"2025-03-03T18:42:34.784Z","total":319,"totalPages":4}
+{"level":"info","message":"Request processed in 39ms","timestamp":"2025-03-03T18:42:34.785Z"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:42:34.794Z","url":"/api/tracks/all/buildit-tech"}
+{"count":80,"labelId":"buildit-tech","level":"info","message":"Found tracks:","timestamp":"2025-03-03T18:42:34.813Z"}
+{"difference":0,"formattedCount":80,"level":"info","message":"Formatted tracks:","originalCount":80,"timestamp":"2025-03-03T18:42:34.814Z"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:42:34.822Z","url":"/api/releases"}
+{"level":"info","limit":500,"message":"GET /releases request:","offset":0,"order":"desc","sort":"release_date","timestamp":"2025-03-03T18:42:34.824Z"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:43:12.089Z","url":"/api/health"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:43:12.101Z","url":"/api/artists/label/tech"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:43:12.137Z","url":"/api/tracks"}
+{"level":"info","limit":100,"message":"GET /tracks request:","page":1,"sort":"created_at","timestamp":"2025-03-03T18:43:12.138Z"}
+{"include":[{"as":"artists","model":"Artist"},{"as":"release","model":"Release","required":false}],"level":"info","message":"Executing track query with:","order":[["created_at","DESC"]],"timestamp":"2025-03-03T18:43:12.139Z","where":{}}
+{"count":100,"level":"info","message":"Found tracks:","page":1,"timestamp":"2025-03-03T18:43:12.182Z","total":319,"totalPages":4}
+{"level":"info","message":"Request processed in 47ms","timestamp":"2025-03-03T18:43:12.185Z"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:43:12.196Z","url":"/api/tracks/all/buildit-tech"}
+{"count":80,"labelId":"buildit-tech","level":"info","message":"Found tracks:","timestamp":"2025-03-03T18:43:12.214Z"}
+{"difference":0,"formattedCount":80,"level":"info","message":"Formatted tracks:","originalCount":80,"timestamp":"2025-03-03T18:43:12.214Z"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:43:12.225Z","url":"/api/releases"}
+{"level":"info","limit":500,"message":"GET /releases request:","offset":0,"order":"desc","sort":"release_date","timestamp":"2025-03-03T18:43:12.226Z"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:43:38.376Z","url":"/api/health"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:43:38.391Z","url":"/api/artists/label/tech"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:43:38.424Z","url":"/api/artists/9a86b82d-8108-445d-bd92-c63a92e9f42f"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:43:38.446Z","url":"/api/artists/1e6Slp9egbeuYW1dXXZdHH"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:43:38.459Z","url":"/api/tracks"}
+{"level":"info","limit":100,"message":"GET /tracks request:","page":1,"sort":"created_at","timestamp":"2025-03-03T18:43:38.460Z"}
+{"include":[{"as":"artists","model":"Artist"},{"as":"release","model":"Release","required":false}],"level":"info","message":"Executing track query with:","order":[["created_at","DESC"]],"timestamp":"2025-03-03T18:43:38.460Z","where":{}}
+{"count":100,"level":"info","message":"Found tracks:","page":1,"timestamp":"2025-03-03T18:43:38.521Z","total":319,"totalPages":4}
+{"level":"info","message":"Request processed in 63ms","timestamp":"2025-03-03T18:43:38.523Z"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:43:38.532Z","url":"/api/tracks/all/buildit-tech"}
+{"count":80,"labelId":"buildit-tech","level":"info","message":"Found tracks:","timestamp":"2025-03-03T18:43:38.550Z"}
+{"difference":0,"formattedCount":80,"level":"info","message":"Formatted tracks:","originalCount":80,"timestamp":"2025-03-03T18:43:38.550Z"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:43:38.556Z","url":"/api/releases"}
+{"level":"info","limit":500,"message":"GET /releases request:","offset":0,"order":"desc","sort":"release_date","timestamp":"2025-03-03T18:43:38.557Z"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:44:08.418Z","url":"/api/health"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:44:08.432Z","url":"/api/artists/label/tech"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:44:08.462Z","url":"/api/artists/9a86b82d-8108-445d-bd92-c63a92e9f42f"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:44:08.471Z","url":"/api/artists/1e6Slp9egbeuYW1dXXZdHH"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:44:08.485Z","url":"/api/tracks"}
+{"level":"info","limit":100,"message":"GET /tracks request:","page":1,"sort":"created_at","timestamp":"2025-03-03T18:44:08.485Z"}
+{"include":[{"as":"artists","model":"Artist"},{"as":"release","model":"Release","required":false}],"level":"info","message":"Executing track query with:","order":[["created_at","DESC"]],"timestamp":"2025-03-03T18:44:08.485Z","where":{}}
+{"count":100,"level":"info","message":"Found tracks:","page":1,"timestamp":"2025-03-03T18:44:08.528Z","total":319,"totalPages":4}
+{"level":"info","message":"Request processed in 45ms","timestamp":"2025-03-03T18:44:08.530Z"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:44:08.537Z","url":"/api/tracks/all/buildit-tech"}
+{"count":80,"labelId":"buildit-tech","level":"info","message":"Found tracks:","timestamp":"2025-03-03T18:44:08.560Z"}
+{"difference":0,"formattedCount":80,"level":"info","message":"Formatted tracks:","originalCount":80,"timestamp":"2025-03-03T18:44:08.561Z"}
+{"headers":{"authorization":"missing"},"level":"info","message":"Incoming request:","method":"GET","query":{},"timestamp":"2025-03-03T18:44:08.566Z","url":"/api/releases"}
+{"level":"info","limit":500,"message":"GET /releases request:","offset":0,"order":"desc","sort":"release_date","timestamp":"2025-03-03T18:44:08.567Z"}

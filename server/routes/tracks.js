@@ -589,41 +589,48 @@ router.get('/', async (req, res) => {
       });
 
       // Format each track using the formatTrackData helper
-      const formattedTracks = tracks.map(track => ({
-        id: track.id,
-        title: track.title,
-        duration_ms: track.duration_ms,
-        track_number: track.track_number,
-        disc_number: track.disc_number,
-        isrc: track.isrc,
-        preview_url: track.preview_url,
-        spotify_url: track.spotify_url,
-        spotify_popularity: track.spotify_popularity,
-        external_urls: track.external_urls,
-        type: track.type,
-        release: {
-          id: track.release.id,
-          title: track.release.title,
-          release_date: track.release.release_date,
-          artwork_url: track.release.artwork_url,
-          artwork_small_url: track.release.artwork_small_url,
-          artwork_large_url: track.release.artwork_large_url,
-          spotify_url: track.release.spotify_url,
-          status: track.release.status,
-          release_type: track.release.release_type
-        },
-        artists: track.artists.map(artist => ({
-          id: artist.id,
-          name: artist.name,
-          spotify_url: artist.spotify_url,
-          spotify_uri: artist.spotify_uri,
-          profile_image_url: artist.profile_image_url,
-          profile_image_small_url: artist.profile_image_small_url,
-          profile_image_large_url: artist.profile_image_large_url
-        })),
-        created_at: track.created_at,
-        updated_at: track.updated_at
-      }));
+      const formattedTracks = tracks.map(track => {
+        // Handle missing release objects
+        const release = track.release || {};
+        
+        // Handle missing or null values
+        const artists = Array.isArray(track.artists) ? track.artists : [];
+        
+        return {
+          id: track.id || null,
+          title: track.title || 'Unknown Title',
+          duration_ms: track.duration_ms || 0,
+          track_number: track.track_number || 0,
+          disc_number: track.disc_number || 0,
+          isrc: track.isrc || null,
+          preview_url: track.preview_url || null,
+          spotify_url: track.spotify_url || null,
+          spotify_popularity: track.spotify_popularity || 0,
+          type: track.type || 'track',
+          release: release ? {
+            id: release.id || null,
+            title: release.title || 'Unknown Release',
+            release_date: release.release_date || null,
+            artwork_url: release.artwork_url || null,
+            artwork_small_url: release.artwork_small_url || null,
+            artwork_large_url: release.artwork_large_url || null,
+            spotify_url: release.spotify_url || null,
+            status: release.status || 'unknown',
+            release_type: release.release_type || 'single'
+          } : null,
+          artists: artists.map(artist => ({
+            id: artist?.id || null,
+            name: artist?.name || 'Unknown Artist',
+            spotify_url: artist?.spotify_url || null,
+            spotify_uri: artist?.spotify_uri || null,
+            profile_image_url: artist?.profile_image_url || null,
+            profile_image_small_url: artist?.profile_image_small_url || null,
+            profile_image_large_url: artist?.profile_image_large_url || null
+          })),
+          created_at: track.created_at || new Date(),
+          updated_at: track.updated_at || new Date()
+        };
+      });
 
       const endTime = Date.now();
       logger.info(`Request processed in ${endTime - startTime}ms`);
@@ -836,27 +843,46 @@ router.get('/search', async (req, res) => {
 
         // Format tracks for response
         const formattedTracks = tracks.map(track => {
-            const formatted = {
-                id: track.id,
-                title: track.title,
-                duration_ms: track.duration_ms || track.duration * 1000, // Convert to ms if needed
-                release_date: track.release_date,
-                artwork_url: track.release?.artwork_url || track.artwork_url,
-                spotify_url: track.spotify_url,
-                label: track.release?.label_id || null,
-                label_name: track.label?.name || 'Unknown Label',
-                artists: track.artists.map(artist => ({
-                    id: artist.id,
-                    name: artist.name,
-                    spotify_url: artist.spotify_url,
-                    spotify_uri: artist.spotify_uri,
-                    profile_image_url: artist.profile_image_url,
-                    profile_image_small_url: artist.profile_image_small_url,
-                    profile_image_large_url: artist.profile_image_large_url
-                }))
-            };
-            console.log('Formatted track:', formatted);
-            return formatted;
+          // Handle missing release objects
+          const release = track.release || {};
+          
+          // Handle missing or null values
+          const artists = Array.isArray(track.artists) ? track.artists : [];
+          
+          return {
+            id: track.id || null,
+            title: track.title || 'Unknown Title',
+            duration_ms: track.duration_ms || 0,
+            track_number: track.track_number || 0,
+            disc_number: track.disc_number || 0,
+            isrc: track.isrc || null,
+            preview_url: track.preview_url || null,
+            spotify_url: track.spotify_url || null,
+            spotify_popularity: track.spotify_popularity || 0,
+            type: track.type || 'track',
+            release: release ? {
+              id: release.id || null,
+              title: release.title || 'Unknown Release',
+              release_date: release.release_date || null,
+              artwork_url: release.artwork_url || null,
+              artwork_small_url: release.artwork_small_url || null,
+              artwork_large_url: release.artwork_large_url || null,
+              spotify_url: release.spotify_url || null,
+              status: release.status || 'unknown',
+              release_type: release.release_type || 'single'
+            } : null,
+            artists: artists.map(artist => ({
+              id: artist?.id || null,
+              name: artist?.name || 'Unknown Artist',
+              spotify_url: artist?.spotify_url || null,
+              spotify_uri: artist?.spotify_uri || null,
+              profile_image_url: artist?.profile_image_url || null,
+              profile_image_small_url: artist?.profile_image_small_url || null,
+              profile_image_large_url: artist?.profile_image_large_url || null
+            })),
+            created_at: track.created_at || new Date(),
+            updated_at: track.updated_at || new Date()
+          };
         });
 
         const response = {

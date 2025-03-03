@@ -162,7 +162,7 @@ router.get('/search', [
 
 // Get artist by ID
 router.get('/:artistId', [
-    param('artistId').custom(isValidSpotifyId).withMessage('Invalid Spotify artist ID'),
+    param('artistId').isString().withMessage('Artist ID must be a string'),
     query('fields').optional().isString(),
     validateRequest
 ], async (req, res) => {
@@ -177,12 +177,41 @@ router.get('/:artistId', [
         const { artistId } = req.params;
         const { fields } = req.query;
         
-        const artist = await Artist.findByPk(artistId);
+        let artist;
+        // Check if the ID is a valid Spotify ID (22 chars) or a UUID
+        const isSpotifyIdFormat = typeof artistId === 'string' && artistId.length === 22;
         
-        console.log('Found artist in database:', artist);
+        if (isSpotifyIdFormat) {
+            // Try to find by Spotify ID
+            console.log('Looking up artist by Spotify ID:', artistId);
+            artist = await Artist.findOne({ 
+                where: { 
+                    spotify_id: artistId 
+                } 
+            });
+        } else {
+            // Try to find by UUID
+            console.log('Looking up artist by UUID:', artistId);
+            try {
+                artist = await Artist.findByPk(artistId);
+            } catch (error) {
+                console.error('Error finding artist by UUID:', error.message);
+                // If it fails because of invalid UUID format, return appropriate error
+                if (error.message.includes('invalid input syntax for type uuid')) {
+                    return res.status(400).json({ 
+                        success: false,
+                        message: `Invalid UUID format: ${artistId}` 
+                    });
+                }
+                // Otherwise rethrow
+                throw error;
+            }
+        }
         
-        if (!artist) {
-            // If not in database, fetch from Spotify
+        console.log('Found artist in database:', artist ? 'Yes' : 'No');
+        
+        if (!artist && isSpotifyIdFormat) {
+            // If not in database but it's a Spotify ID, fetch from Spotify
             console.log('No artist found in database, trying Spotify');
             const spotifyArtist = await spotifyService.getArtist(artistId);
 
