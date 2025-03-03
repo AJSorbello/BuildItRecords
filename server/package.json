@@ -2,8 +2,11 @@
   "name": "builditrecords-server",
   "version": "1.0.0",
   "private": true,
-  "description": "Backend server for BuildIt Records",
-  "main": "index.js",
+  "description": "Server for BuildIt Records",
+  "main": "server.js",
+  "engines": {
+    "node": "22.x"
+  },
   "license": "MIT",
   "overrides": {
     "pg-native": "npm:@vercel/noop",
