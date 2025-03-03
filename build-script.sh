@@ -55,17 +55,17 @@ EOF
 echo "🔍 Validating vercel.json"
 node -e "try { const data = require('./vercel.json'); console.log('✅ vercel.json is valid'); } catch(e) { console.error('❌ Invalid vercel.json:', e.message); process.exit(1); }"
 
+# Install vite and related dependencies first to ensure they're available for imports
+echo "🔨 Installing vite and build dependencies"
+npm install vite@^4.5.3 @vitejs/plugin-react@^4.2.1 --save-dev --no-package-lock
+
 # Use npm instead of pnpm for more reliable package installation in CI environments
-echo "📦 Installing dependencies with npm"
+echo "📦 Installing remaining dependencies with npm"
 npm install --no-package-lock --legacy-peer-deps --no-fund --no-audit
 
 # Install TailwindCSS and PostCSS dependencies
 echo "🌈 Installing TailwindCSS and related dependencies"
 npm install tailwindcss@3.3.0 postcss@8.4.31 autoprefixer@10.4.15 --save-dev --no-package-lock
-
-# Install vite globally for build
-echo "🔨 Installing vite for build"
-npm install -g vite 
 
 # Set environment variables for the build
 echo "🔧 Setting environment variables for production"
@@ -85,9 +85,8 @@ export DB_PASSWORD=postgres
 export DB_SSL=true
 export DB_SSL_REJECT_UNAUTHORIZED=false
 
-# Run the build using npx vite directly
+# Run the build using npx with local vite
 echo "🏗️ Running the build process"
-# Instead of npm run build which uses the vite command
 npx vite build
 
 # Log success message
