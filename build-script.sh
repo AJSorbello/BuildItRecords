@@ -52,6 +52,15 @@ if (!pkg.dependencies.autoprefixer) {
   pkg.dependencies.autoprefixer = '^10.4.15';
 }
 
+// Ensure PostCSS plugins are available at correct versions
+if (!pkg.dependencies['postcss-import']) {
+  pkg.dependencies['postcss-import'] = '^15.0.0';
+}
+
+if (!pkg.dependencies['postcss-url']) {
+  pkg.dependencies['postcss-url'] = '^10.1.3';
+}
+
 // Update overrides to use latest noop
 pkg.overrides = {
   ...pkg.overrides,
@@ -92,7 +101,7 @@ npm install vite@4.5.0 @vitejs/plugin-react@4.2.0 --save --no-package-lock
 
 # Install TailwindCSS and related dependencies
 echo "🌈 Installing TailwindCSS and related dependencies"
-npm install tailwindcss@3.3.0 postcss@8.4.31 autoprefixer@10.4.15 --save --no-package-lock
+npm install tailwindcss@3.3.0 postcss@8.4.31 autoprefixer@10.4.15 postcss-import@15.0.0 postcss-url@10.1.3 --save --no-package-lock
 
 # Use npm instead of pnpm for more reliable package installation in CI environments
 echo "📦 Installing all dependencies with npm"
@@ -143,6 +152,20 @@ try {
   console.log('✅ TailwindCSS version:', require('tailwindcss/package.json').version || 'unknown');
 } catch (e) {
   console.error('❌ Error finding/loading TailwindCSS:', e.message);
+  process.exit(1);
+}
+"
+
+# Check for PostCSS plugins
+echo "🔍 Verifying PostCSS plugins"
+node -e "
+try {
+  console.log('✅ postcss found at:', require.resolve('postcss'));
+  console.log('✅ postcss-import found at:', require.resolve('postcss-import'));
+  console.log('✅ postcss-url found at:', require.resolve('postcss-url'));
+  console.log('✅ autoprefixer found at:', require.resolve('autoprefixer'));
+} catch (e) {
+  console.error('❌ Error finding/loading PostCSS plugins:', e.message);
   process.exit(1);
 }
 "
