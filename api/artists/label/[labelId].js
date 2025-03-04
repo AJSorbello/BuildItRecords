@@ -5,7 +5,7 @@ const { Pool } = require('pg');
 // This should only be used in controlled environments with trusted sources
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
-// Initialize database connection using environment variables
+// Initialize database connection
 const pool = new Pool({
   connectionString: process.env.POSTGRES_URL,
   ssl: {
@@ -15,19 +15,7 @@ const pool = new Pool({
   }
 });
 
-// Function to log environment values without exposing sensitive data
-function logEnvironment() {
-  console.log('API Environment:');
-  console.log('- NODE_ENV:', process.env.NODE_ENV);
-  console.log('- POSTGRES_URL exists:', !!process.env.POSTGRES_URL);
-  console.log('- DB_HOST exists:', !!process.env.DB_HOST);
-  console.log('- NODE_TLS_REJECT_UNAUTHORIZED:', process.env.NODE_TLS_REJECT_UNAUTHORIZED);
-}
-
 module.exports = async (req, res) => {
-  // Log environment for debugging
-  logEnvironment();
-  
   try {
     // Get label ID from the URL
     const { labelId } = req.query;
@@ -43,42 +31,103 @@ module.exports = async (req, res) => {
     console.log('Connected to database');
     
     try {
-      // Query for artists with the specified label
-      const query = `
+      // Debug the table schema
+      console.log('Inspecting database schemas...');
+      
+      try {
+        // Check labels table schema
+        const labelInfo = await client.query(`
+          SELECT column_name, data_type 
+          FROM information_schema.columns 
+          WHERE table_name = 'labels'
+        `);
+        console.log('Labels table columns:', labelInfo.rows.map(r => r.column_name).join(', '));
+        
+        // Check actual labels in the database
+        const labelData = await client.query('SELECT id, name FROM labels');
+        console.log('Available labels:', labelData.rows.map(l => `${l.id} (${l.name})`).join(', '));
+        
+        // Check artists table schema
+        const artistInfo = await client.query(`
+          SELECT column_name, data_type 
+          FROM information_schema.columns 
+          WHERE table_name = 'artists'
+        `);
+        console.log('Artists table columns:', artistInfo.rows.map(r => r.column_name).join(', '));
+      } catch (schemaErr) {
+        console.error('Error checking schema:', schemaErr.message);
+      }
+      
+      // Try different approaches to find the label with flexibility in the ID
+      
+      // First, try a flexible query that checks for both the exact ID and a transformed version
+      const flexibleQuery = `
         SELECT a.* 
         FROM artists a
         JOIN labels l ON a.label_id = l.id
-        WHERE l.id = $1
+        WHERE l.id = $1 
+           OR l.id = $2
+           OR l.name ILIKE $3
+           OR l.id::text ILIKE $4
         ORDER BY a.name ASC
       `;
       
-      const result = await client.query(query, [labelId]);
+      // Try multiple variations of the label ID to account for different formats
+      // The hyphenated version: 'buildit-records'
+      // The non-hyphenated version: 'builditrecords'
+      // A partial match using ILIKE: '%buildit%'
+      const normalizedLabelId = labelId.replace(/-/g, ''); // Remove hyphens
+      
+      console.log('Executing flexible query with parameters:', 
+        labelId, normalizedLabelId, `%${labelId.replace(/-/g, ' ')}%`, `%${labelId}%`);
+      
+      const result = await client.query(flexibleQuery, [
+        labelId, 
+        normalizedLabelId,
+        `%${labelId.replace(/-/g, ' ')}%`,  // Replace hyphens with spaces for ILIKE
+        `%${labelId}%`                     // Simple partial match
+      ]);
       
       console.log(`Found ${result.rows.length} artists for label ${labelId}`);
       
-      // Format response to match expected structure
-      const response = {
-        artists: result.rows.map(artist => ({
-          id: artist.id,
-          name: artist.name,
-          bio: artist.bio || '',
-          spotifyId: artist.spotify_id || '',
-          imageUrl: artist.image_url || '',
-          labelId: artist.label_id,
-          createdAt: artist.created_at,
-          updatedAt: artist.updated_at
-        }))
-      };
+      // If the flexible query returned no results, try a direct query on the labels table
+      if (result.rows.length === 0) {
+        console.log('No artists found with flexible query, checking labels directly...');
+        
+        const labelCheck = await client.query(`
+          SELECT id, name FROM labels 
+          WHERE id::text ILIKE $1 
+             OR name ILIKE $2
+        `, [`%${labelId}%`, `%${labelId.replace(/-/g, ' ')}%`]);
+        
+        if (labelCheck.rows.length > 0) {
+          console.log('Found matching labels:', labelCheck.rows.map(l => `${l.id} (${l.name})`).join(', '));
+        } else {
+          console.log('No matching labels found in database');
+        }
+      }
+      
+      // Format the response to match expected structure
+      const artists = result.rows.map(artist => ({
+        id: artist.id,
+        name: artist.name,
+        bio: artist.bio || '',
+        imageUrl: artist.image_url || '',
+        spotifyId: artist.spotify_id || '',
+        labelId: artist.label_id,
+        createdAt: artist.created_at,
+        updatedAt: artist.updated_at
+      }));
       
       // Return the artists
-      return res.status(200).json(response);
+      return res.status(200).json({ artists });
     } finally {
       // Release the client back to the pool
       client.release();
       console.log('Database connection released');
     }
   } catch (error) {
-    console.error('Error fetching artists:', error);
+    console.error('Error fetching artists by label:', error);
     return res.status(500).json({ 
       error: 'Internal server error', 
       details: error.message,
