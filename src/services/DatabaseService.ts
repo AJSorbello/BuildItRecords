@@ -385,7 +385,7 @@ class DatabaseService {
         data: {
           artists: Artist[];
         };
-      }>(`/artists/label/${id}`);
+      }>(`/artists?label=${id}`);
       
       if (!response?.success || !response?.data?.artists) {
         console.error('Invalid response format from server:', response);
