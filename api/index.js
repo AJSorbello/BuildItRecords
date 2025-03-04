@@ -1,4 +1,9 @@
 // Health check API endpoint
+
+// CRITICAL: Force Node.js to accept self-signed certificates
+// This should only be used in controlled environments with trusted sources
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
 module.exports = (req, res) => {
   // Log environment for debugging
   console.log('API Environment:');
@@ -6,6 +11,7 @@ module.exports = (req, res) => {
   console.log('- POSTGRES_URL exists:', !!process.env.POSTGRES_URL);
   console.log('- DB_SSL:', process.env.DB_SSL);
   console.log('- DB_SSL_REJECT_UNAUTHORIZED:', process.env.DB_SSL_REJECT_UNAUTHORIZED);
+  console.log('- NODE_TLS_REJECT_UNAUTHORIZED:', process.env.NODE_TLS_REJECT_UNAUTHORIZED);
   
   // Try to load pg module for diagnostic purposes
   try {
@@ -48,6 +54,7 @@ module.exports = (req, res) => {
     status: 'ok', 
     environment: process.env.NODE_ENV || 'unknown',
     timestamp: new Date().toISOString(),
-    message: 'BuildItRecords API is running'
+    message: 'BuildItRecords API is running',
+    tlsVerify: process.env.NODE_TLS_REJECT_UNAUTHORIZED === '0' ? 'disabled' : 'enabled'
   });
 };

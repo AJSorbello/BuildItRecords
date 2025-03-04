@@ -1,6 +1,10 @@
 // Serverless API handler for fetching tracks by label
 const { Pool } = require('pg');
 
+// CRITICAL: Force Node.js to accept self-signed certificates
+// This should only be used in controlled environments with trusted sources
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
 // Initialize database connection
 const pool = new Pool({
   connectionString: process.env.POSTGRES_URL,

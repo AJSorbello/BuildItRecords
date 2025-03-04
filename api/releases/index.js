@@ -1,11 +1,16 @@
 // Serverless API handler for fetching releases
 const { Pool } = require('pg');
 
+// CRITICAL: Force Node.js to accept self-signed certificates
+// This should only be used in controlled environments with trusted sources
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
 // Initialize database connection
 const pool = new Pool({
   connectionString: process.env.POSTGRES_URL,
   ssl: {
     rejectUnauthorized: false,
+    // Force SSL to be disabled to bypass certification issues
     sslmode: 'no-verify'
   }
 });
