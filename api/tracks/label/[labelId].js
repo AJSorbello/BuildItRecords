@@ -31,7 +31,20 @@ module.exports = async (req, res) => {
     console.log('Connected to database');
     
     try {
+      // Debug the table schema
+      try {
+        const tableInfo = await client.query(`
+          SELECT column_name, data_type 
+          FROM information_schema.columns 
+          WHERE table_name = 'labels'
+        `);
+        console.log('Labels table columns:', tableInfo.rows.map(r => r.column_name).join(', '));
+      } catch (schemaErr) {
+        console.error('Error checking schema:', schemaErr.message);
+      }
+      
       // Query for tracks with the specified label
+      // Updated to use l.id instead of l.label_id
       const query = `
         SELECT t.*, 
                a.name as artist_name, 
@@ -41,10 +54,12 @@ module.exports = async (req, res) => {
         JOIN artists a ON t.artist_id = a.id
         JOIN labels l ON a.label_id = l.id
         LEFT JOIN releases r ON t.release_id = r.id
-        WHERE l.label_id = $1
+        WHERE l.id = $1
         ORDER BY t.created_at DESC
         LIMIT 50
       `;
+      
+      console.log('Executing query with parameter:', labelId);
       
       const result = await client.query(query, [labelId]);
       
