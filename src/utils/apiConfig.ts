@@ -2,7 +2,7 @@
  * API Configuration Utility
  * 
  * This module provides consistent API URL handling for different environments:
- * - Local development: Uses localhost:3001
+ * - Local development: Uses localhost:3003
  * - Production (Vercel): Uses relative URLs that work with Vercel's API routing or the full API URL
  */
 
@@ -44,8 +44,8 @@ export const getApiBaseUrl = (): string => {
   }
   
   // Default for development
-  console.log('Using development API URL: http://localhost:3001/api');
-  return 'http://localhost:3001/api';
+  console.log('Using development API URL: http://localhost:3003/api');
+  return 'http://localhost:3003/api';
 };
 
 /**

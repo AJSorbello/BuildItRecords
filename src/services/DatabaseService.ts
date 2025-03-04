@@ -69,15 +69,18 @@ class DatabaseService {
   private baseUrl: string;
 
   private constructor() {
-    this.baseUrl = getApiBaseUrl();
-    console.log('DatabaseService initialized with baseUrl:', this.baseUrl);
+    // Log environment detection information
+    console.log('[DatabaseService] Environment:', process.env.NODE_ENV);
+    console.log('[DatabaseService] API URL from env:', process.env.REACT_APP_API_URL);
+    console.log('[DatabaseService] Running on:', typeof window !== 'undefined' ? window.location.origin : 'server');
     
-    // Additional environment checks
-    if (typeof window !== 'undefined') {
-      console.log('Current environment:');
-      console.log('- Window location:', window.location.toString());
-      console.log('- NODE_ENV:', process.env.NODE_ENV);
-      console.log('- Production mode:', process.env.NODE_ENV === 'production');
+    // For local development, temporarily use direct connection to avoid proxy issues
+    if (process.env.NODE_ENV === 'development') {
+      this.baseUrl = 'http://localhost:3003';
+      console.log('[DatabaseService] Using direct local API URL for development:', this.baseUrl);
+    } else {
+      this.baseUrl = getApiBaseUrl();
+      console.log('[DatabaseService] Using API URL:', this.baseUrl);
     }
   }
 
@@ -89,70 +92,61 @@ class DatabaseService {
   }
 
   private async fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const url = `${this.baseUrl}${endpoint}`;
-    console.log(`[DatabaseService] API Request: ${url}`);
+    console.log(`Fetching API: ${endpoint}`);
+    
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    let apiUrl: string;
+    
+    if (isLocalhost && process.env.NODE_ENV === 'development') {
+      // In development, use direct connection to the API server to avoid proxy issues
+      apiUrl = `http://localhost:3003${endpoint}`;
+      console.log(`Development: Using direct API URL: ${apiUrl}`);
+    } else {
+      // In production or if using the Vite dev server proxy
+      apiUrl = `/api${endpoint}`;
+      console.log(`Production/Proxy: Using API URL: ${apiUrl}`);
+    }
     
     try {
-      const response = await fetch(url, {
-        ...options,
+      const response = await fetch(apiUrl, {
         headers: {
           'Content-Type': 'application/json',
-          ...options.headers,
         },
+        ...options,
       });
       
+      // Handle non-successful responses
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`[DatabaseService] API Error (${response.status}): ${errorText}`);
+        console.error(`API Error: ${response.status} - ${response.statusText}`);
+        let errorDetails = null;
         
-        throw new DatabaseError(
-          `API request failed with status ${response.status}: ${errorText}`,
-          response.status
-        );
+        try {
+          errorDetails = await response.json();
+          console.error('API Error Details:', errorDetails);
+        } catch (e) {
+          console.error('Could not parse error response as JSON');
+        }
+        
+        throw new Error(`API Error ${response.status}: ${errorDetails?.error || response.statusText}`);
       }
       
-      const contentType = response.headers.get('content-type');
-      
-      // Check if the response is JSON before trying to parse it
-      if (contentType && contentType.includes('application/json')) {
-        const data = await response.json();
-        console.log(`[DatabaseService] API Success: ${url}`, data ? `(${Array.isArray(data) ? data.length + ' items' : 'object'})` : '(empty)');
-        return data as T;
-      } else {
-        const text = await response.text();
-        console.warn(`[DatabaseService] API returned non-JSON response: ${contentType}`);
-        return text as unknown as T;
+      // Parse response
+      try {
+        return await response.json() as T;
+      } catch (e) {
+        console.error('Failed to parse response as JSON:', e);
+        throw new Error('Invalid API response format');
       }
     } catch (error) {
-      console.error(`[DatabaseService] API Request Failed: ${url}`, error);
-      
-      // Enhance error message for network errors
-      if (error instanceof Error) {
-        if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
-          throw new DatabaseError(
-            `Network error when connecting to API at ${url}. This could be due to CORS, network connectivity, or the server being unavailable.`,
-            500
-          );
-        }
-      }
-      
-      // Re-throw the original error if it's already a DatabaseError
-      if (error instanceof DatabaseError) {
-        throw error;
-      }
-      
-      // Otherwise, wrap it in a DatabaseError
-      throw new DatabaseError(
-        `API request to ${url} failed: ${error instanceof Error ? error.message : String(error)}`,
-        500
-      );
+      console.error('API Request Failed:', error);
+      throw error;
     }
   }
 
   public async getReleasesByLabelId(
     labelId: string,
-    page = 1,
-    limit = 50
+    offset: number = 0,
+    limit: number = 50
   ): Promise<{
     releases: Release[];
     totalReleases: number;
@@ -160,39 +154,55 @@ class DatabaseService {
     hasMore: boolean;
   }> {
     try {
-      const offset = (page - 1) * limit;
+      console.log(`Getting releases for label: ${labelId}`);
       const response = await this.fetchApi<ApiResponse>(
         `/releases?label=${labelId}&offset=${offset}&limit=${limit}`
       );
       
-      if (!response.releases) {
-        throw new DatabaseError('No releases found in response');
+      if (response.releases && Array.isArray(response.releases)) {
+        console.log(`Received ${response.releases.length} releases for label ${labelId}`);
+        const processedReleases = await this.processReleases({ releases: response.releases });
+        const total = response.total || 0;
+
+        return {
+          releases: processedReleases,
+          totalReleases: total,
+          totalTracks: response.count || 0,
+          hasMore: offset + processedReleases.length < total
+        };
       }
-
-      const processedReleases = await this.processReleases({ releases: response.releases });
-      const total = response.total || 0;
-
+      
+      console.warn(`Received empty or invalid releases array for label ${labelId}`);
       return {
-        releases: processedReleases,
-        totalReleases: total,
-        totalTracks: response.count || 0,
-        hasMore: offset + processedReleases.length < total
+        releases: [],
+        totalReleases: 0,
+        totalTracks: 0,
+        hasMore: false
       };
     } catch (error) {
-      console.error('Error fetching releases:', error);
-      throw error;
+      console.error(`Error fetching releases for label ${labelId}:`, error);
+      // Return empty array instead of throwing to make UI more resilient
+      return {
+        releases: [],
+        totalReleases: 0,
+        totalTracks: 0,
+        hasMore: false
+      };
     }
   }
 
   public async getTopReleases(labelId: string): Promise<Release[]> {
     try {
+      console.log(`Getting top releases for label: ${labelId}`);
       const response = await this.fetchApi<ApiResponse>(`/releases/top?label=${labelId}`);
       
-      if (!response.releases) {
-        throw new DatabaseError('No releases found in response');
+      if (response.releases && Array.isArray(response.releases)) {
+        console.log(`Received ${response.releases.length} top releases for label ${labelId}`);
+        return this.processReleases({ releases: response.releases });
       }
-
-      return this.processReleases({ releases: response.releases });
+      
+      console.warn(`Received empty or invalid top releases array for label ${labelId}`);
+      return [];
     } catch (error) {
       if (error instanceof DatabaseError && error.message.includes('404')) {
         console.warn(`Label not found: ${labelId}`);
@@ -327,15 +337,20 @@ class DatabaseService {
     try {
       const response = await this.fetchApi<ApiResponse>(`/tracks/all/${labelId}?sort=${sortBy}`);
       
-      if (!response.tracks) {
-        throw new DatabaseError('No tracks found in response');
+      if (response.tracks && Array.isArray(response.tracks)) {
+        console.log(`Received ${response.tracks.length} tracks for label ${labelId}`);
+        const processedTracks = await this.processTracks({ tracks: response.tracks });
+
+        return {
+          tracks: processedTracks,
+          total: response.total || 0,
+        };
       }
-
-      const processedTracks = await this.processTracks({ tracks: response.tracks });
-
+      
+      console.warn(`Received empty or invalid tracks array for label ${labelId}`);
       return {
-        tracks: processedTracks,
-        total: response.total || 0,
+        tracks: [],
+        total: 0,
       };
     } catch (error) {
       console.error('Error fetching tracks:', error);
@@ -413,54 +428,55 @@ class DatabaseService {
         tracks: Track[]
       }>(`/artists/${artistId}/tracks`);
       
-      if (!response.tracks) {
-        throw new DatabaseError('No tracks found in response');
-      }
-
-      console.log(`Found ${response.tracks.length} tracks for artist: ${response.artist.name}`);
-      
-      // Process the tracks to ensure they match the Track interface format
-      const processedTracks = response.tracks.map(track => {
-        return {
-          id: track.id,
-          title: track.title || 'Unknown Track',
-          name: track.title || 'Unknown Track',
-          duration: track.duration_ms || 0,
-          track_number: 1,
-          disc_number: 1,
-          preview_url: track.preview_url,
-          spotify_url: track.spotify_url || '',
-          spotify_uri: '',
-          release: track.release ? {
-            id: track.release.id,
-            name: track.release.title || 'Unknown Album',
-            title: track.release.title || 'Unknown Album',
-            type: 'album',
-            artists: [],
-            tracks: [],
-            images: [],
-            artwork_url: track.release.artwork_url,
-            release_date: track.release.release_date,
-            spotify_url: '',
+      if (response.tracks && Array.isArray(response.tracks)) {
+        console.log(`Found ${response.tracks.length} tracks for artist: ${response.artist.name}`);
+        
+        // Process the tracks to ensure they match the Track interface format
+        const processedTracks = response.tracks.map(track => {
+          return {
+            id: track.id,
+            title: track.title || 'Unknown Track',
+            name: track.title || 'Unknown Track',
+            duration: track.duration_ms || 0,
+            track_number: 1,
+            disc_number: 1,
+            preview_url: track.preview_url,
+            spotify_url: track.spotify_url || '',
             spotify_uri: '',
-            label_id: track.release.label?.id || '',
-            total_tracks: 0,
-            label: track.release.label ? {
-              id: track.release.label.id,
-              name: track.release.label.name,
-              display_name: track.release.label.display_name
-            } : undefined
-          } : undefined,
-          artists: track.artists || [],
-          remixer: track.remixer,
-          isrc: track.isrc || '',
-          external_urls: { spotify: track.spotify_url || '' },
-          type: 'track',
-          is_remixer: track.is_remixer
-        } satisfies Track;
-      });
+            release: track.release ? {
+              id: track.release.id,
+              name: track.release.title || 'Unknown Album',
+              title: track.release.title || 'Unknown Album',
+              type: 'album',
+              artists: [],
+              tracks: [],
+              images: [],
+              artwork_url: track.release.artwork_url,
+              release_date: track.release.release_date,
+              spotify_url: '',
+              spotify_uri: '',
+              label_id: track.release.label?.id || '',
+              total_tracks: 0,
+              label: track.release.label ? {
+                id: track.release.label.id,
+                name: track.release.label.name,
+                display_name: track.release.label.display_name
+              } : undefined
+            } : undefined,
+            artists: track.artists || [],
+            remixer: track.remixer,
+            isrc: track.isrc || '',
+            external_urls: { spotify: track.spotify_url || '' },
+            type: 'track',
+            is_remixer: track.is_remixer
+          } satisfies Track;
+        });
 
-      return processedTracks;
+        return processedTracks;
+      }
+      
+      console.warn(`Received empty or invalid tracks array for artist ${artistId}`);
+      return [];
     } catch (error) {
       console.error('Error fetching tracks by artist:', error);
       throw error;
@@ -478,32 +494,32 @@ class DatabaseService {
         releases: Release[];
       }>(`/artists/${artistId}/all-releases`);
       
-      if (!response || !response.releases) {
-        console.log('DatabaseService.getReleasesByArtist - No releases found in response:', response);
-        return [];
+      if (response.releases && Array.isArray(response.releases)) {
+        console.log(`DatabaseService.getReleasesByArtist - Found ${response.releases.length} releases`);
+        
+        const processedReleases = response.releases.map(release => {
+          return {
+            id: release.id,
+            title: release.title,
+            artwork_url: release.artwork_url,
+            release_date: release.release_date,
+            catalog_number: release.catalog_number,
+            label_id: release.label_id,
+            spotify_url: release.spotify_url,
+            spotify_id: release.spotify_id,
+            spotify_uri: release.spotify_uri,
+            label: release.label,
+            tracks: release.tracks || [],
+            tracks_count: release.tracks_count
+          } as Release;
+        });
+        
+        console.log('DatabaseService.getReleasesByArtist - Processed releases:', processedReleases);
+        return processedReleases;
       }
       
-      console.log(`DatabaseService.getReleasesByArtist - Found ${response.releases.length} releases`);
-      
-      const processedReleases = response.releases.map(release => {
-        return {
-          id: release.id,
-          title: release.title,
-          artwork_url: release.artwork_url,
-          release_date: release.release_date,
-          catalog_number: release.catalog_number,
-          label_id: release.label_id,
-          spotify_url: release.spotify_url,
-          spotify_id: release.spotify_id,
-          spotify_uri: release.spotify_uri,
-          label: release.label,
-          tracks: release.tracks || [],
-          tracks_count: release.tracks_count
-        } as Release;
-      });
-      
-      console.log('DatabaseService.getReleasesByArtist - Processed releases:', processedReleases);
-      return processedReleases;
+      console.warn('DatabaseService.getReleasesByArtist - Received empty or invalid releases array');
+      return [];
     } catch (error) {
       console.error('DatabaseService.getReleasesByArtist - Error:', error);
       return [];
