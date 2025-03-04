@@ -19,21 +19,60 @@ module.exports = async (req, res) => {
   try {
     console.log('Fetching releases');
     
+    // Get optional label parameter
+    const { label } = req.query;
+    console.log('Label parameter:', label);
+    
     // Connect to the database
     const client = await pool.connect();
     console.log('Connected to database');
     
     try {
-      // Query for releases
-      const query = `
-        SELECT r.*, a.name as artist_name
-        FROM releases r
-        LEFT JOIN artists a ON r.artist_id = a.id
-        ORDER BY r.release_date DESC
-        LIMIT 50
-      `;
+      let query;
+      let params = [];
       
-      const result = await client.query(query);
+      // Log the structure of the tables for debugging
+      console.log('Checking database schema...');
+      
+      try {
+        // First, let's check the columns in the releases table
+        const tableInfo = await client.query(`
+          SELECT column_name, data_type 
+          FROM information_schema.columns 
+          WHERE table_name = 'releases'
+        `);
+        console.log('Releases table columns:', tableInfo.rows.map(r => r.column_name).join(', '));
+      } catch (schemaErr) {
+        console.error('Error checking schema:', schemaErr.message);
+      }
+      
+      // If label is provided, fetch releases for that label
+      if (label) {
+        query = `
+          SELECT r.*, a.name as artist_name
+          FROM releases r
+          LEFT JOIN artists a ON r.artist_id = a.id
+          LEFT JOIN labels l ON a.label_id = l.id
+          WHERE l.id = $1
+          ORDER BY r.release_date DESC
+          LIMIT 50
+        `;
+        params = [label];
+      } else {
+        // Query for all releases
+        query = `
+          SELECT r.*, a.name as artist_name
+          FROM releases r
+          LEFT JOIN artists a ON r.artist_id = a.id
+          ORDER BY r.release_date DESC
+          LIMIT 50
+        `;
+      }
+      
+      console.log('Executing query:', query);
+      console.log('Parameters:', params);
+      
+      const result = await client.query(query, params);
       
       console.log(`Found ${result.rows.length} releases`);
       

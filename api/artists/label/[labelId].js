@@ -48,7 +48,7 @@ module.exports = async (req, res) => {
         SELECT a.* 
         FROM artists a
         JOIN labels l ON a.label_id = l.id
-        WHERE l.label_id = $1
+        WHERE l.id = $1
         ORDER BY a.name ASC
       `;
       
