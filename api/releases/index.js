@@ -55,6 +55,10 @@ module.exports = async (req, res) => {
       `);
       console.log('Labels table columns:', tableInfo.rows.map(r => r.column_name).join(', '));
       
+      // Check actual labels in the database
+      const labelData = await client.query('SELECT id, name FROM labels');
+      console.log('Available labels:', labelData.rows.map(l => `${l.id} (${l.name})`).join(', '));
+      
       // First get a sample release to understand the structure
       const sampleResult = await client.query(`SELECT * FROM releases LIMIT 1`);
       console.log('Sample release:', sampleResult.rows[0] ? Object.keys(sampleResult.rows[0]).join(', ') : 'No releases found');
@@ -63,17 +67,30 @@ module.exports = async (req, res) => {
       let query, params = [];
       
       if (label) {
-        // Query with label filtering
+        // Prepare different variations of the label ID to be more flexible
+        const normalizedLabelId = label.replace(/-/g, ''); // Remove hyphens
+        
+        // Query with flexible label filtering
         query = `
           SELECT r.*, a.name as artist_name
           FROM releases r
           JOIN artists a ON r.artist_id = a.id
           JOIN labels l ON a.label_id = l.id
           WHERE l.id = $1
+             OR l.id = $2
+             OR l.name ILIKE $3
+             OR l.id::text ILIKE $4
           ORDER BY r.release_date DESC
           LIMIT 50
         `;
-        params = [label];
+        params = [
+          label, 
+          normalizedLabelId,
+          `%${label.replace(/-/g, ' ')}%`,  // Replace hyphens with spaces for ILIKE
+          `%${label}%`                     // Simple partial match
+        ];
+        
+        console.log('Executing flexible label query with parameters:', params);
       } else {
         // Simplified query for all releases
         query = `
@@ -83,15 +100,32 @@ module.exports = async (req, res) => {
           ORDER BY r.release_date DESC
           LIMIT 50
         `;
+        
+        console.log('Executing all releases query');
       }
       
       // Try alternate column name if the first query fails
       try {
-        console.log('Executing query with artist_id:', query);
-        console.log('Parameters:', params);
         const result = await client.query(query, params);
         
         console.log(`Found ${result.rows.length} releases`);
+        
+        // If we have a label but no results, check if the label exists
+        if (label && result.rows.length === 0) {
+          console.log('No releases found with flexible query, checking labels directly...');
+          
+          const labelCheck = await client.query(`
+            SELECT id, name FROM labels 
+            WHERE id::text ILIKE $1 
+               OR name ILIKE $2
+          `, [`%${label}%`, `%${label.replace(/-/g, ' ')}%`]);
+          
+          if (labelCheck.rows.length > 0) {
+            console.log('Found matching labels:', labelCheck.rows.map(l => `${l.id} (${l.name})`).join(', '));
+          } else {
+            console.log('No matching labels found in database');
+          }
+        }
         
         // Format the response
         const releases = result.rows.map(release => ({
