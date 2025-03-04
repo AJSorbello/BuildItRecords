@@ -4,11 +4,41 @@ module.exports = (req, res) => {
   console.log('API Environment:');
   console.log('- NODE_ENV:', process.env.NODE_ENV);
   console.log('- POSTGRES_URL exists:', !!process.env.POSTGRES_URL);
+  console.log('- DB_SSL:', process.env.DB_SSL);
+  console.log('- DB_SSL_REJECT_UNAUTHORIZED:', process.env.DB_SSL_REJECT_UNAUTHORIZED);
   
   // Try to load pg module for diagnostic purposes
   try {
     const pg = require('pg');
     console.log('pg module loaded successfully, version:', pg.version || 'unknown');
+    
+    // Log SSL configuration details
+    console.log('Attempting test connection with SSL configuration:');
+    console.log('- SSL Mode: no-verify');
+    console.log('- RejectUnauthorized: false');
+    
+    // Try a simple connection
+    const { Pool } = pg;
+    const pool = new Pool({
+      connectionString: process.env.POSTGRES_URL,
+      ssl: {
+        rejectUnauthorized: false,
+        sslmode: 'no-verify'
+      }
+    });
+    
+    // Basic async connection test
+    (async () => {
+      try {
+        const client = await pool.connect();
+        console.log('✅ Test connection successful!');
+        await client.release();
+        await pool.end();
+      } catch (err) {
+        console.error('❌ Test connection failed:', err.message);
+      }
+    })();
+    
   } catch (error) {
     console.error('Error loading pg module:', error.message);
   }

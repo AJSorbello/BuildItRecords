@@ -30,10 +30,13 @@ async function testConnection() {
   
   console.log('Testing connection to PostgreSQL...');
   
+  // Create a pool with disabled SSL verification to handle self-signed certs
   const pool = new Pool({
     connectionString: process.env.POSTGRES_URL,
     ssl: {
-      rejectUnauthorized: false
+      rejectUnauthorized: false,
+      // Force SSL to be disabled to bypass certification issues
+      sslmode: 'no-verify'
     }
   });
   
