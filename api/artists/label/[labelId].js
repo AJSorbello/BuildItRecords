@@ -34,93 +34,171 @@ module.exports = async (req, res) => {
       // Debug the table schema
       console.log('Inspecting database schemas...');
       
-      try {
-        // Check labels table schema
-        const labelInfo = await client.query(`
-          SELECT column_name, data_type 
-          FROM information_schema.columns 
-          WHERE table_name = 'labels'
-        `);
-        console.log('Labels table columns:', labelInfo.rows.map(r => r.column_name).join(', '));
-        
-        // Check actual labels in the database
-        const labelData = await client.query('SELECT id, name FROM labels');
-        console.log('Available labels:', labelData.rows.map(l => `${l.id} (${l.name})`).join(', '));
-        
-        // Check artists table schema
-        const artistInfo = await client.query(`
-          SELECT column_name, data_type 
-          FROM information_schema.columns 
-          WHERE table_name = 'artists'
-        `);
-        console.log('Artists table columns:', artistInfo.rows.map(r => r.column_name).join(', '));
-      } catch (schemaErr) {
-        console.error('Error checking schema:', schemaErr.message);
+      // Check labels table schema
+      const labelInfo = await client.query(`
+        SELECT column_name, data_type 
+        FROM information_schema.columns 
+        WHERE table_name = 'labels'
+      `);
+      console.log('Labels table columns:', labelInfo.rows.map(r => r.column_name).join(', '));
+      
+      // Check actual labels in the database
+      const labelData = await client.query('SELECT * FROM labels');
+      console.log('Available labels:', labelData.rows.map(l => `${l.id} (${l.name})`).join(', '));
+      console.log('Sample label data:', JSON.stringify(labelData.rows[0]));
+      
+      // Check artists table schema
+      const artistsInfo = await client.query(`
+        SELECT column_name, data_type 
+        FROM information_schema.columns 
+        WHERE table_name = 'artists'
+      `);
+      console.log('Artists table columns:', artistsInfo.rows.map(r => r.column_name).join(', '));
+      
+      // Examine relationships
+      console.log('Examining label-artist relationships...');
+      
+      // Get sample artist to examine
+      const sampleArtist = await client.query('SELECT * FROM artists LIMIT 1');
+      if (sampleArtist.rows.length > 0) {
+        console.log('Sample artist data:', JSON.stringify(sampleArtist.rows[0]));
+      } else {
+        console.log('No artists found in the database');
       }
       
-      // Try different approaches to find the label with flexibility in the ID
+      // Prepare different variations of the label ID to be more flexible
+      const normalizedLabelId = labelId.replace(/-/g, ''); // Remove hyphens
       
-      // First, try a flexible query that checks for both the exact ID and a transformed version
-      const flexibleQuery = `
+      // Check if we're using the correct field for label_id
+      let isUsingId = true;
+      try {
+        // Try to query with label.id
+        const testQuery = await client.query(`
+          SELECT l.id, l.name FROM labels l
+          WHERE l.id = $1
+        `, [labelId]);
+        console.log(`Test query for label.id found ${testQuery.rows.length} matches`);
+        
+        // If no results, check if we should use a different field
+        if (testQuery.rows.length === 0) {
+          const altTestQuery = await client.query(`
+            SELECT l.id, l.name, l.slug FROM labels l
+            WHERE l.slug = $1 OR l.id::text = $1
+          `, [labelId]);
+          console.log(`Test query for label.slug/text found ${altTestQuery.rows.length} matches`);
+          
+          if (altTestQuery.rows.length > 0) {
+            isUsingId = false;
+            console.log('Label matches using slug/text field instead of id');
+          }
+        }
+      } catch (testErr) {
+        console.error('Error testing label queries:', testErr.message);
+      }
+      
+      // Build a flexible query to find artists
+      const queries = [];
+      
+      // Direct ID match query
+      queries.push(`
         SELECT a.* 
         FROM artists a
         JOIN labels l ON a.label_id = l.id
-        WHERE l.id = $1 
-           OR l.id = $2
-           OR l.name ILIKE $3
-           OR l.id::text ILIKE $4
-        ORDER BY a.name ASC
-      `;
+        WHERE l.id = $1
+      `);
       
-      // Try multiple variations of the label ID to account for different formats
-      // The hyphenated version: 'buildit-records'
-      // The non-hyphenated version: 'builditrecords'
-      // A partial match using ILIKE: '%buildit%'
-      const normalizedLabelId = labelId.replace(/-/g, ''); // Remove hyphens
+      // Normalized ID match query
+      queries.push(`
+        SELECT a.* 
+        FROM artists a
+        JOIN labels l ON a.label_id = l.id
+        WHERE l.id = $1
+      `);
       
-      console.log('Executing flexible query with parameters:', 
-        labelId, normalizedLabelId, `%${labelId.replace(/-/g, ' ')}%`, `%${labelId}%`);
+      // Name match query
+      queries.push(`
+        SELECT a.* 
+        FROM artists a
+        JOIN labels l ON a.label_id = l.id
+        WHERE l.name ILIKE $1
+      `);
       
-      const result = await client.query(flexibleQuery, [
-        labelId, 
+      // Slug match query (if slug exists in labels)
+      if (labelInfo.rows.some(col => col.column_name === 'slug')) {
+        queries.push(`
+          SELECT a.* 
+          FROM artists a
+          JOIN labels l ON a.label_id = l.id
+          WHERE l.slug = $1
+        `);
+      }
+      
+      // Try each query until we find artists
+      let artists = [];
+      const queryParams = [
+        labelId,
         normalizedLabelId,
-        `%${labelId.replace(/-/g, ' ')}%`,  // Replace hyphens with spaces for ILIKE
-        `%${labelId}%`                     // Simple partial match
-      ]);
+        `%${labelId.replace(/-/g, ' ')}%`
+      ];
       
-      console.log(`Found ${result.rows.length} artists for label ${labelId}`);
+      console.log('Executing flexible query with parameters:', queryParams);
       
-      // If the flexible query returned no results, try a direct query on the labels table
-      if (result.rows.length === 0) {
-        console.log('No artists found with flexible query, checking labels directly...');
-        
-        const labelCheck = await client.query(`
-          SELECT id, name FROM labels 
-          WHERE id::text ILIKE $1 
-             OR name ILIKE $2
-        `, [`%${labelId}%`, `%${labelId.replace(/-/g, ' ')}%`]);
-        
-        if (labelCheck.rows.length > 0) {
-          console.log('Found matching labels:', labelCheck.rows.map(l => `${l.id} (${l.name})`).join(', '));
-        } else {
-          console.log('No matching labels found in database');
+      for (let i = 0; i < queries.length && artists.length === 0; i++) {
+        try {
+          const query = queries[i];
+          const param = queryParams[Math.min(i, queryParams.length - 1)];
+          
+          console.log(`Trying query variation ${i+1}:`, query.replace(/\s+/g, ' '));
+          const result = await client.query(query, [param]);
+          
+          if (result.rows.length > 0) {
+            console.log(`Found ${result.rows.length} artists with query variation ${i+1}`);
+            artists = result.rows;
+            break;
+          }
+        } catch (queryErr) {
+          console.error(`Error with query variation ${i+1}:`, queryErr.message);
         }
       }
       
-      // Format the response to match expected structure
-      const artists = result.rows.map(artist => ({
+      // If still no artists, try a last-ditch approach with a simplified query
+      if (artists.length === 0) {
+        console.log('No artists found with flexible queries, trying direct simple query...');
+        
+        // Check if there are any artists at all
+        const countQuery = await client.query('SELECT COUNT(*) FROM artists');
+        console.log(`Total artists in database: ${countQuery.rows[0].count}`);
+        
+        // Check if there are any artists with the matching label_id directly
+        try {
+          const directQuery = await client.query(`
+            SELECT * FROM artists
+            WHERE label_id::text = $1
+          `, [labelId]);
+          
+          console.log(`Direct query found ${directQuery.rows.length} artists`);
+          if (directQuery.rows.length > 0) {
+            artists = directQuery.rows;
+          }
+        } catch (directErr) {
+          console.error('Error with direct query:', directErr.message);
+        }
+      }
+      
+      // Format the artists for the response
+      const formattedArtists = artists.map(artist => ({
         id: artist.id,
         name: artist.name,
         bio: artist.bio || '',
         imageUrl: artist.image_url || '',
-        spotifyId: artist.spotify_id || '',
         labelId: artist.label_id,
+        spotifyUrl: artist.spotify_url || '',
         createdAt: artist.created_at,
         updatedAt: artist.updated_at
       }));
       
       // Return the artists
-      return res.status(200).json({ artists });
+      return res.status(200).json({ artists: formattedArtists });
     } finally {
       // Release the client back to the pool
       client.release();
