@@ -33,7 +33,23 @@
       }
     },
     {
-      "src": "api/**/*.js",
+      "src": "api/artists/**/*.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/artist/**/*.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/releases/**/*.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/tracks/**/*.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/health.js",
       "use": "@vercel/node"
     }
   ],
@@ -57,6 +73,10 @@
     { 
       "src": "/api/artist/([^/]+)", 
       "dest": "/api/artist/[id].js?id=$1" 
+    },
+    { 
+      "src": "/api/tracks", 
+      "dest": "/api/tracks/index.js" 
     },
     { 
       "src": "/api/tracks/label/([^/]+)", 
