@@ -1,5 +1,5 @@
 // Simple database test endpoint
-const { getPool } = require('./db-utils');
+const { getPool } = require('./utils/db-utils');
 
 module.exports = async (req, res) => {
   console.log('API: Testing database connection');

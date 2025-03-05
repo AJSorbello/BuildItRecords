@@ -1,247 +1,229 @@
 // Serverless API handler for fetching releases
-const { Pool } = require('pg');
-
-// CRITICAL: Force Node.js to accept self-signed certificates
-// This should only be used in controlled environments with trusted sources
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+const { getPool, getTableSchema, hasColumn, logResponse } = require('../utils/db-utils');
 
 // Initialize database connection
-const pool = new Pool({
-  connectionString: process.env.POSTGRES_URL,
-  ssl: {
-    rejectUnauthorized: false,
-    // Force SSL to be disabled to bypass certification issues
-    sslmode: 'no-verify'
-  }
-});
+const pool = getPool();
 
 module.exports = async (req, res) => {
   try {
-    console.log('Fetching releases');
-    
-    // Get optional label parameter
-    const { label } = req.query;
-    console.log('Label parameter:', label);
+    console.log('Processing releases request', req.query);
     
     // Connect to the database
     const client = await pool.connect();
     console.log('Connected to database');
     
     try {
-      // Log the structure of the tables for thorough debugging
-      console.log('Checking database schemas...');
+      // First check the schema to understand columns
+      const releasesSchema = await getTableSchema(client, 'releases');
+      const artistsSchema = await getTableSchema(client, 'artists');
       
-      // Check releases table
-      let tableInfo = await client.query(`
-        SELECT column_name, data_type 
-        FROM information_schema.columns 
-        WHERE table_name = 'releases'
-      `);
-      const releaseColumns = tableInfo.rows.map(r => r.column_name);
-      console.log('Releases table columns:', releaseColumns.join(', '));
-      
-      // Check artists table
-      tableInfo = await client.query(`
-        SELECT column_name, data_type 
-        FROM information_schema.columns 
-        WHERE table_name = 'artists'
-      `);
-      console.log('Artists table columns:', tableInfo.rows.map(r => r.column_name).join(', '));
-      
-      // Check labels table
-      tableInfo = await client.query(`
-        SELECT column_name, data_type 
-        FROM information_schema.columns 
-        WHERE table_name = 'labels'
-      `);
-      console.log('Labels table columns:', tableInfo.rows.map(r => r.column_name).join(', '));
-      
-      // Check actual labels in the database
-      const labelData = await client.query('SELECT id, name FROM labels');
-      console.log('Available labels:', labelData.rows.map(l => `${l.id} (${l.name})`).join(', '));
-      
-      // First get a sample release to understand the structure
-      const sampleResult = await client.query(`SELECT * FROM releases LIMIT 1`);
-      if (sampleResult.rows.length > 0) {
-        console.log('Sample release:', Object.keys(sampleResult.rows[0]).join(', '));
-      } else {
-        console.log('Sample release: No releases found');
+      // Check if release_artists junction table exists
+      let hasJunctionTable = false;
+      try {
+        const junctionResult = await client.query(`
+          SELECT EXISTS (
+            SELECT FROM information_schema.tables 
+            WHERE table_schema = 'public' 
+            AND table_name = 'release_artists'
+          )
+        `);
+        hasJunctionTable = junctionResult.rows[0].exists;
+      } catch (err) {
+        console.log('Error checking for junction table:', err.message);
       }
       
-      // Based on the schema we found, construct the appropriate query
-      let hasLabelId = releaseColumns.includes('label_id');
-      let hasPrimaryArtistId = releaseColumns.includes('primary_artist_id');
-      let hasArtistId = releaseColumns.includes('artist_id');
+      // Log schema information
+      console.log(`Releases table has ${releasesSchema.length} columns`);
+      console.log(`Artists table has ${artistsSchema.length} columns`);
+      console.log(`Junction table exists: ${hasJunctionTable}`);
       
-      console.log(`Release table has: label_id: ${hasLabelId}, primary_artist_id: ${hasPrimaryArtistId}, artist_id: ${hasArtistId}`);
+      // Get available columns for dynamic query construction
+      const releaseColumns = releasesSchema.map(col => col.column_name);
+      console.log('Available release columns:', releaseColumns.join(', '));
       
-      // Let's try different query strategies based on what we found
-      let releases = [];
+      // Extract query parameters
+      const { label, offset = 0, limit = 50 } = req.query;
       
-      // Strategy 1: Direct label filtering on releases if they have label_id
-      if (hasLabelId && label) {
-        const normalizedLabelId = label.replace(/-/g, ''); // Remove hyphens
-        console.log('Trying direct label_id query on releases table');
+      try {
+        // Build the query based on schema discovery
+        let query;
+        let queryParams = [];
         
-        // Query directly on releases.label_id
-        const directQuery = `
-          SELECT r.*, a.name as artist_name
-          FROM releases r
-          LEFT JOIN artists a ON r.primary_artist_id = a.id
-          WHERE r.label_id = $1
-             OR r.label_id = $2
-             OR r.label_id::text ILIKE $3
-          ORDER BY r.release_date DESC
-          LIMIT 50
-        `;
+        // Check if status column exists for filtering
+        const hasStatusColumn = hasColumn(releasesSchema, 'status');
+        const statusFilter = hasStatusColumn ? "AND r.status = 'published'" : '';
         
-        try {
-          const result = await client.query(directQuery, [
-            label,
-            normalizedLabelId,
-            `%${label}%`
-          ]);
-          
-          console.log(`Found ${result.rows.length} releases with direct label_id query`);
-          
-          if (result.rows.length > 0) {
-            releases = result.rows;
+        // Check if label is queried by id or label_id
+        const labelColumn = hasColumn(releasesSchema, 'label_id') ? 'label_id' : 'id';
+        
+        if (hasJunctionTable) {
+          // Use the junction table for the query if it exists
+          if (label) {
+            query = `
+              SELECT r.*, 
+                     STRING_AGG(a.name, ', ') as artist_names
+              FROM releases r
+              LEFT JOIN release_artists ra ON r.id = ra.release_id
+              LEFT JOIN artists a ON ra.artist_id = a.id
+              WHERE r.${labelColumn} = $1 ${statusFilter}
+              GROUP BY r.id
+              ORDER BY r.release_date DESC
+              LIMIT $2 OFFSET $3
+            `;
+            queryParams = [label, parseInt(limit), parseInt(offset)];
+          } else {
+            query = `
+              SELECT r.*, 
+                     STRING_AGG(a.name, ', ') as artist_names
+              FROM releases r
+              LEFT JOIN release_artists ra ON r.id = ra.release_id
+              LEFT JOIN artists a ON ra.artist_id = a.id
+              ${statusFilter ? `WHERE ${statusFilter.substring(4)}` : ''}
+              GROUP BY r.id
+              ORDER BY r.release_date DESC
+              LIMIT $1 OFFSET $2
+            `;
+            queryParams = [parseInt(limit), parseInt(offset)];
           }
-        } catch (directErr) {
-          console.error('Error with direct label_id query:', directErr.message);
-        }
-      }
-      
-      // Strategy 2: Query using primary_artist_id join to artists and then to labels
-      if (releases.length === 0 && hasPrimaryArtistId && label) {
-        console.log('Trying primary_artist_id join query');
-        
-        const joinQuery = `
-          SELECT r.*, a.name as artist_name
-          FROM releases r
-          JOIN artists a ON r.primary_artist_id = a.id
-          JOIN labels l ON a.label_id = l.id
-          WHERE l.id = $1
-          ORDER BY r.release_date DESC
-          LIMIT 50
-        `;
-        
-        try {
-          const result = await client.query(joinQuery, [label]);
-          console.log(`Found ${result.rows.length} releases with primary_artist_id join query`);
-          
-          if (result.rows.length > 0) {
-            releases = result.rows;
-          }
-        } catch (joinErr) {
-          console.error('Error with primary_artist_id join query:', joinErr.message);
-        }
-      }
-      
-      // Strategy 3: Try using a simple name match if previous strategies failed
-      if (releases.length === 0 && label) {
-        console.log('Trying label name matching query');
-        
-        const nameQuery = `
-          SELECT r.*, a.name as artist_name
-          FROM releases r
-          LEFT JOIN artists a ON r.primary_artist_id = a.id
-          JOIN labels l ON l.name ILIKE $1
-          ORDER BY r.release_date DESC
-          LIMIT 50
-        `;
-        
-        try {
-          const result = await client.query(nameQuery, [`%${label.replace(/-/g, ' ')}%`]);
-          console.log(`Found ${result.rows.length} releases with label name matching query`);
-          
-          if (result.rows.length > 0) {
-            releases = result.rows;
-          }
-        } catch (nameErr) {
-          console.error('Error with label name matching query:', nameErr.message);
-        }
-      }
-      
-      // Final strategy: Get all releases if no label filtering or previous queries failed
-      if (releases.length === 0) {
-        console.log('Trying basic query for all releases');
-        
-        let basicQuery = '';
-        
-        // Select appropriate query based on schema
-        if (hasPrimaryArtistId) {
-          basicQuery = `
-            SELECT r.*, a.name as artist_name
-            FROM releases r
-            LEFT JOIN artists a ON r.primary_artist_id = a.id
-            ORDER BY r.release_date DESC
-            LIMIT 50
-          `;
         } else {
-          basicQuery = `
-            SELECT r.*
-            FROM releases r
-            ORDER BY r.release_date DESC
-            LIMIT 50
-          `;
+          // Fall back to direct query without junction table
+          if (label) {
+            query = `
+              SELECT r.*
+              FROM releases r
+              WHERE r.${labelColumn} = $1 ${statusFilter}
+              ORDER BY r.release_date DESC
+              LIMIT $2 OFFSET $3
+            `;
+            queryParams = [label, parseInt(limit), parseInt(offset)];
+          } else {
+            query = `
+              SELECT r.*
+              FROM releases r
+              ${statusFilter ? `WHERE ${statusFilter.substring(4)}` : ''}
+              ORDER BY r.release_date DESC
+              LIMIT $1 OFFSET $2
+            `;
+            queryParams = [parseInt(limit), parseInt(offset)];
+          }
         }
         
+        console.log('Executing query:', query);
+        console.log('With parameters:', queryParams);
+        
+        const result = await client.query(query, queryParams);
+        console.log(`Found ${result.rows.length} releases`);
+        
+        // Format response with consistent structure
+        const releases = result.rows.map(release => {
+          // Build a standardized release object with optional fields
+          const formattedRelease = {
+            id: release.id,
+            title: release.title,
+            artists: release.artist_names || '',
+            releaseDate: release.release_date,
+            artworkUrl: release.artwork_url || release.artwork_small_url || '',
+            labelId: release.label_id || release.id,
+            spotifyId: release.spotify_id || '',
+            releaseType: release.release_type || release.type || 'album',
+            totalTracks: release.total_tracks || 0,
+            spotifyUrl: release.spotify_url || release.spotify_uri || '',
+            createdAt: release.created_at,
+            updatedAt: release.updated_at
+          };
+          
+          return formattedRelease;
+        });
+        
+        // Log response summary
+        logResponse(releases, '/releases');
+        
+        // Return the formatted releases
+        return res.status(200).json({ 
+          releases,
+          _meta: {
+            count: releases.length,
+            offset: parseInt(offset),
+            limit: parseInt(limit),
+            query: { label },
+            timestamp: new Date().toISOString()
+          }
+        });
+      } catch (queryError) {
+        console.error('Primary query error:', queryError.message);
+        
+        // Try a fallback query if there was an error
         try {
-          const result = await client.query(basicQuery);
-          console.log(`Found ${result.rows.length} releases with basic query`);
+          console.log('Attempting fallback query without complex joins');
           
-          if (result.rows.length > 0) {
-            releases = result.rows;
-          }
-        } catch (basicErr) {
-          console.error('Error with basic query:', basicErr.message);
+          let fallbackQuery;
+          let fallbackParams;
           
-          // Last resort: just get all releases without joins
-          try {
-            const simpleResult = await client.query(`
-              SELECT * FROM releases 
+          if (label) {
+            fallbackQuery = `
+              SELECT * 
+              FROM releases 
+              WHERE ${hasColumn(releasesSchema, 'label_id') ? 'label_id' : 'id'} = $1
               ORDER BY release_date DESC 
-              LIMIT 50
-            `);
-            
-            console.log(`Found ${simpleResult.rows.length} releases with simple query`);
-            releases = simpleResult.rows;
-          } catch (simpleErr) {
-            console.error('Error with simple query:', simpleErr.message);
+              LIMIT $2 OFFSET $3
+            `;
+            fallbackParams = [label, parseInt(limit), parseInt(offset)];
+          } else {
+            fallbackQuery = `
+              SELECT * 
+              FROM releases 
+              ORDER BY release_date DESC 
+              LIMIT $1 OFFSET $2
+            `;
+            fallbackParams = [parseInt(limit), parseInt(offset)];
           }
+          
+          const fallbackResult = await client.query(fallbackQuery, fallbackParams);
+          console.log(`Fallback found ${fallbackResult.rows.length} releases`);
+          
+          // Format the fallback response
+          const fallbackReleases = fallbackResult.rows.map(release => ({
+            id: release.id,
+            title: release.title,
+            releaseDate: release.release_date,
+            artworkUrl: release.artwork_url || release.artwork_small_url || '',
+            labelId: release.label_id || release.id,
+            spotifyId: release.spotify_id || '',
+            releaseType: release.release_type || release.type || 'album',
+            createdAt: release.created_at,
+            updatedAt: release.updated_at
+          }));
+          
+          return res.status(200).json({ 
+            releases: fallbackReleases,
+            _meta: {
+              count: fallbackReleases.length,
+              fallback: true,
+              error: queryError.message,
+              timestamp: new Date().toISOString()
+            }
+          });
+        } catch (fallbackError) {
+          // If even the fallback fails, return the error
+          console.error('Fallback query error:', fallbackError.message);
+          return res.status(500).json({ 
+            error: 'Database query error', 
+            details: fallbackError.message,
+            originalError: queryError.message
+          });
         }
       }
-      
-      // Format the response
-      const formattedReleases = releases.map(release => ({
-        id: release.id,
-        title: release.title || 'Unknown Title',
-        artistId: release.primary_artist_id || release.artist_id || null,
-        artistName: release.artist_name || 'Unknown Artist',
-        releaseDate: release.release_date,
-        type: release.release_type || release.type || 'single',
-        imageUrl: release.artwork_url || release.image_url || '',
-        spotifyId: release.spotify_id || '',
-        spotifyUrl: release.spotify_url || '',
-        catalogNumber: release.catalog_number || '',
-        createdAt: release.created_at,
-        updatedAt: release.updated_at
-      }));
-      
-      // Return the releases
-      return res.status(200).json({ releases: formattedReleases });
     } finally {
       // Release the client back to the pool
       client.release();
       console.log('Database connection released');
     }
   } catch (error) {
-    console.error('Error fetching releases:', error);
+    console.error('Error processing request:', error);
     return res.status(500).json({ 
       error: 'Internal server error', 
       details: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      timestamp: new Date().toISOString()
     });
   }
 };

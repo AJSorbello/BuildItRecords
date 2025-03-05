@@ -1,6 +1,6 @@
 // Serverless API endpoint for artists
 // This file is deployed as an independent serverless function
-const { getPool, getTableSchema, hasColumn } = require('../db-utils');
+const { getPool, getTableSchema, hasColumn } = require('../utils/db-utils');
 
 // Initialize database connection
 const pool = getPool();

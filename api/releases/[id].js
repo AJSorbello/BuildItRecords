@@ -1,5 +1,5 @@
 // Serverless API handler for fetching a single release by ID
-const { getPool, getTableSchema, hasColumn, logResponse } = require('../db-utils');
+const { getPool, getTableSchema, hasColumn, logResponse } = require('../utils/db-utils');
 
 // Initialize database connection
 const pool = getPool();
