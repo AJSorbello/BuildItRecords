@@ -2,15 +2,32 @@ const https = require('https');
 const http = require('http');
 
 // Base URL for API testing
-// Change to production URL when authentication is resolved
-const API_BASE_URL = 'http://localhost:3001';
-// const API_BASE_URL = 'https://builditrecords-b9x74oghy-ajsorbellos-projects.vercel.app';
+// Choose which URL to test:
+// Local API server
+// const API_BASE_URL = 'http://localhost:3001';
+// Preview deployment
+// const API_BASE_URL = 'https://builditrecords-61370ydw7-ajsorbellos-projects.vercel.app';
+// Production deployment
+const API_BASE_URL = 'https://builditrecords-33vlv0jkg-ajsorbellos-projects.vercel.app';
 
 // Test endpoints to verify
 const ENDPOINTS = [
-  { path: '/api/diagnostic', name: 'Database Diagnostic' },
-  { path: '/api/artists?label=buildit-records', name: 'Artists by Label' },
-  { path: '/api/releases?label=buildit-records', name: 'Releases by Label' }
+  { 
+    name: 'Simple Test Endpoint',
+    path: '/api/test'
+  },
+  { 
+    name: 'Database Diagnostic',
+    path: '/api/diagnostic'
+  },
+  { 
+    name: 'Artists by Label',
+    path: '/api/artists?label=buildit-records'
+  },
+  { 
+    name: 'Releases by Label',
+    path: '/api/releases?label=buildit-records'
+  }
 ];
 
 // Function to make a GET request and extract a sample of the data
