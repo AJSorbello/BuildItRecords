@@ -107,6 +107,18 @@
       "dest": "/api/releases/[id].js?id=$1" 
     },
     {
+      "src": "/(tech|records|deep)/(.*)",
+      "dest": "dist/index.html"
+    },
+    {
+      "src": "/(artists|releases|playlists|submit|legal|about|contact)/(.*)",
+      "dest": "dist/index.html"
+    },
+    {
+      "src": "/(records|tech|deep)/(artists|releases|playlists|submit|legal|about|contact)/(.*)",
+      "dest": "dist/index.html"
+    },
+    {
       "src": "/(.*)",
       "dest": "dist/$1"
     }
