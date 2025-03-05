@@ -8,7 +8,7 @@ const http = require('http');
 // Preview deployment
 // const API_BASE_URL = 'https://builditrecords-61370ydw7-ajsorbellos-projects.vercel.app';
 // Production deployment
-const API_BASE_URL = 'https://builditrecords-33vlv0jkg-ajsorbellos-projects.vercel.app';
+const API_BASE_URL = 'https://builditrecords-movqv37rr-ajsorbellos-projects.vercel.app';
 
 // Test endpoints to verify
 const ENDPOINTS = [
