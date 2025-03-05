@@ -38,15 +38,15 @@ echo "🌐 API URL set to: $REACT_APP_API_URL"
 
 # Install dependencies with optional dependencies included
 echo "📦 Installing dependencies with optional dependencies"
-npm install --no-package-lock --legacy-peer-deps
+npm install --legacy-peer-deps
 
 # Explicitly install esbuild with the linux-x64 platform
 echo "📦 Installing esbuild with platform-specific dependencies"
-npm install --no-package-lock esbuild @esbuild/linux-x64
+npm install esbuild @esbuild/linux-x64
 
 # Install API dependencies
 echo "📦 Installing API dependencies"
-cd api && npm install --no-package-lock pg pg-hstore && cd ..
+cd api && npm install pg pg-hstore && cd ..
 
 # Run build using npx to ensure we use the local version
 echo "🏗️ Building the application"

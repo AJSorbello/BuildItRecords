@@ -7,7 +7,7 @@
     "server"
   ],
   "engines": {
-    "node": ">=16.0.0"
+    "node": "22.x"
   },
   "type": "commonjs",
   "resolutions": {
@@ -156,5 +156,6 @@
     "reason": "Fix Vercel deployment registry connection issues",
     "buildAuthor": "BuildIt Support"
   },
-  "vercelDeploymentId": "deploy-6250"
+  "vercelDeploymentId": "deploy-6250",
+  "packageManager": "npm@10.8.2"
 }
