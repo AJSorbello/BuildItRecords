@@ -7,8 +7,9 @@
     "server"
   ],
   "engines": {
-    "node": "22.x"
+    "node": ">=16.0.0"
   },
+  "type": "commonjs",
   "resolutions": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
@@ -17,12 +18,18 @@
     "dev": "vite",
     "build": "vite build",
     "serve": "vite preview",
-    "start": "npm run dev",
+    "start": "pnpm run dev",
     "server": "cd server && node server.js",
-    "dev:all": "concurrently \"npm run server\" \"npm run dev\"",
+    "dev:all": "concurrently \"pnpm run server\" \"pnpm run dev\"",
+    "api:local": "node server/local-api-server.js",
+    "dev:api": "NODE_ENV=development pnpm dlx nodemon server/local-api-server.js",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx --max-warnings=1000 || true",
     "type-check": "tsc --noEmit",
-    "vercel-build": "./build-script.sh"
+    "vercel-build": "./build-script.sh",
+    "test:db": "node api/test-db-connection.js",
+    "test:api": "node server/verify-api.js",
+    "verify:all": "pnpm run test:db && pnpm run test:api",
+    "prepare:deploy": "pnpm run lint && pnpm run verify:all"
   },
   "dependencies": {
     "@ant-design/icons": "^5.5.2",
@@ -63,7 +70,6 @@
     "cors": "^2.8.5",
     "date-fns": "^3.0.6",
     "dotenv": "^16.4.7",
-    "express": "^4.21.2",
     "express-rate-limit": "^7.5.0",
     "express-validator": "^7.2.1",
     "framer-motion": "^10.17.9",
@@ -116,8 +122,10 @@
     "concurrently": "^7.6.0",
     "eslint": "^8.56.0",
     "eslint-plugin-react": "^7.33.2",
+    "express": "^4.21.2",
     "http-proxy-middleware": "^3.0.3",
     "husky": "^9.1.7",
+    "nodemon": "^3.0.2",
     "sequelize-cli": "^6.6.2",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
