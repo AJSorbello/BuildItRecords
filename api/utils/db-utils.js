@@ -31,6 +31,11 @@ function getPool() {
       }
     };
     console.log('Using connection string from POSTGRES_URL');
+    // Log masked connection URL for debugging
+    const maskedUrl = process.env.POSTGRES_URL
+      ? process.env.POSTGRES_URL.replace(/\/\/([^:]+):([^@]+)@/, '//***:***@')
+      : 'none';
+    console.log('Connection URL (masked):', maskedUrl);
   } else {
     // Use individual parameters
     poolConfig = {
@@ -45,6 +50,14 @@ function getPool() {
       } : false
     };
     console.log('Using individual connection parameters');
+    console.log('Connection params (masked):', {
+      host: poolConfig.host,
+      port: poolConfig.port,
+      database: poolConfig.database,
+      user: poolConfig.user,
+      password: '***', 
+      ssl: poolConfig.ssl
+    });
   }
 
   // Add common options
@@ -71,12 +84,19 @@ function getPool() {
  */
 async function getTableSchema(client, tableName) {
   try {
+    console.log(`Fetching schema for table: ${tableName}`);
     const result = await client.query(`
       SELECT column_name, data_type 
       FROM information_schema.columns 
       WHERE table_schema = 'public' AND table_name = $1
       ORDER BY ordinal_position
     `, [tableName]);
+    
+    if (result.rows.length === 0) {
+      console.warn(`Warning: No columns found for table ${tableName}. Verify the table exists.`);
+    } else {
+      console.log(`Found ${result.rows.length} columns for table ${tableName}`);
+    }
     
     return result.rows;
   } catch (error) {
@@ -92,7 +112,9 @@ async function getTableSchema(client, tableName) {
  * @returns {boolean} True if column exists
  */
 function hasColumn(schema, columnName) {
-  return schema.some(col => col.column_name === columnName);
+  const exists = schema.some(col => col.column_name === columnName);
+  console.log(`Column check: '${columnName}' ${exists ? 'exists' : 'does not exist'} in schema`);
+  return exists;
 }
 
 /**
@@ -130,9 +152,39 @@ function logResponse(data, endpoint) {
   console.log(`[${endpoint}] Response summary:`, summary);
 }
 
+/**
+ * Get all tables in the database
+ * @param {Object} client - Database client
+ * @returns {Promise<Array>} Array of table names
+ */
+async function getAllTables(client) {
+  try {
+    console.log('Fetching all tables in database');
+    const result = await client.query(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public'
+      ORDER BY table_name
+    `);
+    
+    if (result.rows.length === 0) {
+      console.warn('Warning: No tables found in database');
+    } else {
+      console.log(`Found ${result.rows.length} tables in database`);
+      console.log('Tables:', result.rows.map(row => row.table_name).join(', '));
+    }
+    
+    return result.rows.map(row => row.table_name);
+  } catch (error) {
+    console.error('Error fetching tables:', error.message);
+    return [];
+  }
+}
+
 module.exports = {
   getPool,
   getTableSchema,
   hasColumn,
-  logResponse
+  logResponse,
+  getAllTables
 };

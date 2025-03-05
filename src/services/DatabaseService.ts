@@ -107,13 +107,21 @@ class DatabaseService {
       console.log(`Production/Proxy: Using API URL: ${apiUrl}`);
     }
     
+    // Debugging helper for Vercel deployment
+    console.log('[DEBUG] Environment:', process.env.NODE_ENV);
+    console.log('[DEBUG] API Base URL:', this.baseUrl);
+    console.log('[DEBUG] Full API URL:', apiUrl);
+    
     try {
+      console.log(`[DEBUG] Sending ${options.method || 'GET'} request to ${apiUrl}`);
       const response = await fetch(apiUrl, {
         headers: {
           'Content-Type': 'application/json',
         },
         ...options,
       });
+      
+      console.log(`[DEBUG] Response status: ${response.status} ${response.statusText}`);
       
       // Handle non-successful responses
       if (!response.ok) {
@@ -132,7 +140,28 @@ class DatabaseService {
       
       // Parse response
       try {
-        return await response.json() as T;
+        const data = await response.json() as T;
+        console.log(`[DEBUG] API Response data type:`, typeof data);
+        console.log(`[DEBUG] API Response has data:`, !!data);
+        
+        // Log the properties of the response without the full payload
+        if (data && typeof data === 'object') {
+          console.log('[DEBUG] Response properties:', Object.keys(data));
+          
+          // Log meta information if it exists
+          if ('_meta' in data) {
+            console.log('[DEBUG] Response meta:', data._meta);
+          }
+          
+          // Log counts for arrays in the response
+          for (const key of Object.keys(data)) {
+            if (Array.isArray(data[key])) {
+              console.log(`[DEBUG] Response ${key} count:`, data[key].length);
+            }
+          }
+        }
+        
+        return data;
       } catch (e) {
         console.error('Failed to parse response as JSON:', e);
         throw new Error('Invalid API response format');
@@ -155,6 +184,34 @@ class DatabaseService {
   }> {
     try {
       console.log(`Getting releases for label: ${labelId}`);
+      
+      // Special logging for buildit-records to help debug production issues
+      if (labelId === 'buildit-records') {
+        console.log('[DEBUG] Detected buildit-records label request');
+        console.log('[DEBUG] Current environment:', process.env.NODE_ENV);
+        console.log('[DEBUG] Making request to:', `${this.baseUrl}/api/releases?label=${labelId}`);
+        
+        // Try fetching the diagnostic data first to understand the database state
+        try {
+          console.log('[DEBUG] Fetching diagnostic data to check database state');
+          const diagnosticData = await this.fetchApi<any>(`/diagnostic`);
+          console.log('[DEBUG] Diagnostic data received:', !!diagnosticData);
+          
+          if (diagnosticData && diagnosticData.diagnosticResults) {
+            console.log('[DEBUG] Database has tables:', diagnosticData.diagnosticResults.tables);
+            
+            // Check if we can find the correct label value from diagnostic info
+            if (diagnosticData.diagnosticResults.labelInfo && 
+                diagnosticData.diagnosticResults.labelInfo.possibleBuilditLabels) {
+              console.log('[DEBUG] Possible BuildIt label values:', 
+                diagnosticData.diagnosticResults.labelInfo.possibleBuilditLabels);
+            }
+          }
+        } catch (diagError) {
+          console.error('[DEBUG] Error fetching diagnostic data:', diagError);
+        }
+      }
+      
       const response = await this.fetchApi<ApiResponse>(
         `/releases?label=${labelId}&offset=${offset}&limit=${limit}`
       );
@@ -172,7 +229,30 @@ class DatabaseService {
         };
       }
       
-      console.warn(`Received empty or invalid releases array for label ${labelId}`);
+      // Enhanced logging for empty results
+      if (labelId === 'buildit-records') {
+        console.warn(`[DEBUG] Received empty or invalid releases array for buildit-records`);
+        console.warn(`[DEBUG] Response structure:`, JSON.stringify(response, null, 2));
+        
+        // Try an alternative approach for the production environment
+        try {
+          console.log('[DEBUG] Trying alternative query for buildit-records with ILIKE search');
+          // Try fetching with the /api/diagnostic endpoint which has our special ILIKE search
+          const alternativeResponse = await this.fetchApi<any>(`/diagnostic`);
+          console.log('[DEBUG] Alternative query response received');
+          
+          if (alternativeResponse && alternativeResponse.diagnosticResults && 
+              alternativeResponse.diagnosticResults.releasesInfo && 
+              alternativeResponse.diagnosticResults.releasesInfo.likeBuilditCount) {
+            console.log('[DEBUG] Found potential releases with LIKE %buildit%:', 
+              alternativeResponse.diagnosticResults.releasesInfo.likeBuilditCount);
+          }
+        } catch (altError) {
+          console.error('[DEBUG] Error in alternative query:', altError);
+        }
+      } else {
+        console.warn(`Received empty or invalid releases array for label ${labelId}`);
+      }
       return {
         releases: [],
         totalReleases: 0,
@@ -380,6 +460,30 @@ class DatabaseService {
   public async getArtistsForLabel(labelId: string | { id: string }): Promise<Artist[]> {
     try {
       const id = typeof labelId === 'string' ? labelId : labelId.id;
+      console.log(`[DEBUG] Fetching artists for label: ${id}`);
+      
+      // Special handling for buildit-records
+      if (id === 'buildit-records') {
+        console.log('[DEBUG] Fetching artists for buildit-records label');
+        
+        // Try using the diagnostic endpoint first to get information
+        try {
+          console.log('[DEBUG] Fetching diagnostic data to understand database state');
+          const diagnosticData = await this.fetchApi<any>(`/diagnostic`);
+          
+          if (diagnosticData && diagnosticData.diagnosticResults) {
+            const artists = diagnosticData.diagnosticResults.artistsInfo || {};
+            console.log('[DEBUG] Artist diagnostic info:', {
+              totalArtists: artists.totalCount,
+              builditArtistsCount: artists.builditRecordsCount,
+              caseInsensitiveCount: artists.caseInsensitiveCount
+            });
+          }
+        } catch (diagError) {
+          console.error('[DEBUG] Error fetching artists diagnostic:', diagError);
+        }
+      }
+      
       const response = await this.fetchApi<{
         success: boolean;
         data: {
@@ -389,7 +493,39 @@ class DatabaseService {
       
       if (!response?.success || !response?.data?.artists) {
         console.error('Invalid response format from server:', response);
+        
+        // For buildit-records, attempt alternative approaches
+        if (id === 'buildit-records') {
+          console.log('[DEBUG] Trying alternative approach for buildit-records artists');
+          
+          try {
+            // Try fetching directly with the enhanced diagnostic endpoint
+            const diagnosticData = await this.fetchApi<any>(`/diagnostic`);
+            if (diagnosticData && diagnosticData.diagnosticResults && 
+                diagnosticData.diagnosticResults.artistsInfo && 
+                diagnosticData.diagnosticResults.artistsInfo.sampleArtists) {
+              
+              console.log('[DEBUG] Diagnostic endpoint returned sample artists');
+              return diagnosticData.diagnosticResults.artistsInfo.sampleArtists;
+            }
+          } catch (altError) {
+            console.error('[DEBUG] Alternative artist approach failed:', altError);
+          }
+        }
+        
         return [];
+      }
+
+      // Extra logging for buildit-records
+      if (id === 'buildit-records') {
+        console.log(`[DEBUG] Found ${response.data.artists.length} artists for buildit-records`);
+        if (response.data.artists.length > 0) {
+          console.log('[DEBUG] Sample artist:', {
+            id: response.data.artists[0].id,
+            name: response.data.artists[0].name,
+            labelId: response.data.artists[0].label_id
+          });
+        }
       }
 
       return response.data.artists;
