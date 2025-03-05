@@ -25,22 +25,30 @@ export REACT_APP_ENV=production
 export REACT_APP_API_URL=/api
 export API_URL=/api
 
-# Database configuration
-export DB_HOST="db.liuaozuvkmvanmchndzl.supabase.co"
-export DB_PORT="5432"
-export DB_NAME="postgres"
-export DB_USER="postgres"
-export DB_PASSWORD="postgres"
+# Database configuration - DO NOT override Vercel-provided values
+# These are fallbacks only
+echo "🔧 Setting database environment variables"
 export DB_SSL="true"
 export DB_SSL_REJECT_UNAUTHORIZED="false"
-export POSTGRES_URL="postgres://postgres:postgres@db.liuaozuvkmvanmchndzl.supabase.co:5432/postgres?sslmode=require"
 
-# Supabase
-export VITE_SUPABASE_URL="https://liuaozuvkmvanmchndzl.supabase.co"
-export VITE_SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxpdWFvenV2a212YW5tY2huZHpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU4NDg0MzQsImV4cCI6MjA1MTQyNDQzNH0.tlHgYcid26cTNuDoKZkHacwfaJ7BWR9d35EtAxtTB_g"
+# Admin configuration
+export ADMIN_USERNAME="admin"
+export ADMIN_PASSWORD_HASH="$2a$10$nQ0oN9pavoYZiAjdPdstL.S.Vi/3012suNyKxHX/CI39wB424l9Ya"
+export JWT_SECRET="buildit_records_jwt_secret_2025"
+
+# Supabase configuration
+export VITE_SUPABASE_URL="${SUPABASE_URL}"
+export VITE_SUPABASE_ANON_KEY="${SUPABASE_ANON_KEY}"
 
 # Ensure API URL is properly set
 echo "🌐 API URL set to: $REACT_APP_API_URL"
+
+# Print important environment variables for debugging
+echo "🔍 Database Connection Info (masked):"
+echo "POSTGRES_URL is set: $(if [ -n "$POSTGRES_URL" ]; then echo "Yes"; else echo "No"; fi)"
+echo "POSTGRES_URL_NON_POOLING is set: $(if [ -n "$POSTGRES_URL_NON_POOLING" ]; then echo "Yes"; else echo "No"; fi)"
+echo "SUPABASE_URL: ${SUPABASE_URL}"
+echo "VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}"
 
 # Install dependencies with optional dependencies included
 echo "📦 Installing dependencies with legacy-peer-deps"
