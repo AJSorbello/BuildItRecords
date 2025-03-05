@@ -51,7 +51,7 @@ const AdminTrackList: React.FC<AdminTrackListProps> = ({ tracks, onDeleteTrack, 
     };
 
     fetchAllTrackDetails();
-  }, [tracks]);
+  }, [tracks, loading, trackDetails]);
 
   const handleDeleteClick = (trackId: string) => {
     setTrackToDelete(trackId);

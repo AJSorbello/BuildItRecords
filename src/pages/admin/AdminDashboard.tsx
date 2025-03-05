@@ -24,7 +24,6 @@ import {
   Avatar,
   Snackbar
 } from '@mui/material';
-import TrackManager from '../../components/admin/TrackManager';
 import { databaseService } from '../../services/DatabaseService';
 import { RECORD_LABELS } from '../../constants/labels';
 import { Track } from '../../types/track';
@@ -45,7 +44,6 @@ interface AdminDashboardState {
   importDialogOpen: boolean;
   snackbarOpen: boolean;
   snackbarMessage: string;
-  snackbarVariant: string;
 }
 
 class AdminDashboard extends Component<{}, AdminDashboardState> {
@@ -68,7 +66,6 @@ class AdminDashboard extends Component<{}, AdminDashboardState> {
       importDialogOpen: false,
       snackbarOpen: false,
       snackbarMessage: '',
-      snackbarVariant: 'success'
     };
     
     // Bind methods
@@ -152,7 +149,6 @@ class AdminDashboard extends Component<{}, AdminDashboardState> {
       this.setState({
         snackbarOpen: true,
         snackbarMessage: message,
-        snackbarVariant: 'success',
         importDialogOpen: false
       });
 
@@ -164,8 +160,7 @@ class AdminDashboard extends Component<{}, AdminDashboardState> {
       this.setState({
         error: errorMessage,
         snackbarOpen: true,
-        snackbarMessage: errorMessage,
-        snackbarVariant: 'error'
+        snackbarMessage: errorMessage
       });
     } finally {
       this.setState({ importing: false });
@@ -227,7 +222,6 @@ class AdminDashboard extends Component<{}, AdminDashboardState> {
       importDialogOpen,
       snackbarOpen,
       snackbarMessage,
-      snackbarVariant
     } = this.state;
     
     if (!isAuthenticated) {

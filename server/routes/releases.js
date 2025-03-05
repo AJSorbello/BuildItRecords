@@ -67,8 +67,7 @@ router.get('/top', [
     // Get releases with tracks
     const releases = await Release.findAll({
       where: {
-        label_id: label,
-        status: 'active'
+        label_id: label
       },
       include: [
         {
@@ -80,7 +79,7 @@ router.get('/top', [
             {
               model: Artist,
               as: 'artists',
-              attributes: ['id', 'name', 'spotify_url', 'profile_image_url', 'profile_image_small_url', 'profile_image_large_url']
+              attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
             }
           ]
         }
@@ -126,7 +125,7 @@ router.get('/top', [
         {
           model: Artist,
           as: 'artists',
-          attributes: ['id', 'name', 'spotify_url', 'profile_image_url', 'profile_image_small_url', 'profile_image_large_url']
+          attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
         },
         {
           model: Track,
@@ -136,7 +135,7 @@ router.get('/top', [
             {
               model: Artist,
               as: 'artists',
-              attributes: ['id', 'name', 'spotify_url', 'profile_image_url', 'profile_image_small_url', 'profile_image_large_url']
+              attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
             }
           ]
         }
@@ -188,11 +187,23 @@ router.get('/', [
           });
         }
 
-        const where = {
-          status: 'active'  // Only show active releases
-        };
+        const where = {};
         if (label) {
           where.label_id = label;
+        }
+
+        // Try to check if status column exists before applying filter
+        // This pattern allows graceful handling of both schema versions
+        try {
+          // Check if status column exists in the Release model
+          if (Release.rawAttributes && Release.rawAttributes.status) {
+            where.status = 'active';  // Only apply if column exists
+            console.log('Adding status filter to query');
+          } else {
+            console.log('Status column not found in model, skipping status filter');
+          }
+        } catch (error) {
+          console.log('Error checking for status column, skipping status filter:', error.message);
         }
 
         // Log the query we're about to run
@@ -212,20 +223,17 @@ router.get('/', [
             'release_type',
             'release_date',
             'artwork_url',
-            'artwork_small_url',
-            'artwork_large_url',
             'spotify_url',
             'spotify_id',
             'external_urls',
             'created_at',
-            'updated_at',
-            'status'
+            'updated_at'
           ],
           include: [
             {
               model: Artist,
               as: 'artists',
-              attributes: ['id', 'name', 'spotify_url', 'profile_image_url', 'profile_image_small_url', 'profile_image_large_url']
+              attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
             },
             {
               model: Track,
@@ -235,7 +243,7 @@ router.get('/', [
                 {
                   model: Artist,
                   as: 'artists',
-                  attributes: ['id', 'name', 'spotify_url', 'profile_image_url', 'profile_image_small_url', 'profile_image_large_url']
+                  attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
                 }
               ]
             }
@@ -285,9 +293,7 @@ router.get('/:id', async (req, res) => {
                 'name', 
                 'type', 
                 'uri', 
-                'profile_image_url',
-                'profile_image_small_url',
-                'profile_image_large_url'
+                'profile_image_url'
               ]
             },
             {
@@ -298,9 +304,7 @@ router.get('/:id', async (req, res) => {
                 'name', 
                 'type', 
                 'uri', 
-                'profile_image_url',
-                'profile_image_small_url',
-                'profile_image_large_url'
+                'profile_image_url'
               ]
             }
           ]
@@ -314,9 +318,7 @@ router.get('/:id', async (req, res) => {
             'name', 
             'type', 
             'uri', 
-            'profile_image_url',
-            'profile_image_small_url',
-            'profile_image_large_url'
+            'profile_image_url'
           ]
         }
       ],
@@ -410,7 +412,7 @@ router.post('/:labelId/import', async (req, res) => {
           {
             model: Artist,
             as: 'artists',
-            attributes: ['id', 'name', 'spotify_url', 'profile_image_url', 'profile_image_small_url', 'profile_image_large_url']
+            attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
           },
           {
             model: Track,
@@ -420,7 +422,7 @@ router.post('/:labelId/import', async (req, res) => {
               {
                 model: Artist,
                 as: 'artists',
-                attributes: ['id', 'name', 'spotify_url', 'profile_image_url', 'profile_image_small_url', 'profile_image_large_url']
+                attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
               }
             ]
           }
@@ -494,14 +496,6 @@ router.get('/label/:labelId', async (req, res) => {
     });
     logger.info('Raw releases count:', releasesCount);
 
-    const publishedReleasesCount = await Release.count({
-      where: { 
-        label_id: label.id,
-        status: 'published'
-      }
-    });
-    logger.info('Published releases count:', publishedReleasesCount);
-
     const tracksCount = await Track.count({
       where: { 
         label_id: label.id
@@ -509,26 +503,28 @@ router.get('/label/:labelId', async (req, res) => {
     });
     logger.info('Raw tracks count:', tracksCount);
 
-    const publishedTracksCount = await Track.count({
-      where: { 
-        label_id: label.id,
-        status: 'published'
-      }
-    });
-    logger.info('Published tracks count:', publishedTracksCount);
-
     // Get all releases with detailed logging
     const releases = await Release.findAll({
       where: { 
-        label_id: label.id,
-        status: 'published' // Only get published releases
+        label_id: label.id
       },
-      attributes: ['id', 'title', 'release_date', 'artwork_url', 'artwork_small_url', 'artwork_large_url', 'spotify_url', 'label_id', 'total_tracks', 'status', 'created_at', 'updated_at'],
+      attributes: [
+        'id',
+        'title',
+        'release_date',
+        'artwork_url',
+        'spotify_url',
+        'label_id',
+        'total_tracks',
+        'status',
+        'created_at',
+        'updated_at'
+      ],
       include: [
         {
           model: Artist,
           as: 'artists',
-          attributes: ['id', 'name', 'spotify_url', 'profile_image_url', 'profile_image_small_url', 'profile_image_large_url']
+          attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
         },
         {
           model: Track,
@@ -539,12 +535,12 @@ router.get('/label/:labelId', async (req, res) => {
             {
               model: Artist,
               as: 'artists',
-              attributes: ['id', 'name', 'spotify_url', 'profile_image_url', 'profile_image_small_url', 'profile_image_large_url']
+              attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
             },
             {
               model: Artist,
               as: 'remixer',
-              attributes: ['id', 'name', 'spotify_url', 'profile_image_url', 'profile_image_small_url', 'profile_image_large_url']
+              attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
             }
           ]
         }
@@ -570,9 +566,7 @@ router.get('/label/:labelId', async (req, res) => {
           id: artist.id,
           name: artist.name,
           spotify_url: artist.spotify_url,
-          profile_image_url: artist.profile_image_url,
-          profile_image_small_url: artist.profile_image_small_url,
-          profile_image_large_url: artist.profile_image_large_url
+          profile_image_url: artist.profile_image_url
         })),
         tracks: (releaseData.tracks || []).map(track => ({
           ...track,
@@ -580,25 +574,23 @@ router.get('/label/:labelId', async (req, res) => {
             id: artist.id,
             name: artist.name,
             spotify_url: artist.spotify_url,
-            profile_image_url: artist.profile_image_url,
-            profile_image_small_url: artist.profile_image_small_url,
-            profile_image_large_url: artist.profile_image_large_url
+            profile_image_url: artist.profile_image_url
           }))
         }))
       };
     });
 
     logger.info('Response data:', {
-      totalReleases: publishedReleasesCount,
-      totalTracks: publishedTracksCount,
+      totalReleases: releasesCount,
+      totalTracks: tracksCount,
       returnedReleases: transformedReleases.length
     });
 
     res.json({
       success: true,
       releases: transformedReleases,
-      totalReleases: publishedReleasesCount,
-      totalTracks: publishedTracksCount
+      totalReleases: releasesCount,
+      totalTracks: tracksCount
     });
   } catch (error) {
     logger.error('Error fetching releases:', error);
@@ -639,7 +631,7 @@ router.get('/:labelId', async (req, res) => {
         {
           model: Artist,
           as: 'artists',
-          attributes: ['id', 'name', 'spotify_url', 'profile_image_url', 'profile_image_small_url', 'profile_image_large_url']
+          attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
         },
         {
           model: Track,
@@ -649,7 +641,7 @@ router.get('/:labelId', async (req, res) => {
             {
               model: Artist,
               as: 'artists',
-              attributes: ['id', 'name', 'spotify_url', 'profile_image_url', 'profile_image_small_url', 'profile_image_large_url']
+              attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
             }
           ]
         }
@@ -668,20 +660,16 @@ router.get('/:labelId', async (req, res) => {
           id: artist.id,
           name: artist.name,
           spotify_url: artist.spotify_url,
-          profile_image_url: artist.profile_image_url,
-          profile_image_small_url: artist.profile_image_small_url,
-          profile_image_large_url: artist.profile_image_large_url
+          profile_image_url: artist.profile_image_url
         })),
-        albumCover: releaseJson.artwork_url || releaseJson.artwork_small_url || releaseJson.artwork_large_url,
+        albumCover: releaseJson.artwork_url,
         tracks: releaseJson.tracks.map(track => ({
           ...track,
           artists: track.artists.map(artist => ({
             id: artist.id,
             name: artist.name,
             spotify_url: artist.spotify_url,
-            profile_image_url: artist.profile_image_url,
-            profile_image_small_url: artist.profile_image_small_url,
-            profile_image_large_url: artist.profile_image_large_url
+            profile_image_url: artist.profile_image_url
           }))
         }))
       };
@@ -719,7 +707,7 @@ router.get('/:labelId/:releaseId', async (req, res) => {
         {
           model: Artist,
           as: 'artists',
-          attributes: ['id', 'name', 'spotify_url', 'profile_image_url', 'profile_image_small_url', 'profile_image_large_url']
+          attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
         },
         {
           model: Track,
@@ -729,7 +717,7 @@ router.get('/:labelId/:releaseId', async (req, res) => {
             {
               model: Artist,
               as: 'artists',
-              attributes: ['id', 'name', 'spotify_url', 'profile_image_url', 'profile_image_small_url', 'profile_image_large_url']
+              attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
             }
           ]
         }
@@ -802,7 +790,7 @@ router.post('/', async (req, res) => {
         {
           model: Artist,
           as: 'artists',
-          attributes: ['id', 'name', 'spotify_url', 'profile_image_url', 'profile_image_small_url', 'profile_image_large_url']
+          attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
         },
         {
           model: Track,
@@ -812,7 +800,7 @@ router.post('/', async (req, res) => {
             {
               model: Artist,
               as: 'artists',
-              attributes: ['id', 'name', 'spotify_url', 'profile_image_url', 'profile_image_small_url', 'profile_image_large_url']
+              attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
             }
           ]
         }
@@ -874,12 +862,12 @@ router.get('/featured', async (req, res) => {
         {
           model: Artist,
           as: 'primaryArtist',
-          attributes: ['id', 'name', 'spotify_url', 'profile_image_url', 'profile_image_small_url', 'profile_image_large_url']
+          attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
         },
         {
           model: Artist,
           as: 'artists',
-          attributes: ['id', 'name', 'spotify_url', 'profile_image_url', 'profile_image_small_url', 'profile_image_large_url']
+          attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
         }
       ],
       order: [
@@ -910,64 +898,207 @@ router.get('/featured', async (req, res) => {
   }
 });
 
-// Get all releases with pagination
+// GET /releases?label=:labelId
 router.get('/', async (req, res) => {
   try {
-    const { labelId } = req.query;
-    const offset = parseInt(req.query.offset) || 0;
-    const limit = parseInt(req.query.limit) || 10;
-
-    const where = {
-      status: 'active'  // Only show active releases
-    };
-    if (labelId) {
-      where.label_id = labelId;
+    console.log(`GET /releases request with query:`, req.query);
+    const { label, offset = 0, limit = 50 } = req.query;
+    
+    // Check for missing parameters
+    if (!label) {
+      console.log('No label provided, attempting to fetch all releases');
+    } else {
+      console.log(`Fetching releases for label: ${label}`);
     }
-
-    const { count, rows } = await Release.findAndCountAll({
-      where,
-      include: [
-        {
-          model: Artist,
+    
+    // Try using raw query first to avoid Sequelize model issues
+    try {
+      const sequelize = db.sequelize;
+      
+      // First inspect the database schema to understand what columns we have
+      const schemaCheck = await sequelize.query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+          AND table_name = 'releases'
+          AND column_name = 'status';
+      `, { type: sequelize.QueryTypes.SELECT });
+      
+      const hasStatusColumn = schemaCheck.length > 0;
+      console.log(`Schema check: releases table ${hasStatusColumn ? 'has' : 'does not have'} status column`);
+      
+      // Check if release_artists table exists
+      const releaseArtistsCheck = await sequelize.query(`
+        SELECT table_name 
+        FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+          AND table_name = 'release_artists';
+      `, { type: sequelize.QueryTypes.SELECT });
+      
+      const hasReleaseArtistsTable = releaseArtistsCheck.length > 0;
+      console.log(`Schema check: ${hasReleaseArtistsTable ? 'Found' : 'Did not find'} release_artists junction table`);
+      
+      // Construct our query based on what we found in the schema
+      let query;
+      let replacements = {};
+      
+      if (hasReleaseArtistsTable) {
+        // Use release_artists junction table for the join
+        query = label 
+          ? `
+            SELECT r.*, 
+                   STRING_AGG(a.name, ', ') as artist_names
+            FROM releases r
+            LEFT JOIN release_artists ra ON r.id = ra.release_id
+            LEFT JOIN artists a ON ra.artist_id = a.id
+            WHERE r.label_id = :label
+            ${hasStatusColumn ? "AND r.status = 'active'" : ""}
+            GROUP BY r.id
+            ORDER BY r.release_date DESC
+            LIMIT :limit OFFSET :offset
+          `
+          : `
+            SELECT r.*, 
+                   STRING_AGG(a.name, ', ') as artist_names
+            FROM releases r
+            LEFT JOIN release_artists ra ON r.id = ra.release_id
+            LEFT JOIN artists a ON ra.artist_id = a.id
+            ${hasStatusColumn ? "WHERE r.status = 'active'" : ""}
+            GROUP BY r.id
+            ORDER BY r.release_date DESC
+            LIMIT :limit OFFSET :offset
+          `;
+        
+        replacements = label ? { label, limit, offset } : { limit, offset };
+      } else {
+        // No junction table - use a simple query
+        query = label
+          ? `
+            SELECT r.* 
+            FROM releases r
+            WHERE r.label_id = :label
+            ${hasStatusColumn ? "AND r.status = 'active'" : ""}
+            ORDER BY r.release_date DESC
+            LIMIT :limit OFFSET :offset
+          `
+          : `
+            SELECT r.*
+            FROM releases r
+            ${hasStatusColumn ? "WHERE r.status = 'active'" : ""}
+            ORDER BY r.release_date DESC
+            LIMIT :limit OFFSET :offset
+          `;
+        
+        replacements = label ? { label, limit, offset } : { limit, offset };
+      }
+      
+      console.log('Executing query:', query);
+      console.log('With parameters:', replacements);
+      
+      const results = await sequelize.query(query, { 
+        replacements,
+        type: sequelize.QueryTypes.SELECT
+      });
+      
+      console.log(`Found ${results.length} releases using raw SQL`);
+      
+      // Format the response
+      const formattedReleases = results.map(release => ({
+        id: release.id,
+        title: release.title || 'Unknown Title',
+        artistId: null, // No direct artist ID in releases
+        artistName: release.artist_names || 'Unknown Artist',
+        releaseDate: release.release_date,
+        type: release.release_type || release.type || 'single',
+        imageUrl: release.artwork_url || release.image_url || '',
+        spotifyId: release.spotify_id || '',
+        spotifyUrl: release.spotify_url || '',
+        catalogNumber: release.catalog_number || '',
+        createdAt: release.created_at,
+        updatedAt: release.updated_at
+      }));
+      
+      // Return the releases
+      return res.json({ releases: formattedReleases });
+      
+    } catch (sqlError) {
+      console.error('Raw SQL query failed:', sqlError);
+      
+      // Fall back to Sequelize approach
+      console.log('Falling back to Sequelize approach...');
+      
+      // Different label handling scenarios
+      let findOptions = {
+        attributes: ['id', 'title', 'release_date', 'release_type', 'artwork_url', 'spotify_id', 'spotify_url'],
+        order: [['release_date', 'DESC']],
+        limit: parseInt(limit, 10),
+        offset: parseInt(offset, 10),
+        include: []
+      };
+      
+      // Add label filter if provided
+      if (label) {
+        findOptions.where = { label_id: label };
+      }
+      
+      // Try to add status filter dynamically
+      try {
+        // Check if status column exists
+        await db.Release.findOne({ attributes: ['status'], limit: 1 });
+        // If we got here, status exists, so we can add it to the where clause
+        findOptions.where = findOptions.where || {};
+        findOptions.where.status = 'active';
+        console.log('Status column exists, adding status=active filter');
+      } catch (statusError) {
+        console.log('Status column does not exist, skipping status filter');
+      }
+      
+      // Try to include artists dynamically
+      try {
+        findOptions.include.push({
+          model: db.Artist,
           as: 'artists',
-          attributes: ['id', 'name', 'spotify_url', 'profile_image_url', 'profile_image_small_url', 'profile_image_large_url']
-        },
-        {
-          model: Track,
-          as: 'tracks',
-          attributes: ['id', 'title', 'duration_ms', 'preview_url', 'spotify_url', 'spotify_id', 'track_number', 'disc_number', 'isrc', 'spotify_popularity', 'external_urls', 'explicit', 'remixer_id', 'created_at', 'updated_at'],
-          include: [
-            {
-              model: Artist,
-              as: 'artists',
-              attributes: ['id', 'name', 'spotify_url', 'profile_image_url', 'profile_image_small_url', 'profile_image_large_url']
-            }
-          ]
-        },
-        {
-          model: Label,
-          as: 'label'
-        }
-      ],
-      order: [['release_date', 'DESC']],
-      offset,
-      limit
-    });
-
-    res.json({
-      items: rows,
-      total: count,
-      offset,
-      limit,
-      hasMore: offset + rows.length < count
-    });
-  } catch (error) {
-    logger.error('Error fetching releases:', error);
-    console.error('Database query failed:', error.message);
-    if (error.original) {
-      console.error('Original database error:', error.original);
+          attributes: ['id', 'name'],
+          through: { attributes: [] }
+        });
+        console.log('Artists association exists, including artists in query');
+      } catch (artistsError) {
+        console.log('Artists association error, skipping artist include', artistsError.message);
+      }
+      
+      console.log('Final findOptions:', JSON.stringify(findOptions, null, 2));
+      
+      const releases = await db.Release.findAll(findOptions);
+      console.log(`Found ${releases.length} releases using Sequelize`);
+      
+      const formattedReleases = releases.map(release => {
+        const plain = release.get({ plain: true });
+        return {
+          id: plain.id,
+          title: plain.title,
+          artistName: plain.artists && plain.artists.length > 0 
+            ? plain.artists.map(a => a.name).join(', ') 
+            : 'Unknown Artist',
+          releaseDate: plain.release_date,
+          type: plain.release_type || 'single',
+          imageUrl: plain.artwork_url || '',
+          spotifyId: plain.spotify_id || '',
+          spotifyUrl: plain.spotify_url || '',
+          createdAt: plain.created_at || plain.createdAt,
+          updatedAt: plain.updated_at || plain.updatedAt
+        };
+      });
+      
+      return res.json({ releases: formattedReleases });
     }
-    handleError(res, error);
+    
+  } catch (error) {
+    console.error('Error fetching releases by label:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message,
+      details: error
+    });
   }
 });
 
@@ -979,7 +1110,7 @@ router.get('/:id', async (req, res) => {
         {
           model: Artist,
           as: 'artists',
-          attributes: ['id', 'name', 'spotify_url', 'profile_image_url', 'profile_image_small_url', 'profile_image_large_url']
+          attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
         },
         {
           model: Track,
@@ -989,7 +1120,7 @@ router.get('/:id', async (req, res) => {
             {
               model: Artist,
               as: 'artists',
-              attributes: ['id', 'name', 'spotify_url', 'profile_image_url', 'profile_image_small_url', 'profile_image_large_url']
+              attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
             }
           ]
         },
@@ -1096,14 +1227,13 @@ router.get('/top/:labelId', async (req, res) => {
 
     const releases = await Release.findAll({
       where: {
-        label_id: numericLabelId,
-        status: 'published'
+        label_id: numericLabelId
       },
       include: [
         {
           model: Artist,
           as: 'artists',
-          attributes: ['id', 'name', 'spotify_url', 'profile_image_url', 'profile_image_small_url', 'profile_image_large_url']
+          attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
         },
         {
           model: Track,
@@ -1114,12 +1244,12 @@ router.get('/top/:labelId', async (req, res) => {
             {
               model: Artist,
               as: 'artists',
-              attributes: ['id', 'name', 'spotify_url', 'profile_image_url', 'profile_image_small_url', 'profile_image_large_url']
+              attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
             },
             {
               model: Artist,
               as: 'remixer',
-              attributes: ['id', 'name', 'spotify_url', 'profile_image_url', 'profile_image_small_url', 'profile_image_large_url']
+              attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
             }
           ]
         }
@@ -1154,21 +1284,30 @@ router.get('/:labelId', async (req, res) => {
     const offset = parseInt(req.query.offset) || 0;
     const limit = parseInt(req.query.limit) || 10;
 
-    const where = {
-      status: 'active'  // Only show active releases
-    };
+    const where = {};
     if (labelId) {
       where.label_id = labelId;
     }
 
     const releases = await Release.findAll({
       where,
-      attributes: ['id', 'title', 'release_date', 'artwork_url', 'artwork_small_url', 'artwork_large_url', 'spotify_url', 'label_id', 'total_tracks', 'status', 'created_at', 'updated_at'],
+      attributes: [
+        'id',
+        'title',
+        'release_date',
+        'artwork_url',
+        'spotify_url',
+        'label_id',
+        'total_tracks',
+        'status',
+        'created_at',
+        'updated_at'
+      ],
       include: [
         {
           model: Artist,
           as: 'artists',
-          attributes: ['id', 'name', 'spotify_url', 'profile_image_url', 'profile_image_small_url', 'profile_image_large_url']
+          attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
         },
         {
           model: Track,
@@ -1179,12 +1318,12 @@ router.get('/:labelId', async (req, res) => {
             {
               model: Artist,
               as: 'artists',
-              attributes: ['id', 'name', 'spotify_url', 'profile_image_url', 'profile_image_small_url', 'profile_image_large_url']
+              attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
             },
             {
               model: Artist,
               as: 'remixer',
-              attributes: ['id', 'name', 'spotify_url', 'profile_image_url', 'profile_image_small_url', 'profile_image_large_url']
+              attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
             }
           ]
         }
@@ -1230,15 +1369,25 @@ router.get('/label/:labelId', async (req, res) => {
     // Get all releases for this label
     const releases = await Release.findAll({
       where: { 
-        label_id: label.id,
-        status: 'published'
+        label_id: label.id
       },
-      attributes: ['id', 'title', 'release_date', 'artwork_url', 'artwork_small_url', 'artwork_large_url', 'spotify_url', 'label_id', 'total_tracks', 'status', 'created_at', 'updated_at'],
+      attributes: [
+        'id',
+        'title',
+        'release_date',
+        'artwork_url',
+        'spotify_url',
+        'label_id',
+        'total_tracks',
+        'status',
+        'created_at',
+        'updated_at'
+      ],
       include: [
         {
           model: Artist,
           as: 'artists',
-          attributes: ['id', 'name', 'spotify_url', 'profile_image_url', 'profile_image_small_url', 'profile_image_large_url']
+          attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
         },
         {
           model: Track,
@@ -1249,12 +1398,12 @@ router.get('/label/:labelId', async (req, res) => {
             {
               model: Artist,
               as: 'artists',
-              attributes: ['id', 'name', 'spotify_url', 'profile_image_url', 'profile_image_small_url', 'profile_image_large_url']
+              attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
             },
             {
               model: Artist,
               as: 'remixer',
-              attributes: ['id', 'name', 'spotify_url', 'profile_image_url', 'profile_image_small_url', 'profile_image_large_url']
+              attributes: ['id', 'name', 'spotify_url', 'profile_image_url']
             }
           ]
         }
@@ -1266,15 +1415,13 @@ router.get('/label/:labelId', async (req, res) => {
     // Get total counts
     const totalReleases = await Release.count({
       where: { 
-        label_id: label.id,
-        status: 'published'
+        label_id: label.id
       }
     });
 
     const totalTracks = await Track.count({
       where: { 
-        label_id: label.id,
-        status: 'published'
+        label_id: label.id
       }
     });
 
@@ -1287,9 +1434,7 @@ router.get('/label/:labelId', async (req, res) => {
           id: artist.id,
           name: artist.name,
           spotify_url: artist.spotify_url,
-          profile_image_url: artist.profile_image_url,
-          profile_image_small_url: artist.profile_image_small_url,
-          profile_image_large_url: artist.profile_image_large_url
+          profile_image_url: artist.profile_image_url
         })),
         tracks: (releaseData.tracks || []).map(track => ({
           ...track,
@@ -1297,9 +1442,7 @@ router.get('/label/:labelId', async (req, res) => {
             id: artist.id,
             name: artist.name,
             spotify_url: artist.spotify_url,
-            profile_image_url: artist.profile_image_url,
-            profile_image_small_url: artist.profile_image_small_url,
-            profile_image_large_url: artist.profile_image_large_url
+            profile_image_url: artist.profile_image_url
           }))
         }))
       };

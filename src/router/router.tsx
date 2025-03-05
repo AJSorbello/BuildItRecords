@@ -2,8 +2,7 @@ import {
   createBrowserRouter, 
   RouterProvider,
   Route,
-  Navigate,
-  useBlocker
+  Navigate
 } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import RecordsHome from '../pages/labels/RecordsHome';

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -28,7 +28,7 @@ export const TrackManagement: React.FC = () => {
   const [selectedLabel, setSelectedLabel] = useState<string>(Object.keys(RECORD_LABELS)[0]);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const fetchTracks = async () => {
+  const fetchTracks = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -46,7 +46,7 @@ export const TrackManagement: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedLabel]);
 
   useEffect(() => {
     const token = localStorage.getItem('adminToken');
@@ -55,7 +55,7 @@ export const TrackManagement: React.FC = () => {
       return;
     }
     fetchTracks();
-  }, [selectedLabel]);
+  }, [fetchTracks, navigate, selectedLabel]);
 
   const handleLabelChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSelectedLabel(event.target.value);

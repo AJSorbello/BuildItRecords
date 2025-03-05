@@ -139,4 +139,188 @@ router.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// GET /api/releases
+router.get('/releases', async (req, res) => {
+  try {
+    console.log('GET /api/releases - Query params:', req.query);
+    const { label, offset = 0, limit = 10 } = req.query;
+    
+    // Debug the actual database schema first
+    try {
+      // Check if the releases table exists and inspect its columns
+      const releasesSchema = await Release.sequelize.query(`
+        SELECT column_name, data_type 
+        FROM information_schema.columns 
+        WHERE table_name = 'releases'
+      `, { type: Release.sequelize.QueryTypes.SELECT });
+      
+      console.log('Releases table columns:', releasesSchema.map(col => col.column_name).join(', '));
+      
+      // Check labels table
+      const labelsSchema = await Label.sequelize.query(`
+        SELECT column_name, data_type 
+        FROM information_schema.columns 
+        WHERE table_name = 'labels'
+      `, { type: Label.sequelize.QueryTypes.SELECT });
+      
+      console.log('Labels table columns:', labelsSchema.map(col => col.column_name).join(', '));
+      
+      // Check artists table
+      const artistsSchema = await Artist.sequelize.query(`
+        SELECT column_name, data_type 
+        FROM information_schema.columns 
+        WHERE table_name = 'artists'
+      `, { type: Artist.sequelize.QueryTypes.SELECT });
+      
+      console.log('Artists table columns:', artistsSchema.map(col => col.column_name).join(', '));
+      
+      // Get some sample data
+      const sampleRelease = await Release.sequelize.query(`
+        SELECT * FROM releases LIMIT 1
+      `, { type: Release.sequelize.QueryTypes.SELECT });
+      
+      console.log('Sample release data:', sampleRelease.length > 0 ? JSON.stringify(sampleRelease[0]) : 'No releases found');
+      
+      // Check if any labels exist
+      const labels = await Label.sequelize.query(`
+        SELECT id, name FROM labels
+      `, { type: Label.sequelize.QueryTypes.SELECT });
+      
+      console.log('Available labels:', labels.map(l => `${l.name} (${l.id})`).join(', '));
+    } catch (schemaError) {
+      console.error('Error inspecting schema:', schemaError);
+    }
+    
+    const whereClause = {};
+    let releases = [];
+    let total = 0;
+    
+    try {
+      if (label) {
+        whereClause.labelId = label;
+        console.log('Filtering by label:', label);
+      }
+      
+      // Try to get releases using ORM first
+      console.log('Attempting to fetch releases using ORM...');
+      releases = await Release.findAll({
+        where: whereClause,
+        include: [
+          {
+            model: Artist,
+            as: 'artist',
+            attributes: ['id', 'name']
+          }
+        ],
+        offset: parseInt(offset, 10),
+        limit: parseInt(limit, 10),
+        order: [['releaseDate', 'DESC']]
+      });
+      
+      total = await Release.count({ where: whereClause });
+      console.log(`Found ${releases.length} releases using ORM out of total ${total}`);
+    } catch (ormError) {
+      console.error('Error using ORM to fetch releases:', ormError);
+      
+      // Fall back to raw SQL without joins if ORM approach fails
+      try {
+        console.log('Falling back to raw SQL...');
+        let query = '';
+        let params = [];
+        
+        if (label) {
+          // Try label_id first (the most common schema)
+          query = `
+            SELECT r.*, a.name as artist_name 
+            FROM releases r
+            LEFT JOIN artists a ON r.primary_artist_id = a.id OR r.artist_id = a.id
+            LEFT JOIN labels l ON l.id = $1
+            ORDER BY r.release_date DESC
+            LIMIT $2 OFFSET $3
+          `;
+          params = [label, parseInt(limit, 10), parseInt(offset, 10)];
+        } else {
+          query = `
+            SELECT r.*, a.name as artist_name
+            FROM releases r
+            LEFT JOIN artists a ON r.primary_artist_id = a.id OR r.artist_id = a.id
+            ORDER BY r.release_date DESC
+            LIMIT $1 OFFSET $2
+          `;
+          params = [parseInt(limit, 10), parseInt(offset, 10)];
+        }
+        
+        console.log('Executing SQL query:', query, 'with params:', params);
+        releases = await Release.sequelize.query(query, { 
+          replacements: params,
+          type: Release.sequelize.QueryTypes.SELECT 
+        });
+        
+        console.log(`Found ${releases.length} releases using raw SQL`);
+      } catch (sqlError) {
+        console.error('Error with raw SQL query:', sqlError);
+        
+        // Last resort: just get basic releases without joins
+        try {
+          console.log('Trying simplest query as last resort...');
+          const simpleQuery = `
+            SELECT * FROM releases 
+            ORDER BY release_date DESC 
+            LIMIT $1 OFFSET $2
+          `;
+          
+          releases = await Release.sequelize.query(simpleQuery, {
+            replacements: [parseInt(limit, 10), parseInt(offset, 10)],
+            type: Release.sequelize.QueryTypes.SELECT
+          });
+          
+          console.log(`Found ${releases.length} releases using simplest query`);
+        } catch (lastError) {
+          console.error('All query attempts failed:', lastError);
+          return res.status(500).json({ 
+            error: 'Could not retrieve releases', 
+            details: lastError.message
+          });
+        }
+      }
+    }
+    
+    // Format the response
+    const formattedReleases = releases.map(release => {
+      let artistName = 'Unknown Artist';
+      if (release.artist && release.artist.name) {
+        artistName = release.artist.name;
+      } else if (release.artist_name) {
+        artistName = release.artist_name;
+      }
+      
+      return {
+        id: release.id,
+        title: release.title || 'Unknown Title',
+        artistId: release.artist_id || release.artistId || (release.artist ? release.artist.id : null),
+        artistName,
+        releaseDate: release.release_date || release.releaseDate,
+        type: release.release_type || release.type || 'single',
+        imageUrl: release.artwork_url || release.imageUrl || '',
+        catalogNumber: release.catalog_number || release.catalogNumber || '',
+        createdAt: release.created_at || release.createdAt,
+        updatedAt: release.updated_at || release.updatedAt
+      };
+    });
+    
+    return res.status(200).json({
+      releases: formattedReleases,
+      total,
+      count: formattedReleases.length
+    });
+  } catch (error) {
+    console.error('Error in /api/releases:', error);
+    return res.status(500).json({ 
+      error: 'Internal server error', 
+      message: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
+
 module.exports = router;

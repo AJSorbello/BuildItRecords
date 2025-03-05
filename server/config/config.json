@@ -1,0 +1,34 @@
+{
+  "development": {
+    "username": "postgres",
+    "password": "postgres",
+    "database": "builditrecords",
+    "host": "localhost",
+    "port": 5432,
+    "dialect": "postgres",
+    "dialectOptions": {
+      "ssl": false
+    }
+  },
+  "test": {
+    "username": "postgres",
+    "password": "postgres",
+    "database": "builditrecords_test",
+    "host": "localhost",
+    "port": 5432,
+    "dialect": "postgres",
+    "dialectOptions": {
+      "ssl": false
+    }
+  },
+  "production": {
+    "use_env_variable": "POSTGRES_URL",
+    "dialect": "postgres",
+    "dialectOptions": {
+      "ssl": {
+        "require": true,
+        "rejectUnauthorized": false
+      }
+    }
+  }
+}

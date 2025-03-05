@@ -1,17 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Container,
-  Typography,
-  Box,
-  Grid,
-  Alert,
-  Button,
-  CircularProgress
-} from '@mui/material';
+import { Typography, Box, Grid, Alert, Button } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import { RecordLabel } from '../../constants/labels';
-import { Track } from '../../types/track';
-import TrackList from '../../components/TrackList';
 import PageLayout from '../../components/PageLayout';
 import { useReleases } from '../../hooks/useReleases';
 import { Album } from '../../types/release';
@@ -79,23 +68,29 @@ const RecordsHome: React.FC<RecordsHomeProps> = ({ labelId: propLabelId }) => {
   if (error) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
-        <Alert 
-          severity="error" 
-          action={
-            canRetry && (
-              <Button
-                color="inherit"
-                size="small"
-                onClick={retryFetch}
-                startIcon={<RefreshIcon />}
-              >
-                Retry
-              </Button>
-            )
-          }
-        >
-          {error}
-        </Alert>
+        <Grid container spacing={3}>
+          <Grid item xs={12} sm={6} md={4}>
+            <Typography variant="h6">{error}</Typography>
+          </Grid>
+          <Grid item xs={12} sm={6} md={8}>
+            <Typography variant="body2" color="text.secondary">
+              {canRetry && (
+                <Box>
+                  <Typography variant="body2" color="text.secondary">
+                    Try again
+                  </Typography>
+                  <Button
+                    color="inherit"
+                    size="small"
+                    onClick={retryFetch}
+                  >
+                    Retry
+                  </Button>
+                </Box>
+              )}
+            </Typography>
+          </Grid>
+        </Grid>
       </Box>
     );
   }

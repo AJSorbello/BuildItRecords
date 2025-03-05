@@ -1,0 +1,294 @@
+=== DATABASE SCHEMA INSPECTION ===
+Date: 2025-03-04T16:53:40.346Z
+
+Connected to database successfully
+
+=== TABLES ===
+Labels,SequelizeMeta,admin_users,artists,demo_submissions,import_logs,labels,release_artists,releases,track_artists,tracks
+
+=== TABLE: Labels ===
+COLUMNS:
+  id (character varying) NOT NULL
+  name (character varying) NOT NULL
+  display_name (character varying) NOT NULL
+  slug (character varying) NOT NULL
+  description (text) NULL
+  spotifyPlaylistId (character varying) NULL
+  createdAt (timestamp with time zone) NOT NULL DEFAULT CURRENT_TIMESTAMP
+  updatedAt (timestamp with time zone) NOT NULL DEFAULT CURRENT_TIMESTAMP
+SAMPLE ROW:
+[object Object]
+
+=== TABLE: SequelizeMeta ===
+COLUMNS:
+  name (character varying) NOT NULL
+ERROR: Error getting sample data for SequelizeMeta: relation "sequelizemeta" does not exist
+
+=== TABLE: admin_users ===
+COLUMNS:
+  id (uuid) NOT NULL
+  username (character varying) NOT NULL
+  password_hash (character varying) NOT NULL
+  is_admin (boolean) NOT NULL DEFAULT false
+  created_at (timestamp with time zone) NOT NULL DEFAULT CURRENT_TIMESTAMP
+  updated_at (timestamp with time zone) NOT NULL DEFAULT CURRENT_TIMESTAMP
+SAMPLE ROW:
+[object Object]
+
+=== TABLE: artists ===
+COLUMNS:
+  id (uuid) NOT NULL DEFAULT uuid_generate_v4()
+  name (character varying) NOT NULL
+  display_name (character varying) NULL
+  spotify_id (character varying) NULL
+  spotify_url (character varying) NULL
+  profile_image_url (character varying) NULL
+  profile_image_small_url (character varying) NULL
+  profile_image_large_url (character varying) NULL
+  external_urls (jsonb) NULL DEFAULT '{}'::jsonb
+  spotify_followers (integer) NULL DEFAULT 0
+  spotify_popularity (integer) NULL DEFAULT 0
+  spotify_genres (ARRAY) NULL
+  label_id (character varying) NULL
+  created_at (timestamp with time zone) NOT NULL DEFAULT CURRENT_TIMESTAMP
+  updated_at (timestamp with time zone) NOT NULL DEFAULT CURRENT_TIMESTAMP
+  email (character varying) NULL
+  country (character varying) NULL
+  province (character varying) NULL
+  facebook_url (character varying) NULL
+  twitter_url (character varying) NULL
+  instagram_url (character varying) NULL
+  soundcloud_url (character varying) NULL
+  apple_music_url (character varying) NULL
+  full_name (character varying) NULL
+  spotify_uri (character varying) NULL
+SAMPLE ROW:
+[object Object]
+FOREIGN KEYS:
+  label_id -> labels.id
+
+=== TABLE: demo_submissions ===
+COLUMNS:
+  id (uuid) NOT NULL DEFAULT uuid_generate_v4()
+  artist_name (character varying) NOT NULL
+  full_name (character varying) NOT NULL
+  email (character varying) NOT NULL
+  country (character varying) NOT NULL
+  province (character varying) NULL
+  facebook_url (character varying) NULL
+  twitter_url (character varying) NULL
+  instagram_url (character varying) NULL
+  soundcloud_url (character varying) NULL
+  apple_music_url (character varying) NULL
+  track_title (character varying) NOT NULL
+  track_url (character varying) NOT NULL
+  genre (character varying) NOT NULL
+  status (USER-DEFINED) NOT NULL DEFAULT 'pending'::submission_status
+  created_at (timestamp with time zone) NOT NULL DEFAULT CURRENT_TIMESTAMP
+  updated_at (timestamp with time zone) NOT NULL DEFAULT CURRENT_TIMESTAMP
+SAMPLE ROW:
+[object Object]
+
+=== TABLE: import_logs ===
+COLUMNS:
+  id (integer) NOT NULL DEFAULT nextval('import_logs_id_seq'::regclass)
+  label_id (character varying) NOT NULL
+  status (character varying) NOT NULL
+  message (text) NULL
+  completed_at (timestamp with time zone) NULL
+  created_at (timestamp with time zone) NOT NULL
+  updated_at (timestamp with time zone) NOT NULL
+NO DATA
+FOREIGN KEYS:
+  label_id -> labels.id
+
+=== TABLE: labels ===
+COLUMNS:
+  id (character varying) NOT NULL
+  name (character varying) NOT NULL
+  display_name (character varying) NOT NULL
+  slug (character varying) NOT NULL
+  description (text) NULL
+  spotify_playlist_id (character varying) NULL
+  created_at (timestamp with time zone) NOT NULL DEFAULT CURRENT_TIMESTAMP
+  updated_at (timestamp with time zone) NOT NULL DEFAULT CURRENT_TIMESTAMP
+SAMPLE ROW:
+[object Object]
+
+=== TABLE: release_artists ===
+COLUMNS:
+  id (uuid) NOT NULL DEFAULT uuid_generate_v4()
+  release_id (uuid) NOT NULL
+  artist_id (uuid) NOT NULL
+  role (USER-DEFINED) NOT NULL DEFAULT 'primary'::artist_role
+  created_at (timestamp with time zone) NOT NULL DEFAULT CURRENT_TIMESTAMP
+  updated_at (timestamp with time zone) NOT NULL DEFAULT CURRENT_TIMESTAMP
+SAMPLE ROW:
+[object Object]
+FOREIGN KEYS:
+  release_id -> releases.id
+  artist_id -> artists.id
+
+=== TABLE: releases ===
+COLUMNS:
+  id (uuid) NOT NULL DEFAULT uuid_generate_v4()
+  title (character varying) NOT NULL
+  spotify_id (character varying) NULL
+  release_type (USER-DEFINED) NOT NULL
+  release_date (timestamp with time zone) NOT NULL
+  artwork_url (character varying) NULL
+  artwork_small_url (character varying) NULL
+  artwork_large_url (character varying) NULL
+  spotify_url (character varying) NULL
+  external_urls (jsonb) NULL DEFAULT '{}'::jsonb
+  label_id (character varying) NULL
+  spotify_popularity (integer) NULL DEFAULT 0
+  total_tracks (integer) NULL DEFAULT 0
+  created_at (timestamp with time zone) NOT NULL DEFAULT CURRENT_TIMESTAMP
+  updated_at (timestamp with time zone) NOT NULL DEFAULT CURRENT_TIMESTAMP
+  type (character varying) NULL
+  popularity (integer) NULL
+  images (jsonb) NULL DEFAULT '[]'::jsonb
+  status (USER-DEFINED) NOT NULL DEFAULT 'draft'::enum_releases_status
+  spotify_uri (character varying) NULL
+SAMPLE ROW:
+[object Object]
+FOREIGN KEYS:
+  label_id -> labels.id
+
+=== TABLE: track_artists ===
+COLUMNS:
+  id (uuid) NOT NULL DEFAULT uuid_generate_v4()
+  track_id (uuid) NOT NULL
+  artist_id (uuid) NOT NULL
+  role (USER-DEFINED) NOT NULL DEFAULT 'primary'::artist_role
+  created_at (timestamp with time zone) NOT NULL DEFAULT CURRENT_TIMESTAMP
+  updated_at (timestamp with time zone) NOT NULL DEFAULT CURRENT_TIMESTAMP
+SAMPLE ROW:
+[object Object]
+FOREIGN KEYS:
+  track_id -> tracks.id
+  artist_id -> artists.id
+
+=== TABLE: tracks ===
+COLUMNS:
+  id (uuid) NOT NULL DEFAULT uuid_generate_v4()
+  title (character varying) NOT NULL
+  duration_ms (integer) NULL
+  preview_url (character varying) NULL
+  spotify_id (character varying) NULL
+  spotify_uri (character varying) NULL
+  spotify_url (character varying) NULL
+  release_id (uuid) NULL
+  track_number (integer) NULL
+  disc_number (integer) NULL DEFAULT 1
+  isrc (character varying) NULL
+  external_urls (jsonb) NULL DEFAULT '{}'::jsonb
+  spotify_popularity (integer) NULL DEFAULT 0
+  explicit (boolean) NULL DEFAULT false
+  created_at (timestamp with time zone) NOT NULL DEFAULT CURRENT_TIMESTAMP
+  updated_at (timestamp with time zone) NOT NULL DEFAULT CURRENT_TIMESTAMP
+  remixer_id (uuid) NULL
+  type (character varying) NOT NULL DEFAULT 'track'::character varying
+SAMPLE ROW:
+[object Object]
+FOREIGN KEYS:
+  release_id -> releases.id
+  remixer_id -> artists.id
+
+=== EXAMINING RELEASES TABLE IN DETAIL ===
+Total records: 174
+MOST COMPLETE RECORD:
+{
+  "id": "696e7633-4755-411c-8eaa-93d76b3a190a",
+  "title": "Delhi Lights (Radio Edit)",
+  "spotify_id": "0AH18KToPVFSfr6x2yaQGa",
+  "release_type": "single",
+  "release_date": "2025-02-28T00:00:00.000Z",
+  "artwork_url": "https://i.scdn.co/image/ab67616d0000b273c0d5a5ce715221fa4340f42c",
+  "artwork_small_url": null,
+  "artwork_large_url": null,
+  "spotify_url": "https://open.spotify.com/album/0AH18KToPVFSfr6x2yaQGa",
+  "external_urls": {},
+  "label_id": "buildit-tech",
+  "spotify_popularity": 0,
+  "total_tracks": 1,
+  "created_at": "2025-02-28T23:40:15.095Z",
+  "updated_at": "2025-02-28T23:40:15.095Z",
+  "type": null,
+  "popularity": 0,
+  "images": [
+    {
+      "url": "https://i.scdn.co/image/ab67616d0000b273c0d5a5ce715221fa4340f42c",
+      "width": 640,
+      "height": 640
+    },
+    {
+      "url": "https://i.scdn.co/image/ab67616d00001e02c0d5a5ce715221fa4340f42c",
+      "width": 300,
+      "height": 300
+    },
+    {
+      "url": "https://i.scdn.co/image/ab67616d00004851c0d5a5ce715221fa4340f42c",
+      "width": 64,
+      "height": 64
+    }
+  ],
+  "status": "active",
+  "spotify_uri": "spotify:album:0AH18KToPVFSfr6x2yaQGa"
+}
+
+=== EXAMINING ARTISTS TABLE IN DETAIL ===
+Total records: 203
+MOST COMPLETE RECORD:
+{
+  "id": "14f7416b-831e-4cd3-872f-f22cb4a61a3a",
+  "name": "Test Artist",
+  "display_name": null,
+  "spotify_id": null,
+  "spotify_url": "https://spotify.com/test",
+  "profile_image_url": "https://example.com/image.jpg",
+  "profile_image_small_url": null,
+  "profile_image_large_url": null,
+  "external_urls": {},
+  "spotify_followers": 0,
+  "spotify_popularity": 0,
+  "spotify_genres": null,
+  "label_id": null,
+  "created_at": "2025-02-19T02:38:42.084Z",
+  "updated_at": "2025-02-19T02:38:42.084Z",
+  "email": null,
+  "country": null,
+  "province": null,
+  "facebook_url": null,
+  "twitter_url": null,
+  "instagram_url": null,
+  "soundcloud_url": null,
+  "apple_music_url": null,
+  "full_name": null,
+  "spotify_uri": null
+}
+
+=== EXAMINING LABELS TABLE IN DETAIL ===
+Total records: 3
+MOST COMPLETE RECORD:
+{
+  "id": "buildit-records",
+  "name": "Build It Records",
+  "display_name": "Build It Records",
+  "slug": "buildit-records",
+  "description": null,
+  "spotify_playlist_id": null,
+  "created_at": "2025-02-18T19:53:41.760Z",
+  "updated_at": "2025-02-18T19:53:41.760Z"
+}
+
+=== TESTING RELEASES-ARTISTS JOIN ===
+ERROR: Error testing releases-artists join: column r.primary_artist_id does not exist
+ERROR: Error testing alternative releases-artists join: column r.artist_id does not exist
+
+=== TESTING RELEASES-LABELS JOIN ===
+JOIN RESULT:
+[object Object],[object Object],[object Object],[object Object],[object Object]
+
+Database connection closed
