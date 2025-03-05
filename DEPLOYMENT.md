@@ -54,8 +54,8 @@ Current deployment status: **Partially Complete**
    - Check GitHub Actions workflow logs for specific error messages
    - Verify that all required secrets are set in repository settings:
      - `VERCEL_TOKEN`
-     - `VERCEL_ORG_ID`
-     - `VERCEL_PROJECT_ID`
+     - `VERCEL_ORG_ID`: `team_wz5Q8fqO2mBkePo2bgVjsZoW`
+     - `VERCEL_PROJECT_ID`: `prj_GqVyeWi0SH0dJ7PYYmPTU9W8qFRE`
 
 2. **Vercel Configuration**
    - Login to Vercel dashboard
