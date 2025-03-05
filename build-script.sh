@@ -37,16 +37,19 @@ export VITE_SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJz
 echo "🌐 API URL set to: $REACT_APP_API_URL"
 
 # Install dependencies with optional dependencies included
-echo "📦 Installing dependencies with optional dependencies"
+echo "📦 Installing dependencies with legacy-peer-deps"
 npm install --legacy-peer-deps
 
-# Explicitly install esbuild with the linux-x64 platform
-echo "📦 Installing esbuild with platform-specific dependencies"
-npm install esbuild @esbuild/linux-x64
+# Do not install platform-specific esbuild as Vercel handles this
+echo "📦 Skipping platform-specific installations"
 
 # Install API dependencies
 echo "📦 Installing API dependencies"
 cd api && npm install pg pg-hstore && cd ..
+
+# Test connection to the database
+echo "🔍 Testing database connection"
+node api/db-diagnostic.js || echo "Warning: Database connection test failed, but continuing with build"
 
 # Run build using npx to ensure we use the local version
 echo "🏗️ Building the application"
