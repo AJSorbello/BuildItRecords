@@ -1,19 +1,8 @@
 // Serverless API handler for fetching artists by label
-const { Pool } = require('pg');
-
-// CRITICAL: Force Node.js to accept self-signed certificates
-// This should only be used in controlled environments with trusted sources
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+const { getPool, getTableSchema } = require('../../utils/db-utils');
 
 // Initialize database connection
-const pool = new Pool({
-  connectionString: process.env.POSTGRES_URL,
-  ssl: {
-    rejectUnauthorized: false,
-    // Force SSL to be disabled to bypass certification issues
-    sslmode: 'no-verify'
-  }
-});
+const pool = getPool();
 
 module.exports = async (req, res) => {
   try {
@@ -35,12 +24,8 @@ module.exports = async (req, res) => {
       console.log('Inspecting database schemas...');
       
       // Check labels table schema
-      const labelInfo = await client.query(`
-        SELECT column_name, data_type 
-        FROM information_schema.columns 
-        WHERE table_name = 'labels'
-      `);
-      console.log('Labels table columns:', labelInfo.rows.map(r => r.column_name).join(', '));
+      const labelSchema = await getTableSchema(client, 'labels');
+      console.log('Labels table columns:', labelSchema.map(r => r.column_name).join(', '));
       
       // Check actual labels in the database
       const labelData = await client.query('SELECT * FROM labels');
@@ -48,12 +33,8 @@ module.exports = async (req, res) => {
       console.log('Sample label data:', JSON.stringify(labelData.rows[0]));
       
       // Check artists table schema
-      const artistsInfo = await client.query(`
-        SELECT column_name, data_type 
-        FROM information_schema.columns 
-        WHERE table_name = 'artists'
-      `);
-      console.log('Artists table columns:', artistsInfo.rows.map(r => r.column_name).join(', '));
+      const artistsSchema = await getTableSchema(client, 'artists');
+      console.log('Artists table columns:', artistsSchema.map(r => r.column_name).join(', '));
       
       // Examine relationships
       console.log('Examining label-artist relationships...');
@@ -124,7 +105,7 @@ module.exports = async (req, res) => {
       `);
       
       // Slug match query (if slug exists in labels)
-      if (labelInfo.rows.some(col => col.column_name === 'slug')) {
+      if (labelSchema.some(col => col.column_name === 'slug')) {
         queries.push(`
           SELECT a.* 
           FROM artists a
