@@ -8,40 +8,23 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),
-      // Add browser compatibility for path
-      path: 'path-browserify',
     },
   },
   build: {
     outDir: 'dist',
-    assetsDir: 'assets',
+    minify: true,
+    target: 'es2015', // Ensure good compatibility
     sourcemap: true,
-    chunkSizeWarningLimit: 1000,
     rollupOptions: {
-      output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom', 'react-router-dom'],
-          ui: ['@mui/material', '@mui/icons-material', '@emotion/react', '@emotion/styled'],
-        },
-      },
-    },
+      external: ['pg-native'] // Explicitly mark as external to avoid Vercel issues
+    }
   },
   server: {
-    port: 3000,
     proxy: {
       '/api': {
-        target: 'http://localhost:5000',
+        target: 'http://localhost:3001',
         changeOrigin: true,
       },
     },
-  },
-  optimizeDeps: {
-    include: ['react', 'react-dom', 'react-router-dom', '@mui/material'],
-    esbuildOptions: {
-      target: 'es2020',
-    },
-  },
-  esbuild: {
-    target: 'es2020',
   },
 });
