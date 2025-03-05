@@ -1,7 +1,7 @@
 {
   "version": 2,
   "buildCommand": "./build-script.sh",
-  "installCommand": "npm install --legacy-peer-deps && cd api && npm install pg pg-hstore",
+  "installCommand": "npm install --legacy-peer-deps",
   "build": {
     "env": {
       "NODE_ENV": "production",
@@ -34,31 +34,7 @@
       }
     },
     {
-      "src": "api/artists/**/*.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "api/artist/**/*.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "api/releases/**/*.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "api/tracks/**/*.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "api/health.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "api/db-diagnostic.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "api/test/**/*.js",
+      "src": "api/**/*.js",
       "use": "@vercel/node"
     }
   ],
@@ -72,40 +48,12 @@
       "dest": "/api/health.js" 
     },
     { 
-      "src": "/api/test", 
-      "dest": "/api/test/index.js" 
-    },
-    { 
       "src": "/api/diagnostic", 
       "dest": "/api/db-diagnostic.js" 
     },
-    { 
-      "src": "/api/artists", 
-      "dest": "/api/artists/index.js" 
-    },
-    { 
-      "src": "/api/artists/label/([^/]+)", 
-      "dest": "/api/artists/label/[labelId].js?labelId=$1" 
-    },
-    { 
-      "src": "/api/artist/([^/]+)", 
-      "dest": "/api/artist/[id].js?id=$1" 
-    },
-    { 
-      "src": "/api/tracks", 
-      "dest": "/api/tracks/index.js" 
-    },
-    { 
-      "src": "/api/tracks/label/([^/]+)", 
-      "dest": "/api/tracks/label/[labelId].js?labelId=$1" 
-    },
-    { 
-      "src": "/api/releases", 
-      "dest": "/api/releases/index.js" 
-    },
-    { 
-      "src": "/api/releases/([^/]+)", 
-      "dest": "/api/releases/[id].js?id=$1" 
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1.js"
     },
     {
       "src": "/(tech|records|deep)/(.*)",
