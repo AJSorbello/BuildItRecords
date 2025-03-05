@@ -16,16 +16,7 @@
       "REACT_APP_SPOTIFY_CLIENT_SECRET": "",
       "CI": "true",
       "VERCEL": "true",
-      "NPM_FLAGS": "--legacy-peer-deps",
-      "VITE_SUPABASE_URL": "@vercel/env/VITE_SUPABASE_URL",
-      "VITE_SUPABASE_ANON_KEY": "@vercel/env/VITE_SUPABASE_ANON_KEY",
-      "DB_HOST": "@vercel/env/DB_HOST",
-      "DB_PORT": "@vercel/env/DB_PORT",
-      "DB_NAME": "@vercel/env/DB_NAME",
-      "DB_USER": "@vercel/env/DB_USER",
-      "DB_PASSWORD": "@vercel/env/DB_PASSWORD",
-      "POSTGRES_URL": "@vercel/env/POSTGRES_URL",
-      "POSTGRES_URL_NON_POOLING": "@vercel/env/POSTGRES_URL_NON_POOLING"
+      "NPM_FLAGS": "--legacy-peer-deps"
     }
   },
   "builds": [
