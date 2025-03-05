@@ -317,7 +317,7 @@ class ArtistsPage extends Component<ArtistsPageProps, ArtistsPageState> {
           <TextField
             fullWidth
             variant="outlined"
-            placeholder="Search by artist name or genre..."
+            placeholder="Search by artist name..."
             value={this.state.searchTerm}
             onChange={this.handleSearchChange}
             sx={{ 
