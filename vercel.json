@@ -19,7 +19,8 @@
       "POSTGRES_URL": "postgres://postgres:postgres@db.liuaozuvkmvanmchndzl.supabase.co:5432/postgres?sslmode=require",
       "CI": "true",
       "VERCEL": "true",
-      "NPM_FLAGS": "--legacy-peer-deps --no-package-lock"
+      "NPM_FLAGS": "--legacy-peer-deps --no-package-lock",
+      "PNPM_FLAGS": "--no-frozen-lockfile"
     }
   },
   "builds": [
