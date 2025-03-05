@@ -1,179 +1,207 @@
-// Diagnostic endpoint to directly check database setup and content
 const { getPool, getAllTables, getTableSchema } = require('./utils/db-utils');
 
-// Initialize database connection
-const pool = getPool();
-
 module.exports = async (req, res) => {
+  console.log('Running database diagnostic');
+  let client;
+  let diagnosticResults = {};
+  
   try {
-    console.log('Running database diagnostic');
-    console.log('Environment:', process.env.NODE_ENV);
-    console.log('Database connection params:', {
-      host: process.env.DB_HOST,
-      database: process.env.DB_NAME,
-      port: process.env.DB_PORT,
-      ssl: process.env.DB_SSL
-    });
+    // Environment info
+    diagnosticResults.environment = process.env.NODE_ENV || 'development';
     
-    // Connect to the database
-    const client = await pool.connect();
+    // Get database connection
+    console.log('Environment:', diagnosticResults.environment);
+    const connection = {
+      host: process.env.DB_HOST || 'localhost',
+      database: process.env.DB_NAME || 'builditrecords',
+      port: process.env.DB_PORT || '5432',
+      ssl: process.env.DB_SSL || 'false'
+    };
+    console.log('Database connection params:', connection);
+    
+    const pool = getPool();
+    diagnosticResults.database = connection.database;
+    client = await pool.connect();
     console.log('Connected to database');
     
-    let diagnosticResults = {
-      environment: process.env.NODE_ENV || 'unknown',
-      database: process.env.DB_NAME || 'unknown',
-      tables: [],
-      artistsInfo: {},
-      releasesInfo: {},
-      labelInfo: {}
-    };
+    // Get all tables in database
+    console.log('Fetching all tables in database');
+    const tables = await getAllTables(client);
+    diagnosticResults.tables = tables;
+    console.log(`Found ${tables.length} tables in database`);
+    console.log('Tables:', tables.join(', '));
     
-    try {
-      // Get all tables
-      const tables = await getAllTables(client);
-      diagnosticResults.tables = tables;
+    // Check artists table
+    diagnosticResults.artistsInfo = {};
+    if (tables.includes('artists')) {
+      console.log('Fetching schema for table: artists');
+      const artistsSchema = await getTableSchema(client, 'artists');
+      diagnosticResults.artistsInfo.schema = artistsSchema;
+      console.log(`Found ${artistsSchema.length} columns for table artists`);
       
-      // Check artists table
-      if (tables.includes('artists')) {
-        // Get artists count
-        const artistsCount = await client.query('SELECT COUNT(*) FROM artists');
-        diagnosticResults.artistsInfo.totalCount = parseInt(artistsCount.rows[0].count);
-        
-        // Get artists schema
-        const artistsSchema = await getTableSchema(client, 'artists');
-        diagnosticResults.artistsInfo.columns = artistsSchema.map(col => col.column_name);
-        
-        // Check if label_id exists
-        const hasLabelId = artistsSchema.some(col => col.column_name === 'label_id');
-        diagnosticResults.artistsInfo.hasLabelIdColumn = hasLabelId;
-        
-        if (hasLabelId) {
-          // Check label values
-          const labelValues = await client.query(`
-            SELECT label_id, COUNT(*) 
-            FROM artists 
-            WHERE label_id IS NOT NULL 
-            GROUP BY label_id
-          `);
-          diagnosticResults.artistsInfo.labelValues = labelValues.rows;
-          
-          // Check buildit-records specifically
-          const builditArtists = await client.query(`
-            SELECT COUNT(*) FROM artists WHERE label_id = 'buildit-records'
-          `);
-          diagnosticResults.artistsInfo.builditRecordsCount = parseInt(builditArtists.rows[0].count);
-          
-          // Check case-insensitive
-          const caseInsensitiveCheck = await client.query(`
-            SELECT COUNT(*) FROM artists WHERE LOWER(label_id) = LOWER('buildit-records')
-          `);
-          diagnosticResults.artistsInfo.caseInsensitiveCount = parseInt(caseInsensitiveCheck.rows[0].count);
-          
-          // Sample 5 artists
-          const sampleArtists = await client.query('SELECT id, name, label_id FROM artists LIMIT 5');
-          diagnosticResults.artistsInfo.sampleArtists = sampleArtists.rows;
-        }
-      }
+      // Check total artists count
+      const artistsCount = await client.query('SELECT COUNT(*) FROM artists');
+      diagnosticResults.artistsInfo.totalCount = parseInt(artistsCount.rows[0].count);
       
-      // Check releases table
-      if (tables.includes('releases')) {
-        // Get releases count
-        const releasesCount = await client.query('SELECT COUNT(*) FROM releases');
-        diagnosticResults.releasesInfo.totalCount = parseInt(releasesCount.rows[0].count);
-        
-        // Get releases schema
-        const releasesSchema = await getTableSchema(client, 'releases');
-        diagnosticResults.releasesInfo.columns = releasesSchema.map(col => col.column_name);
-        
-        // Check if label_id exists
-        const hasLabelId = releasesSchema.some(col => col.column_name === 'label_id');
-        diagnosticResults.releasesInfo.hasLabelIdColumn = hasLabelId;
-        
-        if (hasLabelId) {
-          // Check label values
-          const labelValues = await client.query(`
-            SELECT label_id, COUNT(*) 
-            FROM releases 
-            WHERE label_id IS NOT NULL 
-            GROUP BY label_id
-          `);
-          diagnosticResults.releasesInfo.labelValues = labelValues.rows;
-          
-          // Check buildit-records specifically
-          const builditReleases = await client.query(`
-            SELECT COUNT(*) FROM releases WHERE label_id = 'buildit-records'
-          `);
-          diagnosticResults.releasesInfo.builditRecordsCount = parseInt(builditReleases.rows[0].count);
-          
-          // Check case-insensitive
-          const caseInsensitiveCheck = await client.query(`
-            SELECT COUNT(*) FROM releases WHERE LOWER(label_id) = LOWER('buildit-records')
-          `);
-          diagnosticResults.releasesInfo.caseInsensitiveCount = parseInt(caseInsensitiveCheck.rows[0].count);
-          
-          // Sample 5 releases
-          const sampleReleases = await client.query('SELECT id, title, label_id FROM releases LIMIT 5');
-          diagnosticResults.releasesInfo.sampleReleases = sampleReleases.rows;
-          
-          // Check for any label containing "buildit"
-          const likeCheck = await client.query(`
-            SELECT label_id, COUNT(*) 
-            FROM releases 
-            WHERE label_id LIKE '%buildit%' 
-            GROUP BY label_id
-          `);
-          diagnosticResults.releasesInfo.likeBuilditCount = likeCheck.rows;
-        }
-      }
+      // Check if label_id column exists
+      const hasLabelId = artistsSchema.some(col => col.column_name === 'label_id');
+      diagnosticResults.artistsInfo.hasLabelId = hasLabelId;
       
-      // Check junction table
-      if (tables.includes('release_artists')) {
-        const junctionCount = await client.query('SELECT COUNT(*) FROM release_artists');
-        diagnosticResults.junctionTableCount = parseInt(junctionCount.rows[0].count);
-        
-        const junctionSchema = await getTableSchema(client, 'release_artists');
-        diagnosticResults.junctionTableColumns = junctionSchema.map(col => col.column_name);
-      }
-      
-      // Check labels directly
-      try {
-        const labelCount = await client.query(`
-          SELECT label_id, COUNT(*) as release_count 
-          FROM releases 
-          GROUP BY label_id 
-          ORDER BY COUNT(*) DESC 
-          LIMIT 10
+      if (hasLabelId) {
+        // Check buildit-records count
+        const builditCount = await client.query(`
+          SELECT COUNT(*) FROM artists WHERE label_id = 'buildit-records'
         `);
-        diagnosticResults.labelInfo.topLabels = labelCount.rows;
+        diagnosticResults.artistsInfo.builditRecordsCount = parseInt(builditCount.rows[0].count);
         
-        // Try to find what the actual label ID is for BuildIt Records
-        const possibleLabels = await client.query(`
-          SELECT DISTINCT label_id 
-          FROM releases 
-          WHERE label_id ILIKE '%build%' OR label_id ILIKE '%bit%'
+        // Check case-insensitive
+        const caseInsensitiveCount = await client.query(`
+          SELECT COUNT(*) FROM artists WHERE label_id ILIKE 'buildit-records'
         `);
-        diagnosticResults.labelInfo.possibleBuilditLabels = possibleLabels.rows;
-      } catch (labelError) {
-        diagnosticResults.labelInfo.error = labelError.message;
+        diagnosticResults.artistsInfo.caseInsensitiveCount = parseInt(caseInsensitiveCount.rows[0].count);
+        
+        // Get unique label values and counts
+        const labelValues = await client.query(`
+          SELECT label_id, COUNT(*) FROM artists
+          WHERE label_id IS NOT NULL
+          GROUP BY label_id
+          ORDER BY COUNT(*) DESC
+        `);
+        diagnosticResults.artistsInfo.labelValues = labelValues.rows;
       }
       
-      // Return diagnostic results
-      return res.status(200).json({
-        success: true,
-        diagnosticResults,
-        timestamp: new Date().toISOString()
-      });
-    } finally {
-      client.release();
-      console.log('Database connection released');
+      // Check artists via relationships
+      const artistsViaRelationships = await client.query(`
+        SELECT COUNT(DISTINCT a.id) AS count
+        FROM artists a
+        JOIN release_artists ra ON a.id = ra.artist_id
+        JOIN releases r ON ra.release_id = r.id
+        WHERE r.label_id = 'buildit-records'
+      `);
+      diagnosticResults.artistsInfo.artistsViaRelationshipsCount = parseInt(artistsViaRelationships.rows[0].count);
+    } else {
+      diagnosticResults.artistsInfo.error = 'Artists table not found';
+    }
+    
+    // Check releases table
+    diagnosticResults.releasesInfo = {};
+    if (tables.includes('releases')) {
+      console.log('Fetching schema for table: releases');
+      const releasesSchema = await getTableSchema(client, 'releases');
+      diagnosticResults.releasesInfo.schema = releasesSchema;
+      console.log(`Found ${releasesSchema.length} columns for table releases`);
+      
+      // Check total releases count
+      const releasesCount = await client.query('SELECT COUNT(*) FROM releases');
+      diagnosticResults.releasesInfo.totalCount = parseInt(releasesCount.rows[0].count);
+      
+      // Check if label_id column exists
+      const hasLabelId = releasesSchema.some(col => col.column_name === 'label_id');
+      diagnosticResults.releasesInfo.hasLabelId = hasLabelId;
+      
+      if (hasLabelId) {
+        // Check buildit-records count
+        const builditCount = await client.query(`
+          SELECT COUNT(*) FROM releases WHERE label_id = 'buildit-records'
+        `);
+        diagnosticResults.releasesInfo.builditRecordsCount = parseInt(builditCount.rows[0].count);
+        
+        // Check case-insensitive
+        const caseInsensitiveCount = await client.query(`
+          SELECT COUNT(*) FROM releases WHERE label_id ILIKE 'buildit-records'
+        `);
+        diagnosticResults.releasesInfo.caseInsensitiveCount = parseInt(caseInsensitiveCount.rows[0].count);
+        
+        // Get unique label values and counts
+        const labelValues = await client.query(`
+          SELECT label_id, COUNT(*) FROM releases
+          WHERE label_id IS NOT NULL
+          GROUP BY label_id
+          ORDER BY COUNT(*) DESC
+        `);
+        diagnosticResults.releasesInfo.labelValues = labelValues.rows;
+        
+        // Get releases with label_id like %buildit%
+        const likeBuilditCount = await client.query(`
+          SELECT label_id, COUNT(*) FROM releases
+          WHERE label_id ILIKE '%buildit%'
+          GROUP BY label_id
+          ORDER BY COUNT(*) DESC
+        `);
+        diagnosticResults.releasesInfo.likeBuilditCount = likeBuilditCount.rows;
+      }
+    } else {
+      diagnosticResults.releasesInfo.error = 'Releases table not found';
+    }
+    
+    // Check release_artists table
+    diagnosticResults.releaseArtistsInfo = {};
+    if (tables.includes('release_artists')) {
+      console.log('Fetching schema for table: release_artists');
+      const releaseArtistsSchema = await getTableSchema(client, 'release_artists');
+      diagnosticResults.releaseArtistsInfo.schema = releaseArtistsSchema;
+      console.log(`Found ${releaseArtistsSchema.length} columns for table release_artists`);
+      
+      // Check total relationships count
+      const relationshipsCount = await client.query('SELECT COUNT(*) FROM release_artists');
+      diagnosticResults.releaseArtistsInfo.totalCount = parseInt(relationshipsCount.rows[0].count);
+      
+      // Check unique artists
+      const uniqueArtists = await client.query('SELECT COUNT(DISTINCT artist_id) FROM release_artists');
+      diagnosticResults.releaseArtistsInfo.uniqueArtistsCount = parseInt(uniqueArtists.rows[0].count);
+      
+      // Check unique releases
+      const uniqueReleases = await client.query('SELECT COUNT(DISTINCT release_id) FROM release_artists');
+      diagnosticResults.releaseArtistsInfo.uniqueReleasesCount = parseInt(uniqueReleases.rows[0].count);
+    } else {
+      diagnosticResults.releaseArtistsInfo.error = 'Release_artists table not found';
+    }
+    
+    // Check labels table and info
+    diagnosticResults.labelInfo = {};
+    if (tables.includes('labels')) {
+      // Check for buildit-records label
+      const builditLabel = await client.query(`
+        SELECT * FROM labels WHERE id = 'buildit-records'
+      `);
+      diagnosticResults.labelInfo.builditRecords = builditLabel.rows[0] || null;
+      
+      // Get all possible BuildIt labels
+      const possibleBuilditLabels = await client.query(`
+        SELECT * FROM labels WHERE id ILIKE '%buildit%'
+      `);
+      diagnosticResults.labelInfo.possibleBuilditLabels = possibleBuilditLabels.rows;
+    } else {
+      diagnosticResults.labelInfo.error = 'Labels table not found';
+    }
+    
+    console.log('Database connection released');
+    
+  } catch (error) {
+    console.log('Diagnostic error:', error);
+    diagnosticResults.error = error.message;
+    diagnosticResults.stack = error.stack;
+  } finally {
+    if (client) client.release();
+  }
+  
+  // Send response - handle both Express.js and plain Node.js HTTP response objects
+  try {
+    if (typeof res.status === 'function') {
+      // Express-style response
+      res.status(200).json({ diagnosticResults });
+    } else {
+      // Node.js HTTP module response
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ diagnosticResults }));
     }
   } catch (error) {
-    console.error('Diagnostic error:', error);
-    return res.status(500).json({
-      success: false,
-      error: 'Diagnostic error',
-      details: error.message,
-      timestamp: new Date().toISOString()
-    });
+    console.error('Error sending response:', error);
+    if (typeof res.status === 'function') {
+      res.status(500).json({ error: error.message });
+    } else {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: error.message }));
+    }
   }
 };

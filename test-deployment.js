@@ -3,7 +3,7 @@
 const https = require('https');
 
 // Configuration
-const baseUrl = 'https://your-vercel-deployment-url.vercel.app'; // Replace with your actual Vercel URL
+const baseUrl = 'https://build-it-records-git-vercel-deploy-fix-ajsorbellos-projects.vercel.app'; // The deployed Vercel URL
 const endpoints = [
   {
     path: '/api/diagnostic',
