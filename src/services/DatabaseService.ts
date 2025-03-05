@@ -102,8 +102,15 @@ class DatabaseService {
       apiUrl = `http://localhost:3003${endpoint}`;
       console.log(`Development: Using direct API URL: ${apiUrl}`);
     } else {
-      // In production or if using the Vite dev server proxy
-      apiUrl = `/api${endpoint}`;
+      // In production, this.baseUrl already includes /api from getApiBaseUrl()
+      // So we need to prevent duplicate /api in the URL
+      if (this.baseUrl.endsWith('/api')) {
+        // If baseUrl ends with /api, construct the URL correctly
+        apiUrl = `${this.baseUrl}${endpoint.startsWith('/') ? endpoint : '/' + endpoint}`;
+      } else {
+        // If baseUrl doesn't end with /api (fallback case)
+        apiUrl = `/api${endpoint}`;
+      }
       console.log(`Production/Proxy: Using API URL: ${apiUrl}`);
     }
     
@@ -189,7 +196,7 @@ class DatabaseService {
       if (labelId === 'buildit-records') {
         console.log('[DEBUG] Detected buildit-records label request');
         console.log('[DEBUG] Current environment:', process.env.NODE_ENV);
-        console.log('[DEBUG] Making request to:', `${this.baseUrl}/api/releases?label=${labelId}`);
+        console.log('[DEBUG] Making request to:', `${this.baseUrl}/releases?label=${labelId}`);
         
         // Try fetching the diagnostic data first to understand the database state
         try {

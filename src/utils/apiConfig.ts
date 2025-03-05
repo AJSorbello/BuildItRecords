@@ -38,8 +38,10 @@ export const getApiBaseUrl = (): string => {
   if (typeof window !== 'undefined') {
     // Production environment (including Vercel)
     if (process.env.NODE_ENV === 'production' || window.location.hostname.includes('vercel.app')) {
-      console.log('Using production API URL with origin:', window.location.origin);
-      return `${window.location.origin}/api`;
+      const apiUrl = `${window.location.origin}/api`;
+      console.log('Using production API URL with origin:', apiUrl);
+      console.log('URL construction verification - this URL already includes /api suffix');
+      return apiUrl;
     }
   }
   
