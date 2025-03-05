@@ -120,5 +120,6 @@
       "master": true,
       "vercel-deploy-fix": true
     }
-  }
+  },
+  "public": true
 }
