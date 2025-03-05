@@ -68,18 +68,36 @@ export REACT_APP_ENV=production
 export REACT_APP_API_URL=/api
 export API_URL=/api
 
-# Check if our .env file exists and source it if it does
-if [ -f .env ]; then
-  echo "📝 Loading environment variables from .env file"
-  export $(grep -v '^#' .env | xargs) || echo "⚠️ Warning: Some environment variables may not have been loaded properly"
-fi
+# Manually set important environment variables from .env without using export command
+echo "📝 Setting up critical environment variables"
+# Database connection
+export DB_HOST="liuaozuvkmvanmchndzl.supabase.co"
+export DB_PORT="5432"
+export DB_NAME="postgres"
+export DB_USER="postgres"
+export DB_PASSWORD="postgres"
+export DB_SSL="true"
+export DB_SSL_REJECT_UNAUTHORIZED="false"
+export POSTGRES_URL="postgres://postgres:postgres@db.liuaozuvkmvanmchndzl.supabase.co:5432/postgres?sslmode=require"
+
+# Supabase
+export VITE_SUPABASE_URL="https://liuaozuvkmvanmchndzl.supabase.co"
+export VITE_SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxpdWFvenV2a212YW5tY2huZHpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU4NDg0MzQsImV4cCI6MjA1MTQyNDQzNH0.tlHgYcid26cTNuDoKZkHacwfaJ7BWR9d35EtAxtTB_g"
 
 # Ensure API URL is properly set
 echo "🌐 API URL set to: $REACT_APP_API_URL"
 
-# Run the build commands
+# Explicitly install vite globally to ensure it's available
+echo "📦 Installing vite explicitly"
+npm install -g vite || { echo "❌ Global vite installation failed"; exit 1; }
+
+# Also install it in the project
+echo "📦 Installing vite in the project"
+npm install --save-dev vite@latest @vitejs/plugin-react || { echo "❌ Local vite installation failed"; exit 1; }
+
+# Run the build commands using npx to ensure we use the local installation
 echo "🏗️ Building the application with Vite"
-npm run build || { echo "❌ Build command failed"; exit 1; }
+npx vite build || { echo "❌ Build command failed"; exit 1; }
 
 # Restore original package.json
 if [ -f package.json.bak ]; then
