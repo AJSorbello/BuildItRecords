@@ -18,18 +18,18 @@
     "dev": "vite",
     "build": "vite build",
     "serve": "vite preview",
-    "start": "pnpm run dev",
+    "start": "npm run dev",
     "server": "cd server && node server.js",
-    "dev:all": "concurrently \"pnpm run server\" \"pnpm run dev\"",
+    "dev:all": "concurrently \"npm run server\" \"npm run dev\"",
     "api:local": "node server/local-api-server.js",
-    "dev:api": "NODE_ENV=development pnpm dlx nodemon server/local-api-server.js",
+    "dev:api": "NODE_ENV=development nodemon server/local-api-server.js",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx --max-warnings=1000 || true",
     "type-check": "tsc --noEmit",
     "vercel-build": "./build-script.sh",
     "test:db": "node api/test-db-connection.js",
     "test:api": "node server/verify-api.js",
-    "verify:all": "pnpm run test:db && pnpm run test:api",
-    "prepare:deploy": "pnpm run lint && pnpm run verify:all"
+    "verify:all": "npm run test:db && npm run test:api",
+    "prepare:deploy": "npm run lint && npm run verify:all"
   },
   "dependencies": {
     "@ant-design/icons": "^5.5.2",
