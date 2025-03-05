@@ -152,3 +152,84 @@ The backend provides RESTful APIs for:
 - Secure headers with Helmet
 - Environment variable protection
 - Supabase security features
+
+## Deployment
+
+### Vercel Deployment
+
+The application is configured for deployment on Vercel with serverless API functions.
+
+#### API Structure for Vercel
+
+The serverless API is organized in the `/api` directory:
+- `/api/artists` - Artist endpoints
+- `/api/releases` - Release endpoints 
+- `/api/db-diagnostic` - Database diagnostic tools
+- `/api/utils` - Shared utilities and database connection helpers
+
+All API endpoints include CORS headers to allow cross-origin requests.
+
+#### Manual Deployment
+
+To deploy manually to Vercel:
+
+1. Install Vercel CLI:
+```bash
+npm install -g vercel
+```
+
+2. Login to Vercel:
+```bash
+vercel login
+```
+
+3. Deploy the application:
+```bash
+vercel --prod
+```
+
+#### GitHub Actions Automated Deployment
+
+The repository includes a GitHub Actions workflow for automated deployments to Vercel:
+
+1. The workflow is defined in `.github/workflows/vercel-deploy.yml`
+2. It triggers automatically on pushes to the `main` branch
+3. Required secrets:
+   - `VERCEL_TOKEN`: Your Vercel API token
+   - `VERCEL_ORG_ID`: Your Vercel organization ID
+   - `VERCEL_PROJECT_ID`: Your Vercel project ID
+
+#### Verifying the Deployment
+
+Run the verification script to check if API endpoints are working:
+
+```bash
+node verify-production-api.js
+```
+
+This script tests all API endpoints and returns diagnostic information about their response.
+
+### API Endpoints
+
+The following API endpoints are available:
+
+#### Diagnostic
+- `GET /api/diagnostic` - Provides comprehensive database information including schema details, table counts, and data relationships
+
+#### Artists
+- `GET /api/artists` - Get all artists (with optional pagination)
+- `GET /api/artists?label=buildit-records` - Get artists for a specific label
+- `GET /api/artists/{id}` - Get a specific artist by ID
+
+#### Releases
+- `GET /api/releases` - Get all releases (with optional pagination)
+- `GET /api/releases?label=buildit-records` - Get releases for a specific label
+- `GET /api/releases/{id}` - Get a specific release by ID
+
+#### Labels
+- All label IDs:
+  - `buildit-records` - BuildIt Records
+  - `buildit-tech` - BuildIt Tech
+  - `buildit-deep` - BuildIt Deep
+
+All API endpoints return JSON responses and include proper error handling and CORS headers.
