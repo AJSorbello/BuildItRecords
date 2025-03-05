@@ -37,6 +37,10 @@
   ],
   "routes": [
     { 
+      "src": "/api/test-db", 
+      "dest": "/api/test-db.js" 
+    },
+    { 
       "src": "/api/health", 
       "dest": "/api/health.js" 
     },
@@ -59,10 +63,6 @@
     { 
       "src": "/api/tracks/label/([^/]+)", 
       "dest": "/api/tracks/label/[labelId].js?labelId=$1" 
-    },
-    { 
-      "src": "/api/tracks", 
-      "dest": "/api/tracks/index.js" 
     },
     { 
       "src": "/api/releases", 
