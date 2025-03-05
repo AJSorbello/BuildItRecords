@@ -1,10 +1,16 @@
 // Serverless API handler for fetching releases
-const { getPool, getTableSchema, hasColumn, logResponse, getAllTables } = require('../utils/db-utils');
+const { getPool, getTableSchema, hasColumn, logResponse, addCorsHeaders, getAllTables } = require('../utils/db-utils');
 
 // Initialize database connection
 const pool = getPool();
 
 module.exports = async (req, res) => {
+  console.log('Releases API endpoint called');
+  console.log('Query params:', req.query);
+  
+  // Add CORS headers
+  addCorsHeaders(res);
+  
   try {
     console.log('Processing releases request', req.query);
     console.log('Environment:', process.env.NODE_ENV);

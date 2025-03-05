@@ -1,6 +1,6 @@
 // Serverless API endpoint for artists
 // This file is deployed as an independent serverless function
-const { getPool, getTableSchema, hasColumn, getAllTables } = require('../utils/db-utils');
+const { getPool, getTableSchema, hasColumn, getAllTables, addCorsHeaders } = require('../utils/db-utils');
 
 // Initialize database connection
 const pool = getPool();
@@ -15,10 +15,8 @@ module.exports = async (req, res) => {
     ssl: process.env.DB_SSL
   });
 
-  // CORS headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  // Add CORS headers
+  addCorsHeaders(res);
 
   // Handle OPTIONS request (preflight)
   if (req.method === 'OPTIONS') {

@@ -1,4 +1,5 @@
-const { getPool, getAllTables, getTableSchema } = require('./utils/db-utils');
+const { Pool } = require('pg');
+const { getPool, getAllTables, getTableSchema, addCorsHeaders } = require('./utils/db-utils');
 
 module.exports = async (req, res) => {
   console.log('Running database diagnostic');
@@ -184,6 +185,9 @@ module.exports = async (req, res) => {
   } finally {
     if (client) client.release();
   }
+  
+  // Add CORS headers to enable cross-origin requests
+  addCorsHeaders(res);
   
   // Send response - handle both Express.js and plain Node.js HTTP response objects
   try {
