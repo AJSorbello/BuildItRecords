@@ -36,9 +36,9 @@ export ADMIN_USERNAME="admin"
 export ADMIN_PASSWORD_HASH="$2a$10$nQ0oN9pavoYZiAjdPdstL.S.Vi/3012suNyKxHX/CI39wB424l9Ya"
 export JWT_SECRET="buildit_records_jwt_secret_2025"
 
-# Supabase configuration
-export VITE_SUPABASE_URL="${SUPABASE_URL}"
-export VITE_SUPABASE_ANON_KEY="${SUPABASE_ANON_KEY}"
+# Supabase configuration - Removed references to non-existent env vars
+# export VITE_SUPABASE_URL="${SUPABASE_URL}"
+# export VITE_SUPABASE_ANON_KEY="${SUPABASE_ANON_KEY}"
 
 # Ensure API URL is properly set
 echo "🌐 API URL set to: $REACT_APP_API_URL"
@@ -48,7 +48,6 @@ echo "🔍 Database Connection Info (masked):"
 echo "POSTGRES_URL is set: $(if [ -n "$POSTGRES_URL" ]; then echo "Yes"; else echo "No"; fi)"
 echo "POSTGRES_URL_NON_POOLING is set: $(if [ -n "$POSTGRES_URL_NON_POOLING" ]; then echo "Yes"; else echo "No"; fi)"
 echo "SUPABASE_URL: ${SUPABASE_URL}"
-echo "VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}"
 
 # Install dependencies with optional dependencies included
 echo "📦 Installing dependencies with legacy-peer-deps"
