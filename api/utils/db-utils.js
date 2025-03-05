@@ -22,8 +22,21 @@ function getPool() {
   // Create connection options
   let poolConfig;
 
-  if (process.env.POSTGRES_URL) {
-    // Use connection string if available
+  // Check for Vercel-specific connection strings first
+  if (process.env.POSTGRES_URL_NON_POOLING) {
+    // Use Vercel's non-pooling connection string (preferred for serverless)
+    poolConfig = {
+      connectionString: process.env.POSTGRES_URL_NON_POOLING,
+      ssl: { rejectUnauthorized: true }
+    };
+    console.log('Using Vercel POSTGRES_URL_NON_POOLING connection string');
+    // Log masked connection URL for debugging
+    const maskedUrl = process.env.POSTGRES_URL_NON_POOLING
+      ? process.env.POSTGRES_URL_NON_POOLING.replace(/\/\/([^:]+):([^@]+)@/, '//***:***@')
+      : 'none';
+    console.log('Vercel connection URL (masked):', maskedUrl);
+  } else if (process.env.POSTGRES_URL) {
+    // Use standard connection string if available
     poolConfig = {
       connectionString: process.env.POSTGRES_URL,
       ssl: {
@@ -39,11 +52,11 @@ function getPool() {
   } else {
     // Use individual parameters
     poolConfig = {
-      host: process.env.DB_HOST || 'localhost',
-      port: process.env.DB_PORT || 5432,
-      database: process.env.DB_NAME || 'builditrecords',
-      user: process.env.DB_USER || 'postgres',
-      password: process.env.DB_PASSWORD || '',
+      host: process.env.POSTGRES_HOST || process.env.DB_HOST || 'localhost',
+      port: process.env.POSTGRES_PORT || process.env.DB_PORT || 5432,
+      database: process.env.POSTGRES_DATABASE || process.env.DB_NAME || 'builditrecords',
+      user: process.env.POSTGRES_USER || process.env.DB_USER || 'postgres',
+      password: process.env.POSTGRES_PASSWORD || process.env.DB_PASSWORD || '',
       // Only use SSL if explicitly set to true
       ssl: process.env.DB_SSL === 'true' ? {
         rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false'

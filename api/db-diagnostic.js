@@ -3,6 +3,15 @@ const { getPool, getAllTables, getTableSchema, addCorsHeaders } = require('./uti
 
 module.exports = async (req, res) => {
   console.log('Running database diagnostic');
+  
+  // Add CORS headers
+  addCorsHeaders(res);
+  
+  // Handle OPTIONS request (preflight)
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  
   let client;
   let diagnosticResults = {};
   
@@ -13,12 +22,16 @@ module.exports = async (req, res) => {
     // Get database connection
     console.log('Environment:', diagnosticResults.environment);
     const connection = {
-      host: process.env.DB_HOST || 'localhost',
-      database: process.env.DB_NAME || 'builditrecords',
-      port: process.env.DB_PORT || '5432',
-      ssl: process.env.DB_SSL || 'false'
+      host: process.env.POSTGRES_HOST || process.env.DB_HOST || 'localhost',
+      database: process.env.POSTGRES_DATABASE || process.env.DB_NAME || 'builditrecords',
+      port: process.env.POSTGRES_PORT || process.env.DB_PORT || '5432',
+      ssl: process.env.DB_SSL || 'false',
+      connectionString: process.env.POSTGRES_URL_NON_POOLING || process.env.POSTGRES_URL || 'none'
     };
-    console.log('Database connection params:', connection);
+    console.log('Database connection params:', {
+      ...connection,
+      connectionString: connection.connectionString.replace(/\/\/([^:]+):([^@]+)@/, '//***:***@')
+    });
     
     const pool = getPool();
     diagnosticResults.database = connection.database;
@@ -185,9 +198,6 @@ module.exports = async (req, res) => {
   } finally {
     if (client) client.release();
   }
-  
-  // Add CORS headers to enable cross-origin requests
-  addCorsHeaders(res);
   
   // Send response - handle both Express.js and plain Node.js HTTP response objects
   try {
