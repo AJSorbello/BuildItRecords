@@ -718,8 +718,81 @@ async function attachArtistInfoToReleases(releases) {
   }));
 }
 
+/**
+ * Fetch top releases from Supabase
+ * @param {Object} options Query options
+ * @param {string} options.labelId Optional label ID to filter by
+ * @param {number} options.limit Maximum number of releases to return
+ * @returns {Promise<Array>} Array of top releases
+ */
+async function getTopReleases({ labelId, limit = 10 }) {
+  if (!supabase) {
+    throw new Error('Supabase client not initialized');
+  }
+  
+  console.log(`Fetching top releases${labelId ? ` for label ID: ${labelId}` : ''} using Supabase client`);
+  
+  try {
+    // Strategy: Get releases sorted by popularity metrics (play count, etc.)
+    let query = supabase
+      .from('releases')
+      .select(`
+        *,
+        artists:release_artists(
+          artist_id,
+          artists(*)
+        )
+      `)
+      .order('play_count', { ascending: false })
+      .limit(limit);
+    
+    // Apply label filter if provided
+    if (labelId) {
+      // Map label ID based on database structure
+      let databaseLabelId = labelId;
+      if (labelId === 'buildit-records') {
+        console.log('Mapping "buildit-records" label ID to "1" based on database structure');
+        databaseLabelId = "1";
+      }
+      query = query.eq('label_id', databaseLabelId);
+    }
+    
+    const { data: releases, error } = await query;
+    
+    if (error) {
+      console.error('Error fetching top releases:', error);
+      throw new Error(`Failed to fetch top releases: ${error.message}`);
+    }
+    
+    if (!releases || releases.length === 0) {
+      console.log('No top releases found');
+      return [];
+    }
+    
+    // Process releases to extract artist information
+    const processedReleases = releases.map(release => {
+      const artists = release.artists?.map(ra => {
+        return ra.artists || null;
+      }).filter(a => a !== null) || [];
+      
+      return {
+        ...release,
+        artists,
+        artists_array: artists
+      };
+    });
+    
+    console.log(`Retrieved ${processedReleases.length} top releases`);
+    return processedReleases;
+  } catch (error) {
+    console.error('Error in getTopReleases:', error);
+    throw error;
+  }
+}
+
 module.exports = {
   getArtistsByLabel,
   getReleases,
+  getTopReleases,
   supabase
 };
