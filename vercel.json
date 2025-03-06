@@ -42,14 +42,6 @@
       "src": "/api/health", 
       "dest": "/api/health.js" 
     },
-    { 
-      "src": "/api/diagnostic", 
-      "dest": "/api/db-diagnostic.js" 
-    },
-    {
-      "src": "/api/db-test",
-      "dest": "/api/db-test.js"
-    },
     {
       "src": "/api/(.*)",
       "dest": "/api/$1.js"
