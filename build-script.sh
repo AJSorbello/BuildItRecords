@@ -49,25 +49,26 @@ echo "POSTGRES_URL is set: $(if [ -n "$POSTGRES_URL" ]; then echo "Yes"; else ec
 echo "POSTGRES_URL_NON_POOLING is set: $(if [ -n "$POSTGRES_URL_NON_POOLING" ]; then echo "Yes"; else echo "No"; fi)"
 echo "SUPABASE_URL: ${SUPABASE_URL}"
 
-# Install dependencies with optional dependencies included
-echo "📦 Installing dependencies with legacy-peer-deps"
-npm install --legacy-peer-deps --no-optional
+# Install dependencies WITH optional dependencies (important for esbuild)
+echo "📦 Installing dependencies with legacy-peer-deps and including optional dependencies"
+npm install --legacy-peer-deps
 if [ $? -ne 0 ]; then
   echo "❌ Main dependency installation failed. Trying without peer deps..."
-  npm install --no-optional
+  npm install
   if [ $? -ne 0 ]; then
     echo "❌ Dependency installation failed completely. Exiting."
     exit 1
   fi
 fi
 
-# Skip platform-specific installations
-echo "📦 Skipping platform-specific installations"
+# Explicitly install esbuild with its binaries
+echo "📦 Ensuring esbuild is properly installed with binaries"
+npm install esbuild
 
 # Install API dependencies
 echo "📦 Installing API dependencies"
 cd api 
-npm install pg pg-hstore --no-optional
+npm install pg pg-hstore
 if [ $? -ne 0 ]; then
   echo "❌ API dependency installation failed. Continuing anyway..."
 fi
@@ -101,6 +102,8 @@ if [ $BUILD_RESULT -ne 0 ]; then
   ls -la node_modules
   echo "Vite modules:"
   ls -la node_modules/vite || echo "No vite module found"
+  echo "esbuild modules:"
+  ls -la node_modules/esbuild || echo "No esbuild module found"
   echo "Full package.json:"
   cat package.json
   exit $BUILD_RESULT
