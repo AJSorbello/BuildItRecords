@@ -1,196 +1,254 @@
-// Serverless API handler for fetching artists by label
-const { getPool, getTableSchema } = require('../../utils/db-utils');
+const { getArtistsByLabel } = require('../../utils/supabase-client');
+const { getPool } = require('../../utils/db-utils');
 
-// Initialize database connection
-const pool = getPool();
+/**
+ * Handler for getting artists by label
+ * @param {Object} req - HTTP request object
+ * @param {Object} res - HTTP response object
+ */
+module.exports = async function handler(req, res) {
+  // Set CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-module.exports = async (req, res) => {
-  try {
-    // Get label ID from the URL
-    const { labelId } = req.query;
-    
-    if (!labelId) {
-      return res.status(400).json({ error: 'Missing labelId parameter' });
-    }
-    
-    console.log(`Fetching artists for label: ${labelId}`);
-    
-    // Connect to the database
-    const client = await pool.connect();
-    console.log('Connected to database');
-    
-    try {
-      // Debug the table schema
-      console.log('Inspecting database schemas...');
-      
-      // Check labels table schema
-      const labelSchema = await getTableSchema(client, 'labels');
-      console.log('Labels table columns:', labelSchema.map(r => r.column_name).join(', '));
-      
-      // Check actual labels in the database
-      const labelData = await client.query('SELECT * FROM labels');
-      console.log('Available labels:', labelData.rows.map(l => `${l.id} (${l.name})`).join(', '));
-      console.log('Sample label data:', JSON.stringify(labelData.rows[0]));
-      
-      // Check artists table schema
-      const artistsSchema = await getTableSchema(client, 'artists');
-      console.log('Artists table columns:', artistsSchema.map(r => r.column_name).join(', '));
-      
-      // Examine relationships
-      console.log('Examining label-artist relationships...');
-      
-      // Get sample artist to examine
-      const sampleArtist = await client.query('SELECT * FROM artists LIMIT 1');
-      if (sampleArtist.rows.length > 0) {
-        console.log('Sample artist data:', JSON.stringify(sampleArtist.rows[0]));
-      } else {
-        console.log('No artists found in the database');
-      }
-      
-      // Prepare different variations of the label ID to be more flexible
-      const normalizedLabelId = labelId.replace(/-/g, ''); // Remove hyphens
-      
-      // Check if we're using the correct field for label_id
-      let isUsingId = true;
-      try {
-        // Try to query with label.id
-        const testQuery = await client.query(`
-          SELECT l.id, l.name FROM labels l
-          WHERE l.id = $1
-        `, [labelId]);
-        console.log(`Test query for label.id found ${testQuery.rows.length} matches`);
-        
-        // If no results, check if we should use a different field
-        if (testQuery.rows.length === 0) {
-          const altTestQuery = await client.query(`
-            SELECT l.id, l.name, l.slug FROM labels l
-            WHERE l.slug = $1 OR l.id::text = $1
-          `, [labelId]);
-          console.log(`Test query for label.slug/text found ${altTestQuery.rows.length} matches`);
-          
-          if (altTestQuery.rows.length > 0) {
-            isUsingId = false;
-            console.log('Label matches using slug/text field instead of id');
-          }
-        }
-      } catch (testErr) {
-        console.error('Error testing label queries:', testErr.message);
-      }
-      
-      // Build a flexible query to find artists
-      const queries = [];
-      
-      // Direct ID match query
-      queries.push(`
-        SELECT a.* 
-        FROM artists a
-        JOIN labels l ON a.label_id = l.id
-        WHERE l.id = $1
-      `);
-      
-      // Normalized ID match query
-      queries.push(`
-        SELECT a.* 
-        FROM artists a
-        JOIN labels l ON a.label_id = l.id
-        WHERE l.id = $1
-      `);
-      
-      // Name match query
-      queries.push(`
-        SELECT a.* 
-        FROM artists a
-        JOIN labels l ON a.label_id = l.id
-        WHERE l.name ILIKE $1
-      `);
-      
-      // Slug match query (if slug exists in labels)
-      if (labelSchema.some(col => col.column_name === 'slug')) {
-        queries.push(`
-          SELECT a.* 
-          FROM artists a
-          JOIN labels l ON a.label_id = l.id
-          WHERE l.slug = $1
-        `);
-      }
-      
-      // Try each query until we find artists
-      let artists = [];
-      const queryParams = [
-        labelId,
-        normalizedLabelId,
-        `%${labelId.replace(/-/g, ' ')}%`
-      ];
-      
-      console.log('Executing flexible query with parameters:', queryParams);
-      
-      for (let i = 0; i < queries.length && artists.length === 0; i++) {
-        try {
-          const query = queries[i];
-          const param = queryParams[Math.min(i, queryParams.length - 1)];
-          
-          console.log(`Trying query variation ${i+1}:`, query.replace(/\s+/g, ' '));
-          const result = await client.query(query, [param]);
-          
-          if (result.rows.length > 0) {
-            console.log(`Found ${result.rows.length} artists with query variation ${i+1}`);
-            artists = result.rows;
-            break;
-          }
-        } catch (queryErr) {
-          console.error(`Error with query variation ${i+1}:`, queryErr.message);
-        }
-      }
-      
-      // If still no artists, try a last-ditch approach with a simplified query
-      if (artists.length === 0) {
-        console.log('No artists found with flexible queries, trying direct simple query...');
-        
-        // Check if there are any artists at all
-        const countQuery = await client.query('SELECT COUNT(*) FROM artists');
-        console.log(`Total artists in database: ${countQuery.rows[0].count}`);
-        
-        // Check if there are any artists with the matching label_id directly
-        try {
-          const directQuery = await client.query(`
-            SELECT * FROM artists
-            WHERE label_id::text = $1
-          `, [labelId]);
-          
-          console.log(`Direct query found ${directQuery.rows.length} artists`);
-          if (directQuery.rows.length > 0) {
-            artists = directQuery.rows;
-          }
-        } catch (directErr) {
-          console.error('Error with direct query:', directErr.message);
-        }
-      }
-      
-      // Format the artists for the response
-      const formattedArtists = artists.map(artist => ({
-        id: artist.id,
-        name: artist.name,
-        bio: artist.bio || '',
-        imageUrl: artist.image_url || '',
-        labelId: artist.label_id,
-        spotifyUrl: artist.spotify_url || '',
-        createdAt: artist.created_at,
-        updatedAt: artist.updated_at
-      }));
-      
-      // Return the artists
-      return res.status(200).json({ artists: formattedArtists });
-    } finally {
-      // Release the client back to the pool
-      client.release();
-      console.log('Database connection released');
-    }
-  } catch (error) {
-    console.error('Error fetching artists by label:', error);
-    return res.status(500).json({ 
-      error: 'Internal server error', 
-      details: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+  // Handle OPTIONS request (CORS preflight)
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
+  // Only accept GET requests
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method Not Allowed' });
+  }
+
+  const { labelId } = req.query;
+
+  if (!labelId) {
+    return res.status(400).json({ 
+      error: 'Label ID is required',
+      meta: { timestamp: new Date().toISOString() }
     });
   }
-};
+
+  console.log(`[${new Date().toISOString()}] Getting artists for label: ${labelId}`);
+  
+  try {
+    // Try using the Supabase client first (preferred)
+    try {
+      console.log('Attempting to get artists using Supabase client...');
+      const supabaseArtists = await getArtistsByLabel({ labelId, limit: 100 });
+      
+      if (supabaseArtists && supabaseArtists.length > 0) {
+        console.log(`Found ${supabaseArtists.length} artists for label ${labelId} using Supabase client`);
+        return res.status(200).json({ 
+          artists: supabaseArtists,
+          meta: {
+            source: 'supabase-client',
+            count: supabaseArtists.length,
+            label: labelId,
+            timestamp: new Date().toISOString()
+          }
+        });
+      } else {
+        console.log(`No artists found for label ${labelId} using Supabase client, trying direct database query...`);
+      }
+    } catch (supabaseError) {
+      console.error('Error getting artists with Supabase client:', supabaseError);
+      console.log('Falling back to direct database query...');
+    }
+
+    // Fall back to direct PostgreSQL query if Supabase client fails
+    console.log('Attempting direct PostgreSQL connection to retrieve artists...');
+    let client = null;
+    try {
+      // Get the database pool and connect to it
+      const pool = getPool();
+      client = await pool.connect();
+      
+      console.log('Connected to PostgreSQL database successfully');
+      
+      // First try junction table approach to find artists through releases
+      const junctionQuery = `
+        SELECT DISTINCT a.id, a.name, a.image_url, a.spotify_url
+        FROM artists a
+        JOIN release_artists ra ON a.id = ra.artist_id
+        JOIN releases r ON r.id = ra.release_id
+        WHERE r.label_id = $1
+        LIMIT 100
+      `;
+      
+      console.log('Executing junction table query to find artists through releases');
+      const junctionResult = await client.query(junctionQuery, [labelId]);
+      
+      if (junctionResult.rows && junctionResult.rows.length > 0) {
+        console.log(`Found ${junctionResult.rows.length} artists through release relationships`);
+        
+        // Format artist data for response
+        const formattedArtists = junctionResult.rows.map(artist => ({
+          id: artist.id,
+          name: artist.name,
+          imageUrl: artist.image_url,
+          spotifyUrl: artist.spotify_url
+        }));
+        
+        return res.status(200).json({
+          artists: formattedArtists,
+          meta: {
+            source: 'postgres-junction',
+            count: formattedArtists.length,
+            label: labelId,
+            timestamp: new Date().toISOString()
+          }
+        });
+      }
+      
+      // If junction approach didn't work, try direct label_id approach
+      console.log('No artists found via junction table, trying direct label ID approach');
+      const directQuery = `
+        SELECT id, name, image_url, spotify_url
+        FROM artists
+        WHERE label_id = $1
+        LIMIT 100
+      `;
+      
+      // Try with id in case label_id doesn't exist
+      const directResult = await client.query(directQuery, [labelId]);
+      
+      if (directResult.rows && directResult.rows.length > 0) {
+        console.log(`Found ${directResult.rows.length} artists with direct label ID lookup`);
+        
+        // Format artist data for response
+        const formattedArtists = directResult.rows.map(artist => ({
+          id: artist.id,
+          name: artist.name,
+          imageUrl: artist.image_url,
+          spotifyUrl: artist.spotify_url
+        }));
+        
+        return res.status(200).json({
+          artists: formattedArtists,
+          meta: {
+            source: 'postgres-direct',
+            count: formattedArtists.length,
+            label: labelId,
+            timestamp: new Date().toISOString()
+          }
+        });
+      }
+      
+      // If we still haven't found any artists, try a flexible approach
+      console.log('No artists found with direct label ID, trying flexible approach');
+      const flexibleQuery = `
+        SELECT DISTINCT a.id, a.name, a.image_url, a.spotify_url
+        FROM artists a
+        LEFT JOIN release_artists ra ON a.id = ra.artist_id
+        LEFT JOIN releases r ON ra.release_id = r.id
+        WHERE a.label_id = $1 
+           OR r.label_id = $1
+           OR a.label_id ILIKE '%' || $1 || '%'
+           OR r.label_id ILIKE '%' || $1 || '%'
+        LIMIT 100
+      `;
+      
+      const flexibleResult = await client.query(flexibleQuery, [labelId]);
+      
+      if (flexibleResult.rows && flexibleResult.rows.length > 0) {
+        console.log(`Found ${flexibleResult.rows.length} artists with flexible label lookup`);
+        
+        // Format artist data for response
+        const formattedArtists = flexibleResult.rows.map(artist => ({
+          id: artist.id,
+          name: artist.name,
+          imageUrl: artist.image_url,
+          spotifyUrl: artist.spotify_url
+        }));
+        
+        return res.status(200).json({
+          artists: formattedArtists,
+          meta: {
+            source: 'postgres-flexible',
+            count: formattedArtists.length,
+            label: labelId,
+            timestamp: new Date().toISOString()
+          }
+        });
+      }
+      
+      // Last resort: get any artists, regardless of label
+      console.log('No artists found with any label approach, fetching recent artists as fallback');
+      const fallbackQuery = `
+        SELECT id, name, image_url, spotify_url
+        FROM artists
+        ORDER BY id DESC
+        LIMIT 100
+      `;
+      
+      const fallbackResult = await client.query(fallbackQuery);
+      
+      if (fallbackResult.rows && fallbackResult.rows.length > 0) {
+        console.log(`Using ${fallbackResult.rows.length} fallback artists (not filtered by label)`);
+        
+        // Format artist data for response
+        const formattedArtists = fallbackResult.rows.map(artist => ({
+          id: artist.id,
+          name: artist.name,
+          imageUrl: artist.image_url,
+          spotifyUrl: artist.spotify_url
+        }));
+        
+        return res.status(200).json({
+          artists: formattedArtists,
+          meta: {
+            source: 'postgres-fallback',
+            count: formattedArtists.length,
+            label: labelId,
+            note: 'Artists not filtered by label - fallback mode',
+            timestamp: new Date().toISOString()
+          }
+        });
+      }
+      
+      // If we've reached this point, we couldn't find any artists
+      console.log('No artists found after all attempts');
+      return res.status(404).json({
+        error: 'No artists found for this label after all attempts',
+        meta: {
+          label: labelId,
+          timestamp: new Date().toISOString()
+        }
+      });
+      
+    } catch (dbError) {
+      console.error('Database error when fetching artists:', dbError);
+      return res.status(500).json({
+        error: 'No artists found for this label after all attempts',
+        meta: {
+          label: labelId,
+          pgError: dbError.message || 'Unknown database error',
+          timestamp: new Date().toISOString()
+        }
+      });
+    } finally {
+      // Clean up the database connection
+      if (client) {
+        console.log('Releasing PostgreSQL client back to the pool');
+        try {
+          client.release();
+        } catch (releaseError) {
+          console.error('Error releasing PostgreSQL client:', releaseError);
+        }
+      }
+    }
+  } catch (error) {
+    console.error(`Error processing artists request for label ${labelId}:`, error);
+    return res.status(500).json({
+      error: 'Failed to retrieve artists',
+      meta: {
+        label: labelId,
+        message: error.message,
+        timestamp: new Date().toISOString()
+      }
+    });
+  }
+}

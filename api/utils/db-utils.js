@@ -11,81 +11,50 @@ if (process.env.NODE_ENV !== 'production' || process.env.DB_SSL_REJECT_UNAUTHORI
 let pool;
 
 /**
- * Get or create a database connection pool
+ * Get a pool connection to the database
  * @returns {Pool} PostgreSQL connection pool
  */
 function getPool() {
   if (pool) {
     return pool;
   }
-  
-  // Create connection options
-  let poolConfig;
 
-  // Check for Vercel-specific connection strings first
+  // Determine which connection string to use
+  let connectionString;
+  
+  // If POSTGRES_URL_NON_POOLING is set, prefer that (Vercel production format)
   if (process.env.POSTGRES_URL_NON_POOLING) {
-    // Use Vercel's non-pooling connection string (preferred for serverless)
-    poolConfig = {
-      connectionString: process.env.POSTGRES_URL_NON_POOLING,
-      ssl: { rejectUnauthorized: true }
-    };
     console.log('Using Vercel POSTGRES_URL_NON_POOLING connection string');
-    // Log masked connection URL for debugging
-    const maskedUrl = process.env.POSTGRES_URL_NON_POOLING
-      ? process.env.POSTGRES_URL_NON_POOLING.replace(/\/\/([^:]+):([^@]+)@/, '//***:***@')
-      : 'none';
-    console.log('Vercel connection URL (masked):', maskedUrl);
-  } else if (process.env.POSTGRES_URL) {
-    // Use standard connection string if available
-    poolConfig = {
-      connectionString: process.env.POSTGRES_URL,
-      ssl: {
-        rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false'
-      }
-    };
-    console.log('Using connection string from POSTGRES_URL');
-    // Log masked connection URL for debugging
-    const maskedUrl = process.env.POSTGRES_URL
-      ? process.env.POSTGRES_URL.replace(/\/\/([^:]+):([^@]+)@/, '//***:***@')
-      : 'none';
-    console.log('Connection URL (masked):', maskedUrl);
+    connectionString = process.env.POSTGRES_URL_NON_POOLING;
+  }
+  // Fall back to explicit connection parameters
+  else if (process.env.POSTGRES_HOST) {
+    // Build connection string from individual parameters
+    const ssl = process.env.POSTGRES_SSL ? 'sslmode=require' : '';
+    connectionString = `postgres://${process.env.POSTGRES_USER}:${process.env.POSTGRES_PASSWORD}@${process.env.POSTGRES_HOST}:${process.env.POSTGRES_PORT || 5432}/${process.env.POSTGRES_DATABASE}?${ssl}`;
+    console.log(`Using explicit PostgreSQL connection parameters: ${process.env.POSTGRES_HOST}`);
   } else {
-    // Use individual parameters
-    poolConfig = {
-      host: process.env.POSTGRES_HOST || process.env.DB_HOST || 'localhost',
-      port: process.env.POSTGRES_PORT || process.env.DB_PORT || 5432,
-      database: process.env.POSTGRES_DATABASE || process.env.DB_NAME || 'builditrecords',
-      user: process.env.POSTGRES_USER || process.env.DB_USER || 'postgres',
-      password: process.env.POSTGRES_PASSWORD || process.env.DB_PASSWORD || '',
-      // Only use SSL if explicitly set to true
-      ssl: process.env.DB_SSL === 'true' ? {
-        rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false'
-      } : false
-    };
-    console.log('Using individual connection parameters');
-    console.log('Connection params (masked):', {
-      host: poolConfig.host,
-      port: poolConfig.port,
-      database: poolConfig.database,
-      user: poolConfig.user,
-      password: '***', 
-      ssl: poolConfig.ssl
-    });
+    console.error('No PostgreSQL connection parameters found');
+    throw new Error('Database connection parameters missing');
   }
 
-  // Add common options
-  poolConfig.connectionTimeoutMillis = 10000;
-  poolConfig.idleTimeoutMillis = 30000;
-  poolConfig.max = 20; // Maximum number of clients in the pool
+  // Create the pool with the connection string
+  pool = new Pool({
+    connectionString,
+    ssl: {
+      rejectUnauthorized: process.env.NODE_ENV === 'production'
+    },
+    max: 10, // Maximum number of clients in the pool
+    idleTimeoutMillis: 30000, // How long a client is allowed to remain idle before being closed
+    connectionTimeoutMillis: 10000, // How long to wait before timing out when connecting a new client
+  });
 
-  // Initialize database connection
-  pool = new Pool(poolConfig);
-  
-  // Log pool errors
+  // Add error handler to the pool
   pool.on('error', (err) => {
     console.error('Unexpected error on idle client', err);
+    // Don't terminate the process, just log the error and continue
   });
-  
+
   return pool;
 }
 
@@ -98,19 +67,13 @@ function getPool() {
 async function getTableSchema(client, tableName) {
   try {
     console.log(`Fetching schema for table: ${tableName}`);
-    const result = await client.query(`
-      SELECT column_name, data_type 
+    const schemaQuery = `
+      SELECT column_name, data_type, is_nullable 
       FROM information_schema.columns 
-      WHERE table_schema = 'public' AND table_name = $1
-      ORDER BY ordinal_position
-    `, [tableName]);
-    
-    if (result.rows.length === 0) {
-      console.warn(`Warning: No columns found for table ${tableName}. Verify the table exists.`);
-    } else {
-      console.log(`Found ${result.rows.length} columns for table ${tableName}`);
-    }
-    
+      WHERE table_name = $1
+      ORDER BY ordinal_position;
+    `;
+    const result = await client.query(schemaQuery, [tableName]);
     return result.rows;
   } catch (error) {
     console.error(`Error fetching schema for ${tableName}:`, error.message);
@@ -131,41 +94,6 @@ function hasColumn(schema, columnName) {
 }
 
 /**
- * Log response details for debugging
- * @param {Object} data - Response data
- * @param {string} endpoint - API endpoint
- */
-function logResponse(data, endpoint) {
-  // For large datasets, only log summary information
-  let summary;
-  
-  if (Array.isArray(data)) {
-    summary = `Array with ${data.length} items`;
-    if (data.length > 0) {
-      const sampleItem = typeof data[0] === 'object' 
-        ? { ...data[0], _sample: true }
-        : data[0];
-      console.log(`Sample item:`, sampleItem);
-    }
-  } else if (typeof data === 'object' && data !== null) {
-    summary = {};
-    Object.keys(data).forEach(key => {
-      if (Array.isArray(data[key])) {
-        summary[key] = `Array[${data[key].length}]`;
-      } else if (typeof data[key] === 'object' && data[key] !== null) {
-        summary[key] = 'Object';
-      } else {
-        summary[key] = data[key];
-      }
-    });
-  } else {
-    summary = data;
-  }
-  
-  console.log(`[${endpoint}] Response summary:`, summary);
-}
-
-/**
  * Get all tables in the database
  * @param {Object} client - Database client
  * @returns {Promise<Array>} Array of table names
@@ -173,20 +101,13 @@ function logResponse(data, endpoint) {
 async function getAllTables(client) {
   try {
     console.log('Fetching all tables in database');
-    const result = await client.query(`
+    const query = `
       SELECT table_name 
       FROM information_schema.tables 
       WHERE table_schema = 'public'
-      ORDER BY table_name
-    `);
-    
-    if (result.rows.length === 0) {
-      console.warn('Warning: No tables found in database');
-    } else {
-      console.log(`Found ${result.rows.length} tables in database`);
-      console.log('Tables:', result.rows.map(row => row.table_name).join(', '));
-    }
-    
+      ORDER BY table_name;
+    `;
+    const result = await client.query(query);
     return result.rows.map(row => row.table_name);
   } catch (error) {
     console.error('Error fetching tables:', error.message);
@@ -194,7 +115,32 @@ async function getAllTables(client) {
   }
 }
 
-// Add CORS headers helper function
+/**
+ * Log response details for debugging
+ * @param {*} data - Response data
+ * @param {string} endpoint - API endpoint
+ */
+function logResponse(data, endpoint) {
+  const timestamp = new Date().toISOString();
+  const sample = Array.isArray(data) ? 
+    (data.length > 0 ? data.slice(0, 2) : []) : 
+    data;
+  
+  // Format response for logging
+  const logData = {
+    endpoint,
+    timestamp,
+    count: Array.isArray(data) ? data.length : (typeof data === 'object' ? 1 : 0),
+    sample: typeof sample === 'object' ? JSON.stringify(sample).substring(0, 500) : sample
+  };
+  
+  console.log(`[${timestamp}] Response from ${endpoint}:`, logData);
+}
+
+/**
+ * Add CORS headers helper function
+ * @param {Object} res - Express response object
+ */
 function addCorsHeaders(res) {
   // Allow requests from any origin
   res.setHeader('Access-Control-Allow-Origin', '*');
