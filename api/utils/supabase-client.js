@@ -733,60 +733,112 @@ async function getTopReleases({ labelId, limit = 10 }) {
   console.log(`Fetching top releases${labelId ? ` for label ID: ${labelId}` : ''} using Supabase client`);
   
   try {
-    // Strategy: Get releases sorted by popularity metrics (play count, etc.)
-    let query = supabase
+    // Initial approach - get all fields with nested artist data
+    try {
+      console.log('Attempting comprehensive query with artist details');
+      // Strategy: Get releases sorted by popularity metrics (play count, etc.)
+      let query = supabase
+        .from('releases')
+        .select(`
+          *,
+          artists:release_artists(
+            artist_id,
+            artists(*)
+          )
+        `)
+        .limit(limit);
+      
+      // Apply label filter if provided
+      if (labelId) {
+        // Map label ID based on database structure
+        let databaseLabelId = labelId;
+        if (labelId === 'buildit-records') {
+          console.log('Mapping "buildit-records" label ID to "1" based on database structure');
+          databaseLabelId = "1";
+        }
+        query = query.eq('label_id', databaseLabelId);
+      }
+      
+      // Order by play_count if the column exists
+      query = query.order('play_count', { ascending: false });
+      
+      const { data: releases, error } = await query;
+      
+      if (error) {
+        console.error('Error fetching top releases with comprehensive query:', error);
+        throw error;
+      }
+      
+      if (!releases || releases.length === 0) {
+        console.log('No top releases found with comprehensive query');
+        // Don't return yet, try the fallback approach
+      } else {
+        // Process releases to extract artist information
+        const processedReleases = releases.map(release => {
+          const artists = release.artists?.map(ra => {
+            return ra.artists || null;
+          }).filter(a => a !== null) || [];
+          
+          return {
+            ...release,
+            artists,
+            artists_array: artists
+          };
+        });
+        
+        console.log(`Retrieved ${processedReleases.length} top releases with comprehensive query`);
+        return processedReleases;
+      }
+    } catch (comprehensiveError) {
+      console.error('Comprehensive query approach failed:', comprehensiveError);
+      console.log('Falling back to simpler query approach');
+      // Continue to fallback approach
+    }
+    
+    // Fallback approach - get only basic release data without joins
+    console.log('Using fallback approach with simpler query');
+    let fallbackQuery = supabase
       .from('releases')
-      .select(`
-        *,
-        artists:release_artists(
-          artist_id,
-          artists(*)
-        )
-      `)
-      .order('play_count', { ascending: false })
+      .select('*')
       .limit(limit);
     
     // Apply label filter if provided
     if (labelId) {
-      // Map label ID based on database structure
       let databaseLabelId = labelId;
       if (labelId === 'buildit-records') {
-        console.log('Mapping "buildit-records" label ID to "1" based on database structure');
+        console.log('Mapping "buildit-records" label ID to "1" for fallback query');
         databaseLabelId = "1";
       }
-      query = query.eq('label_id', databaseLabelId);
+      fallbackQuery = fallbackQuery.eq('label_id', databaseLabelId);
     }
     
-    const { data: releases, error } = await query;
+    // Try to order by created_at as a fallback sorting criterion
+    fallbackQuery = fallbackQuery.order('created_at', { ascending: false });
     
-    if (error) {
-      console.error('Error fetching top releases:', error);
-      throw new Error(`Failed to fetch top releases: ${error.message}`);
+    const { data: basicReleases, error: fallbackError } = await fallbackQuery;
+    
+    if (fallbackError) {
+      console.error('Error in fallback query approach:', fallbackError);
+      throw fallbackError;
     }
     
-    if (!releases || releases.length === 0) {
-      console.log('No top releases found');
-      return [];
+    if (!basicReleases || basicReleases.length === 0) {
+      console.log('No releases found with fallback query');
+      return []; // Return empty array as a last resort
     }
     
-    // Process releases to extract artist information
-    const processedReleases = releases.map(release => {
-      const artists = release.artists?.map(ra => {
-        return ra.artists || null;
-      }).filter(a => a !== null) || [];
-      
-      return {
-        ...release,
-        artists,
-        artists_array: artists
-      };
-    });
+    console.log(`Retrieved ${basicReleases.length} basic releases with fallback query`);
     
-    console.log(`Retrieved ${processedReleases.length} top releases`);
-    return processedReleases;
+    // Add placeholder for artists since we don't have the join data
+    return basicReleases.map(release => ({
+      ...release,
+      artists: [],
+      artists_array: []
+    }));
+    
   } catch (error) {
-    console.error('Error in getTopReleases:', error);
-    throw error;
+    console.error('Final error in getTopReleases:', error);
+    throw new Error(`Failed to fetch top releases: ${error.message}`);
   }
 }
 
