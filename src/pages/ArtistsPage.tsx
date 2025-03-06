@@ -105,14 +105,14 @@ class ArtistsPage extends Component<ArtistsPageProps, ArtistsPageState> {
 
   getLabelId() {
     const { label } = this.props;
-    // Map route label names to full label IDs
+    // Map route label names to numeric label IDs that match our Supabase database
     const labelMap: Record<string, string> = {
-      'records': 'buildit-records',
-      'tech': 'buildit-tech',
-      'deep': 'buildit-deep'
+      'records': '1',  // BUILD IT RECORDS
+      'tech': '2',     // BUILD IT TECH 
+      'deep': '3'      // BUILD IT DEEP
     };
     
-    return labelMap[label] || 'buildit-tech';
+    return labelMap[label] || '2'; // Default to BUILD IT TECH
   }
 
   getTitle() {
