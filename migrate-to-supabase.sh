@@ -9,14 +9,18 @@ LOCAL_DB_HOST="localhost"
 LOCAL_DB_PORT="5432"
 LOCAL_DB_NAME="builditrecords"
 LOCAL_DB_USER="postgres"
-LOCAL_DB_PASSWORD=""  # Set your local password here
+LOCAL_DB_PASSWORD="postgres"  # Local PostgreSQL password from .env
 
+# Production Supabase credentials
+SUPABASE_URL="https://liuaozuvkmvanmchndzl.supabase.co"
 SUPABASE_DB_HOST="db.liuaozuvkmvanmchndzl.supabase.co"
 SUPABASE_DB_PORT="5432"
 SUPABASE_DB_NAME="postgres"
 SUPABASE_DB_USER="postgres"
-SUPABASE_DB_PASSWORD="postgres"
-SUPABASE_CONNECTION="postgres://${SUPABASE_DB_USER}:${SUPABASE_DB_PASSWORD}@${SUPABASE_DB_HOST}:${SUPABASE_DB_PORT}/${SUPABASE_DB_NAME}?sslmode=require"
+# Replace [YOUR-PASSWORD] with your actual Supabase database password
+SUPABASE_DB_PASSWORD="H0u53Mu51c11!"  # Supabase database password
+# Full connection string (matches the format you found)
+SUPABASE_CONNECTION="postgresql://${SUPABASE_DB_USER}:${SUPABASE_DB_PASSWORD}@${SUPABASE_DB_HOST}:${SUPABASE_DB_PORT}/${SUPABASE_DB_NAME}?sslmode=require"
 
 # Output files
 DUMP_FILE="builditrecords_dump.sql"
