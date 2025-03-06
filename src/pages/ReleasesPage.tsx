@@ -98,7 +98,7 @@ export const ReleasesPage = ({ label: propLabel }: ReleasesPageProps) => {
       setError(null);
 
       console.log('Fetching releases for label:', labelConfig.id, 'page:', page);
-      const data = await databaseService.getReleasesByLabelId(labelConfig.id, page);
+      const data = await databaseService.getReleasesByLabel(labelConfig.id, page);
 
       if (!data) {
         throw new Error('No data received from server');
