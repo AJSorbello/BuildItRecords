@@ -59,6 +59,10 @@
       "dest": "dist/index.html"
     },
     {
+      "src": "/admin/(.*)",
+      "dest": "dist/index.html"
+    },
+    {
       "src": "/(artists|releases|playlists|submit|legal|about|contact)/(.*)",
       "dest": "dist/index.html"
     },
