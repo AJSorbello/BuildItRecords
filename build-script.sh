@@ -76,7 +76,9 @@ cd ..
 
 # Test database connection but don't fail if it doesn't work
 echo "🔍 Testing database connection"
-node api/db-diagnostic.js || echo "Warning: Database connection test failed, but continuing with build"
+# Commented out as db-diagnostic.js was removed to reduce function count
+# node api/db-diagnostic.js || echo "Warning: Database connection test failed, but continuing with build"
+echo "Skipping database diagnostic test"
 
 # Check for needed directories
 echo "🔧 Checking project structure"
