@@ -36,9 +36,9 @@ export ADMIN_USERNAME="admin"
 export ADMIN_PASSWORD_HASH="$2a$10$nQ0oN9pavoYZiAjdPdstL.S.Vi/3012suNyKxHX/CI39wB424l9Ya"
 export JWT_SECRET="buildit_records_jwt_secret_2025"
 
-# Supabase configuration - Removed references to non-existent env vars
-# export VITE_SUPABASE_URL="${SUPABASE_URL}"
-# export VITE_SUPABASE_ANON_KEY="${SUPABASE_ANON_KEY}"
+# Supabase configuration
+export VITE_SUPABASE_URL="${SUPABASE_URL}"
+export VITE_SUPABASE_ANON_KEY="${SUPABASE_ANON_KEY}"
 
 # Ensure API URL is properly set
 echo "🌐 API URL set to: $REACT_APP_API_URL"
