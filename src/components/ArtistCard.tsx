@@ -13,7 +13,7 @@ const ArtistCard: React.FC<ArtistCardProps> = ({ artist, onClick, background }) 
   const artistImage = artist.profile_image_url || 
                       artist.profile_image_small_url || 
                       artist.profile_image_large_url || 
-                      `https://via.placeholder.com/300x300?text=${encodeURIComponent(artist.name)}`;
+                      `https://placehold.co/300x300/DEDEDE/555555?text=${encodeURIComponent(artist.name)}`;
 
   const handleClick = () => {
     if (onClick) {
@@ -56,9 +56,10 @@ const ArtistCard: React.FC<ArtistCardProps> = ({ artist, onClick, background }) 
           image={artistImage}
           alt={artist.name || 'Unknown Artist'}
           onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
-            // Fallback to placeholder if image fails to load
+            // Fallback to a reliable placeholder service if image fails to load
             const target = e.target as HTMLImageElement;
-            target.src = '/images/placeholder-artist.jpg';
+            // Use placehold.co as a fallback with artist name
+            target.src = `https://placehold.co/300x300/DEDEDE/555555?text=${encodeURIComponent(artist.name || 'Unknown Artist')}`;
           }}
         />
       </Box>
