@@ -842,9 +842,95 @@ async function getTopReleases({ labelId, limit = 10 }) {
   }
 }
 
+/**
+ * Fetch all releases associated with an artist
+ * @param {Object} options Query options
+ * @param {string} options.artistId Artist ID to filter releases by
+ * @returns {Promise<Array>} Array of releases
+ */
+async function getReleasesByArtist({ artistId }) {
+  if (!supabase) {
+    throw new Error('Supabase client not initialized');
+  }
+
+  console.log(`Fetching releases for artist with ID: ${artistId}`);
+
+  try {
+    // First try the direct query using artist_id from the junction table
+    let { data: releases, error } = await supabase
+      .from('release_artists')
+      .select(`
+        release_id,
+        releases:release_id (*)
+      `)
+      .eq('artist_id', artistId);
+
+    // Process the nested results to get just the releases
+    if (releases && releases.length > 0) {
+      console.log(`Found ${releases.length} releases for artist ${artistId} via junction table`);
+      // Extract actual release objects and filter out any nulls
+      releases = releases
+        .map(item => item.releases)
+        .filter(release => release !== null);
+      
+      return releases;
+    }
+
+    // If no results, try using Spotify ID
+    console.log('No releases found with artist ID, trying with Spotify ID...');
+    
+    // Find the artist by Spotify ID
+    const { data: artists, error: artistError } = await supabase
+      .from('artists')
+      .select('id')
+      .eq('spotify_id', artistId)
+      .limit(1);
+    
+    if (artistError) {
+      console.error('Error finding artist by Spotify ID:', artistError);
+    }
+    
+    if (artists && artists.length > 0) {
+      const internalArtistId = artists[0].id;
+      console.log(`Found internal artist ID ${internalArtistId} for Spotify ID ${artistId}`);
+      
+      // Try the query again with internal ID
+      const { data: retryReleases, error: retryError } = await supabase
+        .from('release_artists')
+        .select(`
+          release_id,
+          releases:release_id (*)
+        `)
+        .eq('artist_id', internalArtistId);
+      
+      if (retryError) {
+        console.error('Error fetching releases with internal artist ID:', retryError);
+      }
+      
+      if (retryReleases && retryReleases.length > 0) {
+        console.log(`Found ${retryReleases.length} releases for artist with internal ID ${internalArtistId}`);
+        // Extract actual release objects and filter out any nulls
+        const processedReleases = retryReleases
+          .map(item => item.releases)
+          .filter(release => release !== null);
+        
+        return processedReleases;
+      }
+    }
+    
+    // If we still haven't found anything, return an empty array
+    console.log(`No releases found for artist ID ${artistId}`);
+    return [];
+  } catch (error) {
+    console.error('Error fetching releases for artist:', error);
+    throw error;
+  }
+}
+
 module.exports = {
   getArtistsByLabel,
   getReleases,
   getTopReleases,
+  getReleasesByArtist,
   supabase
 };
