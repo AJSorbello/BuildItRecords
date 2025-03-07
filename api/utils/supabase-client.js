@@ -403,182 +403,65 @@ async function getReleases({ labelId, limit = 100, page = 1 }) {
         }
       }
       
-      // Check for release table structure
-      const { data: releasesSample, error: releasesSampleError } = await supabase
+      // Get sample release to understand structure
+      const { data: sampleRelease, error: sampleError } = await supabase
         .from('releases')
         .select('*')
-        .limit(1);
+        .limit(1)
+        .single();
         
-      if (releasesSampleError) {
-        console.error('Error checking releases sample:', releasesSampleError);
-      } else if (releasesSample && releasesSample.length > 0) {
-        console.log('Found release sample with keys:', Object.keys(releasesSample[0]).join(', '));
-        console.log(`Sample release: ${JSON.stringify(releasesSample[0])}`);
-      }
-      
-      // Check for artists table structure
-      const { data: artistsSample, error: artistsSampleError } = await supabase
-        .from('artists')
-        .select('*')
-        .limit(1);
-        
-      if (artistsSampleError) {
-        console.error('Error checking artists sample:', artistsSampleError);
-      } else if (artistsSample && artistsSample.length > 0) {
-        console.log('Found artist sample with keys:', Object.keys(artistsSample[0]).join(', '));
-        console.log(`Sample artist: ${JSON.stringify(artistsSample[0])}`);
-      }
-      
-      // Try to get all tables
-      try {
-        // This special query should work in Supabase
-        const { data: tables, error: tablesError } = await supabase.rpc('get_tables');
-        
-        if (tablesError) {
-          console.error('Error querying tables with RPC:', tablesError);
-        } else if (tables) {
-          console.log('Tables found in database:', tables);
-        }
-      } catch (tablesError) {
-        console.error('Exception querying tables:', tablesError);
+      if (sampleError) {
+        console.error('Error getting sample release:', sampleError);
+      } else if (sampleRelease) {
+        console.log('Sample release keys:', Object.keys(sampleRelease).join(', '));
       }
     } catch (schemaError) {
-      console.error('Schema inspection error:', schemaError);
-    }
-  
-    // Attempt #1: Try a flexible label matching approach
-    try {
-      console.log('Attempting flexible label query');
-      
-      // Create a query with flexible label handling
-      let query = supabase
-        .from('releases')
-        .select('*')
-        .order('release_date', { ascending: false })
-        .limit(limit);
-      
-      // Handle label filtering with multiple approaches based on previous findings
-      if (labelId) {
-        // For BuildIt Records specifically, use a more flexible approach
-        if (labelId === 'buildit-records') {
-          query = query.or(`label_id.eq.${labelId},label_id.ilike.%buildit%,label_id.ilike.%build it%`);
-        } else {
-          // For other labels, try the standard exact match
-          query = query.eq('label_id', labelId);
-        }
-      }
-      
-      const { data: flexibleReleases, error: flexibleError } = await query;
-      
-      if (flexibleError) {
-        console.error('Flexible label query failed:', flexibleError);
-        throw flexibleError;
-      }
-      
-      if (!flexibleReleases || flexibleReleases.length === 0) {
-        console.log('No releases found with flexible label query');
-        
-        // Try a different approach - use the 'id' column instead of 'label_id'
-        const { data: idReleases, error: idError } = await supabase
-          .from('releases')
-          .select('*')
-          .eq('id', labelId)
-          .order('release_date', { ascending: false })
-          .limit(limit);
-        
-        if (idError) {
-          console.error('ID-based query failed:', idError);
-        } else if (idReleases && idReleases.length > 0) {
-          console.log(`Found ${idReleases.length} releases using 'id' column`);
-          
-          // Get artist information using our fetch artist relations helper
-          const releasesWithArtists = await attachArtistInfoToReleases(idReleases);
-          
-          return releasesWithArtists;
-        }
-        
-        // Try one more catch-all approach - get all releases without filtering
-        console.log('Trying catch-all approach - retrieving all recent releases');
-        const { data: allReleases, error: allError } = await supabase
-          .from('releases')
-          .select('*')
-          .order('release_date', { ascending: false })
-          .limit(limit);
-        
-        if (allError) {
-          console.error('Catch-all query failed:', allError);
-          throw allError;
-        }
-        
-        if (!allReleases || allReleases.length === 0) {
-          console.log('No releases found with any query approach');
-          return [];
-        }
-        
-        console.log(`Found ${allReleases.length} releases using catch-all approach`);
-        
-        // Filter locally for potential label matches if possible
-        const filteredReleases = labelId
-          ? allReleases.filter(r => {
-              // Try to match label in various ways
-              if (!r.label_id) return false;
-              const labelLower = labelId.toLowerCase();
-              const rLabelLower = r.label_id.toLowerCase();
-              return rLabelLower === labelLower || 
-                     rLabelLower.includes(labelLower.replace(/-/g, '')) ||
-                     rLabelLower.includes(labelLower.replace(/-/g, ' '));
-            })
-          : allReleases;
-        
-        // Use filtered if we found matches, otherwise use all
-        const resultReleases = filteredReleases.length > 0 ? filteredReleases : allReleases;
-        
-        // Get artist information using our fetch artist relations helper
-        const releasesWithArtists = await attachArtistInfoToReleases(resultReleases);
-        
-        return releasesWithArtists;
-      }
-      
-      console.log(`Found ${flexibleReleases.length} releases with flexible query`);
-      
-      // Get artist information using our fetch artist relations helper
-      const releasesWithArtists = await attachArtistInfoToReleases(flexibleReleases);
-      
-      return releasesWithArtists;
-      
-    } catch (complexError) {
-      console.error('Error with complex query approach:', complexError);
-      
-      // Fall back to a very simple approach, just getting releases without any joins
-      console.log('Falling back to basic query without any joins');
-      const { data: basicReleases, error: basicError } = await supabase
-        .from('releases')
-        .select('id, title, name, release_date, artwork_url, cover_art_url, spotify_id')
-        .order('release_date', { ascending: false })
-        .limit(limit);
-      
-      if (basicError) {
-        console.error('Basic fallback query failed:', basicError);
-        throw basicError;
-      }
-      
-      console.log(`Found ${basicReleases ? basicReleases.length : 0} releases with basic query`);
-      
-      // Even in the basic case, try to get artist information
-      if (basicReleases && basicReleases.length > 0) {
-        return await attachArtistInfoToReleases(basicReleases);
-      }
-      
-      return (basicReleases || []).map(release => ({
-        id: release.id,
-        title: release.title || release.name,
-        artists: [], // No artist info in basic query
-        releaseDate: release.release_date,
-        artworkUrl: release.artwork_url || release.cover_art_url,
-        spotifyId: release.spotify_id
-      }));
+      console.error('Error examining database schema:', schemaError);
     }
     
+    // Construct query based on whether we have a label ID
+    let query = supabase
+      .from('releases')
+      .select('*');
+      
+    // Apply label filter if provided
+    if (labelId) {
+      query = query.eq('label_id', labelId);
+    }
+    
+    // Apply pagination
+    query = query
+      .range(offset, offset + limit - 1)
+      .order('release_date', { ascending: false });
+      
+    // Execute query  
+    const { data: releases, error } = await query;
+    
+    if (error) {
+      console.error('Error fetching releases:', error);
+      throw error;
+    }
+    
+    if (!releases || releases.length === 0) {
+      console.log('No releases found in Supabase');
+      return [];
+    }
+    
+    console.log(`Found ${releases.length} releases in Supabase, attaching artist info...`);
+    
+    // Use helper function to attach artist information to releases
+    const releasesWithArtists = await attachArtistInfoToReleases(releases);
+    
+    // Log results for debugging
+    console.log(`Processed ${releasesWithArtists.length} releases with artist information`);
+    const artistCounts = releasesWithArtists.map(r => ({
+      id: r.id,
+      title: r.title,
+      artistCount: r.artists && r.artists.length || 0
+    }));
+    console.log('Artist counts per release:', JSON.stringify(artistCounts, null, 2));
+    
+    return releasesWithArtists;
   } catch (error) {
     console.error('Error fetching releases from Supabase:', error);
     throw error;
@@ -648,7 +531,8 @@ async function attachArtistInfoToReleases(releases) {
             releaseArtistsMap[junction.release_id].push({
               id: artist.id,
               name: artist.name,
-              imageUrl: artist.profile_image_url || 
+              imageUrl: artist.image_url || 
+                      artist.profile_image_url || 
                       artist.profile_image_small_url || 
                       artist.profile_image_large_url
             });
@@ -657,6 +541,7 @@ async function attachArtistInfoToReleases(releases) {
         
         // Return formatted releases with artist info
         return releases.map(release => ({
+          ...release,
           id: release.id,
           title: release.title || release.name,
           artists: releaseArtistsMap[release.id] || [],
@@ -686,8 +571,7 @@ async function attachArtistInfoToReleases(releases) {
         const artists = Array.isArray(release.artists) ? release.artists : [];
         
         return {
-          id: release.id,
-          title: release.title || release.name,
+          ...release,
           artists: artists.map(artist => ({
             id: artist.id,
             name: artist.name,
@@ -705,13 +589,58 @@ async function attachArtistInfoToReleases(releases) {
     console.error('Error in approach 2:', approach2Error);
   }
   
-  // If all approaches fail, just return releases with empty artists arrays
-  console.log('All artist lookup approaches failed, returning releases without artist data');
+  // Approach 3: Get "Various Artists" as a fallback
+  try {
+    console.log('Approach 3: Looking for Various Artists as fallback...');
+    
+    const { data: variousArtistsData, error: variousArtistsError } = await supabase
+      .from('artists')
+      .select('*')
+      .or('name.ilike.%various artists%,name.ilike.%compilation%')
+      .limit(1);
+      
+    if (variousArtistsError) {
+      console.error('Error finding Various Artists:', variousArtistsError);
+    } else if (variousArtistsData && variousArtistsData.length > 0) {
+      console.log('Found Various Artists as fallback');
+      
+      const variousArtist = variousArtistsData[0];
+      const fallbackArtist = {
+        id: variousArtist.id,
+        name: variousArtist.name,
+        imageUrl: variousArtist.image_url || 
+                 variousArtist.profile_image_url || 
+                 variousArtist.profile_image_small_url
+      };
+      
+      return releases.map(release => ({
+        ...release,
+        title: release.title || release.name,
+        artists: [fallbackArtist], // Use Various Artists as fallback
+        releaseDate: release.release_date,
+        artworkUrl: release.artwork_url || release.cover_art_url,
+        spotifyId: release.spotify_id
+      }));
+    } else {
+      console.log('No Various Artists found for fallback');
+    }
+  } catch (approach3Error) {
+    console.error('Error in approach 3:', approach3Error);
+  }
+  
+  // If all approaches fail, create a default artist
+  console.log('All artist lookup approaches failed, creating default artist');
+  
+  const defaultArtist = {
+    id: 'default',
+    name: 'Build It Records',
+    imageUrl: '/images/placeholder-artist.jpg' // Standard placeholder
+  };
   
   return releases.map(release => ({
-    id: release.id,
+    ...release,
     title: release.title || release.name,
-    artists: [], // No artist info could be found
+    artists: [defaultArtist], // Use default artist
     releaseDate: release.release_date,
     artworkUrl: release.artwork_url || release.cover_art_url,
     spotifyId: release.spotify_id
@@ -733,112 +662,43 @@ async function getTopReleases({ labelId, limit = 10 }) {
   console.log(`Fetching top releases${labelId ? ` for label ID: ${labelId}` : ''} using Supabase client`);
   
   try {
-    // Initial approach - get all fields with nested artist data
-    try {
-      console.log('Attempting comprehensive query with artist details');
-      // Strategy: Get releases sorted by popularity metrics (play count, etc.)
-      let query = supabase
-        .from('releases')
-        .select(`
-          *,
-          artists:release_artists(
-            artist_id,
-            artists(*)
-          )
-        `)
-        .limit(limit);
-      
-      // Apply label filter if provided
-      if (labelId) {
-        // Map label ID based on database structure
-        let databaseLabelId = labelId;
-        if (labelId === 'buildit-records') {
-          console.log('Mapping "buildit-records" label ID to "1" based on database structure');
-          databaseLabelId = "1";
-        }
-        query = query.eq('label_id', databaseLabelId);
-      }
-      
-      // Order by play_count if the column exists
-      query = query.order('play_count', { ascending: false });
-      
-      const { data: releases, error } = await query;
-      
-      if (error) {
-        console.error('Error fetching top releases with comprehensive query:', error);
-        throw error;
-      }
-      
-      if (!releases || releases.length === 0) {
-        console.log('No top releases found with comprehensive query');
-        // Don't return yet, try the fallback approach
-      } else {
-        // Process releases to extract artist information
-        const processedReleases = releases.map(release => {
-          const artists = release.artists?.map(ra => {
-            return ra.artists || null;
-          }).filter(a => a !== null) || [];
-          
-          return {
-            ...release,
-            artists,
-            artists_array: artists
-          };
-        });
-        
-        console.log(`Retrieved ${processedReleases.length} top releases with comprehensive query`);
-        return processedReleases;
-      }
-    } catch (comprehensiveError) {
-      console.error('Comprehensive query approach failed:', comprehensiveError);
-      console.log('Falling back to simpler query approach');
-      // Continue to fallback approach
-    }
-    
-    // Fallback approach - get only basic release data without joins
-    console.log('Using fallback approach with simpler query');
-    let fallbackQuery = supabase
+    // Construct the query
+    let query = supabase
       .from('releases')
-      .select('*')
-      .limit(limit);
-    
-    // Apply label filter if provided
+      .select('*');
+      
+    // Add label filter if provided
     if (labelId) {
-      let databaseLabelId = labelId;
-      if (labelId === 'buildit-records') {
-        console.log('Mapping "buildit-records" label ID to "1" for fallback query');
-        databaseLabelId = "1";
-      }
-      fallbackQuery = fallbackQuery.eq('label_id', databaseLabelId);
+      query = query.eq('label_id', labelId);
     }
     
-    // Try to order by created_at as a fallback sorting criterion
-    fallbackQuery = fallbackQuery.order('created_at', { ascending: false });
+    // Apply order and limit
+    query = query
+      .order('release_date', { ascending: false })
+      .limit(limit);
+      
+    // Execute the query
+    const { data: releases, error } = await query;
     
-    const { data: basicReleases, error: fallbackError } = await fallbackQuery;
-    
-    if (fallbackError) {
-      console.error('Error in fallback query approach:', fallbackError);
-      throw fallbackError;
+    if (error) {
+      console.error('Error fetching top releases:', error);
+      throw error;
     }
     
-    if (!basicReleases || basicReleases.length === 0) {
-      console.log('No releases found with fallback query');
-      return []; // Return empty array as a last resort
+    if (!releases || releases.length === 0) {
+      console.log('No top releases found');
+      return [];
     }
     
-    console.log(`Retrieved ${basicReleases.length} basic releases with fallback query`);
+    console.log(`Found ${releases.length} top releases in Supabase, attaching artist info...`);
     
-    // Add placeholder for artists since we don't have the join data
-    return basicReleases.map(release => ({
-      ...release,
-      artists: [],
-      artists_array: []
-    }));
+    // Use helper function to attach artist information to releases
+    const releasesWithArtists = await attachArtistInfoToReleases(releases);
     
+    return releasesWithArtists;
   } catch (error) {
-    console.error('Final error in getTopReleases:', error);
-    throw new Error(`Failed to fetch top releases: ${error.message}`);
+    console.error('Error fetching top releases from Supabase:', error);
+    throw error;
   }
 }
 
