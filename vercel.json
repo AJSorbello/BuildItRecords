@@ -16,7 +16,9 @@
       "REACT_APP_SPOTIFY_CLIENT_SECRET": "",
       "CI": "true",
       "VERCEL": "true",
-      "NPM_FLAGS": "--legacy-peer-deps"
+      "NPM_FLAGS": "--legacy-peer-deps",
+      "VITE_SUPABASE_URL": "https://mlncktxzmhmgcdywsbhn.supabase.co",
+      "VITE_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1sbmNrdHh6bWhtZ2NkeXdzYmhuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDg2MDkzMTksImV4cCI6MjAyNDE4NTMxOX0.qcVJDYSSSqXQqD3-nHoNNHbWGvQqoJQWcXmNDxN3iDA"
     }
   },
   "builds": [
@@ -36,15 +38,28 @@
   "routes": [
     { 
       "src": "/api/test-db", 
-      "dest": "/api/test-db.js" 
+      "dest": "/api/test-db.js",
+      "headers": {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS"
+      }
     },
     { 
       "src": "/api/health", 
-      "dest": "/api/health.js" 
+      "dest": "/api/health.js",
+      "headers": {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, OPTIONS"
+      }
     },
     {
       "src": "/api/(.*)",
-      "dest": "/api/$1.js"
+      "dest": "/api/$1.js",
+      "headers": {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type"
+      }
     },
     {
       "src": "/(tech|records|deep)/(.*)",
@@ -73,7 +88,9 @@
     "DB_SSL_REJECT_UNAUTHORIZED": "false",
     "ADMIN_USERNAME": "admin",
     "ADMIN_PASSWORD_HASH": "$2a$10$nQ0oN9pavoYZiAjdPdstL.S.Vi/3012suNyKxHX/CI39wB424l9Ya",
-    "JWT_SECRET": "buildit_records_jwt_secret_2025"
+    "JWT_SECRET": "buildit_records_jwt_secret_2025",
+    "SUPABASE_URL": "https://mlncktxzmhmgcdywsbhn.supabase.co",
+    "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1sbmNrdHh6bWhtZ2NkeXdzYmhuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDg2MDkzMTksImV4cCI6MjAyNDE4NTMxOX0.qcVJDYSSSqXQqD3-nHoNNHbWGvQqoJQWcXmNDxN3iDA"
   },
   "git": {
     "deploymentEnabled": {
