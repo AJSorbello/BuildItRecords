@@ -29,7 +29,7 @@ export type Track = {
   duration: number;
   track_number: number;
   disc_number: number;
-  preview_url?: string;
+  preview_url?: string | null;
   spotify_url: string;
   spotify_uri: string;
   release?: Album;

@@ -34,7 +34,7 @@ interface Album {
   images?: Array<{ url: string; height: number; width: number }>;
   spotify_url: string;
   spotify_uri: string;
-  label_id: string;
+  labelId: string;
   total_tracks: number;
   artists?: Artist[];
   tracks?: Track[];
@@ -88,6 +88,7 @@ interface ImportResponse {
     totalArtistsImported: number;
     totalReleasesImported: number;
   };
+  count?: number;
 }
 
 /**
@@ -389,7 +390,7 @@ class DatabaseService {
                  (release.artwork_url ? [{ url: release.artwork_url, height: 300, width: 300 }] : []),
           artists: Array.isArray(release.artists) ? 
                   release.artists.map((artist: any) => this.mapSpotifyArtistToArtist(artist)) : [],
-          label_id: release.label_id || '',
+          labelId: release.label_id || '',
           total_tracks: release.total_tracks || 0,
           external_urls: { 
             spotify: release.external_urls?.spotify || release.spotify_url || '' 
@@ -462,7 +463,7 @@ class DatabaseService {
         images: albumData.images || [{ url: albumData.artwork_url || '', height: 0, width: 0 }],
         spotify_url: albumData.spotify_url || albumData.external_urls?.spotify || '',
         spotify_uri: albumData.spotify_uri || albumData.uri || '',
-        label_id: albumData.label_id || '',
+        labelId: albumData.label_id || '',
         total_tracks: albumData.total_tracks || 0,
         artists: Array.isArray(albumData.artists) ? albumData.artists : []
       };
@@ -471,20 +472,6 @@ class DatabaseService {
     return track;
   }
   
-  private mapSpotifyArtistToArtist(artistData: any): Artist {
-    if (!artistData) return { id: '', name: '', type: 'artist', external_urls: { spotify: '' }, uri: '', spotify_url: '' };
-    
-    return {
-      id: artistData.id || '',
-      name: artistData.name || 'Unknown Artist',
-      uri: artistData.uri || artistData.spotify_uri || '',
-      external_urls: artistData.external_urls || { spotify: artistData.spotify_url || '' },
-      spotify_url: artistData.external_urls?.spotify || artistData.spotify_url || '',
-      image_url: artistData.images?.[0]?.url || '',
-      type: 'artist'
-    };
-  }
-
   public async getTracksByLabel(
     labelId: string,
     offset = 0,
@@ -665,65 +652,6 @@ class DatabaseService {
   }
 
   /**
-   * Maps a Spotify artist to our internal Artist interface
-   * @param artist The Spotify artist object
-   * @returns An Artist object
-   */
-  private mapSpotifyArtistToArtist(artist: Record<string, any>): Artist {
-    return {
-      id: artist.id || '',
-      name: artist.name || 'Unknown Artist',
-      uri: artist.uri || artist.spotify_uri || '',
-      external_urls: artist.external_urls || { spotify: artist.spotify_url || '' },
-      spotify_url: artist.external_urls?.spotify || artist.spotify_url || '',
-      image_url: artist.images?.[0]?.url || '',
-      type: 'artist'
-    };
-  }
-
-  public async adminLogin(username: string, password: string): Promise<AdminLoginResponse> {
-    try {
-      return await this.fetchApi<AdminLoginResponse>('/admin/login', {
-        method: 'POST',
-        body: JSON.stringify({ username, password }),
-      });
-    } catch (error) {
-      console.error('Login error:', error);
-      throw error;
-    }
-  }
-
-  public async verifyAdminToken(): Promise<TokenVerificationResponse> {
-    try {
-      return await this.fetchApi<TokenVerificationResponse>('/admin/verify');
-    } catch (error) {
-      console.error('Token verification error:', error);
-      throw error;
-    }
-  }
-
-  public async getTracksByArtist(artistId: string): Promise<Track[]> {
-    console.log(`DatabaseService.getTracksByArtist - Fetching tracks for artist ID: ${artistId}`);
-    try {
-      const response = await this.fetchApi<{
-        tracks: any[];
-      }>(`/artists/${artistId}/tracks`);
-      
-      if (response.tracks && Array.isArray(response.tracks)) {
-        console.log(`Received ${response.tracks.length} tracks for artist ${artistId}`);
-        const processedTracks = await this.processTracks({ tracks: response.tracks });
-        return processedTracks;
-      }
-      
-      console.warn(`Received empty or invalid tracks array for artist ${artistId}`);
-      return [];
-    } catch (error) {
-      console.error('Error fetching tracks by artist:', error);
-      throw error;
-    }
-  }
-
-  /**
    * Get all releases associated with a specific artist across all labels
    * @param artistId The ID of the artist
    */
@@ -751,8 +679,10 @@ class DatabaseService {
           artwork_url: release.artwork_url || '',
           spotify_url: release.spotify_url || '',
           artists: release.artists || [],
+          labelId: release.label_id || '',
+          total_tracks: release.total_tracks || 0,
           tracks: (release.tracks || []).map(track => this.createTrack(track)),
-          label: release.label || { name: release.label_name || '' }
+          label: release.label || { name: release.label_name ? String(release.label_name) : '' }
         };
         
         // Use type assertion to tell TypeScript this matches the Release interface
@@ -830,6 +760,65 @@ class DatabaseService {
     
     // Use the standard createTrack method for consistent handling
     return this.createTrack(trackSnapshot);
+  }
+
+  /**
+   * Maps a Spotify artist to our internal Artist interface
+   * @param artist The Spotify artist object
+   * @returns An Artist object
+   */
+  private mapSpotifyArtistToArtist(artist: Record<string, any>): Artist {
+    return {
+      id: artist.id || '',
+      name: artist.name || 'Unknown Artist',
+      uri: artist.uri || artist.spotify_uri || '',
+      external_urls: artist.external_urls || { spotify: artist.spotify_url || '' },
+      spotify_url: artist.external_urls?.spotify || artist.spotify_url || '',
+      image_url: artist.images?.[0]?.url || '',
+      type: 'artist'
+    };
+  }
+
+  public async adminLogin(username: string, password: string): Promise<AdminLoginResponse> {
+    try {
+      return await this.fetchApi<AdminLoginResponse>('/admin/login', {
+        method: 'POST',
+        body: JSON.stringify({ username, password }),
+      });
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
+    }
+  }
+
+  public async verifyAdminToken(): Promise<TokenVerificationResponse> {
+    try {
+      return await this.fetchApi<TokenVerificationResponse>('/admin/verify');
+    } catch (error) {
+      console.error('Token verification error:', error);
+      throw error;
+    }
+  }
+
+  public async getTracksByArtist(artistId: string): Promise<Track[]> {
+    console.log(`DatabaseService.getTracksByArtist - Fetching tracks for artist ID: ${artistId}`);
+    try {
+      const response = await this.fetchApi<{
+        tracks: any[];
+      }>(`/artists/${artistId}/tracks`);
+      
+      if (response.tracks && Array.isArray(response.tracks)) {
+        console.log(`Received ${response.tracks.length} tracks for artist ${artistId}`);
+        const processedTracks = await this.processTracks({ tracks: response.tracks });
+        return processedTracks;
+      }
+      
+      console.warn(`Received empty or invalid tracks array for artist ${artistId}`);
+      return [];
+    } catch (error) {
+      console.error('Error fetching tracks by artist:', error);
+      throw error;
+    }
   }
 }
 
