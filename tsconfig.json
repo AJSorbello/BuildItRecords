@@ -17,6 +17,7 @@
     "jsx": "react-jsx",
     "outDir": "./dist",
     "baseUrl": ".",
+    "typeRoots": ["./node_modules/@types", "./src/types"],
     "paths": {
       "@/*": ["src/*"],
       "utils/*": ["src/utils/*"],
@@ -26,7 +27,8 @@
     }
   },
   "include": [
-    "src/**/*"
+    "src/**/*",
+    "src/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",

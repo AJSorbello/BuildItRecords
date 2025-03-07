@@ -381,15 +381,15 @@ class DatabaseService {
                  (release.artwork_url ? [{ url: release.artwork_url, height: 300, width: 300 }] : []),
           artists: Array.isArray(release.artists) ? 
                   release.artists.map((artist: any) => this.mapSpotifyArtistToArtist(artist)) : [],
-          labelId: release.label_id || '',
+          label_id: release.label_id || '',
+          label_name: release.label_name || null,
           total_tracks: release.total_tracks || 0,
           external_urls: { 
             spotify: release.external_urls?.spotify || release.spotify_url || '' 
           },
           spotify_url: release.spotify_url || release.external_urls?.spotify || '',
           spotify_uri: release.spotify_uri || release.uri || '',
-          spotify_id: release.id || '',
-          popularity: release.popularity || 0,
+          uri: release.uri || release.spotify_uri || '',
           tracks: Array.isArray(release.tracks) ? 
                  release.tracks.map((track: any) => this.createTrack(track)) : [],
           status: release.status || 'active'
@@ -454,7 +454,7 @@ class DatabaseService {
         images: albumData.images || [{ url: albumData.artwork_url || '', height: 0, width: 0 }],
         spotify_url: albumData.spotify_url || albumData.external_urls?.spotify || '',
         spotify_uri: albumData.spotify_uri || albumData.uri || '',
-        labelId: albumData.label_id || '',
+        label_id: albumData.label_id || '',
         total_tracks: albumData.total_tracks || 0,
         artists: Array.isArray(albumData.artists) ? albumData.artists : []
       };
@@ -670,7 +670,7 @@ class DatabaseService {
           artwork_url: release.artwork_url || '',
           spotify_url: release.spotify_url || '',
           artists: release.artists || [],
-          labelId: release.label_id || '',
+          label_id: release.label_id || '',
           total_tracks: release.total_tracks || 0,
           tracks: (release.tracks || []).map(track => this.createTrack(track)),
           label: release.label || { name: release.label_name ? String(release.label_name) : '' }

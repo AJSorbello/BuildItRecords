@@ -1,9 +1,8 @@
-import type { Artist } from './artist';
-import type { Track } from './track';
-import type { SpotifyImage, SpotifyExternalUrls } from './spotify';
-import type { RecordLabelId } from './labels';
+import type { Artist, Track, SpotifyImage, SpotifyExternalUrls, RecordLabelId } from '.';
 
 export interface Release {
+  label_id: string;
+  label_name: any;
   id: string;
   title: string;
   type: 'album' | 'single' | 'compilation';

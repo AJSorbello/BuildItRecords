@@ -3,8 +3,7 @@
  * @module types/Track
  */
 
-import type { SpotifyExternalUrls, SpotifyExternalIds } from './spotify';
-import type { Artist } from './artist';
+import type { SpotifyExternalUrls, SpotifyExternalIds, Artist } from '.';
 
 export type Album = {
   id: string;

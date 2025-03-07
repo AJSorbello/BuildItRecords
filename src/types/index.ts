@@ -247,3 +247,11 @@ export const convertSpotifyTrack = (track: SpotifyTrack): Track => ({
   spotifyUrl: track.external_urls.spotify,
   type: 'track'
 });
+
+// Re-export all types for better module resolution
+export * from '../types/artist';
+export * from '../types/release';
+export * from '../types/track';
+export * from './spotify';
+import { RecordLabelId as LabelId } from './labels';
+export { LabelId };

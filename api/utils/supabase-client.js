@@ -1,10 +1,20 @@
 const { createClient } = require('@supabase/supabase-js');
 
-// Create a Supabase client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+// Create a Supabase client with support for multiple environment variable naming conventions
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 
+                   process.env.SUPABASE_URL || 
+                   process.env.VITE_SUPABASE_URL;
+
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 
+                        process.env.SUPABASE_ANON_KEY ||
+                        process.env.VITE_SUPABASE_ANON_KEY;
 
 console.log('Supabase URL and key available:', !!supabaseUrl, !!supabaseAnonKey);
+console.log('Environment variables check:',
+  'NEXT_PUBLIC_SUPABASE_URL:', !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+  'SUPABASE_URL:', !!process.env.SUPABASE_URL,
+  'VITE_SUPABASE_URL:', !!process.env.VITE_SUPABASE_URL
+);
 
 // Initialize the client
 let supabase;
