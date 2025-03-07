@@ -1,12 +1,34 @@
-// Serverless API handler for fetching releases
+// Unified serverless API handler for all releases endpoints
 const { getPool, getTableSchema, hasColumn, logResponse, addCorsHeaders } = require('../utils/db-utils');
-const { getReleases } = require('../utils/supabase-client');
+const { getReleases, getTopReleases, getRelease } = require('../utils/supabase-client');
 
-// Handler for GET /api/releases
-async function getReleasesHandler(req, res) {
+module.exports = async (req, res) => {
   // Add CORS headers
   addCorsHeaders(res);
 
+  // Handle OPTIONS request (preflight)
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
+  console.log(`API Request: ${req.method} ${req.url}`);
+  
+  // Determine which endpoint was requested
+  const isTopReleasesRequest = req.url.includes('/top');
+  const isReleaseByIdRequest = req.url.match(/\/releases\/[a-zA-Z0-9-]+$/);
+  
+  // Route to the appropriate handler
+  if (isTopReleasesRequest) {
+    return await getTopReleasesHandler(req, res);
+  } else if (isReleaseByIdRequest) {
+    return await getReleaseByIdHandler(req, res);
+  } else {
+    return await getReleasesHandler(req, res);
+  }
+};
+
+// Handler for GET /api/releases (standard releases listing)
+async function getReleasesHandler(req, res) {
   // Get query parameters
   const { label, limit = 100, page = 1 } = req.query;
   const labelId = label; // For clarity
@@ -200,32 +222,29 @@ async function getReleasesHandler(req, res) {
           releases: supabaseReleases,
           meta: {
             count: supabaseReleases.length,
-            source: 'supabase-fallback',
-            error: pgError.message,
+            source: 'supabase-client-fallback',
             timestamp: new Date().toISOString()
           }
         };
         
-        logResponse(response, '/api/releases');
+        logResponse(response, '/api/releases (supabase fallback)');
         return res.status(200).json(response);
-      } else {
-        // If Supabase also fails or returns no results, return error
-        return res.status(404).json({
-          error: 'No releases found after all attempts',
-          meta: { 
-            label: labelId,
-            pgError: pgError.message,
-            timestamp: new Date().toISOString()
-          }
-        });
       }
+      
+      // If all methods fail, return an error
+      console.error('All release fetching methods failed');
+      return res.status(500).json({
+        error: 'Failed to fetch releases',
+        message: pgError.message,
+        timestamp: new Date().toISOString()
+      });
     }
-    
   } catch (error) {
-    console.error('Error fetching releases:', error);
+    console.error('Error in releases handler:', error);
     return res.status(500).json({
-      error: 'Internal server error',
-      details: error.message
+      error: 'Failed to fetch releases',
+      message: error.message,
+      timestamp: new Date().toISOString()
     });
   } finally {
     if (client) {
@@ -234,5 +253,213 @@ async function getReleasesHandler(req, res) {
   }
 }
 
-// Export the handler
-module.exports = getReleasesHandler;
+// Handler for GET /api/releases/top
+async function getTopReleasesHandler(req, res) {
+  // Get query parameters
+  const { label, limit = 10 } = req.query;
+  const labelId = label; // For clarity
+  
+  // Log the request
+  console.log(`[/api/releases/top] Fetching top releases with params: label=${labelId}, limit=${limit}`);
+  
+  let client = null;
+  try {
+    // First approach: Try using Supabase client
+    try {
+      console.log('[/api/releases/top] Using Supabase client for fetching top releases');
+      
+      const topReleases = await getTopReleases({ labelId, limit: parseInt(limit) });
+      
+      const response = {
+        releases: topReleases || [],
+        meta: {
+          count: topReleases ? topReleases.length : 0,
+          source: 'supabase-client',
+          timestamp: new Date().toISOString(),
+          params: { label: labelId, limit }
+        }
+      };
+      
+      logResponse(response, '/api/releases/top');
+      return res.status(200).json(response);
+      
+    } catch (supabaseError) {
+      console.error('[/api/releases/top] Error with Supabase client:', supabaseError);
+      console.log('[/api/releases/top] Falling back to direct PostgreSQL connection');
+      
+      // Fall back to direct PostgreSQL connection
+      const pool = getPool();
+      client = await pool.connect();
+      
+      // Get schema information for debugging
+      console.log('[/api/releases/top] Checking database schema...');
+      try {
+        const releaseSchema = await getTableSchema(client, 'releases');
+        console.log('[/api/releases/top] Release schema:', JSON.stringify(releaseSchema));
+      } catch (schemaError) {
+        console.error('[/api/releases/top] Error fetching schema:', schemaError);
+      }
+      
+      // Construct a basic SQL query for top releases
+      let query = `
+        SELECT r.*, COUNT(r.id) AS play_count
+        FROM releases r
+      `;
+      
+      const params = [];
+      
+      // Add label filter if provided
+      if (labelId) {
+        // Add join with label table
+        query += `
+          JOIN labels l ON r.label_id = l.id
+          WHERE l.id = $1
+        `;
+        params.push(labelId === 'buildit-records' ? '1' : labelId);
+      }
+      
+      // Add group by, order by, and limit
+      query += `
+        GROUP BY r.id
+        ORDER BY play_count DESC
+        LIMIT $${params.length + 1}
+      `;
+      params.push(parseInt(limit));
+      
+      console.log(`[/api/releases/top] Executing fallback SQL query: ${query}`, params);
+      
+      try {
+        const result = await client.query(query, params);
+        const releases = result.rows;
+        
+        const response = {
+          releases: releases || [],
+          meta: {
+            count: releases ? releases.length : 0,
+            source: 'postgres-direct-fallback',
+            timestamp: new Date().toISOString(),
+            params: { label: labelId, limit }
+          }
+        };
+        
+        logResponse(response, '/api/releases/top (fallback)');
+        return res.status(200).json(response);
+      } catch (sqlError) {
+        console.error('[/api/releases/top] Error executing fallback SQL query:', sqlError);
+        throw sqlError;
+      }
+    }
+  } catch (error) {
+    console.error('[/api/releases/top] Final error in top releases handler:', error);
+    
+    // Return a 500 error with detailed information
+    return res.status(500).json({
+      error: 'Failed to fetch top releases',
+      message: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+      timestamp: new Date().toISOString()
+    });
+  } finally {
+    if (client) {
+      client.release();
+    }
+  }
+}
+
+// Handler for GET /api/releases/:id
+async function getReleaseByIdHandler(req, res) {
+  // Extract release ID from the URL
+  const urlParts = req.url.split('/');
+  const releaseId = urlParts[urlParts.length - 1];
+  
+  if (!releaseId) {
+    return res.status(400).json({ error: 'Missing release ID' });
+  }
+  
+  console.log(`Fetching release details for ID: ${releaseId}`);
+  
+  let client = null;
+  try {
+    // First try Supabase client
+    try {
+      const release = await getRelease(releaseId);
+      
+      if (release) {
+        return res.status(200).json({
+          success: true,
+          data: { release },
+          timestamp: new Date().toISOString()
+        });
+      }
+    } catch (supabaseError) {
+      console.error('Error fetching release with Supabase:', supabaseError);
+      console.log('Falling back to direct PostgreSQL connection');
+    }
+    
+    // Fall back to direct PostgreSQL connection
+    const pool = getPool();
+    client = await pool.connect();
+    
+    // Query to fetch release by ID with related artist information
+    const query = `
+      SELECT 
+        r.*,
+        JSON_AGG(
+          json_build_object(
+            'id', a.id,
+            'name', a.name,
+            'imageUrl', COALESCE(a.profile_image_url, a.profile_image_small_url)
+          )
+        ) as artists
+      FROM releases r
+      LEFT JOIN release_artists ra ON r.id = ra.release_id
+      LEFT JOIN artists a ON ra.artist_id = a.id
+      WHERE r.id = $1
+      GROUP BY r.id
+    `;
+    
+    const result = await client.query(query, [releaseId]);
+    
+    if (result.rows.length === 0) {
+      console.log(`No release found with ID: ${releaseId}`);
+      return res.status(404).json({
+        success: false,
+        error: 'Release not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    const release = result.rows[0];
+    
+    // Clean up artists array
+    if (release.artists && release.artists !== '[null]') {
+      try {
+        release.artists = release.artists.filter(a => a && a.id);
+      } catch (e) {
+        console.error('Error parsing artists JSON:', e);
+        release.artists = [];
+      }
+    } else {
+      release.artists = [];
+    }
+    
+    return res.status(200).json({
+      success: true,
+      data: { release },
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('Error fetching release details:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Error fetching release details',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
+  } finally {
+    if (client) {
+      client.release();
+    }
+  }
+}

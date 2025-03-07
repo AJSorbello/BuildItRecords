@@ -843,6 +843,64 @@ async function getTopReleases({ labelId, limit = 10 }) {
 }
 
 /**
+ * Get a single release by ID
+ * @param {string} releaseId - Release ID to fetch
+ * @returns {Promise<Object>} Release object
+ */
+async function getRelease(releaseId) {
+  if (!supabase) {
+    throw new Error('Supabase client not initialized');
+  }
+  
+  console.log(`Fetching single release with ID: ${releaseId}`);
+  
+  try {
+    // First, get the basic release data
+    const { data: release, error } = await supabase
+      .from('releases')
+      .select('*')
+      .eq('id', releaseId)
+      .single();
+    
+    if (error) {
+      console.error('Error fetching release:', error);
+      
+      // Try alternate ID formats
+      console.log('Trying to fetch release by spotify_id...');
+      const { data: spotifyRelease, error: spotifyError } = await supabase
+        .from('releases')
+        .select('*')
+        .eq('spotify_id', releaseId)
+        .single();
+      
+      if (spotifyError) {
+        console.error('Error fetching release by spotify_id:', spotifyError);
+        return null;
+      }
+      
+      if (spotifyRelease) {
+        // Found by Spotify ID, now fetch the artists
+        console.log(`Found release by spotify_id: ${releaseId}`);
+        return await attachArtistInfoToReleases([spotifyRelease]).then(releases => releases[0]);
+      }
+      
+      return null;
+    }
+    
+    if (!release) {
+      console.log(`No release found with ID: ${releaseId}`);
+      return null;
+    }
+    
+    // Fetch the artists associated with this release
+    return await attachArtistInfoToReleases([release]).then(releases => releases[0]);
+  } catch (error) {
+    console.error('Error in getRelease function:', error);
+    return null;
+  }
+}
+
+/**
  * Fetch all releases associated with an artist
  * @param {Object} options Query options
  * @param {string} options.artistId Artist ID to filter releases by
@@ -932,5 +990,6 @@ module.exports = {
   getReleases,
   getTopReleases,
   getReleasesByArtist,
-  supabase
+  getRelease,
+  attachArtistInfoToReleases
 };

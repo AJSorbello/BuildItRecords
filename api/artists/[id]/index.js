@@ -1,6 +1,7 @@
-// Handler for both artist details and related endpoints
+// Handler for artist details and related endpoints
 const { Pool } = require('pg');
 const { getPool, addCorsHeaders, logResponse } = require('../../utils/db-utils');
+const supabaseClient = require('../../utils/supabase-client');
 
 // CRITICAL: Force Node.js to accept self-signed certificates
 // This should only be used in controlled environments with trusted sources
@@ -17,19 +18,103 @@ module.exports = async (req, res) => {
     return res.status(400).json({ error: 'Missing artist ID parameter' });
   }
   
+  console.log(`Artist API request for ID: ${id}, URL: ${req.url}`);
+  
   // Check the request path to determine the endpoint type
-  const isReleasesRequest = req.url.includes('/all-releases');
+  const isReleasesRequest = req.url.includes('/all-releases') || req.url.includes('/releases');
+  const isDetailsRequest = !isReleasesRequest;
   
   if (isReleasesRequest) {
     return await getArtistReleasesHandler(req, res, id);
+  } else if (isDetailsRequest) {
+    return await getArtistDetailsHandler(req, res, id);
   } else {
-    // Default artist details handler could be added here
+    // Default case (shouldn't normally be reached)
     return res.status(404).json({ error: 'Endpoint not implemented' });
   }
 };
 
 /**
- * Handler for GET /api/artists/:id/all-releases
+ * Handler for artist details
+ * Handles GET /api/artists/:id
+ * @param {Object} req - Request object
+ * @param {Object} res - Response object
+ * @param {string} artistId - Artist ID
+ */
+async function getArtistDetailsHandler(req, res, artistId) {
+  console.log(`Fetching details for artist with ID: ${artistId}`);
+  
+  let client = null;
+  try {
+    // Initialize the database connection pool
+    const pool = getPool();
+    client = await pool.connect();
+    
+    // First try direct ID match
+    const query = 'SELECT * FROM artists WHERE id = $1';
+    const result = await client.query(query, [artistId]);
+    
+    if (result.rows.length > 0) {
+      // Found artist by ID
+      console.log(`Found artist with ID: ${artistId}`);
+      const response = {
+        success: true,
+        data: {
+          artist: result.rows[0],
+        },
+        timestamp: new Date().toISOString()
+      };
+      
+      logResponse(response, `/api/artists/${artistId}`);
+      return res.status(200).json(response);
+    }
+    
+    // Try by Spotify ID if direct match failed
+    console.log('Trying to find artist by Spotify ID...');
+    const spotifyQuery = 'SELECT * FROM artists WHERE spotify_id = $1';
+    const spotifyResult = await client.query(spotifyQuery, [artistId]);
+    
+    if (spotifyResult.rows.length > 0) {
+      // Found artist by Spotify ID
+      console.log(`Found artist with Spotify ID: ${artistId}`);
+      const response = {
+        success: true,
+        data: {
+          artist: spotifyResult.rows[0],
+        },
+        timestamp: new Date().toISOString()
+      };
+      
+      logResponse(response, `/api/artists/${artistId}`);
+      return res.status(200).json(response);
+    }
+    
+    // No artist found
+    return res.status(404).json({ 
+      success: false, 
+      error: 'Artist not found',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error fetching artist details:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Error fetching artist details',
+      details: error.message,
+      artist_id: artistId
+    });
+  } finally {
+    // Release the database client
+    if (client) {
+      client.release();
+      console.log('Database connection released');
+    }
+  }
+}
+
+/**
+ * Handler for artist releases
+ * Handles GET /api/artists/:id/all-releases and /api/artists/:id/releases
  * @param {Object} req - Request object
  * @param {Object} res - Response object
  * @param {string} artistId - Artist ID
@@ -37,6 +122,36 @@ module.exports = async (req, res) => {
 async function getArtistReleasesHandler(req, res, artistId) {
   console.log(`Fetching releases for artist with ID: ${artistId}`);
   
+  // Try using Supabase client first (faster and more reliable)
+  try {
+    console.log('Attempting to fetch releases via Supabase client...');
+    const releases = await supabaseClient.getReleasesByArtist({ artistId });
+    
+    if (releases && releases.length > 0) {
+      console.log(`Found ${releases.length} releases via Supabase client`);
+      
+      // Format and return the response
+      const response = {
+        releases: releases,
+        meta: {
+          count: releases.length,
+          artist_id: artistId,
+          method: 'supabase',
+          timestamp: new Date().toISOString()
+        }
+      };
+      
+      logResponse(response, `/api/artists/${artistId}/releases`);
+      return res.status(200).json(response);
+    }
+    
+    console.log('No releases found via Supabase client, falling back to direct DB query...');
+  } catch (supabaseError) {
+    console.error('Error using Supabase client:', supabaseError.message);
+    console.log('Falling back to direct DB query...');
+  }
+  
+  // Fall back to direct database query if Supabase client fails
   let client = null;
   try {
     // Initialize the database connection pool
@@ -73,17 +188,20 @@ async function getArtistReleasesHandler(req, res, artistId) {
         
         // If we found releases, use them
         if (retryResult.rows.length > 0) {
+          const processedReleases = processReleases(retryResult.rows);
+          
           const response = {
-            releases: retryResult.rows,
+            releases: processedReleases,
             meta: {
-              count: retryResult.rows.length,
+              count: processedReleases.length,
               artist_id: artistId,
               internal_id: internalArtistId,
+              method: 'database',
               timestamp: new Date().toISOString()
             }
           };
           
-          logResponse(response, `/api/artists/${artistId}/all-releases`);
+          logResponse(response, `/api/artists/${artistId}/releases`);
           return res.status(200).json(response);
         }
       }
@@ -100,17 +218,20 @@ async function getArtistReleasesHandler(req, res, artistId) {
       });
     }
     
-    // Format and return the response
+    // Process and return the releases
+    const processedReleases = processReleases(result.rows);
+    
     const response = {
-      releases: result.rows,
+      releases: processedReleases,
       meta: {
-        count: result.rows.length,
+        count: processedReleases.length,
         artist_id: artistId,
+        method: 'database',
         timestamp: new Date().toISOString()
       }
     };
     
-    logResponse(response, `/api/artists/${artistId}/all-releases`);
+    logResponse(response, `/api/artists/${artistId}/releases`);
     return res.status(200).json(response);
   } catch (error) {
     console.error('Error fetching releases for artist:', error);
@@ -126,4 +247,43 @@ async function getArtistReleasesHandler(req, res, artistId) {
       console.log('Database connection released');
     }
   }
+}
+
+/**
+ * Helper function to process release data to match the expected TypeScript interface
+ * @param {Array} releases - Raw releases from database
+ * @returns {Array} - Processed releases
+ */
+function processReleases(releases) {
+  return releases.map(release => {
+    // Get some default values for required properties
+    const images = release.images || [];
+    if (release.artwork_url && !images.length) {
+      images.push({ url: release.artwork_url, height: 300, width: 300 });
+    }
+    
+    // Transform raw database release to match TypeScript interface
+    return {
+      id: release.id,
+      title: release.title || release.name || 'Unknown Release',
+      type: release.type || 'album',
+      artists: release.artists || [],
+      tracks: release.tracks || [],
+      images: images,
+      artwork_url: release.artwork_url,
+      release_date: release.release_date || new Date().toISOString().split('T')[0],
+      release_date_precision: release.release_date_precision || 'day',
+      external_urls: release.external_urls || { spotify: release.spotify_url || '' },
+      uri: release.spotify_uri || release.uri || '',
+      labelId: release.label_id,
+      label: release.label,
+      total_tracks: release.total_tracks || (release.tracks ? release.tracks.length : 0),
+      spotify_url: release.spotify_url,
+      spotify_uri: release.spotify_uri,
+      catalog_number: release.catalog_number,
+      label_id: release.label_id,
+      spotify_id: release.spotify_id,
+      tracks_count: release.tracks_count || (release.tracks ? release.tracks.length : 0)
+    };
+  });
 }
