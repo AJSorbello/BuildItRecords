@@ -5,20 +5,11 @@
 
 import { Track } from '../types/track';
 import { Release } from '../types/release';
+import { Artist } from '../types/artist';
 import { SpotifyImage } from '../types/spotify';
 import { DatabaseError } from '../utils/errors';
 import { RecordLabelId } from '../types/labels'; 
 import { getApiBaseUrl } from '../utils/apiConfig';
-
-interface Artist {
-  id: string;
-  name: string;
-  uri?: string;
-  external_urls?: { spotify?: string };
-  spotify_url?: string;
-  image_url?: string;
-  type: 'artist';
-}
 
 interface ArtistWithReleases extends Artist {
   releases: Release[];
