@@ -41,7 +41,7 @@
   ],
   "routes": [
     { 
-      "src": "/api/health", 
+      "src": "/api/health(/.*)?", 
       "dest": "/api/health.js",
       "headers": {
         "Access-Control-Allow-Origin": "*",
@@ -49,8 +49,8 @@
       }
     },
     {
-      "src": "/api/artists/([^/]+)/([^/]+)",
-      "dest": "/api/artists/[id]/index.js?id=$1&action=$2",
+      "src": "/api/artist/([^/]+)/releases",
+      "dest": "/api/artist.js",
       "headers": {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -58,8 +58,8 @@
       }
     },
     {
-      "src": "/api/artists/([^/]+)",
-      "dest": "/api/artists/[id]/index.js?id=$1",
+      "src": "/api/artist/([^/]+)",
+      "dest": "/api/artist.js",
       "headers": {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -67,8 +67,8 @@
       }
     },
     {
-      "src": "/api/artists",
-      "dest": "/api/artists/index.js",
+      "src": "/api/artist",
+      "dest": "/api/artist.js",
       "headers": {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -76,8 +76,8 @@
       }
     },
     {
-      "src": "/api/artists/label/([^/]+)",
-      "dest": "/api/artists/label/[labelId].js?labelId=$1",
+      "src": "/api/release/([^/]+)/tracks",
+      "dest": "/api/release.js",
       "headers": {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -85,8 +85,8 @@
       }
     },
     {
-      "src": "/api/releases/top",
-      "dest": "/api/releases/index.js?top=true",
+      "src": "/api/release/([^/]+)",
+      "dest": "/api/release.js",
       "headers": {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -94,8 +94,8 @@
       }
     },
     {
-      "src": "/api/releases/([^/]+)",
-      "dest": "/api/releases/index.js?id=$1",
+      "src": "/api/release",
+      "dest": "/api/release.js",
       "headers": {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -103,8 +103,8 @@
       }
     },
     {
-      "src": "/api/releases",
-      "dest": "/api/releases/index.js",
+      "src": "/api/track/([^/]+)",
+      "dest": "/api/track.js",
       "headers": {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -112,8 +112,8 @@
       }
     },
     {
-      "src": "/api/tracks/([^/]+)",
-      "dest": "/api/tracks/index.js?id=$1",
+      "src": "/api/track",
+      "dest": "/api/track.js",
       "headers": {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -121,8 +121,17 @@
       }
     },
     {
-      "src": "/api/tracks",
-      "dest": "/api/tracks/index.js",
+      "src": "/api/label/([^/]+)",
+      "dest": "/api/label.js",
+      "headers": {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type"
+      }
+    },
+    {
+      "src": "/api/label",
+      "dest": "/api/label.js",
       "headers": {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, POST, OPTIONS",

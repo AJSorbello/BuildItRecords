@@ -74,6 +74,50 @@ if [ $? -ne 0 ]; then
 fi
 cd ..
 
+# Clean up redundant API endpoints
+echo "🧹 Cleaning up redundant API endpoints to stay within Vercel limits"
+# Create a directory for redundant files if it doesn't exist
+mkdir -p api-backup
+
+# Move redundant API endpoint files to backup directory
+# These endpoints are now consolidated and shouldn't be deployed
+if [ -d "api/artists" ]; then
+  echo "Moving api/artists directory to backup..."
+  mv api/artists api-backup/
+fi
+
+if [ -d "api/releases" ]; then
+  echo "Moving api/releases directory to backup..."
+  mv api/releases api-backup/
+fi
+
+if [ -d "api/tracks" ]; then
+  echo "Moving api/tracks directory to backup..."
+  mv api/tracks api-backup/
+fi
+
+if [ -d "api/diagnostic" ]; then
+  echo "Moving api/diagnostic directory to backup..."
+  mv api/diagnostic api-backup/
+fi
+
+if [ -d "api/health" ]; then
+  echo "Moving api/health directory to backup..."
+  mv api/health api-backup/
+fi
+
+if [ -f "api/release/[id].js" ]; then
+  echo "Moving api/release/[id].js to backup..."
+  mkdir -p api-backup/release
+  mv api/release/[id].js api-backup/release/
+fi
+
+if [ -f "api/artist/[id].js" ]; then
+  echo "Moving api/artist/[id].js to backup..."
+  mkdir -p api-backup/artist
+  mv api/artist/[id].js api-backup/artist/
+fi
+
 # Test database connection but don't fail if it doesn't work
 echo "🔍 Testing database connection"
 # Commented out as db-diagnostic.js was removed to reduce function count

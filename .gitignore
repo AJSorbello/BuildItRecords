@@ -1,17 +1,21 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
 # dependencies
-node_modules
-.pnp
+/node_modules
+/.pnp
 .pnp.js
-.pnpm-store/
 
 # testing
 /coverage
+test-*.js
+**/test-*.js
+**/*test*.js
+check-*.js
+verify-*.js
 
 # production
 /build
 /dist
-/server/dist
-/server/build
 
 # misc
 .DS_Store
@@ -19,36 +23,27 @@ node_modules
 .env.development.local
 .env.test.local
 .env.production.local
-.env
+.env.supabase
 
-# logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-pnpm-debug.log*
 
-# IDE
+# IDEs
 .idea
 .vscode
-*.swp
-*.swo
+*.sublime-project
+*.sublime-workspace
 
-# Temp files
-*.tmp
-*.temp
-.cache
+# Development utilities
+db-check.js
+db-schema-inspect.js
+analyze-db.js
+direct-api-test.js
+direct-supabase-import.js
+inspect-supabase.js
+update-label-associations.js
 
-# Lock files (except pnpm)
-package-lock.json
-yarn.lock
-# Keep pnpm-lock.yaml
-
-# Build output
-*.tsbuildinfo
-.next
-out
-
-# System files
-Thumbs.db
-.vercel
-.env*.local
+# Backup files
+api-backup/
+backup_redundant_files/

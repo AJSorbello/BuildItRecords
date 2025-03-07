@@ -1,0 +1,25 @@
+# Ignore original API endpoints that have been consolidated
+api/artist/[id].js
+api/artists/
+api/diagnostic/
+api/health/
+api/release/[id].js
+api/releases/
+api/tracks/
+
+# Ignore test files
+**/test-*.js
+**/check-*.js
+**/verify-*.js
+*test*.js
+*check*.js
+*verify*.js
+
+# Development utilities that shouldn't be deployed
+db-check.js
+db-schema-inspect.js
+analyze-db.js
+direct-api-test.js
+direct-supabase-import.js
+inspect-supabase.js
+update-label-associations.js
