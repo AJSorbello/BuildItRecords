@@ -1,10 +1,14 @@
 # Ignore original API endpoints that have been consolidated
-api/artist/[id].js
 api/artists/
+api/artists/[id]/
+api/artists/label/
+api/artists/releases/
 api/diagnostic/
 api/health/
 api/release/[id].js
 api/releases/
+api/releases/[id].js
+api/releases/top/
 api/tracks/
 
 # Ignore test files
@@ -23,3 +27,4 @@ direct-api-test.js
 direct-supabase-import.js
 inspect-supabase.js
 update-label-associations.js
+api-consolidation-backup/
