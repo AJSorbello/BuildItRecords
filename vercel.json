@@ -17,12 +17,12 @@
       "CI": "true",
       "VERCEL": "true",
       "NPM_FLAGS": "--legacy-peer-deps",
-      "VITE_SUPABASE_URL": "https://mlncktxzmhmgcdywsbhn.supabase.co",
-      "VITE_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1sbmNrdHh6bWhtZ2NkeXdzYmhuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDg2MDkzMTksImV4cCI6MjAyNDE4NTMxOX0.qcVJDYSSSqXQqD3-nHoNNHbWGvQqoJQWcXmNDxN3iDA",
-      "NEXT_PUBLIC_SUPABASE_URL": "https://mlncktxzmhmgcdywsbhn.supabase.co",
-      "NEXT_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1sbmNrdHh6bWhtZ2NkeXdzYmhuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDg2MDkzMTksImV4cCI6MjAyNDE4NTMxOX0.qcVJDYSSSqXQqD3-nHoNNHbWGvQqoJQWcXmNDxN3iDA",
-      "SUPABASE_URL": "https://mlncktxzmhmgcdywsbhn.supabase.co",
-      "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1sbmNrdHh6bWhtZ2NkeXdzYmhuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDg2MDkzMTksImV4cCI6MjAyNDE4NTMxOX0.qcVJDYSSSqXQqD3-nHoNNHbWGvQqoJQWcXmNDxN3iDA"
+      "VITE_SUPABASE_URL": "https://liuaozuvkmvanmchndzl.supabase.co",
+      "VITE_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxpdWFvenV2a212YW5tY2huZHpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU4NDg0MzQsImV4cCI6MjA1MTQyNDQzNH0.tlHgYcid26cTNuDoKZkHacwfaJ7BWR9d35EtAxtTB_g",
+      "NEXT_PUBLIC_SUPABASE_URL": "https://liuaozuvkmvanmchndzl.supabase.co",
+      "NEXT_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxpdWFvenV2a212YW5tY2huZHpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU4NDg0MzQsImV4cCI6MjA1MTQyNDQzNH0.tlHgYcid26cTNuDoKZkHacwfaJ7BWR9d35EtAxtTB_g",
+      "SUPABASE_URL": "https://liuaozuvkmvanmchndzl.supabase.co",
+      "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxpdWFvenV2a212YW5tY2huZHpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU4NDg0MzQsImV4cCI6MjA1MTQyNDQzNH0.tlHgYcid26cTNuDoKZkHacwfaJ7BWR9d35EtAxtTB_g"
     }
   },
   "builds": [
@@ -112,8 +112,8 @@
       }
     },
     {
-      "src": "/api/tracks/label/([^/]+)",
-      "dest": "/api/tracks/index.js?labelId=$1",
+      "src": "/api/tracks/([^/]+)",
+      "dest": "/api/tracks/index.js?id=$1",
       "headers": {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -166,12 +166,12 @@
     "ADMIN_USERNAME": "admin",
     "ADMIN_PASSWORD_HASH": "$2a$10$nQ0oN9pavoYZiAjdPdstL.S.Vi/3012suNyKxHX/CI39wB424l9Ya",
     "JWT_SECRET": "buildit_records_jwt_secret_2025",
-    "VITE_SUPABASE_URL": "https://mlncktxzmhmgcdywsbhn.supabase.co",
-    "VITE_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1sbmNrdHh6bWhtZ2NkeXdzYmhuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDg2MDkzMTksImV4cCI6MjAyNDE4NTMxOX0.qcVJDYSSSqXQqD3-nHoNNHbWGvQqoJQWcXmNDxN3iDA",
-    "NEXT_PUBLIC_SUPABASE_URL": "https://mlncktxzmhmgcdywsbhn.supabase.co",
-    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1sbmNrdHh6bWhtZ2NkeXdzYmhuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDg2MDkzMTksImV4cCI6MjAyNDE4NTMxOX0.qcVJDYSSSqXQqD3-nHoNNHbWGvQqoJQWcXmNDxN3iDA",
-    "SUPABASE_URL": "https://mlncktxzmhmgcdywsbhn.supabase.co",
-    "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1sbmNrdHh6bWhtZ2NkeXdzYmhuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDg2MDkzMTksImV4cCI6MjAyNDE4NTMxOX0.qcVJDYSSSqXQqD3-nHoNNHbWGvQqoJQWcXmNDxN3iDA"
+    "VITE_SUPABASE_URL": "https://liuaozuvkmvanmchndzl.supabase.co",
+    "VITE_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxpdWFvenV2a212YW5tY2huZHpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU4NDg0MzQsImV4cCI6MjA1MTQyNDQzNH0.tlHgYcid26cTNuDoKZkHacwfaJ7BWR9d35EtAxtTB_g",
+    "NEXT_PUBLIC_SUPABASE_URL": "https://liuaozuvkmvanmchndzl.supabase.co",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxpdWFvenV2a212YW5tY2huZHpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU4NDg0MzQsImV4cCI6MjA1MTQyNDQzNH0.tlHgYcid26cTNuDoKZkHacwfaJ7BWR9d35EtAxtTB_g",
+    "SUPABASE_URL": "https://liuaozuvkmvanmchndzl.supabase.co",
+    "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxpdWFvenV2a212YW5tY2huZHpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU4NDg0MzQsImV4cCI6MjA1MTQyNDQzNH0.tlHgYcid26cTNuDoKZkHacwfaJ7BWR9d35EtAxtTB_g"
   },
   "git": {
     "deploymentEnabled": {
