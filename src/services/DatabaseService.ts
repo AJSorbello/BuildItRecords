@@ -350,111 +350,136 @@ class DatabaseService {
     }
   }
 
-  public async processReleases(response: { releases: Release[] }): Promise<Release[]> {
+  /**
+   * Get releases for a specific label
+   * This method exists for backward compatibility with components that call getReleasesByLabelId
+   * @param labelId The ID of the label
+   * @param page The page number for pagination
+   * @param limit The number of releases per page
+   * @returns Promise resolving to releases, count, and pagination info
+   */
+  public async getReleasesByLabelId(
+    labelId: string,
+    page: number = 1,
+    limit: number = 50
+  ): Promise<{
+    releases: Release[];
+    totalReleases: number;
+    totalTracks: number;
+    hasMore: boolean;
+  }> {
+    // Convert page to offset for getReleasesByLabel
+    const offset = (page - 1) * limit;
+    
+    // Call the existing method
+    return this.getReleasesByLabel(labelId, offset, limit);
+  }
+
+  public async processReleases(response: { releases: any[] }): Promise<Release[]> {
     try {
       const releases = response.releases.map((release) => {
-        // Process images
-        const processedImages = (release.images || []).map((img: SpotifyImage) => ({
-          url: img.url,
-          height: img.height !== null ? img.height : 0,
-          width: img.width !== null ? img.width : 0
-        }));
-        
-        // Ensure we have an artwork_url by using the first image if available
-        const artwork_url = release.artwork_url || 
-                           (release.images && release.images.length > 0 && release.images[0].url) || 
-                           '';
-        
-        // Log artists information for debugging
-        console.log('Processing release:', release.title);
-        console.log('  Release artwork_url:', artwork_url);
-        console.log('  Release artists:', release.artists?.length || 0);
-        if (release.artists && release.artists.length > 0) {
-          console.log('  Release artists details:');
-          release.artists.forEach((artist, i) => {
-            console.log(`    Artist ${i+1}: ${artist.name} (${artist.id})`);
-            console.log(`      Image URLs: ${artist.profile_image_url ? 'Yes' : 'No'}, ${artist.profile_image_small_url ? 'Yes' : 'No'}, ${artist.profile_image_large_url ? 'Yes' : 'No'}`);
-          });
-        }
-        console.log('  Release tracks:', release.tracks?.length || 0);
-        
-        if (release.tracks && release.tracks.length > 0) {
-          console.log('  Track artists:');
-          release.tracks.forEach((track, i) => {
-            console.log(`    Track ${i+1}: ${track.title} has ${track.artists?.length || 0} artists`);
-            if (track.artists && track.artists.length > 0) {
-              track.artists.forEach((artist, j) => {
-                console.log(`      Artist ${j+1}: ${artist.name} (${artist.id})`);
-                console.log(`        Image URLs: ${artist.profile_image_url ? 'Yes' : 'No'}, ${artist.profile_image_small_url ? 'Yes' : 'No'}, ${artist.profile_image_large_url ? 'Yes' : 'No'}`);
-              });
-            }
-          });
-        }
-
-        return {
-          id: release.id,
-          title: release.title || 'Unknown Album',
-          type: 'album' as const,
-          artists: release.artists || [],
-          tracks: release.tracks || [],
-          images: processedImages,
-          artwork_url: artwork_url,
-          release_date: release.release_date,
-          external_urls: {
-            spotify: release.spotify_url || ''
-          },
-          uri: release.spotify_uri || '',
+        // Create a properly typed Release object
+        const typedRelease: Release = {
+          id: release.id || '',
+          name: release.name || '',
+          title: release.name || '',
+          type: 'album',
+          album_type: release.album_type || 'album',
+          release_date: release.release_date || '',
+          images: Array.isArray(release.images) ? release.images : 
+                 (release.artwork_url ? [{ url: release.artwork_url, height: 300, width: 300 }] : []),
+          artists: Array.isArray(release.artists) ? 
+                  release.artists.map((artist: any) => this.mapSpotifyArtistToArtist(artist)) : [],
+          label_id: release.label_id || '',
           total_tracks: release.total_tracks || 0,
-          release_date_precision: 'day',
-          label: undefined
-        } satisfies Release;
+          external_urls: { 
+            spotify: release.external_urls?.spotify || release.spotify_url || '' 
+          },
+          spotify_url: release.spotify_url || release.external_urls?.spotify || '',
+          spotify_uri: release.spotify_uri || release.uri || '',
+          spotify_id: release.id || '',
+          popularity: release.popularity || 0,
+          tracks: Array.isArray(release.tracks) ? 
+                 release.tracks.map((track: any) => this.createTrack(track)) : [],
+          status: release.status || 'active'
+        };
+
+        return typedRelease;
       });
 
       return releases;
     } catch (error) {
       console.error('Error processing releases:', error);
-      throw error;
+      return [];
     }
   }
 
-  private async processTracks(response: { tracks: any[] }): Promise<Track[]> {
+  // Helper function to create a properly typed Track object from API response
+  private createTrack(trackData: any): Track {
+    // Create a properly typed Track object
+    const track: Track = {
+      id: trackData.id || '',
+      title: trackData.title || trackData.name || '',
+      name: trackData.name || trackData.title || '',
+      duration: trackData.duration || Number(trackData.duration_ms || 0),
+      track_number: trackData.track_number || 1,
+      disc_number: trackData.disc_number || 1,
+      preview_url: trackData.preview_url || null,
+      spotify_url: trackData.spotify_url || '',
+      spotify_uri: trackData.spotify_uri || trackData.uri || '',
+      artists: Array.isArray(trackData.artists) ? trackData.artists.map(this.mapSpotifyArtistToArtist) : [],
+      isrc: trackData.isrc || '',
+      external_urls: { spotify: trackData.external_urls?.spotify || trackData.spotify_url || '' },
+      type: 'track',
+      remixer: trackData.remixer || undefined,
+    };
+    
+    // Add release data if available
+    if (trackData.release) {
+      const albumData = trackData.release;
+      track.release = {
+        id: albumData.id || '',
+        name: albumData.name || '',
+        title: albumData.title || albumData.name || '',
+        type: 'album',
+        release_date: albumData.release_date || '',
+        images: albumData.images || [{ url: albumData.artwork_url || '', height: 0, width: 0 }],
+        spotify_url: albumData.spotify_url || albumData.external_urls?.spotify || '',
+        spotify_uri: albumData.spotify_uri || albumData.uri || '',
+        label_id: albumData.label_id || '',
+        total_tracks: albumData.total_tracks || 0,
+        artists: Array.isArray(albumData.artists) ? albumData.artists : []
+      };
+    }
+    
+    return track;
+  }
+  
+  private mapSpotifyArtistToArtist(artistData: any): Artist {
+    if (!artistData) return { id: '', name: '', type: 'artist' };
+    
+    return {
+      id: artistData.id || '',
+      name: artistData.name || '',
+      type: 'artist',
+      images: artistData.images || [],
+      spotify_id: artistData.id || '',
+      spotify_url: artistData.spotify_url || artistData.external_urls?.spotify || '',
+      spotify_uri: artistData.spotify_uri || artistData.uri || ''
+    };
+  }
+  
+  public async processTracks(response: { tracks: any[] }): Promise<Track[]> {
     try {
-      // Map the API response to match the Track interface using type assertion
-      return response.tracks.map(track => {
-        // Create an album object using the fields we have from the API
-        const albumObj = track.release ? {
-          id: track.release.id,
-          name: track.release.title || track.release.name || 'Unknown Album', // Use name instead of title
-          // Required Album properties
-          artists: track.release.artists || [],
-          images: track.release.images || [],
-          release_date: track.release.release_date || '',
-          release_date_precision: track.release.release_date_precision || 'day',
-          total_tracks: track.release.total_tracks || 0,
-          external_urls: { spotify: track.release.spotify_url || '' }, // Map spotify_url to external_urls
-          uri: track.release.uri || track.release.spotify_uri || '', // Map spotify_uri to uri
-          album_type: 'album' // Required property in Album interface
-        } : undefined;
-
-        return {
-          id: track.id,
-          title: track.title || 'Unknown Track',
-          name: track.title || 'Unknown Track',
-          duration: track.duration || track.duration_ms || 0, // Handle both duration and duration_ms
-          track_number: 1,
-          disc_number: 1,
-          preview_url: track.preview_url,
-          spotify_url: '',
-          spotify_uri: '',
-          release: albumObj,
-          artists: track.artists || track.release.artists || [],
-          remixer: track.remixer,
-          isrc: '',
-          external_urls: { spotify: '' },
-          type: 'track'
-          // Removed is_remixer which doesn't exist in Track type
-        } satisfies Track;
-      });
+      if (!response.tracks || !Array.isArray(response.tracks)) {
+        console.error('Invalid tracks data:', response);
+        return [];
+      }
+      
+      // Use the createTrack method to ensure proper typing
+      const tracks: Track[] = response.tracks.map(track => this.createTrack(track));
+      
+      return tracks;
     } catch (error) {
       console.error('Error processing tracks:', error);
       return [];
@@ -463,67 +488,87 @@ class DatabaseService {
 
   public async getTracksByLabel(
     labelId: string,
-    options?: { offset?: number; limit?: number; sortBy?: string }
-  ): Promise<{ tracks: Track[]; total: number }> {
+    offset = 0,
+    limit = 50
+  ): Promise<{
+    tracks: Track[];
+    totalTracks: number;
+    hasMore: boolean;
+  }> {
     try {
-      const offset = options?.offset || 0;
-      const limit = options?.limit || 20;
-      const sortBy = options?.sortBy || 'title';
-      
-      console.log(`Fetching tracks for label: ${labelId} with offset: ${offset}, limit: ${limit}, sortBy: ${sortBy}`);
-      
-      const response = await this.fetchApi<ApiResponse>(`/tracks/all/${labelId}?sort=${sortBy}`);
-      
+      console.log(`Getting tracks for label: ${labelId}`);
+      const response = await this.fetchApi<ApiResponse>(
+        `/tracks?label=${labelId}&offset=${offset}&limit=${limit}`
+      );
+
       if (response.tracks && Array.isArray(response.tracks)) {
         console.log(`Received ${response.tracks.length} tracks for label ${labelId}`);
-        
-        // Map tracks to match the actual Track interface and use type assertion
-        const tracks = response.tracks.map(track => {
-          const trackObj = {
-            id: track.id,
-            title: track.title || track.name || 'Unknown Track',
-            name: track.title || track.name || 'Unknown Track',
-            duration: Number(track.duration || track.duration_ms || 0),
-            track_number: track.track_number || 1,
-            disc_number: track.disc_number || 1,
-            preview_url: track.preview_url || null,
-            spotify_url: track.spotify_url || '',
-            spotify_uri: track.spotify_uri || track.uri || '',
-            release: track.release ? {
-              id: track.release.id,
-              name: track.release.title || track.release.name || 'Unknown Album', // Use name instead of title
-              // Required Album properties
-              artists: track.release.artists || [],
-              images: track.release.images || [],
-              release_date: track.release.release_date || '',
-              release_date_precision: track.release.release_date_precision || 'day',
-              total_tracks: track.release.total_tracks || 0,
-              external_urls: { spotify: track.release.spotify_url || '' }, // Map spotify_url to external_urls
-              uri: track.release.uri || track.release.spotify_uri || track.release.spotify_url || '', // Map spotify_uri to uri
-              album_type: 'album' // Required property in Album interface
-            } : undefined,
-            artists: track.artists || [],
-            remixer: track.remixer,
-            isrc: track.isrc || '',
-            external_urls: { spotify: track.external_urls?.spotify || track.spotify_url || '' },
-            type: 'track' as const
-          };
-          
-          return trackObj as unknown as Track;
-        });
+        const processedTracks = await this.processTracks({ tracks: response.tracks });
+        const total = response.total || 0;
 
         return {
-          tracks,
-          total: response.total || 0,
+          tracks: processedTracks,
+          totalTracks: total,
+          hasMore: offset + processedTracks.length < total
         };
       }
-      
-      console.warn(`Received empty or invalid tracks array for label ${labelId}`);
-      return { tracks: [], total: 0 };
+
+      return {
+        tracks: [],
+        totalTracks: 0,
+        hasMore: false
+      };
     } catch (error) {
-      console.error('Error fetching tracks:', error);
-      throw error;
+      console.error(`Error fetching tracks for label ${labelId}:`, error);
+      return {
+        tracks: [],
+        totalTracks: 0,
+        hasMore: false
+      };
     }
+  }
+
+  public async searchTracks(query: string, offset = 0, limit = 50): Promise<{
+    tracks: Track[];
+    totalTracks: number;
+    hasMore: boolean;
+  }> {
+    try {
+      console.log(`Searching tracks with query: "${query}"`);
+      const response = await this.fetchApi<ApiResponse>(
+        `/tracks/search?query=${encodeURIComponent(query)}&offset=${offset}&limit=${limit}`
+      );
+
+      if (response.tracks && Array.isArray(response.tracks)) {
+        console.log(`Received ${response.tracks.length} tracks for search "${query}"`);
+        const processedTracks = await this.processTracks({ tracks: response.tracks });
+        const total = response.total || 0;
+
+        return {
+          tracks: processedTracks,
+          totalTracks: total,
+          hasMore: offset + processedTracks.length < total
+        };
+      }
+
+      return {
+        tracks: [],
+        totalTracks: 0,
+        hasMore: false
+      };
+    } catch (error) {
+      console.error(`Error searching tracks with query "${query}":`, error);
+      return {
+        tracks: [],
+        totalTracks: 0,
+        hasMore: false
+      };
+    }
+  }
+  
+  private createTracksObject(track: any): Track {
+    // Create a properly typed Track object using our helper method
+    return this.createTrack(track);
   }
 
   public async importTracksFromSpotify(labelId: string): Promise<ImportResponse> {
@@ -682,7 +727,7 @@ class DatabaseService {
             release_date_precision: release.release_date_precision || 'day',
             total_tracks: release.total_tracks || 0,
             external_urls: { spotify: release.spotify_url || '' }, // Map spotify_url to external_urls
-            uri: release.uri || release.spotify_uri || '', // Map spotify_uri to uri
+            uri: release.uri || release.spotify_uri || release.spotify_url || '', // Map spotify_uri to uri
             album_type: 'album' // Required property in Album interface
           } : undefined;
 
@@ -859,6 +904,44 @@ class DatabaseService {
       console.error('DatabaseService.createTracks - Error:', error);
       return [];
     }
+  }
+
+  private createTrackFromSnapshot(trackSnapshot: { name: string; artists: Artist[]; release?: any; }): Track {
+    // Create a properly typed Track object from the snapshot
+    const track: Track = {
+      id: trackSnapshot.id || '', // Use existing id or empty string
+      title: trackSnapshot.name || '',
+      name: trackSnapshot.name || '',
+      duration: trackSnapshot.duration || 0,
+      track_number: trackSnapshot.track_number || 0,
+      disc_number: trackSnapshot.disc_number || 0,
+      preview_url: trackSnapshot.preview_url || null,
+      spotify_url: trackSnapshot.spotify_url || '',
+      spotify_uri: trackSnapshot.spotify_uri || '',
+      artists: trackSnapshot.artists || [],
+      isrc: trackSnapshot.isrc || '',
+      external_urls: { spotify: trackSnapshot.spotify_url || '' },
+      type: 'track',
+      remixer: trackSnapshot.remixer
+    };
+    
+    // Add release if it exists
+    if (trackSnapshot.release) {
+      track.release = {
+        id: trackSnapshot.release.id || '',
+        name: trackSnapshot.release.name || '',
+        title: trackSnapshot.release.name || '',
+        type: 'album',
+        release_date: trackSnapshot.release.release_date || '',
+        images: trackSnapshot.release.images || [],
+        spotify_url: trackSnapshot.release.spotify_url || '',
+        spotify_uri: trackSnapshot.release.spotify_uri || '',
+        label_id: trackSnapshot.release.label_id || '',
+        total_tracks: trackSnapshot.release.total_tracks || 0
+      };
+    }
+    
+    return track;
   }
 }
 
