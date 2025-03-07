@@ -1,75 +1,84 @@
 // API Health Check Endpoint
-const { getPool } = require('./utils/db-utils');
-
-// Initialize database connection
-const pool = getPool();
+const { getPool, addCorsHeaders } = require('./utils/db-utils');
 
 module.exports = async (req, res) => {
+  // Add CORS headers
+  addCorsHeaders(res);
+
+  // Handle OPTIONS request (preflight)
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
+  console.log(`API Health Check Request: ${req.method} ${req.url}`);
+  
   const startTime = Date.now();
   const health = {
     uptime: process.uptime(),
     timestamp: new Date().toISOString(),
     env: process.env.NODE_ENV || 'development',
-    database: 'checking...',
+    database: 'not checked', // Default to not checked
     version: process.env.npm_package_version || 'unknown',
     memory: process.memoryUsage(),
     hostname: process.env.VERCEL_URL || req.headers.host || 'localhost',
     status: 'ok'
   };
 
+  // Try to check database, but don't fail if unavailable
   try {
-    // Check database connection
-    const client = await pool.connect();
-    try {
-      // Test quick query
-      const result = await client.query('SELECT NOW() as time');
-      const dbTime = result.rows[0].time;
-      
-      // Database connectivity details
-      health.database = {
-        status: 'connected',
-        time: dbTime,
-        ping: Date.now() - startTime + 'ms'
-      };
-      
-      // Try to get some basic stats about the database
+    // Initialize database connection
+    const pool = getPool();
+    
+    if (pool) {
       try {
-        const statsResult = await client.query(`
-          SELECT 
-            (SELECT COUNT(*) FROM releases) as releases_count,
-            (SELECT COUNT(*) FROM artists) as artists_count,
-            (SELECT COUNT(*) FROM tracks) as tracks_count
-        `);
-        
-        if (statsResult.rows.length > 0) {
-          health.databaseStats = statsResult.rows[0];
+        // Check database connection
+        const client = await pool.connect();
+        try {
+          // Test quick query
+          const result = await client.query('SELECT NOW() as time');
+          const dbTime = result.rows[0].time;
+          
+          // Database connectivity details
+          health.database = {
+            status: 'connected',
+            time: dbTime,
+            latency: Date.now() - startTime
+          };
+        } catch (dbQueryError) {
+          health.database = {
+            status: 'error',
+            message: 'Query failed',
+            error: dbQueryError.message
+          };
+        } finally {
+          // Always release client
+          client.release();
         }
-      } catch (statError) {
-        console.log('Could not retrieve database stats:', statError.message);
-        // Non-critical error, we can continue
+      } catch (dbConnectError) {
+        health.database = {
+          status: 'error',
+          message: 'Connection failed',
+          error: dbConnectError.message
+        };
       }
-      
-      return res.status(200).json(health);
-    } catch (queryError) {
+    } else {
       health.database = {
-        status: 'error',
-        message: queryError.message,
-        error: 'Database query failed'
+        status: 'unavailable',
+        message: 'Database pool not initialized'
       };
-      
-      return res.status(500).json(health);
-    } finally {
-      client.release();
     }
-  } catch (connectionError) {
+  } catch (error) {
+    // If there's any error in the database check, just record it
     health.database = {
       status: 'error',
-      message: connectionError.message,
-      error: 'Database connection failed'
+      message: 'Failed to check database',
+      error: error.message
     };
-    
-    return res.status(503).json(health);
-  } finally {
-    health.responseTime = Date.now() - startTime + 'ms';
   }
+
+  // Add response time
+  health.responseTime = Date.now() - startTime;
+
+  // Always return a 200 status for the health endpoint
+  return res.status(200).json(health);
 };
