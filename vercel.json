@@ -41,10 +41,6 @@
     {
       "src": "api/utils/*.js", 
       "use": "@vercel/node"
-    },
-    {
-      "src": "api/artist/[id].js",
-      "use": "@vercel/node"
     }
   ],
   "routes": [
