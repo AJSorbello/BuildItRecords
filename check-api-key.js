@@ -1,8 +1,8 @@
 /**
  * Script to help validate Supabase API key and access
  */
-const { createClient } = require('@supabase/supabase-js');
-const readline = require('readline');
+const { createClient } = require('@supabase/supabase-js') // eslint-disable-line @typescript-eslint/no-var-requires;
+const readline = require('readline') // eslint-disable-line @typescript-eslint/no-var-requires;
 
 // Create interface for reading user input
 const rl = readline.createInterface({

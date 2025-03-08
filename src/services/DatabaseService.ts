@@ -223,8 +223,8 @@ class DatabaseService {
 
   public async getReleasesByLabel(
     labelId: string,
-    offset: number = 0,
-    limit: number = 50
+    offset = 0,
+    limit = 50
   ): Promise<{
     releases: Release[];
     totalReleases: number;
@@ -352,8 +352,8 @@ class DatabaseService {
    */
   public async getReleasesByLabelId(
     labelId: string,
-    page: number = 1,
-    limit: number = 50
+    page = 1,
+    limit = 50
   ): Promise<{
     releases: Release[];
     totalReleases: number;

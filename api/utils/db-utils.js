@@ -1,5 +1,5 @@
 // Common database utilities for serverless API endpoints
-const { Pool } = require('pg');
+const { Pool } = require('pg') // eslint-disable-line @typescript-eslint/no-var-requires;
 
 // Configure SSL based on environment
 if (process.env.NODE_ENV !== 'production' || process.env.DB_SSL_REJECT_UNAUTHORIZED === 'false') {

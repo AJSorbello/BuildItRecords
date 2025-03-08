@@ -2,7 +2,7 @@
 // This script directly connects to the Supabase PostgreSQL database
 // to analyze table structures and data relevant to the API issue
 
-const { Pool } = require('pg');
+const { Pool } = require('pg') // eslint-disable-line @typescript-eslint/no-var-requires;
 require('dotenv').config();
 
 // Initialize connection pool

@@ -2,7 +2,7 @@
 require('dotenv').config();
 
 // Get PostgreSQL client
-const { Pool } = require('pg');
+const { Pool } = require('pg') // eslint-disable-line @typescript-eslint/no-var-requires;
 
 // Force accept self-signed certificates (for development only)
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';

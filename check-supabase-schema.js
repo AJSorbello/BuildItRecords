@@ -1,6 +1,6 @@
 // Script to check the schema of tables in Supabase
 require('dotenv').config();
-const { createClient } = require('@supabase/supabase-js');
+const { createClient } = require('@supabase/supabase-js') // eslint-disable-line @typescript-eslint/no-var-requires;
 
 // Supabase configuration (from .env file)
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;

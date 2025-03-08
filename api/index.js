@@ -15,7 +15,7 @@ module.exports = (req, res) => {
   
   // Try to load pg module for diagnostic purposes
   try {
-    const pg = require('pg');
+    const pg = require('pg') // eslint-disable-line @typescript-eslint/no-var-requires;
     console.log('pg module loaded successfully, version:', pg.version || 'unknown');
     
     // Log SSL configuration details

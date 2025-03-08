@@ -51,7 +51,7 @@ const NotFoundPage: React.FC = () => {
           variant="h6"
           gutterBottom
         >
-          Looks like you&apos;ve wandered into uncharted territory
+          Looks like you've wandered into uncharted territory
         </Typography>
         <Typography
           variant="body1"
@@ -60,7 +60,7 @@ const NotFoundPage: React.FC = () => {
             color: 'rgba(255, 255, 255, 0.7)'
           }}
         >
-          The page you&apos;re looking for doesn&apos;t exist or has been moved.
+          The page you're looking for doesn't exist or has been moved.
         </Typography>
         <Button
           variant="contained"

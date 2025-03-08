@@ -1,6 +1,6 @@
 // Script to update label associations for existing records in Supabase
 require('dotenv').config();
-const { createClient } = require('@supabase/supabase-js');
+const { createClient } = require('@supabase/supabase-js') // eslint-disable-line @typescript-eslint/no-var-requires;
 
 // Supabase configuration (from environment variables - using the same pattern as in your build-script.sh)
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;

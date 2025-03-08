@@ -313,7 +313,7 @@ const SubmitPage: React.FC<SubmitPageProps> = ({ label = 'records' }) => {
 
       <Typography variant="body1" sx={{ color: 'text.secondary', mb: 4 }}>
         Build It Records is dedicated to showcasing emerging and accomplished underground house music producers. 
-        We&apos;re constantly seeking fresh, innovative sounds that push the boundaries of underground electronic music.
+        We're constantly seeking fresh, innovative sounds that push the boundaries of underground electronic music.
       </Typography>
 
       {/* Artist Information */}

@@ -81,7 +81,7 @@ const AboutPage: React.FC = () => {
               Join Our Community
             </Typography>
             <Typography>
-              Whether you&apos;re an artist looking to release music or a fan seeking the latest underground sounds, 
+              Whether you're an artist looking to release music or a fan seeking the latest underground sounds, 
               we welcome you to be part of our growing community. Follow us on social media and subscribe to our 
               newsletter to stay updated with our latest releases and events.
             </Typography>

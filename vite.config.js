@@ -1,6 +1,6 @@
-const { defineConfig } = require('vite');
-const react = require('@vitejs/plugin-react');
-const path = require('path');
+const { defineConfig } = require('vite') // eslint-disable-line @typescript-eslint/no-var-requires;
+const react = require('@vitejs/plugin-react') // eslint-disable-line @typescript-eslint/no-var-requires;
+const path = require('path') // eslint-disable-line @typescript-eslint/no-var-requires;
 
 // https://vitejs.dev/config/
 module.exports = defineConfig({

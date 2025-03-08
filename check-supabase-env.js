@@ -1,5 +1,5 @@
 // Script to check if we can connect to Supabase using Vercel environment variables
-const https = require('https');
+const https = require('https') // eslint-disable-line @typescript-eslint/no-var-requires;
 
 // Try to get Supabase URL using DNS lookup
 console.log('Attempting to resolve Supabase domain...');
@@ -12,7 +12,7 @@ function lookupDomain(domain) {
       }
     }, (res) => {
       console.log(`Status code for ${domain}: ${res.statusCode}`);
-      res.on('data', () => {});
+      res.on('data', () => { /* No operation */ });
       res.on('end', () => {
         resolve(res.statusCode !== 404);
       });

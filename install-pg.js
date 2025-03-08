@@ -1,6 +1,6 @@
-const { execSync } = require('child_process');
-const fs = require('fs');
-const path = require('path');
+const { execSync } = require('child_process') // eslint-disable-line @typescript-eslint/no-var-requires;
+const fs = require('fs') // eslint-disable-line @typescript-eslint/no-var-requires;
+const path = require('path') // eslint-disable-line @typescript-eslint/no-var-requires;
 
 console.log('🔍 Starting pg installation script');
 
@@ -28,7 +28,7 @@ function installPg() {
     if (isPgInstalled()) {
       // Create a test file
       const testContent = `
-const pg = require('pg');
+const pg = require('pg') // eslint-disable-line @typescript-eslint/no-var-requires;
 console.log('Successfully loaded pg module');
 console.log('pg version:', require('pg/package.json').version);
       `;

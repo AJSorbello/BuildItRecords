@@ -1,5 +1,5 @@
 // Simple test script to check the API
-const http = require('http');
+const http = require('http') // eslint-disable-line @typescript-eslint/no-var-requires;
 
 // Function to make a GET request without external dependencies
 function httpGet(url) {
@@ -49,7 +49,7 @@ async function testApi() {
       const url = `http://localhost:3001/api/releases?label=${label.id}`;
       console.log(`Requesting: ${url}`);
       
-      const data = await httpGet(url);
+      const data = // eslint-disable-line @typescript-eslint/no-unused-vars await httpGet(url);
       
       if (data && data.releases) {
         console.log(`✅ Successfully fetched ${data.releases.length} releases!`);

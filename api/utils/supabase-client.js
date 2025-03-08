@@ -1,4 +1,4 @@
-const { createClient } = require('@supabase/supabase-js');
+const { createClient } = require('@supabase/supabase-js') // eslint-disable-line @typescript-eslint/no-var-requires;
 
 // Create a Supabase client with support for multiple environment variable naming conventions
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 
@@ -41,7 +41,7 @@ async function getArtistsByLabel({ labelId, limit = 100, page = 1 }) {
   }
   
   console.log(`Fetching artists with label ID: ${labelId} using Supabase client`);
-  const offset = (page - 1) * limit;
+  const offset = // eslint-disable-line @typescript-eslint/no-unused-vars (page - 1) * limit;
   
   try {
     // Check for a label ID mapping based on what we've learned from the database

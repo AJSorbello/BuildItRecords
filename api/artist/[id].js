@@ -1,6 +1,6 @@
 // Serverless API handler for fetching an artist by ID
-const { Pool } = require('pg');
-const { createClient } = require('@supabase/supabase-js');
+const { Pool } = require('pg') // eslint-disable-line @typescript-eslint/no-var-requires;
+const { createClient } = require('@supabase/supabase-js') // eslint-disable-line @typescript-eslint/no-var-requires;
 
 // CRITICAL: Force Node.js to accept self-signed certificates
 // This should only be used in controlled environments with trusted sources

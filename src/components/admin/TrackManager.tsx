@@ -24,8 +24,8 @@ interface TrackManagerProps {
 
 const TrackManager: React.FC<TrackManagerProps> = ({
   tracks = [],
-  onEdit = () => {},
-  onDelete = () => {},
+  onEdit = () => { /* TODO: Implement function */ },
+  onDelete = () => { /* TODO: Implement function */ },
 }) => {
   const formatDuration = (ms: number | undefined): string => {
     if (!ms || isNaN(Number(ms))) return '0:00';

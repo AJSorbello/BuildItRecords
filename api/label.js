@@ -5,8 +5,8 @@
  * - /api/label/[id] - Get label by ID
  */
 
-const { createClient } = require('@supabase/supabase-js');
-const { addCorsHeaders, getPool, formatResponse } = require('./utils/db-utils');
+const { createClient } = require('@supabase/supabase-js') // eslint-disable-line @typescript-eslint/no-var-requires;
+const { addCorsHeaders, getPool, formatResponse } = require('./utils/db-utils') // eslint-disable-line @typescript-eslint/no-var-requires;
 
 // Initialize database connection for PostgreSQL direct access
 let pool;

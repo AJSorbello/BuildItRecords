@@ -1,8 +1,8 @@
 // Direct script to import data from Spotify API directly to Supabase
 require('dotenv').config();
-const { createClient } = require('@supabase/supabase-js');
-const axios = require('axios');
-const SpotifyWebApi = require('spotify-web-api-node');
+const { createClient } = require('@supabase/supabase-js') // eslint-disable-line @typescript-eslint/no-var-requires;
+const axios = require('axios') // eslint-disable-line @typescript-eslint/no-var-requires;
+const SpotifyWebApi = require('spotify-web-api-node') // eslint-disable-line @typescript-eslint/no-var-requires;
 
 // Supabase configuration (from .env file)
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;

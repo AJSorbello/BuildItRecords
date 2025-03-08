@@ -1,6 +1,6 @@
 // Script to inspect the Supabase database schema and count records
 // This helps diagnose if data exists in Supabase after migration
-const { Pool } = require('pg');
+const { Pool } = require('pg') // eslint-disable-line @typescript-eslint/no-var-requires;
 
 // Connection parameters for Supabase
 const config = {

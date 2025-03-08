@@ -24,7 +24,7 @@ async function printResponseDetails(response) {
   });
   
   try {
-    const data = await response.text();
+    const data = // eslint-disable-line @typescript-eslint/no-unused-vars await response.text();
     let parsed;
     try {
       parsed = JSON.parse(data);

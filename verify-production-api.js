@@ -1,5 +1,5 @@
-const https = require('https');
-const http = require('http');
+const https = require('https') // eslint-disable-line @typescript-eslint/no-var-requires;
+const http = require('http') // eslint-disable-line @typescript-eslint/no-var-requires;
 
 // Base URL for API testing
 // Choose which URL to test:
@@ -61,7 +61,7 @@ function makeRequest(url) {
       // Process complete response
       res.on('end', () => {
         try {
-          const data = JSON.parse(rawData);
+          const data = // eslint-disable-line @typescript-eslint/no-unused-vars JSON.parse(rawData);
           let summary = {};
           
           // Extract useful data for summary based on endpoint

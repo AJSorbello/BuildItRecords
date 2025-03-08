@@ -1,6 +1,6 @@
 // Simple script to check Supabase database status
 require('dotenv').config();
-const { createClient } = require('@supabase/supabase-js');
+const { createClient } = require('@supabase/supabase-js') // eslint-disable-line @typescript-eslint/no-var-requires;
 
 // Supabase configuration
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
