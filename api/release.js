@@ -7,8 +7,8 @@
  * - /api/release/[id]/tracks - Get tracks for a release
  */
 
-const { createClient } = require('@supabase/supabase-js');
-const { addCorsHeaders, getPool, formatResponse, hasColumn, getTableSchema } = require('./utils/db-utils');
+const { createClient } = require('@supabase/supabase-js') // eslint-disable-line @typescript-eslint/no-var-requires;
+const { addCorsHeaders, getPool, formatResponse, hasColumn, getTableSchema } = require('./utils/db-utils') // eslint-disable-line @typescript-eslint/no-var-requires;
 
 // Initialize database connection for PostgreSQL direct access
 let pool;
@@ -114,6 +114,7 @@ async function getAllReleasesHandler(req, res) {
           const client = await pool.connect();
           
           // Inspect schema to handle correct column references
+          // eslint-disable-line @typescript-eslint/no-unused-vars
           const releasesSchema = await getTableSchema(client, 'releases');
           const artistsSchema = await getTableSchema(client, 'artists');
           

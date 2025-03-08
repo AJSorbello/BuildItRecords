@@ -6,8 +6,8 @@
  * - /api/track/[id] - Get track by ID
  */
 
-const { createClient } = require('@supabase/supabase-js');
-const { addCorsHeaders, getPool, formatResponse, hasColumn, getTableSchema } = require('./utils/db-utils');
+const { createClient } = require('@supabase/supabase-js') // eslint-disable-line @typescript-eslint/no-var-requires;
+const { addCorsHeaders, getPool, formatResponse, hasColumn, getTableSchema } = require('./utils/db-utils') // eslint-disable-line @typescript-eslint/no-var-requires;
 
 // Initialize database connection for PostgreSQL direct access
 let pool;
@@ -108,7 +108,9 @@ async function getAllTracksHandler(req, res) {
           const client = await pool.connect();
           
           // Inspect schema to handle correct column references
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
           const tracksSchema = await getTableSchema(client, 'tracks');
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
           const releasesSchema = await getTableSchema(client, 'releases');
           
           console.log('Schema inspection completed, constructing query');
