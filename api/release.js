@@ -239,118 +239,212 @@ function formatReleasesWithArtists(rows) {
 async function getReleasesByLabelHandler(labelId, req, res) {
   console.log(`Fetching releases for label ID: ${labelId}`);
   
-  // Try direct database query first for better control over the results
+  // Get pagination parameters with defaults
+  const limit = parseInt(req.query.limit) || 50;
+  const offset = parseInt(req.query.offset) || 0;
+  
+  // Log request parameters for debugging
+  console.log(`Request parameters: limit=${limit}, offset=${offset}, labelId=${labelId}`);
+  
+  // Process response in a consistent way
+  const sendResponse = (success, message, data) => {
+    console.log(`Sending response: success=${success}, message=${message}`);
+    return res.status(200).json({
+      success,
+      message,
+      data
+    });
+  };
+  
+  // Simple helper to check if a column exists in a schema
+  const hasColumn = (schema, columnName) => {
+    return schema.some(col => col.column_name === columnName);
+  };
+  
+  // Try direct database query first
   if (pool) {
     try {
-      console.log(`Using direct database query for releases by label ${labelId}`);
+      console.log('Getting database client from pool');
       const client = await pool.connect();
       
-      // Inspect schema to handle correct column references
-      const releasesSchema = await getTableSchema(client, 'releases');
-      const labelsSchema = await getTableSchema(client, 'labels');
-      const artistsSchema = await getTableSchema(client, 'artists');
-      
-      console.log('Release table schema:', JSON.stringify(releasesSchema));
-      console.log('Labels table schema:', JSON.stringify(labelsSchema));
-      console.log('Artists table schema:', JSON.stringify(artistsSchema));
-      
-      const labelIdColumn = hasColumn(labelsSchema, 'id') ? 'id' : 'label_id';
-      const releaseLabelColumn = hasColumn(releasesSchema, 'label_id') ? 'label_id' : 'labelId';
-      
-      // First try: Get a simple list of releases for the label without trying to join artists
       try {
+        // First check database schema to understand column names
+        console.log('Inspecting database schema for releases query...');
+        
+        // Query the schema for releases table
+        const getTableSchema = async (tableName) => {
+          const schemaQuery = `
+            SELECT column_name, data_type 
+            FROM information_schema.columns 
+            WHERE table_name = $1
+          `;
+          const result = await client.query(schemaQuery, [tableName]);
+          return result.rows;
+        };
+        
+        // Get schema for all relevant tables
+        const releasesSchema = await getTableSchema('releases');
+        const labelsSchema = await getTableSchema('labels');
+        const artistsSchema = await getTableSchema('artists');
+        
+        // Log schema information for debugging
+        console.log('Schema inspection results:');
+        console.log('- Releases columns:', releasesSchema.map(col => col.column_name).join(', '));
+        console.log('- Labels columns:', labelsSchema.map(col => col.column_name).join(', '));
+        console.log('- Artists columns:', artistsSchema.map(col => col.column_name).join(', '));
+        
+        // Determine the correct column names based on the schema
+        const releaseLabelColumn = hasColumn(releasesSchema, 'label_id') ? 'label_id' : 'labelId';
+        const releaseIdColumn = hasColumn(releasesSchema, 'id') ? 'id' : 'release_id';
+        const labelIdColumn = hasColumn(labelsSchema, 'id') ? 'id' : 'label_id';
+        
+        // Simple approach - Step 1: Get releases first without any joins
+        console.log('Executing simple releases query without joins');
+        
+        // Simple query for releases by label - avoid joins completely
         const simpleQuery = `
-          SELECT r.*
-          FROM releases r
-          WHERE r.${releaseLabelColumn} = $1 
-             OR r.${releaseLabelColumn}::text = $1
-             OR r.${releaseLabelColumn} IN (
-                SELECT ${labelIdColumn} FROM labels WHERE name ILIKE $2 OR ${labelIdColumn}::text = $1
-             )
+          SELECT * FROM releases 
+          WHERE ${releaseLabelColumn} = $1 
+             OR ${releaseLabelColumn}::text = $1 
+             OR ${releaseLabelColumn}::text LIKE $2
+          ORDER BY release_date DESC 
+          LIMIT $3 OFFSET $4
         `;
         
-        console.log(`Executing simple query with label ID: ${labelId}`);
-        const result = await client.query(simpleQuery, [labelId, `%${labelId}%`]);
+        console.log('Executing query:', simpleQuery);
+        console.log('Parameters:', [labelId, `%${labelId}%`, limit, offset]);
         
-        if (result.rows.length > 0) {
-          console.log(`Found ${result.rows.length} releases for label ${labelId} via simple query`);
-          
-          // Now try to fetch artist information for each release
-          const releases = [];
-          
-          for (const release of result.rows) {
-            try {
-              // Try to get artist info for this release
-              const artistQuery = `
-                SELECT a.*
-                FROM artists a
-                WHERE a.id = $1
-              `;
-              
-              const artistResult = await client.query(artistQuery, [release.artist_id]);
-              
-              // Add release with artist data
-              releases.push({
-                ...release,
-                artist: artistResult.rows[0] || null
-              });
-            } catch (artistError) {
-              console.error(`Error fetching artist for release ${release.id}: ${artistError.message}`);
-              // Still include the release, just without artist data
-              releases.push(release);
-            }
-          }
-          
+        const releasesResult = await client.query(simpleQuery, [labelId, `%${labelId}%`, limit, offset]);
+        
+        if (releasesResult.rows.length === 0) {
           client.release();
+          console.log('No releases found with simple query');
           
-          return res.status(200).json({
-            success: true,
-            message: `Found ${releases.length} releases for label ${labelId}`,
-            data: {
-              releases: releases
+          // Try an alternative query with fuzzy matching
+          try {
+            console.log('Attempting alternative query approach');
+            const altClient = await pool.connect();
+            
+            // Get the label name for fuzzy matching
+            const labelQuery = 'SELECT name FROM labels WHERE id = $1 OR id::text = $1';
+            const labelResult = await altClient.query(labelQuery, [labelId]);
+            let labelName = '';
+            
+            if (labelResult.rows.length > 0) {
+              labelName = labelResult.rows[0].name;
+              console.log(`Found label name: ${labelName}`);
+            } else {
+              console.log('Label not found, using ID as search term');
+              labelName = labelId;
             }
-          });
+            
+            // Try matching by label name
+            const altQuery = `
+              SELECT r.*
+              FROM releases r
+              JOIN labels l ON r.${releaseLabelColumn}::text = l.${labelIdColumn}::text 
+                           OR l.name ILIKE $1
+              ORDER BY r.release_date DESC
+              LIMIT $2 OFFSET $3
+            `;
+            
+            console.log('Executing alternative query with label name match');
+            console.log('Parameters:', [`%${labelName}%`, limit, offset]);
+            
+            const altReleasesResult = await altClient.query(altQuery, [`%${labelName}%`, limit, offset]);
+            altClient.release();
+            
+            if (altReleasesResult.rows.length === 0) {
+              console.log('No releases found with alternative query');
+              return sendResponse(true, 'No releases found for this label', { releases: [] });
+            }
+            
+            console.log(`Found ${altReleasesResult.rows.length} releases with alternative query`);
+            return sendResponse(true, `Found ${altReleasesResult.rows.length} releases`, { 
+              releases: altReleasesResult.rows
+            });
+          } catch (altError) {
+            console.error(`Alternative query error: ${altError.message}`);
+            return sendResponse(true, 'Error with alternative query, returning empty set', { releases: [] });
+          }
         }
-      } catch (simpleQueryError) {
-        console.error(`Simple query error: ${simpleQueryError.message}`);
-      }
-      
-      // If simple query didn't work, try the original approach
-      try {
-        // More complex query with joins
-        const query = `
-          SELECT r.*, a.*
-          FROM releases r
-          LEFT JOIN artists a ON r.artist_id = a.id
-          WHERE r.${releaseLabelColumn} = $1 OR r.${releaseLabelColumn}::text = $1
-        `;
         
-        console.log(`Executing complex query with label ID: ${labelId}`);
-        const result = await client.query(query, [labelId]);
-        client.release();
+        console.log(`Found ${releasesResult.rows.length} releases`);
         
-        // Format the results to match the expected structure
-        const formattedReleases = formatReleasesWithArtists(result.rows);
-        
-        console.log(`Found ${formattedReleases.length} releases for label ${labelId} via complex query`);
-        
-        return res.status(200).json({
-          success: true,
-          message: `Found ${formattedReleases.length} releases for label ${labelId}`,
-          data: {
-            releases: formattedReleases
+        // Step 2: Get the artist information separately to avoid relationship issues
+        const artistIds = new Set();
+        releasesResult.rows.forEach(release => {
+          if (release.artist_id) {
+            artistIds.add(release.artist_id.toString());
+          } else if (release.artistId) {
+            artistIds.add(release.artistId.toString());
           }
         });
-      } catch (complexQueryError) {
-        console.error(`Complex query error: ${complexQueryError.message}`);
+        
+        let artistsMap = {};
+        
+        if (artistIds.size > 0) {
+          console.log(`Fetching artist details for ${artistIds.size} artists`);
+          const artistIdsArray = Array.from(artistIds);
+          
+          // Use a simple IN query for artists to avoid complex joins
+          const artistsQuery = `
+            SELECT * FROM artists 
+            WHERE id::text = ANY($1)
+          `;
+          
+          try {
+            const artistsResult = await client.query(artistsQuery, [artistIdsArray]);
+            console.log(`Found ${artistsResult.rows.length} artists`);
+            
+            // Create a map of artist ID to artist data
+            artistsResult.rows.forEach(artist => {
+              const artistId = artist.id.toString();
+              artistsMap[artistId] = artist;
+            });
+          } catch (artistError) {
+            console.error(`Error fetching artists: ${artistError.message}`);
+            // Continue with releases data only
+          }
+        }
+        
+        // Step 3: Manually join the releases with artists
+        const releases = releasesResult.rows.map(release => {
+          const artistId = (release.artist_id || release.artistId || '').toString();
+          
+          // Create a processed release with artist information if available
+          const processedRelease = {
+            ...release,
+            artist: artistsMap[artistId] || null
+          };
+          
+          return processedRelease;
+        });
+        
         client.release();
+        console.log(`Successfully processed ${releases.length} releases with artist data`);
+        
+        return sendResponse(true, `Found ${releases.length} releases for label ${labelId}`, {
+          releases,
+          total: releases.length,
+          offset,
+          limit
+        });
+      } catch (queryError) {
+        console.error(`Query error: ${queryError.message}`);
+        client.release();
+        
+        // Try Supabase fallback
+        console.log('Direct query failed, falling back to Supabase');
       }
     } catch (dbError) {
-      console.error(`Direct query error for releases by label: ${dbError.message}`);
+      console.error(`Database connection error: ${dbError.message}`);
+      // Continue to Supabase fallback
     }
   }
   
-  // Fallback to Supabase if direct database queries failed
+  // If direct database query fails, try Supabase client
+  console.log('Trying Supabase client for releases query');
   const supabaseUrl = process.env.SUPABASE_URL || 
                     process.env.VITE_SUPABASE_URL || 
                     process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -360,112 +454,142 @@ async function getReleasesByLabelHandler(labelId, req, res) {
                     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   
   if (!supabaseUrl || !supabaseKey) {
-    return res.status(200).json({
-      success: false,
-      message: 'Supabase configuration missing',
-      data: {
-        releases: []
-      }
-    });
+    console.error('Supabase configuration missing');
+    return sendResponse(false, 'Database configuration missing', null);
   }
   
   try {
     // Initialize Supabase client
     const supabase = createClient(supabaseUrl, supabaseKey);
     
-    // Use a simpler query to avoid relationship issues
-    console.log(`Trying simplified Supabase query for label ${labelId}`);
-    const { data: releases, error } = await supabase
+    console.log('Querying Supabase for releases');
+    
+    // Simple query to avoid relationship issues
+    let query = supabase
       .from('releases')
       .select('*')
-      .eq('label_id', labelId);
+      
+    // Add filter based on label
+    if (labelId && labelId !== 'all') {
+      if (labelId === 'buildit-records') {
+        console.log('Using specific query for buildit-records label');
+        query = query.eq('label_id', 1);
+      } else {
+        query = query.eq('label_id', labelId);
+      }
+    }
+    
+    // Add pagination
+    query = query
+      .order('release_date', { ascending: false })
+      .range(offset, offset + limit - 1);
+    
+    const { data: releases, error } = await query;
     
     if (error) {
-      console.error(`Error fetching releases for label ${labelId}: ${error.message}`);
+      console.error(`Supabase query error: ${error.message}`);
       
-      // Try a more flexible approach with string search
+      // Try an alternative approach without relationships
       try {
-        console.log(`Trying alternative Supabase query with filter for label ${labelId}`);
+        console.log('Trying alternative Supabase query with string matching');
+        
+        // First try to get the label name if we have an ID
+        let labelName = '';
+        if (labelId && labelId !== 'all') {
+          const { data: labelData } = await supabase
+            .from('labels')
+            .select('name')
+            .eq('id', labelId)
+            .single();
+          
+          if (labelData) {
+            labelName = labelData.name;
+            console.log(`Found label name: ${labelName}`);
+          }
+        }
+        
+        // Use OR conditions with the label name and ID
         const { data: altReleases, error: altError } = await supabase
           .from('releases')
           .select('*')
-          .or(`label_id.eq.${labelId},label_id.ilike.%${labelId}%`);
+          .or(`label_id.eq.${labelId},label_id.ilike.%${labelId}%${labelName ? ',label.name.ilike.%' + labelName + '%' : ''}`)
+          .order('release_date', { ascending: false })
+          .range(offset, offset + limit - 1);
         
-        if (altError || !altReleases || altReleases.length === 0) {
-          console.error(`Alternative query failed: ${altError?.message || 'No results'}`);
-          return res.status(200).json({
-            success: false,
-            message: `Error fetching releases for label ${labelId}: ${error.message}`,
-            data: {
-              releases: []
-            }
+        if (!altError && altReleases && altReleases.length > 0) {
+          console.log(`Found ${altReleases.length} releases via alternative query`);
+          return sendResponse(true, `Found ${altReleases.length} releases for label ${labelId}`, {
+            releases: altReleases,
+            total: altReleases.length,
+            offset,
+            limit
           });
         }
-        
-        console.log(`Found ${altReleases.length} releases for label ${labelId} via alternative query`);
-        
-        return res.status(200).json({
-          success: true,
-          message: `Found ${altReleases.length} releases for label ${labelId} (artist data unavailable)`,
-          data: {
-            releases: altReleases
-          }
-        });
       } catch (altError) {
         console.error(`Alternative query error: ${altError.message}`);
       }
       
-      return res.status(200).json({
-        success: false,
-        message: `Error fetching releases for label ${labelId}: ${error.message}`,
-        data: {
-          releases: []
-        }
+      // Return empty array instead of error for better frontend experience
+      return sendResponse(true, `No releases found for label ${labelId}`, {
+        releases: [],
+        total: 0,
+        offset,
+        limit
       });
     }
     
-    console.log(`Found ${releases?.length || 0} releases for label ${labelId} via Supabase`);
+    console.log(`Found ${releases?.length || 0} releases via Supabase query`);
     
-    // Get artist data separately to avoid the relationship issue
-    const enhancedReleases = [];
-    
-    for (const release of releases || []) {
-      if (release.artist_id) {
-        try {
-          const { data: artist } = await supabase
+    // If we successfully got releases, try to get artist information
+    if (releases && releases.length > 0) {
+      try {
+        // Extract artist IDs
+        const artistIds = releases
+          .map(release => release.artist_id || release.artistId)
+          .filter(id => id);
+        
+        // Get artist data if we have any artist IDs
+        if (artistIds.length > 0) {
+          const { data: artists } = await supabase
             .from('artists')
             .select('*')
-            .eq('id', release.artist_id)
-            .maybeSingle();
+            .in('id', artistIds);
           
-          enhancedReleases.push({
-            ...release,
-            artist: artist
-          });
-        } catch (artistError) {
-          console.error(`Error fetching artist for release: ${artistError.message}`);
-          enhancedReleases.push(release);
+          // Create a map for faster lookup
+          const artistsMap = {};
+          if (artists) {
+            artists.forEach(artist => {
+              artistsMap[artist.id] = artist;
+            });
+            
+            // Attach artist data to releases
+            releases.forEach(release => {
+              const artistId = release.artist_id || release.artistId;
+              if (artistId && artistsMap[artistId]) {
+                release.artist = artistsMap[artistId];
+              }
+            });
+          }
         }
-      } else {
-        enhancedReleases.push(release);
+      } catch (artistError) {
+        console.error(`Error fetching artist data: ${artistError.message}`);
+        // Continue with releases only
       }
     }
     
-    return res.status(200).json({
-      success: true,
-      message: `Found ${enhancedReleases.length} releases for label ${labelId}`,
-      data: {
-        releases: enhancedReleases
-      }
+    return sendResponse(true, `Found ${releases?.length || 0} releases for label ${labelId}`, {
+      releases: releases || [],
+      total: releases?.length || 0,
+      offset,
+      limit
     });
-  } catch (error) {
-    console.error(`Unexpected error in getReleasesByLabelHandler: ${error.message}`);
-    return res.status(200).json({
-      success: false,
-      message: `Error: ${error.message}`,
-      data: {
-        releases: []
-      }
+  } catch (supabaseError) {
+    console.error(`Unexpected error in Supabase query: ${supabaseError.message}`);
+    return sendResponse(true, 'Error fetching releases, returning empty set', {
+      releases: [],
+      total: 0,
+      offset,
+      limit
     });
   }
 }

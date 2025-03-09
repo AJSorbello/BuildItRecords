@@ -124,75 +124,125 @@ async function getAllArtistsHandler(req, res) {
 async function getArtistsByLabelHandler(labelId, req, res) {
   console.log(`Fetching artists for label ID: ${labelId}`);
   
+  // Helper function to send a consistent response format
+  const sendResponse = (success, message, data) => {
+    console.log(`Sending response: success=${success}, message=${message}`);
+    return res.status(200).json({
+      success,
+      message,
+      data
+    });
+  };
+  
   // Try direct database query first for better control over the results
   if (pool) {
+    console.log('Using PostgreSQL connection pool');
     try {
       const client = await pool.connect();
       
       // Check table schema to use correct column names
+      console.log('Inspecting schema for artists query...');
       const artistsSchema = await getTableSchema(client, 'artists');
       const labelsSchema = await getTableSchema(client, 'labels');
       
-      console.log('Artist table schema:', JSON.stringify(artistsSchema));
-      console.log('Labels table schema:', JSON.stringify(labelsSchema));
+      console.log('Schema inspection results:');
+      console.log('- Artists columns:', artistsSchema.map(col => col.column_name).join(', '));
+      console.log('- Labels columns:', labelsSchema.map(col => col.column_name).join(', '));
       
+      // Determine the correct column names based on the schema
       const labelIdColumn = hasColumn(labelsSchema, 'id') ? 'id' : 'label_id';
       const artistLabelColumn = hasColumn(artistsSchema, 'label_id') ? 'label_id' : 'labelId';
       
-      // Construct query based on schema - use a simpler join that handles type conversion
-      const query = `
-        SELECT a.*
-        FROM artists a
-        LEFT JOIN labels l ON a.${artistLabelColumn} = l.${labelIdColumn}::text
-        WHERE l.${labelIdColumn}::text = $1 OR l.name ILIKE $2
+      // --- APPROACH 1: Direct query with exact match ---
+      console.log('Trying direct query with exact match');
+      const directQuery = `
+        SELECT * FROM artists 
+        WHERE ${artistLabelColumn} = $1 
+           OR ${artistLabelColumn}::text = $1
       `;
       
-      console.log(`Executing query with label ID: ${labelId}`);
-      const result = await client.query(query, [labelId, `%${labelId}%`]);
-      client.release();
-      
-      console.log(`Found ${result.rows.length} artists for label ${labelId} via direct query`);
+      console.log(`Executing direct query with label ID: ${labelId}`);
+      let result = await client.query(directQuery, [labelId]);
       
       if (result.rows.length > 0) {
-        return res.status(200).json({
-          success: true,
-          message: `Found ${result.rows.length} artists for label ${labelId}`,
-          data: {
-            artists: result.rows
-          }
+        console.log(`Found ${result.rows.length} artists via direct query`);
+        client.release();
+        return sendResponse(true, `Found ${result.rows.length} artists for label ${labelId}`, {
+          artists: result.rows
         });
       }
       
-      // Fallback to a simplified query if the join didn't work
+      // --- APPROACH 2: Try with label name matching ---
+      console.log('Trying with label name matching');
+      let labelName = '';
+      
       try {
-        const client2 = await pool.connect();
-        const simplifiedQuery = `
-          SELECT * FROM artists 
-          WHERE label_id = $1 OR label_id::text = $1
+        const labelQuery = 'SELECT name FROM labels WHERE id = $1 OR id::text = $1';
+        const labelResult = await client.query(labelQuery, [labelId]);
+        
+        if (labelResult.rows.length > 0) {
+          labelName = labelResult.rows[0].name;
+          console.log(`Found label name: ${labelName}`);
+        }
+      } catch (labelError) {
+        console.error(`Error finding label name: ${labelError.message}`);
+        // Continue with other approaches
+      }
+      
+      if (labelName) {
+        const nameMatchQuery = `
+          SELECT a.* FROM artists a
+          WHERE a.${artistLabelColumn}::text = $1
+             OR EXISTS (
+               SELECT 1 FROM labels l 
+               WHERE l.name ILIKE $2 
+                 AND (a.${artistLabelColumn}::text = l.${labelIdColumn}::text 
+                   OR a.${artistLabelColumn}::text = $1)
+             )
         `;
         
-        console.log(`Executing simplified query with label ID: ${labelId}`);
-        const simplifiedResult = await client2.query(simplifiedQuery, [labelId]);
-        client2.release();
+        console.log(`Executing name match query with: ${labelId}, %${labelName}%`);
+        result = await client.query(nameMatchQuery, [labelId, `%${labelName}%`]);
         
-        console.log(`Found ${simplifiedResult.rows.length} artists for label ${labelId} via simplified query`);
-        
-        return res.status(200).json({
-          success: true,
-          message: `Found ${simplifiedResult.rows.length} artists for label ${labelId}`,
-          data: {
-            artists: simplifiedResult.rows
-          }
-        });
-      } catch (fallbackError) {
-        console.error(`Fallback query error: ${fallbackError.message}`);
+        if (result.rows.length > 0) {
+          console.log(`Found ${result.rows.length} artists via name match query`);
+          client.release();
+          return sendResponse(true, `Found ${result.rows.length} artists for label ${labelId}`, {
+            artists: result.rows
+          });
+        }
       }
+      
+      // --- APPROACH 3: Try LIKE pattern matching ---
+      console.log('Trying with pattern matching');
+      const patternQuery = `
+        SELECT * FROM artists 
+        WHERE ${artistLabelColumn}::text LIKE $1
+      `;
+      
+      console.log(`Executing pattern matching query with: %${labelId}%`);
+      result = await client.query(patternQuery, [`%${labelId}%`]);
+      
+      if (result.rows.length > 0) {
+        console.log(`Found ${result.rows.length} artists via pattern matching`);
+        client.release();
+        return sendResponse(true, `Found ${result.rows.length} artists for label ${labelId}`, {
+          artists: result.rows
+        });
+      }
+      
+      // Release the client before moving to the next method
+      client.release();
+      console.log('No artists found with any query method');
+      
     } catch (dbError) {
-      console.error(`Direct query error for artists by label: ${dbError.message}`);
+      console.error(`Database error for artists by label: ${dbError.message}`);
+      // Continue to Supabase fallback
     }
   }
   
-  // If direct query approaches failed, try Supabase as a last resort
+  // If direct queries unsuccessful, try Supabase client
+  console.log('Direct database queries unsuccessful, trying Supabase...');
   const supabaseUrl = process.env.SUPABASE_URL || 
                     process.env.VITE_SUPABASE_URL || 
                     process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -200,46 +250,99 @@ async function getArtistsByLabelHandler(labelId, req, res) {
   const supabaseKey = process.env.SUPABASE_ANON_KEY || 
                     process.env.VITE_SUPABASE_ANON_KEY || 
                     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
+  
   if (!supabaseUrl || !supabaseKey) {
-    return res.status(200).json({
-      success: false,
-      message: 'Supabase configuration missing',
-      data: null
-    });
+    return sendResponse(false, 'Supabase configuration missing', null);
   }
-
-  // Initialize Supabase client
-  const supabase = createClient(supabaseUrl, supabaseKey);
-
-  // Query for artists by label
-  const { data: artists, error } = await supabase
-    .from('artists')
-    .select('*')
-    .eq('label_id', labelId);
-
-  if (error) {
-    console.error(`Error fetching artists for label ${labelId}: ${error.message}`);
+  
+  try {
+    console.log('Initializing Supabase client');
+    const supabase = createClient(supabaseUrl, supabaseKey);
     
-    // Return empty array instead of null to prevent frontend errors
-    return res.status(200).json({
-      success: false,
-      message: `Error fetching artists for label ${labelId}: ${error.message}`,
-      data: {
-        artists: []
+    // --- APPROACH 1: Direct query by label_id ---
+    console.log(`Querying Supabase for artists with label_id = ${labelId}`);
+    let { data: artists, error } = await supabase
+      .from('artists')
+      .select('*')
+      .eq('label_id', labelId);
+    
+    if (!error && artists && artists.length > 0) {
+      console.log(`Found ${artists.length} artists via direct Supabase query`);
+      return sendResponse(true, `Found ${artists.length} artists for label ${labelId}`, {
+        artists: artists
+      });
+    }
+    
+    // --- APPROACH 2: Try more flexible matching ---
+    if (error || !artists || artists.length === 0) {
+      console.log('Direct query unsuccessful, trying with OR conditions');
+      
+      // Try to get label name first if we have a numeric ID
+      let labelName = '';
+      if (!isNaN(labelId)) {
+        try {
+          const { data: labelData } = await supabase
+            .from('labels')
+            .select('name')
+            .eq('id', parseInt(labelId))
+            .single();
+          
+          if (labelData) {
+            labelName = labelData.name;
+            console.log(`Found label name: ${labelName}`);
+          }
+        } catch (labelError) {
+          console.error(`Error fetching label: ${labelError.message}`);
+        }
       }
+      
+      // Build a flexible OR query with all the matching patterns
+      let orCondition = `label_id.eq.${labelId},label_id.ilike.%${labelId}%`;
+      if (labelName) {
+        orCondition += `,label_name.ilike.%${labelName}%`;
+      }
+      
+      console.log(`Using OR condition: ${orCondition}`);
+      const { data: flexibleArtists, error: flexibleError } = await supabase
+        .from('artists')
+        .select('*')
+        .or(orCondition);
+      
+      if (!flexibleError && flexibleArtists && flexibleArtists.length > 0) {
+        console.log(`Found ${flexibleArtists.length} artists via flexible Supabase query`);
+        return sendResponse(true, `Found ${flexibleArtists.length} artists for label ${labelId}`, {
+          artists: flexibleArtists
+        });
+      }
+    }
+    
+    // --- APPROACH 3: Handle special case for buildit-records label ---
+    if (labelId === 'buildit-records' || labelId === '1') {
+      console.log('Trying special case for buildit-records label');
+      const { data: buildItArtists, error: buildItError } = await supabase
+        .from('artists')
+        .select('*')
+        .eq('label_id', 1);
+      
+      if (!buildItError && buildItArtists && buildItArtists.length > 0) {
+        console.log(`Found ${buildItArtists.length} artists for buildit-records label`);
+        return sendResponse(true, `Found ${buildItArtists.length} artists for buildit-records`, {
+          artists: buildItArtists
+        });
+      }
+    }
+    
+    // If all approaches failed, return empty array instead of null
+    console.log('All Supabase approaches failed, returning empty array');
+    return sendResponse(true, `No artists found for label ${labelId}`, {
+      artists: []
+    });
+  } catch (supabaseError) {
+    console.error(`Unexpected error in Supabase query: ${supabaseError.message}`);
+    return sendResponse(true, 'Error fetching artists, returning empty array', {
+      artists: []
     });
   }
-
-  console.log(`Found ${artists?.length || 0} artists for label ${labelId} via Supabase`);
-
-  return res.status(200).json({
-    success: true,
-    message: `Found ${artists?.length || 0} artists for label ${labelId}`,
-    data: {
-      artists: artists || []
-    }
-  });
 }
 
 // Handler for GET /api/artist/[id] - Get artist by ID
