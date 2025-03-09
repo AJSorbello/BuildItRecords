@@ -118,6 +118,18 @@ if [ -f "api/artist/[id].js" ]; then
   mv api/artist/[id].js api-backup/artist/
 fi
 
+# Verify our key API endpoints are present
+echo "🔍 Checking for crucial API endpoint files"
+for file in api/artist.js api/release.js api/health.js api/index.js api/label.js; do
+  if [ -f "$file" ]; then
+    echo "✅ Found $file"
+    echo "File size: $(du -h $file | cut -f1)"
+    echo "Last modified: $(stat -f "%Sm" $file)"
+  else
+    echo "❌ MISSING CRUCIAL FILE: $file"
+  fi
+done
+
 # Test database connection but don't fail if it doesn't work
 echo "🔍 Testing database connection"
 # Commented out as db-diagnostic.js was removed to reduce function count
