@@ -24,7 +24,15 @@ import { TopReleases } from '../components/TopReleases';
 import { labelColors } from '../theme/theme';
 
 // Map route labels to RECORD_LABELS keys
-const getLabelId = (label: string): string => {
+const getLabelId = (label: string | RecordLabel | undefined): string => {
+  if (!label) return 'buildit-records'; // Default to buildit-records if undefined
+  
+  // If label is a RecordLabel object, return its id
+  if (typeof label === 'object' && 'id' in label) {
+    return label.id;
+  }
+  
+  // Handle string label
   const labelMap: { [key: string]: string } = {
     'records': 'buildit-records',
     'tech': 'buildit-tech',
@@ -158,9 +166,16 @@ export const ReleasesPage = ({ label: propLabel }: ReleasesPageProps) => {
     fetchReleases(1);
   }, [labelId, propLabel]);
 
-  const labelConfig = RECORD_LABELS[getLabelId(labelId || propLabel)];
-  const currentLabelKey = labelId || propLabel;
-  const labelColor = labelColors[currentLabelKey] || '#02FF95';
+  const labelIdString = (labelId || propLabel || 'records');
+  const mappedLabelId = getLabelId(labelIdString);
+  const labelConfig = RECORD_LABELS[mappedLabelId];
+  const currentLabelKey = typeof labelIdString === 'string' ? labelIdString : 
+                          (typeof labelIdString === 'object' && 'id' in labelIdString ? labelIdString.id : 'records');
+  
+  // Ensure currentLabelKey is one of the valid keys for labelColors or use default
+  const validLabelKey = (currentLabelKey === 'records' || currentLabelKey === 'tech' || currentLabelKey === 'deep') 
+                        ? currentLabelKey : 'records';
+  const labelColor = labelColors[validLabelKey] || '#02FF95';
 
   // Generate gradient background based on the label
   const getGradientBackground = () => {
@@ -178,7 +193,8 @@ export const ReleasesPage = ({ label: propLabel }: ReleasesPageProps) => {
     return (
       <Box sx={{ mt: 8, textAlign: 'center' }}>
         <Typography variant="h5" color="text.secondary">
-          Invalid label: {labelId || propLabel}
+          Invalid label: {typeof labelIdString === 'string' ? labelIdString : 
+                         (typeof labelIdString === 'object' && 'id' in labelIdString ? labelIdString.id : 'unknown')}
         </Typography>
       </Box>
     );

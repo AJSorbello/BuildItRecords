@@ -254,4 +254,4 @@ export * from '../types/release';
 export * from '../types/track';
 export * from './spotify';
 import { RecordLabelId as LabelId } from './labels';
-export { LabelId };
+export type { LabelId };
