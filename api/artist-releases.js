@@ -20,9 +20,20 @@ module.exports = async (req, res) => {
 
   // Apply CORS headers for actual requests
   corsMiddleware(req, res, async () => {
-    // Extract artist ID from URL path
-    // The URL format would be /api/artist-releases/[artistId]
-    const artistId = req.url.split('/').pop();
+    // Extract artist ID from URL path or query parameters
+    // The URL format would be /api/artist-releases/[artistId] or with a query param ?id=[artistId]
+    let artistId;
+    
+    // First check if we have it in the query parameters
+    if (req.query && req.query.id) {
+      artistId = req.query.id;
+    } else {
+      // Otherwise extract from the URL path
+      const pathParts = req.url.split('/');
+      const lastSegment = pathParts.pop() || '';
+      // Remove any query string that might be attached
+      artistId = lastSegment.split('?')[0];
+    }
     
     if (!artistId) {
       return res.status(200).json({
