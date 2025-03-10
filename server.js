@@ -29,7 +29,10 @@ setupCommonMiddleware(app);
 // Mount API routes under /api
 app.use('/api', apiRoutes);
 
-// Root route
+// Also mount API routes at root level for Render compatibility
+app.use('/', apiRoutes);
+
+// Root route info - serves at both / and /api
 app.get('/', (req, res) => {
   res.status(200).json({
     success: true,
