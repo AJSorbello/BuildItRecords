@@ -16,10 +16,10 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "echo 'API-only build - no frontend assets to build'",
+    "build": "vite build",
     "serve": "vite preview",
     "start": "node server.js",
-    "start:dev": "npm run dev",
+    "start:frontend": "npm run dev",
     "server": "cd server && node server.js",
     "dev:all": "concurrently \"npm run server\" \"npm run dev\"",
     "api:local": "node server/local-api-server.js",
