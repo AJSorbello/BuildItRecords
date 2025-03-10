@@ -140,12 +140,14 @@ async function getArtistsByLabelHandler(labelId, req, res) {
   console.log(`Fetching artists for label ID: ${labelId}`);
   
   // Helper function to send a consistent response format
-  const sendResponse = (success, message, data) => {
+  const sendResponse = (success, message, artistsData) => {
     console.log(`Sending response: success=${success}, message=${message}`);
     return res.status(200).json({
       success,
       message,
-      data
+      data: {
+        artists: artistsData && artistsData.artists ? artistsData.artists : (artistsData || [])
+      }
     });
   };
   
@@ -182,9 +184,7 @@ async function getArtistsByLabelHandler(labelId, req, res) {
       if (result.rows.length > 0) {
         console.log(`Found ${result.rows.length} artists via direct query`);
         client.release();
-        return sendResponse(true, `Found ${result.rows.length} artists for label ${labelId}`, {
-          artists: result.rows
-        });
+        return sendResponse(true, `Found ${result.rows.length} artists for label ${labelId}`, result.rows);
       }
       
       // --- APPROACH 2: Try with label name matching ---
@@ -222,9 +222,7 @@ async function getArtistsByLabelHandler(labelId, req, res) {
         if (result.rows.length > 0) {
           console.log(`Found ${result.rows.length} artists via name match query`);
           client.release();
-          return sendResponse(true, `Found ${result.rows.length} artists for label ${labelId}`, {
-            artists: result.rows
-          });
+          return sendResponse(true, `Found ${result.rows.length} artists for label ${labelId}`, result.rows);
         }
       }
       
@@ -241,9 +239,7 @@ async function getArtistsByLabelHandler(labelId, req, res) {
       if (result.rows.length > 0) {
         console.log(`Found ${result.rows.length} artists via pattern matching`);
         client.release();
-        return sendResponse(true, `Found ${result.rows.length} artists for label ${labelId}`, {
-          artists: result.rows
-        });
+        return sendResponse(true, `Found ${result.rows.length} artists for label ${labelId}`, result.rows);
       }
       
       // Release the client before moving to the next method
@@ -283,9 +279,7 @@ async function getArtistsByLabelHandler(labelId, req, res) {
     
     if (!error && artists && artists.length > 0) {
       console.log(`Found ${artists.length} artists via direct Supabase query`);
-      return sendResponse(true, `Found ${artists.length} artists for label ${labelId}`, {
-        artists: artists
-      });
+      return sendResponse(true, `Found ${artists.length} artists for label ${labelId}`, artists);
     }
     
     // --- APPROACH 2: Try more flexible matching ---
@@ -325,9 +319,7 @@ async function getArtistsByLabelHandler(labelId, req, res) {
       
       if (!flexibleError && flexibleArtists && flexibleArtists.length > 0) {
         console.log(`Found ${flexibleArtists.length} artists via flexible Supabase query`);
-        return sendResponse(true, `Found ${flexibleArtists.length} artists for label ${labelId}`, {
-          artists: flexibleArtists
-        });
+        return sendResponse(true, `Found ${flexibleArtists.length} artists for label ${labelId}`, flexibleArtists);
       }
     }
     
@@ -341,22 +333,16 @@ async function getArtistsByLabelHandler(labelId, req, res) {
       
       if (!buildItError && buildItArtists && buildItArtists.length > 0) {
         console.log(`Found ${buildItArtists.length} artists for buildit-records label`);
-        return sendResponse(true, `Found ${buildItArtists.length} artists for buildit-records`, {
-          artists: buildItArtists
-        });
+        return sendResponse(true, `Found ${buildItArtists.length} artists for buildit-records`, buildItArtists);
       }
     }
     
     // If all approaches failed, return empty array instead of null
     console.log('All Supabase approaches failed, returning empty array');
-    return sendResponse(true, `No artists found for label ${labelId}`, {
-      artists: []
-    });
+    return sendResponse(true, `No artists found for label ${labelId}`, []);
   } catch (supabaseError) {
     console.error(`Unexpected error in Supabase query: ${supabaseError.message}`);
-    return sendResponse(true, 'Error fetching artists, returning empty array', {
-      artists: []
-    });
+    return sendResponse(true, 'Error fetching artists, returning empty array', []);
   }
 }
 
