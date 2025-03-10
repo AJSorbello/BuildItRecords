@@ -96,11 +96,45 @@ async function getAllReleasesHandler(req, res) {
     });
   }
   
-  // Initialize Supabase client
-  const supabase = createClient(supabaseUrl, supabaseKey);
-  
-  // Multi-step approach to avoid relationship errors
   try {
+    // Try direct SQL approach first to avoid relationship embedding issues
+    if (pool) {
+      try {
+        // Query to get releases with artists information
+        const query = `
+          SELECT r.*, a.id as artist_id, a.name as artist_name 
+          FROM releases r
+          LEFT JOIN artists a ON r.artist_id = a.id
+          ORDER BY r.title
+        `;
+        console.log('Executing direct SQL query for releases:', query);
+        
+        const result = await pool.query(query);
+        const rows = result.rows || [];
+        
+        console.log(`Found ${rows.length} releases using direct SQL`);
+        
+        // Process results to format releases with artists
+        const releases = formatReleasesWithArtists(rows);
+        
+        return res.status(200).json({
+          success: true,
+          message: `Found ${releases.length} releases`,
+          data: {
+            releases: releases
+          }
+        });
+      } catch (sqlError) {
+        console.error(`SQL error in getAllReleasesHandler: ${sqlError.message}`);
+        // Fall back to multi-step approach if SQL fails
+      }
+    }
+    
+    // Initialize Supabase client for fallback approach
+    console.log('Falling back to multi-step approach for releases');
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    
+    // Multi-step approach to avoid relationship errors
     console.log('Using multi-step approach to fetch releases and related data');
     
     // Step 1: Get all releases first
@@ -195,23 +229,29 @@ function formatReleasesWithArtists(rows) {
     if (!releasesMap[releaseId]) {
       // Initialize the release object
       releasesMap[releaseId] = {
-        ...row,
-        artists: []
-      };
-      
-      // Extract artist data if available
-      if (row.name && !releasesMap[releaseId].artists.some(a => a.id === row.artist_id)) {
-        releasesMap[releaseId].artists.push({
+        id: row.id,
+        title: row.title,
+        release_date: row.release_date,
+        catalog_number: row.catalog_number,
+        description: row.description,
+        image_url: row.image_url,
+        spotify_url: row.spotify_url,
+        bandcamp_url: row.bandcamp_url,
+        apple_music_url: row.apple_music_url,
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+        artist_id: row.artist_id,
+        label_id: row.label_id,
+        // Add artist information
+        artist: row.artist_id ? {
           id: row.artist_id,
-          name: row.name,
-          image_url: row.image_url,
-          spotify_id: row.spotify_id
-        });
-      }
+          name: row.artist_name || 'Unknown Artist'
+        } : null
+      };
     }
   });
   
-  // Convert the map to an array
+  // Convert map to array
   return Object.values(releasesMap);
 }
 
