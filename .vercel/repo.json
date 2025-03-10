@@ -3,11 +3,6 @@
   "remoteName": "origin",
   "projects": [
     {
-      "id": "prj_GqVyeWi0SH0dJ7PYYmPTU9W8qFRE",
-      "name": "builditrecords",
-      "directory": "."
-    },
-    {
       "id": "prj_QXb0Mh1IiJl7SVyVMz343vG2PcR1",
       "name": "build-it-records",
       "directory": "."
