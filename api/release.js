@@ -164,9 +164,7 @@ async function getAllReleasesHandler(req, res) {
           return res.status(200).json({
             success: true,
             message: `Found ${formattedReleases.length} releases`,
-            data: {
-              releases: formattedReleases
-            }
+            data: formattedReleases
           });
         } else {
           console.log('SQL query returned no results, falling back to REST API');
@@ -237,9 +235,7 @@ async function getAllReleasesHandler(req, res) {
         return res.status(200).json({
           success: true,
           message: `Found ${filteredReleases.length} releases`,
-          data: {
-            releases: filteredReleases
-          }
+          data: filteredReleases
         });
       } else {
         const errorText = await response.text();
@@ -253,9 +249,7 @@ async function getAllReleasesHandler(req, res) {
       return res.status(200).json({
         success: false,
         message: `Error fetching releases: ${fetchError.message}`,
-        data: {
-          releases: [] // Return empty array as last resort
-        }
+        data: [] // Return empty array as last resort
       });
     }
   } catch (error) {
@@ -264,9 +258,7 @@ async function getAllReleasesHandler(req, res) {
     return res.status(200).json({
       success: false,
       message: `Server error: ${error.message}`,
-      data: {
-        releases: [] // Return empty array on error
-      }
+      data: [] // Return empty array on error
     });
   }
 }
@@ -438,16 +430,14 @@ async function getReleasesByLabelHandler(labelId, req, res) {
             
             if (altReleasesResult.rows.length === 0) {
               console.log('No releases found with alternative query');
-              return sendResponse(true, 'No releases found for this label', { releases: [] });
+              return sendResponse(true, 'No releases found for this label', []);
             }
             
             console.log(`Found ${altReleasesResult.rows.length} releases with alternative query`);
-            return sendResponse(true, `Found ${altReleasesResult.rows.length} releases`, { 
-              releases: altReleasesResult.rows
-            });
+            return sendResponse(true, `Found ${altReleasesResult.rows.length} releases`, altReleasesResult.rows);
           } catch (altError) {
             console.error(`Alternative query error: ${altError.message}`);
-            return sendResponse(true, 'Error with alternative query, returning empty set', { releases: [] });
+            return sendResponse(true, 'Error with alternative query, returning empty set', []);
           }
         }
         
@@ -506,12 +496,7 @@ async function getReleasesByLabelHandler(labelId, req, res) {
         client.release();
         console.log(`Successfully processed ${releases.length} releases with artist data`);
         
-        return sendResponse(true, `Found ${releases.length} releases for label ${labelId}`, {
-          releases,
-          total: releases.length,
-          offset,
-          limit
-        });
+        return sendResponse(true, `Found ${releases.length} releases for label ${labelId}`, releases);
       } catch (queryError) {
         console.error(`Query error: ${queryError.message}`);
         client.release();
@@ -600,24 +585,14 @@ async function getReleasesByLabelHandler(labelId, req, res) {
         
         if (!altError && altReleases && altReleases.length > 0) {
           console.log(`Found ${altReleases.length} releases via alternative query`);
-          return sendResponse(true, `Found ${altReleases.length} releases for label ${labelId}`, {
-            releases: altReleases,
-            total: altReleases.length,
-            offset,
-            limit
-          });
+          return sendResponse(true, `Found ${altReleases.length} releases for label ${labelId}`, altReleases);
         }
       } catch (altError) {
         console.error(`Alternative query error: ${altError.message}`);
       }
       
       // Return empty array instead of error for better frontend experience
-      return sendResponse(true, `No releases found for label ${labelId}`, {
-        releases: [],
-        total: 0,
-        offset,
-        limit
-      });
+      return sendResponse(true, `No releases found for label ${labelId}`, []);
     }
     
     console.log(`Found ${releases?.length || 0} releases via Supabase query`);
@@ -659,20 +634,10 @@ async function getReleasesByLabelHandler(labelId, req, res) {
       }
     }
     
-    return sendResponse(true, `Found ${releases?.length || 0} releases for label ${labelId}`, {
-      releases: releases || [],
-      total: releases?.length || 0,
-      offset,
-      limit
-    });
+    return sendResponse(true, `Found ${releases?.length || 0} releases for label ${labelId}`, releases || []);
   } catch (supabaseError) {
     console.error(`Unexpected error in Supabase query: ${supabaseError.message}`);
-    return sendResponse(true, 'Error fetching releases, returning empty set', {
-      releases: [],
-      total: 0,
-      offset,
-      limit
-    });
+    return sendResponse(true, 'Error fetching releases, returning empty set', []);
   }
 }
 
@@ -732,9 +697,7 @@ async function getReleaseByIdHandler(releaseId, req, res) {
     return res.status(200).json({
       success: true,
       message: 'Release found',
-      data: {
-        release: release
-      }
+      data: release
     });
   } catch (error) {
     console.error(`Unexpected error in getReleaseByIdHandler: ${error.message}`);
@@ -793,9 +756,7 @@ async function getReleaseTracksHandler(releaseId, req, res) {
     return res.status(200).json({
       success: true,
       message: `Found ${tracks.length} tracks for release ${releaseId}`,
-      data: {
-        tracks: tracks
-      }
+      data: tracks
     });
   } catch (error) {
     console.error(`Unexpected error in getReleaseTracksHandler: ${error.message}`);

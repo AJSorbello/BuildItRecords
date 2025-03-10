@@ -160,9 +160,7 @@ async function handleAllArtists(req, res) {
           return res.status(200).json({
             success: true,
             message: `Found ${artists.length} artists`,
-            data: {
-              artists: artists
-            }
+            data: artists
           });
         } else {
           console.log('SQL query returned no results, falling back to REST API');
@@ -197,9 +195,7 @@ async function handleAllArtists(req, res) {
         return res.status(200).json({
           success: true,
           message: `Found ${artists.length} artists`,
-          data: {
-            artists: artists
-          }
+          data: artists
         });
       } else {
         const errorText = await response.text();
@@ -213,9 +209,7 @@ async function handleAllArtists(req, res) {
       return res.status(200).json({
         success: false,
         message: `Error fetching artists: ${fetchError.message}`,
-        data: {
-          artists: [] // Return empty array as last resort
-        }
+        data: [] // Return empty array as last resort
       });
     }
   } catch (error) {
@@ -224,9 +218,7 @@ async function handleAllArtists(req, res) {
     return res.status(200).json({
       success: false,
       message: `Server error: ${error.message}`,
-      data: {
-        artists: [] // Return empty array on error
-      }
+      data: [] // Return empty array on error
     });
   }
 }
