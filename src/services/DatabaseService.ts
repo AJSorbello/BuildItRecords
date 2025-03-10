@@ -657,36 +657,39 @@ class DatabaseService {
     try {
       console.log(`Fetching releases for artist ${artistId}`);
       
-      const endpoint = `/artists/releases/${artistId}`;
+      // Updated to use the new dedicated endpoint that fixes the JSON error
+      const endpoint = `/artist-releases/${artistId}`;
       
       const response = await this.fetchApi<ApiResponse>(endpoint);
       
-      if (!response.releases || !Array.isArray(response.releases)) {
-        console.warn(`No releases found for artist ${artistId}`);
-        return [];
+      if (response?.data && Array.isArray(response.data)) {
+        console.log(`Successfully found ${response.data.length} releases for artist ${artistId}`);
+        
+        // Transform the data and use type assertion to bypass TypeScript checking
+        return response.data.map(release => {
+          // Create a release object with the properties we have
+          const releaseObj = {
+            id: release.id || '',
+            title: release.title || release.name || 'Unknown Release',
+            type: release.type || 'release',
+            release_date: release.release_date || '',
+            artwork_url: release.artwork_url || '',
+            spotify_url: release.spotify_url || '',
+            artists: release.artists || [],
+            label_id: release.label_id || '',
+            total_tracks: release.total_tracks || 0,
+            tracks: (release.tracks || []).map(track => this.createTrack(track)),
+            label: release.label || { name: release.label_name ? String(release.label_name) : '' }
+          };
+          
+          // Use type assertion to tell TypeScript this matches the Release interface
+          return releaseObj as unknown as Release;
+        });
+        
       }
       
-      // Transform the data and use type assertion to bypass TypeScript checking
-      return response.releases.map(release => {
-        // Create a release object with the properties we have
-        const releaseObj = {
-          id: release.id || '',
-          title: release.title || release.name || 'Unknown Release',
-          type: release.type || 'release',
-          release_date: release.release_date || '',
-          artwork_url: release.artwork_url || '',
-          spotify_url: release.spotify_url || '',
-          artists: release.artists || [],
-          label_id: release.label_id || '',
-          total_tracks: release.total_tracks || 0,
-          tracks: (release.tracks || []).map(track => this.createTrack(track)),
-          label: release.label || { name: release.label_name ? String(release.label_name) : '' }
-        };
-        
-        // Use type assertion to tell TypeScript this matches the Release interface
-        return releaseObj as unknown as Release;
-      });
-      
+      console.warn(`Received empty or invalid releases array for artist ${artistId}`);
+      return [];
     } catch (error) {
       console.error(`Error fetching releases for artist ${artistId}:`, error);
       return [];
