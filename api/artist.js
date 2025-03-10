@@ -126,73 +126,94 @@ async function getAllArtistsHandler(req, res) {
   }
   
   try {
-    // Use direct SQL query approach instead of Supabase ORM to avoid JSON parsing issues
-    if (pool) {
+    // Initialize database pool for direct SQL
+    let localPool;
+    try {
+      console.log('Initializing local pool for direct query');
+      localPool = getPool();
+      console.log('Local pool initialized successfully');
+    } catch (poolError) {
+      console.error(`Failed to initialize local pool: ${poolError.message}`);
+      localPool = null;
+    }
+    
+    // Use direct SQL query approach
+    if (localPool) {
       try {
-        console.log('Pool available - using direct SQL approach');
+        console.log('Using direct SQL approach for artists');
         const query = 'SELECT * FROM artists ORDER BY name';
-        console.log('Executing direct SQL query:', query);
+        console.log('Executing SQL query:', query);
         
-        const result = await pool.query(query);
-        console.log(`SQL query completed with ${result.rows?.length || 0} rows`);
-        const artists = result.rows || [];
+        const result = await localPool.query(query);
+        console.log(`SQL query result: ${result.rowCount} rows`);
         
-        console.log(`Found ${artists.length} artists using direct SQL`);
+        // If we got results, format and return them
+        if (result && result.rows && result.rows.length >= 0) {
+          const artists = result.rows;
+          console.log(`Returning ${artists.length} artists from SQL query`);
+          
+          return res.status(200).json({
+            success: true,
+            message: `Found ${artists.length} artists`,
+            data: artists
+          });
+        } else {
+          console.log('SQL query returned no results, falling back to Supabase client');
+        }
+      } catch (sqlError) {
+        console.error(`SQL query error: ${sqlError.message}`);
+        console.log('SQL query failed, falling back to Supabase client');
+      }
+    }
+    
+    // Fallback to a more resilient approach
+    try {
+      console.log('Using fallback approach with simple fetch');
+      // Using Supabase REST API directly as a fallback
+      const supabaseRestUrl = `${supabaseUrl}/rest/v1/artists?select=*`;
+      console.log(`Fetching from REST API: ${supabaseRestUrl}`);
+      
+      const response = await fetch(supabaseRestUrl, {
+        method: 'GET',
+        headers: {
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation'
+        }
+      });
+      
+      if (response.ok) {
+        const artists = await response.json();
+        console.log(`Fetched ${artists.length} artists from REST API`);
         
         return res.status(200).json({
           success: true,
           message: `Found ${artists.length} artists`,
-          data: {
-            artists: artists
-          }
+          data: artists
         });
-      } catch (sqlError) {
-        console.error(`SQL error in getAllArtistsHandler (detailed): ${sqlError.message}`, sqlError);
-        console.log('Falling back to Supabase client due to SQL error');
-        // Fall back to Supabase client if SQL fails
+      } else {
+        const errorText = await response.text();
+        console.error(`REST API error: ${response.status} - ${errorText}`);
+        throw new Error(`REST API error: ${response.status}`);
       }
-    } else {
-      console.log('No pool available - skipping direct SQL approach');
-    }
-    
-    // Fallback to Supabase client if direct SQL is not available
-    console.log('Falling back to Supabase client for artists query');
-    const supabase = createClient(supabaseUrl, supabaseKey);
-    
-    // Get all artists from Supabase - explicitly using .select()
-    console.log('Executing Supabase query: from("artists").select("*")');
-    const { data: artists, error } = await supabase
-      .from('artists')
-      .select('*');
-    
-    if (error) {
-      console.error(`Error fetching artists via Supabase (detailed): ${error.message}`, error);
+    } catch (fetchError) {
+      console.error(`Fetch error: ${fetchError.message}`);
+      
+      // Last resort: return empty array with error message
       return res.status(200).json({
         success: false,
-        message: `Error fetching artists: ${error.message}`,
-        data: {
-          artists: [] // Return empty array instead of null
-        }
+        message: `Error fetching artists: ${fetchError.message}`,
+        data: [] // Return empty array as last resort
       });
     }
-    
-    console.log(`Found ${artists?.length || 0} artists using Supabase client`);
-    
-    return res.status(200).json({
-      success: true,
-      message: `Found ${artists?.length || 0} artists`,
-      data: {
-        artists: artists || [] // Ensure we return an array even if null
-      }
-    });
   } catch (error) {
-    console.error(`Unexpected error in getAllArtistsHandler (detailed): ${error.message}`, error);
+    console.error(`Unexpected error in getAllArtistsHandler: ${error.message}`);
+    
     return res.status(200).json({
       success: false,
-      message: `Error fetching artists: ${error.message}`,
-      data: {
-        artists: [] // Return empty array instead of null
-      }
+      message: `Server error: ${error.message}`,
+      data: [] // Return empty array on error
     });
   }
 }
@@ -207,9 +228,7 @@ async function getArtistsByLabelHandler(labelId, req, res) {
     return res.status(200).json({
       success: false,
       message: 'Database connection failed',
-      data: {
-        artists: [] // Return empty array instead of null
-      }
+      data: [] // Return empty array instead of null
     });
   }
   
@@ -242,9 +261,7 @@ async function getArtistsByLabelHandler(labelId, req, res) {
       return res.status(200).json({
         success: true,
         message: `No artists found for label ID: ${labelId}`,
-        data: {
-          artists: []
-        }
+        data: []
       });
     }
     
@@ -253,18 +270,14 @@ async function getArtistsByLabelHandler(labelId, req, res) {
     return res.status(200).json({
       success: true,
       message: `Found ${result.rows.length} artists for label ${labelId}`,
-      data: {
-        artists: result.rows
-      }
+      data: result.rows
     });
   } catch (error) {
     console.error(`Error in getArtistsByLabelHandler: ${error.message}`);
     return res.status(200).json({
       success: false,
       message: `Database error: ${error.message}`,
-      data: {
-        artists: []
-      }
+      data: []
     });
   }
 }
@@ -334,9 +347,7 @@ async function getArtistByIdHandler(artistId, req, res) {
   return res.status(200).json({
     success: true,
     message: 'Artist found',
-    data: {
-      artist: artist
-    }
+    data: artist
   });
 }
 
@@ -377,9 +388,7 @@ async function getArtistReleasesHandler(artistId, req, res) {
     return res.status(200).json({
       success: false,
       message: `Error fetching releases for artist ${artistId}: ${error.message}`,
-      data: {
-        releases: []
-      }
+      data: []
     });
   }
   
@@ -388,8 +397,6 @@ async function getArtistReleasesHandler(artistId, req, res) {
   return res.status(200).json({
     success: true,
     message: `Found ${releases.length} releases for artist ${artistId}`,
-    data: {
-      releases: releases
-    }
+    data: releases
   });
 }
