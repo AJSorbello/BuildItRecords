@@ -26,8 +26,7 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const { query } = req;
-    const artistId = query.id;
+    const artistId = req.params?.artistId || req.query?.artistId;
 
     if (!artistId) {
       console.error('No artist ID provided');
@@ -50,27 +49,38 @@ module.exports = async (req, res) => {
 
 async function handleArtistReleases(req, res, artistId) {
   try {
-    console.log(`[artist-releases] Fetching releases for artist ${artistId}`);
+    console.log(`[artist-releases] Processing request with artistId parameter: ${artistId}`);
     
     // In Express mode, get Supabase from app.locals or create new connection
     const supabase = req.app?.locals?.supabase || 
-      createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+      getSupabaseClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
     
     const supabaseAdmin = req.app?.locals?.supabaseAdmin || 
-      createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+      getSupabaseClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
     
-    // If artistId is not provided, check query params
-    if (!artistId && req.query.artistId) {
+    // Check multiple ways to get artistId
+    if (!artistId) {
+      // Try to get from URL parameters
+      artistId = req.params?.artistId;
+      console.log(`[artist-releases] Got artistId from req.params: ${artistId}`);
+    }
+    
+    // If still no artistId, check query params
+    if (!artistId && req.query?.artistId) {
       artistId = req.query.artistId;
+      console.log(`[artist-releases] Got artistId from req.query: ${artistId}`);
     }
     
     if (!artistId) {
+      console.log('[artist-releases] No artist ID provided');
       return res.status(400).json({
         success: false,
         message: 'Artist ID is required',
         data: { releases: [] }
       });
     }
+    
+    console.log(`[artist-releases] Fetching releases for artist ${artistId}`);
     
     let releases = [];
     let artist = null;
@@ -357,7 +367,7 @@ async function handleArtistReleases(req, res, artistId) {
 }
 
 // Helper for standalone mode
-function createClient(url, key) {
+function getSupabaseClient(url, key) {
   try {
     const { createClient } = require('@supabase/supabase-js');
     return createClient(url, key);
