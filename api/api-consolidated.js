@@ -549,82 +549,154 @@ async function handleSingleArtist(req, res, artistId) {
 async function handleArtistReleases(req, res, artistId) {
   console.log(`Handling request for artist ${artistId} releases`);
   
+  // Get database connection info
+  const dbUser = process.env.POSTGRES_USER || process.env.DB_USER;
+  const dbPass = process.env.POSTGRES_PASSWORD || process.env.DB_PASS;
+  const dbHost = process.env.POSTGRES_HOST || process.env.DB_HOST;
+  const dbPort = process.env.POSTGRES_PORT || process.env.DB_PORT || '5432';
+  const dbName = process.env.POSTGRES_DATABASE || process.env.DB_NAME;
+  
+  // Fallback to Supabase if direct DB credentials aren't available
   const supabaseUrl = process.env.SUPABASE_URL || 
-                    process.env.VITE_SUPABASE_URL || 
-                    process.env.NEXT_PUBLIC_SUPABASE_URL;
-                    
+                      process.env.VITE_SUPABASE_URL || 
+                      process.env.NEXT_PUBLIC_SUPABASE_URL;
+                      
   const supabaseKey = process.env.SUPABASE_ANON_KEY || 
                       process.env.VITE_SUPABASE_ANON_KEY || 
                       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   
-  if (!supabaseUrl || !supabaseKey) {
-    return res.status(200).json({
-      success: false,
-      message: 'Supabase configuration missing',
-      data: []
-    });
-  }
-  
   try {
-    // Initialize Supabase client
-    const supabase = createClient(supabaseUrl, supabaseKey);
-    
-    // First attempt: Try using the newer relationship model with release_artists
-    const { data: releaseArtists, error: raError } = await supabase
-      .from('release_artists')
-      .select('release_id')
-      .eq('artist_id', artistId);
-    
-    if (!raError && releaseArtists && releaseArtists.length > 0) {
-      // Get the release IDs associated with this artist
-      const releaseIds = releaseArtists.map(ra => ra.release_id);
+    // Attempt with PostgreSQL direct connection first
+    if (dbHost && dbUser && dbPass && dbName) {
+      console.log('Using direct PostgreSQL connection for artist releases query');
       
-      // Now fetch the actual releases
-      const { data: releases, error } = await supabase
-        .from('releases')
-        .select('*')
-        .in('id', releaseIds);
-      
-      if (error) {
-        console.error(`Error fetching releases for artist ${artistId}: ${error.message}`);
-        throw error;
-      }
-      
-      console.log(`Found ${releases ? releases.length : 0} releases for artist ${artistId} using release_artists`);
-      
-      return res.status(200).json({
-        success: true,
-        message: `Found ${releases ? releases.length : 0} releases for artist ${artistId}`,
-        data: releases || []
+      const { Pool } = require('pg');
+      const pool = new Pool({
+        user: dbUser,
+        password: dbPass,
+        host: dbHost,
+        port: dbPort,
+        database: dbName,
+        ssl: { rejectUnauthorized: false }
       });
-    } else {
-      // Fallback: Try using direct artist_id on releases
-      console.log('No releases found using release_artists table, trying direct artist_id query');
       
-      const { data: releases, error } = await supabase
-        .from('releases')
-        .select('*')
-        .eq('artist_id', artistId);
+      try {
+        // First try to get releases via the release_artists join table
+        const joinQuery = `
+          SELECT r.* 
+          FROM releases r
+          JOIN release_artists ra ON r.id = ra.release_id
+          WHERE ra.artist_id = $1
+          ORDER BY r.release_date DESC NULLS LAST
+        `;
+        
+        const result = await pool.query(joinQuery, [artistId]);
+        console.log(`Found ${result.rows.length} releases for artist ${artistId} using join table`);
+        
+        if (result.rows.length > 0) {
+          return res.status(200).json({
+            success: true,
+            message: `Found ${result.rows.length} releases for artist ${artistId}`,
+            data: result.rows
+          });
+        }
+        
+        // If no results, try direct artist_id lookup
+        const directQuery = `
+          SELECT * FROM releases 
+          WHERE artist_id = $1
+          ORDER BY release_date DESC NULLS LAST
+        `;
+        
+        const directResult = await pool.query(directQuery, [artistId]);
+        console.log(`Found ${directResult.rows.length} releases for artist ${artistId} using direct query`);
+        
+        return res.status(200).json({
+          success: true,
+          message: `Found ${directResult.rows.length} releases for artist ${artistId}`,
+          data: directResult.rows || []
+        });
+      } catch (pgError) {
+        console.error(`PostgreSQL error: ${pgError.message}`);
+        // Fall through to Supabase approach
+      } finally {
+        // Always close the pool
+        await pool.end();
+      }
+    }
+    
+    // Fallback to Supabase approach
+    if (supabaseUrl && supabaseKey) {
+      console.log('Falling back to Supabase for artist releases query');
       
-      if (error) {
-        console.error(`Error fetching releases for artist ${artistId} using direct query: ${error.message}`);
-        throw error;
+      // Initialize Supabase client
+      const supabase = createClient(supabaseUrl, supabaseKey);
+      
+      // First attempt: Try using the newer relationship model with release_artists
+      let releases = [];
+      
+      try {
+        // First check release_artists
+        const { data: releaseArtists, error: raError } = await supabase
+          .from('release_artists')
+          .select('release_id')
+          .eq('artist_id', artistId);
+        
+        if (!raError && releaseArtists && releaseArtists.length > 0) {
+          // Get the release IDs associated with this artist
+          const releaseIds = releaseArtists.map(ra => ra.release_id);
+          
+          // Get the releases
+          const { data, error } = await supabase
+            .from('releases')
+            .select('*')
+            .in('id', releaseIds);
+          
+          if (!error && data) {
+            releases = data;
+          }
+        }
+      } catch (error) {
+        console.error(`Error querying release_artists: ${error.message}`);
       }
       
-      console.log(`Found ${releases ? releases.length : 0} releases for artist ${artistId} using direct query`);
+      // If we didn't find any releases, try direct query
+      if (releases.length === 0) {
+        try {
+          const { data, error } = await supabase
+            .from('releases')
+            .select('*')
+            .eq('artist_id', artistId);
+          
+          if (!error && data) {
+            releases = data;
+          }
+        } catch (error) {
+          console.error(`Error with direct artist_id query: ${error.message}`);
+        }
+      }
+      
+      console.log(`Found ${releases.length} releases for artist ${artistId}`);
       
       return res.status(200).json({
         success: true,
-        message: `Found ${releases ? releases.length : 0} releases for artist ${artistId}`,
-        data: releases || []
+        message: `Found ${releases.length} releases for artist ${artistId}`,
+        data: releases
       });
     }
+    
+    // No database connections available
+    return res.status(200).json({
+      success: false,
+      message: 'Database configuration missing',
+      data: []
+    });
   } catch (error) {
     console.error(`Unexpected error in handleArtistReleases: ${error.message}`);
     return res.status(200).json({
       success: false,
       message: `Error fetching artist releases: ${error.message}`,
-      data: []  // Return empty array instead of null
+      data: []
     });
   }
 }
