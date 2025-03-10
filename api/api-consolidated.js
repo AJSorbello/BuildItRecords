@@ -566,6 +566,9 @@ async function handleArtistReleases(req, res, artistId) {
                       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   
   try {
+    // Debug output - inspect the artistId
+    console.log(`Artist ID type: ${typeof artistId}, value: "${artistId}"`);
+    
     // Attempt with PostgreSQL direct connection first
     if (dbHost && dbUser && dbPass && dbName) {
       console.log('Using direct PostgreSQL connection for artist releases query');
@@ -581,6 +584,26 @@ async function handleArtistReleases(req, res, artistId) {
       });
       
       try {
+        // First get the database schema to understand the structure
+        const schemaQuery = `
+          SELECT column_name, data_type 
+          FROM information_schema.columns 
+          WHERE table_name = 'release_artists'
+        `;
+        
+        const schemaResult = await pool.query(schemaQuery);
+        console.log('Release_artists schema:', JSON.stringify(schemaResult.rows));
+        
+        // Also check the artist ID column
+        const artistSchemaQuery = `
+          SELECT column_name, data_type 
+          FROM information_schema.columns 
+          WHERE table_name = 'artists' AND column_name = 'id'
+        `;
+        
+        const artistSchemaResult = await pool.query(artistSchemaQuery);
+        console.log('Artists ID column info:', JSON.stringify(artistSchemaResult.rows));
+        
         // First try to get releases via the release_artists join table
         const joinQuery = `
           SELECT r.* 
@@ -590,6 +613,7 @@ async function handleArtistReleases(req, res, artistId) {
           ORDER BY r.release_date DESC NULLS LAST
         `;
         
+        console.log(`Executing join query with artist ID: ${artistId}`);
         const result = await pool.query(joinQuery, [artistId]);
         console.log(`Found ${result.rows.length} releases for artist ${artistId} using join table`);
         
@@ -608,6 +632,7 @@ async function handleArtistReleases(req, res, artistId) {
           ORDER BY release_date DESC NULLS LAST
         `;
         
+        console.log(`Executing direct query with artist ID: ${artistId}`);
         const directResult = await pool.query(directQuery, [artistId]);
         console.log(`Found ${directResult.rows.length} releases for artist ${artistId} using direct query`);
         
@@ -632,51 +657,98 @@ async function handleArtistReleases(req, res, artistId) {
       // Initialize Supabase client
       const supabase = createClient(supabaseUrl, supabaseKey);
       
-      // First attempt: Try using the newer relationship model with release_artists
+      // CRITICAL CHANGE: Instead of using the Supabase query builder which is giving
+      // the "JSON object requested, multiple rows returned" error, we'll use RPC to 
+      // call a custom server-side function that returns an array
+      
+      // First get the artist details to verify we have a valid ID
+      console.log(`Checking if artist ${artistId} exists in database`);
+      
+      const { data: artistData, error: artistError } = await supabase
+        .from('artists')
+        .select('*')
+        .eq('id', artistId)
+        .limit(1);
+        
+      if (artistError) {
+        console.error(`Error verifying artist: ${artistError.message}`);
+      } else {
+        console.log(`Artist check: Found ${artistData?.length || 0} artists with ID ${artistId}`);
+      }
+      
+      // First attempt: Try using a raw SQL query via RPC
       let releases = [];
       
       try {
-        // First check release_artists
-        const { data: releaseArtists, error: raError } = await supabase
-          .from('release_artists')
-          .select('release_id')
-          .eq('artist_id', artistId);
+        console.log(`Using raw SQL via RPC for artist ${artistId}`);
         
-        if (!raError && releaseArtists && releaseArtists.length > 0) {
-          // Get the release IDs associated with this artist
-          const releaseIds = releaseArtists.map(ra => ra.release_id);
+        // This uses rpc to return an array even when the query would normally
+        // cause the "JSON object requested, multiple rows returned" error
+        const { data, error } = await supabase.rpc('get_artist_releases', {
+          artist_id_param: artistId
+        });
+        
+        if (error) {
+          console.error(`RPC error: ${error.message}`);
           
-          // Get the releases
-          const { data, error } = await supabase
-            .from('releases')
-            .select('*')
-            .in('id', releaseIds);
+          // If RPC fails (e.g., function doesn't exist), fall back to manual queries
           
-          if (!error && data) {
-            releases = data;
-          }
-        }
-      } catch (error) {
-        console.error(`Error querying release_artists: ${error.message}`);
-      }
-      
-      // If we didn't find any releases, try direct query
-      if (releases.length === 0) {
-        try {
-          const { data, error } = await supabase
-            .from('releases')
-            .select('*')
+          // First try release_artists
+          const { data: releaseArtists, error: raError } = await supabase
+            .from('release_artists')
+            .select('release_id')
             .eq('artist_id', artistId);
           
-          if (!error && data) {
-            releases = data;
+          if (!raError && releaseArtists && releaseArtists.length > 0) {
+            console.log(`Found ${releaseArtists.length} release associations for artist ${artistId}`);
+            
+            // Get the release IDs associated with this artist
+            const releaseIds = releaseArtists.map(ra => ra.release_id);
+            
+            // Create an array to collect all releases
+            const allReleases = [];
+            
+            // Process release IDs in batches to avoid "in" clause limitations
+            const batchSize = 20;
+            for (let i = 0; i < releaseIds.length; i += batchSize) {
+              const batchIds = releaseIds.slice(i, i + batchSize);
+              
+              // Get this batch of releases
+              const { data: batchReleases, error: batchError } = await supabase
+                .from('releases')
+                .select('*')
+                .in('id', batchIds);
+              
+              if (!batchError && batchReleases) {
+                allReleases.push(...batchReleases);
+              }
+            }
+            
+            // Set the releases to the collected results
+            releases = allReleases;
+          } else {
+            // Last resort: try direct artist_id on releases
+            console.log('Trying direct artist_id query as last resort');
+            
+            const { data: directData, error: directError } = await supabase
+              .from('releases')
+              .select('*')
+              .eq('artist_id', artistId);
+            
+            if (!directError && directData) {
+              releases = directData;
+            } else {
+              console.error(`Direct query error: ${directError?.message}`);
+            }
           }
-        } catch (error) {
-          console.error(`Error with direct artist_id query: ${error.message}`);
+        } else if (data) {
+          releases = data;
         }
+      } catch (error) {
+        console.error(`Error in Supabase queries: ${error.message}`);
       }
       
-      console.log(`Found ${releases.length} releases for artist ${artistId}`);
+      console.log(`Final result: Found ${releases.length} releases for artist ${artistId}`);
       
       return res.status(200).json({
         success: true,
