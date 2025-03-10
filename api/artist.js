@@ -117,10 +117,35 @@ async function getAllArtistsHandler(req, res) {
     });
   }
   
-  // Initialize Supabase client
-  const supabase = createClient(supabaseUrl, supabaseKey);
-  
   try {
+    // Use direct SQL query approach instead of Supabase ORM to avoid JSON parsing issues
+    if (pool) {
+      try {
+        const query = 'SELECT * FROM artists ORDER BY name';
+        console.log('Executing direct SQL query:', query);
+        
+        const result = await pool.query(query);
+        const artists = result.rows || [];
+        
+        console.log(`Found ${artists.length} artists using direct SQL`);
+        
+        return res.status(200).json({
+          success: true,
+          message: `Found ${artists.length} artists`,
+          data: {
+            artists: artists
+          }
+        });
+      } catch (sqlError) {
+        console.error(`SQL error in getAllArtistsHandler: ${sqlError.message}`);
+        // Fall back to Supabase client if SQL fails
+      }
+    }
+    
+    // Fallback to Supabase client if direct SQL is not available
+    console.log('Falling back to Supabase client for artists query');
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    
     // Get all artists from Supabase - explicitly using .select()
     const { data: artists, error } = await supabase
       .from('artists')
@@ -137,7 +162,7 @@ async function getAllArtistsHandler(req, res) {
       });
     }
     
-    console.log(`Found ${artists?.length || 0} artists`);
+    console.log(`Found ${artists?.length || 0} artists using Supabase client`);
     
     return res.status(200).json({
       success: true,
