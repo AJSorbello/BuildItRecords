@@ -332,12 +332,15 @@ async function handleArtistReleases(req, res, artistId) {
     message: releases.length > 0 ? 
       `Found ${releases.length} releases for artist ${artistId}` : 
       `Found 0 releases for artist ${artistId}`,
-    data: releases,
-    meta: {
-      artistId: artistId,
-      approachUsed: "unknown",
+    data: {
       artist: artist,
-      errors: errorMessages.length > 0 ? errorMessages : undefined
+      releases: releases,
+      artists: artist ? [artist] : [],  // Include artists array for frontend compatibility
+      meta: {
+        artistId: artistId,
+        approachUsed: "unknown",
+        errors: errorMessages.length > 0 ? errorMessages : undefined
+      }
     }
   };
 
