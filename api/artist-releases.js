@@ -326,24 +326,19 @@ async function handleArtistReleases(req, res, artistId) {
     }
   }
 
-  // Final result
+  // Final result - ensure data.releases is properly formatted for the frontend
   const finalResponse = {
     success: true,
     message: releases.length > 0 ? 
       `Found ${releases.length} releases for artist ${artistId}` : 
       `Found 0 releases for artist ${artistId}`,
     data: {
-      artist: artist,
-      releases: releases,
-      artists: artist ? [artist] : [],  // Include artists array for frontend compatibility
-      meta: {
-        artistId: artistId,
-        approachUsed: "unknown",
-        errors: errorMessages.length > 0 ? errorMessages : undefined
-      }
+      releases: releases || [],
+      artist: artist || null,
+      artists: artist ? [artist] : []
     }
   };
 
-  console.log(`[artist-releases] Returning ${releases.length} releases for artist ${artistId}`);
+  console.log(`[artist-releases] Final response format:`, JSON.stringify(finalResponse, null, 2));
   return res.status(200).json(finalResponse);
 }
