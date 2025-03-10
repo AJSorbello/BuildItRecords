@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: buildit-records
+    env: node
+    plan: free
+    buildCommand: npm install && npm run build 
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+    autoDeploy: true
