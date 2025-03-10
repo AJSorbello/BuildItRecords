@@ -39,6 +39,10 @@
       "use": "@vercel/node"
     },
     {
+      "src": "api/artist-releases.js",
+      "use": "@vercel/node"
+    },
+    {
       "src": "api/utils/*.js", 
       "use": "@vercel/node"
     }
@@ -227,6 +231,15 @@
     {
       "src": "/api/diagnostic",
       "dest": "/api/api-consolidated.js",
+      "headers": {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type"
+      }
+    },
+    {
+      "src": "/api/artist-releases/([^/]+)",
+      "dest": "/api/artist-releases.js?id=$1",
       "headers": {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
