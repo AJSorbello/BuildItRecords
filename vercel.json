@@ -298,7 +298,7 @@
     },
     {
       "src": "/records/artists",
-      "dest": "/api/records/artists.js",
+      "dest": "/api/artist.js",
       "headers": {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -316,7 +316,7 @@
     },
     {
       "src": "/records/releases",
-      "dest": "/api/records/releases.js",
+      "dest": "/api/release.js",
       "headers": {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
