@@ -45,16 +45,17 @@
   ],
   "routes": [
     { 
-      "src": "/api/health(/.*)?", 
-      "dest": "/api/health.js",
+      "src": "/api/health-check",
+      "dest": "/api/health-check.js",
       "headers": {
         "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, OPTIONS"
+        "Access-Control-Allow-Methods": "GET, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type"
       }
     },
     { 
-      "src": "/api/health-check(/.*)?", 
-      "dest": "/api/health-check.js",
+      "src": "/api/health(/.*)?", 
+      "dest": "/api/health.js",
       "headers": {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, OPTIONS"
