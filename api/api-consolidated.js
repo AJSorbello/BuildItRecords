@@ -121,6 +121,8 @@ module.exports = async (req, res) => {
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development'
       });
+    } else if (resourceType === 'diagnostic') {
+      return await handleDiagnostic(req, res);
     } else {
       // Handle unsupported resource type
       return res.status(200).json({
@@ -548,8 +550,8 @@ async function handleArtistReleases(req, res, artistId) {
   console.log(`Handling request for artist ${artistId} releases`);
   
   const supabaseUrl = process.env.SUPABASE_URL || 
-                     process.env.VITE_SUPABASE_URL || 
-                     process.env.NEXT_PUBLIC_SUPABASE_URL;
+                    process.env.VITE_SUPABASE_URL || 
+                    process.env.NEXT_PUBLIC_SUPABASE_URL;
                     
   const supabaseKey = process.env.SUPABASE_ANON_KEY || 
                       process.env.VITE_SUPABASE_ANON_KEY || 
@@ -581,20 +583,19 @@ async function handleArtistReleases(req, res, artistId) {
       const { data: releases, error } = await supabase
         .from('releases')
         .select('*')
-        .in('id', releaseIds)
-        .order('release_date', { ascending: false });
+        .in('id', releaseIds);
       
       if (error) {
         console.error(`Error fetching releases for artist ${artistId}: ${error.message}`);
         throw error;
       }
       
-      console.log(`Found ${releases.length} releases for artist ${artistId} using release_artists`);
+      console.log(`Found ${releases ? releases.length : 0} releases for artist ${artistId} using release_artists`);
       
       return res.status(200).json({
         success: true,
-        message: `Found ${releases.length} releases for artist ${artistId}`,
-        data: releases
+        message: `Found ${releases ? releases.length : 0} releases for artist ${artistId}`,
+        data: releases || []
       });
     } else {
       // Fallback: Try using direct artist_id on releases
@@ -603,28 +604,27 @@ async function handleArtistReleases(req, res, artistId) {
       const { data: releases, error } = await supabase
         .from('releases')
         .select('*')
-        .eq('artist_id', artistId)
-        .order('release_date', { ascending: false });
+        .eq('artist_id', artistId);
       
       if (error) {
         console.error(`Error fetching releases for artist ${artistId} using direct query: ${error.message}`);
         throw error;
       }
       
-      console.log(`Found ${releases.length} releases for artist ${artistId} using direct query`);
+      console.log(`Found ${releases ? releases.length : 0} releases for artist ${artistId} using direct query`);
       
       return res.status(200).json({
         success: true,
-        message: `Found ${releases.length} releases for artist ${artistId}`,
-        data: releases
+        message: `Found ${releases ? releases.length : 0} releases for artist ${artistId}`,
+        data: releases || []
       });
     }
   } catch (error) {
     console.error(`Unexpected error in handleArtistReleases: ${error.message}`);
     return res.status(200).json({
       success: false,
-      message: `Error: ${error.message}`,
-      data: []
+      message: `Error fetching artist releases: ${error.message}`,
+      data: []  // Return empty array instead of null
     });
   }
 }
@@ -890,6 +890,46 @@ async function handleSingleTrack(req, res, trackId) {
       success: false,
       message: `Error: ${error.message}`,
       data: null
+    });
+  }
+}
+
+async function handleDiagnostic(req, res) {
+  console.log("Handling diagnostic request");
+  
+  try {
+    const supabaseUrl = process.env.SUPABASE_URL || 
+                      process.env.VITE_SUPABASE_URL || 
+                      process.env.NEXT_PUBLIC_SUPABASE_URL;
+                      
+    const supabaseKey = process.env.SUPABASE_ANON_KEY || 
+                        process.env.VITE_SUPABASE_ANON_KEY || 
+                        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    
+    // Test Supabase connection
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    
+    // Get database schema info
+    const { data: schemasData, error: schemaError } = await supabase
+      .from('information_schema.tables')
+      .select('table_schema, table_name')
+      .eq('table_schema', 'public');
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Diagnostic information',
+      data: {
+        environment: process.env.NODE_ENV || 'unknown',
+        timestamp: new Date().toISOString(),
+        schemas: schemasData || [],
+        errors: schemaError ? [schemaError.message] : []
+      }
+    });
+  } catch (error) {
+    return res.status(200).json({
+      success: false,
+      message: `Diagnostic error: ${error.message}`,
+      data: {}
     });
   }
 }
