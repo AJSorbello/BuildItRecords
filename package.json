@@ -18,7 +18,7 @@
     "dev": "vite",
     "build": "echo 'API-only deployment - no frontend assets to build'",
     "serve": "vite preview",
-    "start": "node server.js",
+    "start": "node render-server.js",
     "start:frontend": "npm run dev",
     "server": "cd server && node server.js",
     "dev:all": "concurrently \"npm run server\" \"npm run dev\"",
