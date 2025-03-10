@@ -43,6 +43,10 @@
       "use": "@vercel/node"
     },
     {
+      "src": "api/inspect-schema.js",
+      "use": "@vercel/node"
+    },
+    {
       "src": "api/utils/*.js", 
       "use": "@vercel/node"
     }
@@ -122,7 +126,7 @@
     },
     {
       "src": "/api/artists/releases/([^/]+)",
-      "dest": "/api/api-consolidated.js?id=$1&sub=releases",
+      "dest": "/api/artist-releases.js?id=$1",
       "headers": {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -247,26 +251,8 @@
       }
     },
     {
-      "src": "/api/artist/releases/([^/]+)",
-      "dest": "/api/artist-releases.js?id=$1",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type"
-      }
-    },
-    {
-      "src": "/api/artists/releases/([^/]+)",
-      "dest": "/api/artist-releases.js?id=$1",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type"
-      }
-    },
-    {
-      "src": "/api/artist-releases/([^/]+)",
-      "dest": "/api/artist-releases.js?id=$1",
+      "src": "/api/inspect-schema",
+      "dest": "/api/inspect-schema.js",
       "headers": {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
