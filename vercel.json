@@ -88,6 +88,33 @@
       }
     },
     {
+      "src": "/api/artists/([^/]+)/releases",
+      "dest": "/api/artist.js?id=$1&endpoint=releases",
+      "headers": {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type"
+      }
+    },
+    {
+      "src": "/api/artists/([^/]+)",
+      "dest": "/api/artist.js?id=$1",
+      "headers": {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type"
+      }
+    },
+    {
+      "src": "/api/artists",
+      "dest": "/api/artist.js",
+      "headers": {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type"
+      }
+    },
+    {
       "src": "/api/release/([^/]+)/tracks",
       "dest": "/api/release.js?id=$1&endpoint=tracks",
       "headers": {
@@ -115,6 +142,24 @@
       }
     },
     {
+      "src": "/api/releases/([^/]+)",
+      "dest": "/api/release.js?id=$1",
+      "headers": {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type"
+      }
+    },
+    {
+      "src": "/api/releases",
+      "dest": "/api/release.js",
+      "headers": {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type"
+      }
+    },
+    {
       "src": "/api/track/([^/]+)",
       "dest": "/api/track.js?id=$1",
       "headers": {
@@ -125,6 +170,24 @@
     },
     {
       "src": "/api/track",
+      "dest": "/api/track.js",
+      "headers": {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type"
+      }
+    },
+    {
+      "src": "/api/tracks/([^/]+)",
+      "dest": "/api/track.js?id=$1",
+      "headers": {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type"
+      }
+    },
+    {
+      "src": "/api/tracks",
       "dest": "/api/track.js",
       "headers": {
         "Access-Control-Allow-Origin": "*",
