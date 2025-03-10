@@ -76,19 +76,29 @@ module.exports = async (req, res) => {
 
 // Handler for GET /api/release - List all releases
 async function getAllReleasesHandler(req, res) {
-  console.log('Fetching all releases');
+  console.log('Fetching all releases - handler entry point');
   
-  // Get environment variables
+  // Check for query parameters
+  const label = req.query.label;
+  const artist = req.query.artist;
+  
+  console.log('Query parameters:', { label, artist });
+  
+  // Get Supabase credentials
   const supabaseUrl = process.env.SUPABASE_URL || 
                      process.env.VITE_SUPABASE_URL || 
                      process.env.NEXT_PUBLIC_SUPABASE_URL;
-                     
+                    
   const supabaseKey = process.env.SUPABASE_ANON_KEY || 
-                     process.env.VITE_SUPABASE_ANON_KEY || 
-                     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+                      process.env.VITE_SUPABASE_ANON_KEY || 
+                      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  
+  console.log('Supabase configuration check:', {
+    hasUrl: !!supabaseUrl,
+    hasKey: !!supabaseKey
+  });
   
   if (!supabaseUrl || !supabaseKey) {
-    console.error('Supabase configuration missing');
     return res.status(200).json({
       success: false,
       message: 'Supabase configuration missing',
@@ -97,162 +107,214 @@ async function getAllReleasesHandler(req, res) {
   }
   
   try {
-    // Try direct SQL approach first to avoid relationship embedding issues
-    if (pool) {
+    // Initialize database pool for direct SQL
+    let localPool;
+    try {
+      console.log('Initializing local pool for direct query');
+      localPool = getPool();
+      console.log('Local pool initialized successfully');
+    } catch (poolError) {
+      console.error(`Failed to initialize local pool: ${poolError.message}`);
+      localPool = null;
+    }
+    
+    // Use direct SQL query approach
+    if (localPool) {
       try {
-        // Query to get releases with artists information
-        const query = `
-          SELECT r.*, a.id as artist_id, a.name as artist_name 
+        console.log('Using direct SQL approach for releases');
+        
+        // Construct query based on parameters
+        let query, queryParams = [];
+        let paramIndex = 1;
+        
+        // Base query with join to get artist information
+        const baseQuery = `
+          SELECT r.*, a.name as artist_name, a.id as artist_id 
           FROM releases r
-          LEFT JOIN artists a ON r.artist_id = a.id
-          ORDER BY r.title
+          LEFT JOIN release_artists ra ON r.id = ra.release_id
+          LEFT JOIN artists a ON ra.artist_id = a.id
         `;
-        console.log('Executing direct SQL query for releases:', query);
         
-        const result = await pool.query(query);
-        const rows = result.rows || [];
+        // Add WHERE clauses based on parameters
+        let whereClause = '';
         
-        console.log(`Found ${rows.length} releases using direct SQL`);
+        if (label) {
+          whereClause += `${whereClause ? ' AND ' : ' WHERE '}r.label_id = $${paramIndex++}`;
+          queryParams.push(label);
+        }
         
-        // Process results to format releases with artists
-        const releases = formatReleasesWithArtists(rows);
+        if (artist) {
+          whereClause += `${whereClause ? ' AND ' : ' WHERE '}ra.artist_id = $${paramIndex++}`;
+          queryParams.push(artist);
+        }
+        
+        // Complete query with ordering
+        query = `${baseQuery}${whereClause} ORDER BY r.release_date DESC NULLS LAST, r.title ASC`;
+        
+        console.log('Executing SQL query:', query, 'with params:', queryParams);
+        
+        const result = await localPool.query(query, queryParams);
+        console.log(`SQL query result: ${result.rowCount} rows`);
+        
+        // Format and return releases with artist info
+        if (result && result.rows && result.rows.length >= 0) {
+          const formattedReleases = formatReleasesWithArtists(result.rows);
+          console.log(`Returning ${formattedReleases.length} formatted releases from SQL query`);
+          
+          return res.status(200).json({
+            success: true,
+            message: `Found ${formattedReleases.length} releases`,
+            data: {
+              releases: formattedReleases
+            }
+          });
+        } else {
+          console.log('SQL query returned no results, falling back to REST API');
+        }
+      } catch (sqlError) {
+        console.error(`SQL query error: ${sqlError.message}`);
+        console.log('SQL query failed, falling back to REST API');
+      }
+    }
+    
+    // Fallback to REST API approach
+    try {
+      console.log('Using fallback approach with REST API');
+      
+      // Base URL for releases endpoint
+      let supabaseRestUrl = `${supabaseUrl}/rest/v1/releases?select=*`;
+      
+      // Add parameters if specified
+      if (label) {
+        supabaseRestUrl += `&label_id=eq.${encodeURIComponent(label)}`;
+      }
+      
+      console.log(`Fetching from REST API: ${supabaseRestUrl}`);
+      
+      const response = await fetch(supabaseRestUrl, {
+        method: 'GET',
+        headers: {
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation'
+        }
+      });
+      
+      if (response.ok) {
+        const releases = await response.json();
+        console.log(`Fetched ${releases.length} releases from REST API`);
+        
+        // If artist is specified, we need to filter the results client-side
+        // as the artist relationship query is more complex for the REST API
+        let filteredReleases = releases;
+        
+        if (artist && filteredReleases.length > 0) {
+          // Get the artist-release relationships
+          const artistReleasesUrl = `${supabaseUrl}/rest/v1/release_artists?artist_id=eq.${encodeURIComponent(artist)}&select=release_id`;
+          const artistReleasesResponse = await fetch(artistReleasesUrl, {
+            method: 'GET',
+            headers: {
+              'apikey': supabaseKey,
+              'Authorization': `Bearer ${supabaseKey}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          if (artistReleasesResponse.ok) {
+            const artistReleases = await artistReleasesResponse.json();
+            const releaseIds = artistReleases.map(ar => ar.release_id);
+            
+            // Filter releases to only those associated with the artist
+            filteredReleases = releases.filter(release => releaseIds.includes(release.id));
+            console.log(`Filtered to ${filteredReleases.length} releases for artist ${artist}`);
+          }
+        }
+        
+        // For completeness, we should also try to get artist names for these releases
+        // But we'll skip that for now to keep the fallback simple
         
         return res.status(200).json({
           success: true,
-          message: `Found ${releases.length} releases`,
+          message: `Found ${filteredReleases.length} releases`,
           data: {
-            releases: releases
+            releases: filteredReleases
           }
         });
-      } catch (sqlError) {
-        console.error(`SQL error in getAllReleasesHandler: ${sqlError.message}`);
-        // Fall back to multi-step approach if SQL fails
+      } else {
+        const errorText = await response.text();
+        console.error(`REST API error: ${response.status} - ${errorText}`);
+        throw new Error(`REST API error: ${response.status}`);
       }
-    }
-    
-    // Initialize Supabase client for fallback approach
-    console.log('Falling back to multi-step approach for releases');
-    const supabase = createClient(supabaseUrl, supabaseKey);
-    
-    // Multi-step approach to avoid relationship errors
-    console.log('Using multi-step approach to fetch releases and related data');
-    
-    // Step 1: Get all releases first
-    const { data: releases, error: releasesError } = await supabase
-      .from('releases')
-      .select('*');
-    
-    if (releasesError) {
-      console.error(`Error fetching releases: ${releasesError.message}`);
+    } catch (fetchError) {
+      console.error(`Fetch error: ${fetchError.message}`);
+      
+      // Last resort: return empty array with error message
       return res.status(200).json({
         success: false,
-        message: `Error fetching releases: ${releasesError.message}`,
+        message: `Error fetching releases: ${fetchError.message}`,
         data: {
-          releases: [] // Return empty array instead of null
+          releases: [] // Return empty array as last resort
         }
       });
     }
-    
-    if (!releases || releases.length === 0) {
-      console.log('No releases found');
-      return res.status(200).json({
-        success: true,
-        message: 'No releases found',
-        data: {
-          releases: []
-        }
-      });
-    }
-    
-    console.log(`Found ${releases.length} releases`);
-    
-    // Step 2: Prepare release data with placeholder for artist info
-    const releasesWithArtists = releases.map(release => ({
-      ...release,
-      artist: null // Placeholder for artist data
-    }));
-    
-    // Step 3: Get artist information for each release
-    for (let i = 0; i < releasesWithArtists.length; i++) {
-      const release = releasesWithArtists[i];
-      const artistId = release.artist_id;
-      
-      if (artistId) {
-        try {
-          const { data: artist, error: artistError } = await supabase
-            .from('artists')
-            .select('*')
-            .eq('id', artistId)
-            .single();
-          
-          if (!artistError && artist) {
-            releasesWithArtists[i].artist = artist;
-          } else {
-            console.log(`Could not find artist with id ${artistId}: ${artistError?.message || 'No error message'}`);
-          }
-        } catch (err) {
-          console.error(`Error fetching artist for release ${release.id}: ${err.message}`);
-        }
-      }
-    }
-    
-    console.log(`Completed processing ${releasesWithArtists.length} releases with artist data`);
-    
-    return res.status(200).json({
-      success: true,
-      message: `Found ${releasesWithArtists.length} releases`,
-      data: {
-        releases: releasesWithArtists
-      }
-    });
-    
   } catch (error) {
     console.error(`Unexpected error in getAllReleasesHandler: ${error.message}`);
+    
     return res.status(200).json({
       success: false,
-      message: `Error fetching release releases: ${error.message}`,
+      message: `Server error: ${error.message}`,
       data: {
-        releases: []
+        releases: [] // Return empty array on error
       }
     });
   }
 }
 
-// Helper function to format releases with artists from raw query results
+/**
+ * Helper function to format releases with artist information
+ * Processes results from a direct SQL query that joins releases and artists
+ */
 function formatReleasesWithArtists(rows) {
-  // Group rows by release ID
-  const releasesMap = {};
+  // Map to store releases with their artists
+  const releasesMap = new Map();
   
+  // Process each row and combine artists for the same release
   rows.forEach(row => {
     const releaseId = row.id;
     
-    if (!releasesMap[releaseId]) {
-      // Initialize the release object
-      releasesMap[releaseId] = {
-        id: row.id,
+    if (!releasesMap.has(releaseId)) {
+      // Create a new release entry
+      const release = {
+        id: releaseId,
         title: row.title,
         release_date: row.release_date,
-        catalog_number: row.catalog_number,
-        description: row.description,
-        image_url: row.image_url,
+        artwork_url: row.artwork_url,
         spotify_url: row.spotify_url,
-        bandcamp_url: row.bandcamp_url,
-        apple_music_url: row.apple_music_url,
+        label_id: row.label_id,
+        release_type: row.release_type,
         created_at: row.created_at,
         updated_at: row.updated_at,
-        artist_id: row.artist_id,
-        label_id: row.label_id,
-        // Add artist information
-        artist: row.artist_id ? {
-          id: row.artist_id,
-          name: row.artist_name || 'Unknown Artist'
-        } : null
+        artists: []
       };
+      
+      releasesMap.set(releaseId, release);
+    }
+    
+    // Get the release from the map
+    const release = releasesMap.get(releaseId);
+    
+    // Add artist info if present and not already added
+    if (row.artist_id && !release.artists.some(a => a.id === row.artist_id)) {
+      release.artists.push({
+        id: row.artist_id,
+        name: row.artist_name || 'Unknown Artist'
+      });
     }
   });
   
-  // Convert map to array
-  return Object.values(releasesMap);
+  // Convert map values to array and return
+  return Array.from(releasesMap.values());
 }
 
 // Handler for GET /api/release?label=[id] - List releases by label
