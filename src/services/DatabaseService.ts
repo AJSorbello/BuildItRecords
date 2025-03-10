@@ -593,12 +593,16 @@ class DatabaseService {
       
       const response = await this.fetchApi<{
         success: boolean;
-        data: {
-          artists: any[];
-        };
+        message?: string;
+        data: any[] | { artists: any[] };
       }>(`/artists?label=${id}`);
       
-      if (!response?.success || !response?.data?.artists) {
+      console.log('[DEBUG] Response data count:', Array.isArray(response?.data) ? response.data.length : response?.data?.artists?.length);
+      
+      // Handle both formats: 
+      // 1. New API format: { success: true, data: [...] }
+      // 2. Old API format: { success: true, data: { artists: [...] } }
+      if (!response?.success || (!Array.isArray(response?.data) && !response?.data?.artists)) {
         console.error('Invalid response format from server:', response);
         
         // For buildit-records, attempt alternative approaches
@@ -625,17 +629,20 @@ class DatabaseService {
 
       // Extra logging for buildit-records
       if (id === 'buildit-records') {
-        console.log(`[DEBUG] Found ${response.data.artists.length} artists for buildit-records`);
-        if (response.data.artists.length > 0) {
+        const artistCount = Array.isArray(response.data) ? response.data.length : response.data.artists?.length || 0;
+        console.log(`[DEBUG] Found ${artistCount} artists for buildit-records`);
+        
+        if (artistCount > 0) {
+          const sampleArtist = Array.isArray(response.data) ? response.data[0] : response.data.artists[0];
           console.log('[DEBUG] Sample artist:', {
-            id: response.data.artists[0].id,
-            name: response.data.artists[0].name,
-            labelId: response.data.artists[0].label_id
+            id: sampleArtist.id,
+            name: sampleArtist.name,
+            labelId: sampleArtist.label_id
           });
         }
       }
 
-      return response.data.artists.map(artist => this.mapSpotifyArtistToArtist(artist));
+      return Array.isArray(response.data) ? response.data.map(artist => this.mapSpotifyArtistToArtist(artist)) : response.data.artists.map(artist => this.mapSpotifyArtistToArtist(artist));
     } catch (error) {
       console.error('Error fetching artists for label:', error);
       throw new DatabaseError('Failed to fetch artists');
