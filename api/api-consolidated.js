@@ -76,28 +76,48 @@ module.exports = async (req, res) => {
     // Route to the correct handler based on the path
     if (resourceType === 'artist') {
       if (resourceId) {
-        // Handle specific artist request - not implemented in this version
-        return res.status(200).json({
-          success: false,
-          message: 'Specific artist endpoint not implemented in consolidated API',
-          data: null
-        });
+        // Handle specific artist request
+        if (pathSegments[3] === 'releases') {
+          // Handle artist releases (e.g., /api/artist/123/releases)
+          return await handleArtistReleases(req, res, resourceId);
+        } else {
+          // Handle single artist by ID
+          return await handleSingleArtist(req, res, resourceId);
+        }
       } else {
         // Handle all artists request
         return await handleAllArtists(req, res);
       }
     } else if (resourceType === 'release') {
       if (resourceId) {
-        // Handle specific release request - not implemented in this version
-        return res.status(200).json({
-          success: false,
-          message: 'Specific release endpoint not implemented in consolidated API',
-          data: null
-        });
+        // Handle specific release request
+        if (pathSegments[3] === 'tracks') {
+          // Handle release tracks (e.g., /api/release/123/tracks)
+          return await handleReleaseTracks(req, res, resourceId);
+        } else {
+          // Handle single release by ID
+          return await handleSingleRelease(req, res, resourceId);
+        }
       } else {
         // Handle all releases request
         return await handleAllReleases(req, res);
       }
+    } else if (resourceType === 'track') {
+      if (resourceId) {
+        // Handle specific track request
+        return await handleSingleTrack(req, res, resourceId);
+      } else {
+        // Handle all tracks request
+        return await handleAllTracks(req, res);
+      }
+    } else if (resourceType === 'status' || resourceType === 'health-check' || pathSegments[1] === 'health') {
+      // Handle health check endpoint
+      return res.status(200).json({
+        success: true,
+        message: 'API is healthy',
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV || 'development'
+      });
     } else {
       // Handle unsupported resource type
       return res.status(200).json({
@@ -450,4 +470,423 @@ function formatReleasesWithArtists(rows) {
   
   // Convert map values to array and return
   return Array.from(releasesMap.values());
+}
+
+// New handlers for specific artist and release endpoints
+async function handleSingleArtist(req, res, artistId) {
+  console.log(`Handling request for single artist ${artistId}`);
+  
+  const supabaseUrl = process.env.SUPABASE_URL || 
+                     process.env.VITE_SUPABASE_URL || 
+                     process.env.NEXT_PUBLIC_SUPABASE_URL;
+                    
+  const supabaseKey = process.env.SUPABASE_ANON_KEY || 
+                      process.env.VITE_SUPABASE_ANON_KEY || 
+                      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  
+  if (!supabaseUrl || !supabaseKey) {
+    return res.status(200).json({
+      success: false,
+      message: 'Supabase configuration missing',
+      data: null
+    });
+  }
+  
+  // Initialize Supabase client
+  const supabase = createClient(supabaseUrl, supabaseKey);
+  
+  // Support both UUID and Spotify ID formats
+  let query;
+  const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(artistId);
+  
+  if (isUUID) {
+    // If the ID is a UUID, use the id column
+    query = supabase
+      .from('artists')
+      .select('*')
+      .eq('id', artistId);
+  } else {
+    // Otherwise assume it's a Spotify ID
+    query = supabase
+      .from('artists')
+      .select('*')
+      .eq('id', artistId);
+  }
+  
+  const { data: artist, error } = await query.single();
+  
+  if (error) {
+    console.error(`Error fetching artist ${artistId}: ${error.message}`);
+    return res.status(200).json({
+      success: false,
+      message: `Error fetching artist ${artistId}: ${error.message}`,
+      data: null
+    });
+  }
+  
+  if (!artist) {
+    return res.status(200).json({
+      success: false,
+      message: `Artist with ID ${artistId} not found`,
+      data: null
+    });
+  }
+  
+  console.log(`Found artist: ${artist.name}`);
+  
+  return res.status(200).json({
+    success: true,
+    message: 'Artist found',
+    data: artist
+  });
+}
+
+async function handleArtistReleases(req, res, artistId) {
+  console.log(`Handling request for artist ${artistId} releases`);
+  
+  const supabaseUrl = process.env.SUPABASE_URL || 
+                     process.env.VITE_SUPABASE_URL || 
+                     process.env.NEXT_PUBLIC_SUPABASE_URL;
+                    
+  const supabaseKey = process.env.SUPABASE_ANON_KEY || 
+                      process.env.VITE_SUPABASE_ANON_KEY || 
+                      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  
+  if (!supabaseUrl || !supabaseKey) {
+    return res.status(200).json({
+      success: false,
+      message: 'Supabase configuration missing',
+      data: []
+    });
+  }
+  
+  try {
+    // Initialize Supabase client
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    
+    // First attempt: Try using the newer relationship model with release_artists
+    const { data: releaseArtists, error: raError } = await supabase
+      .from('release_artists')
+      .select('release_id')
+      .eq('artist_id', artistId);
+    
+    if (!raError && releaseArtists && releaseArtists.length > 0) {
+      // Get the release IDs associated with this artist
+      const releaseIds = releaseArtists.map(ra => ra.release_id);
+      
+      // Now fetch the actual releases
+      const { data: releases, error } = await supabase
+        .from('releases')
+        .select('*')
+        .in('id', releaseIds)
+        .order('release_date', { ascending: false });
+      
+      if (error) {
+        console.error(`Error fetching releases for artist ${artistId}: ${error.message}`);
+        throw error;
+      }
+      
+      console.log(`Found ${releases.length} releases for artist ${artistId} using release_artists`);
+      
+      return res.status(200).json({
+        success: true,
+        message: `Found ${releases.length} releases for artist ${artistId}`,
+        data: releases
+      });
+    } else {
+      // Fallback: Try using direct artist_id on releases
+      console.log('No releases found using release_artists table, trying direct artist_id query');
+      
+      const { data: releases, error } = await supabase
+        .from('releases')
+        .select('*')
+        .eq('artist_id', artistId)
+        .order('release_date', { ascending: false });
+      
+      if (error) {
+        console.error(`Error fetching releases for artist ${artistId} using direct query: ${error.message}`);
+        throw error;
+      }
+      
+      console.log(`Found ${releases.length} releases for artist ${artistId} using direct query`);
+      
+      return res.status(200).json({
+        success: true,
+        message: `Found ${releases.length} releases for artist ${artistId}`,
+        data: releases
+      });
+    }
+  } catch (error) {
+    console.error(`Unexpected error in handleArtistReleases: ${error.message}`);
+    return res.status(200).json({
+      success: false,
+      message: `Error: ${error.message}`,
+      data: []
+    });
+  }
+}
+
+async function handleSingleRelease(req, res, releaseId) {
+  console.log(`Handling request for single release ${releaseId}`);
+  
+  const supabaseUrl = process.env.SUPABASE_URL || 
+                     process.env.VITE_SUPABASE_URL || 
+                     process.env.NEXT_PUBLIC_SUPABASE_URL;
+                    
+  const supabaseKey = process.env.SUPABASE_ANON_KEY || 
+                      process.env.VITE_SUPABASE_ANON_KEY || 
+                      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  
+  if (!supabaseUrl || !supabaseKey) {
+    return res.status(200).json({
+      success: false,
+      message: 'Supabase configuration missing',
+      data: []
+    });
+  }
+  
+  try {
+    // Initialize Supabase client
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    
+    // First attempt: Try to get release with artist info using nested select
+    try {
+      const { data: release, error } = await supabase
+        .from('releases')
+        .select(`
+          *,
+          artists (*)
+        `)
+        .eq('id', releaseId)
+        .single();
+      
+      if (!error && release) {
+        console.log(`Found release: ${release.title}`);
+        
+        return res.status(200).json({
+          success: true,
+          message: 'Release found',
+          data: release
+        });
+      } else {
+        console.log(`Error with nested query, falling back to simple query: ${error?.message}`);
+      }
+    } catch (nestedError) {
+      console.error('Error with nested query:', nestedError.message);
+    }
+    
+    // Fallback: Simple query without artist info
+    const { data: release, error } = await supabase
+      .from('releases')
+      .select('*')
+      .eq('id', releaseId)
+      .single();
+    
+    if (error) {
+      console.error(`Error fetching release ${releaseId}: ${error.message}`);
+      return res.status(200).json({
+        success: false,
+        message: `Error fetching release ${releaseId}: ${error.message}`,
+        data: []
+      });
+    }
+    
+    if (!release) {
+      return res.status(200).json({
+        success: false,
+        message: `Release with ID ${releaseId} not found`,
+        data: []
+      });
+    }
+    
+    console.log(`Found release (basic info): ${release.title}`);
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Release found',
+      data: release
+    });
+  } catch (error) {
+    console.error(`Unexpected error in handleSingleRelease: ${error.message}`);
+    return res.status(200).json({
+      success: false,
+      message: `Error: ${error.message}`,
+      data: []
+    });
+  }
+}
+
+async function handleReleaseTracks(req, res, releaseId) {
+  console.log(`Handling request for release ${releaseId} tracks`);
+  
+  const supabaseUrl = process.env.SUPABASE_URL || 
+                     process.env.VITE_SUPABASE_URL || 
+                     process.env.NEXT_PUBLIC_SUPABASE_URL;
+                    
+  const supabaseKey = process.env.SUPABASE_ANON_KEY || 
+                      process.env.VITE_SUPABASE_ANON_KEY || 
+                      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  
+  if (!supabaseUrl || !supabaseKey) {
+    return res.status(200).json({
+      success: false,
+      message: 'Supabase configuration missing',
+      data: []
+    });
+  }
+  
+  try {
+    // Initialize Supabase client
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    
+    // Get tracks for the release
+    const { data: tracks, error } = await supabase
+      .from('tracks')
+      .select('*')
+      .eq('release_id', releaseId)
+      .order('track_number', { ascending: true });
+    
+    if (error) {
+      console.error(`Error fetching tracks for release ${releaseId}: ${error.message}`);
+      return res.status(200).json({
+        success: false,
+        message: `Error fetching tracks for release ${releaseId}: ${error.message}`,
+        data: []
+      });
+    }
+    
+    console.log(`Found ${tracks.length} tracks for release ${releaseId}`);
+    
+    return res.status(200).json({
+      success: true,
+      message: `Found ${tracks.length} tracks for release ${releaseId}`,
+      data: tracks
+    });
+  } catch (error) {
+    console.error(`Unexpected error in handleReleaseTracks: ${error.message}`);
+    return res.status(200).json({
+      success: false,
+      message: `Error: ${error.message}`,
+      data: []
+    });
+  }
+}
+
+async function handleAllTracks(req, res) {
+  console.log('Handling request for all tracks');
+  
+  const supabaseUrl = process.env.SUPABASE_URL || 
+                     process.env.VITE_SUPABASE_URL || 
+                     process.env.NEXT_PUBLIC_SUPABASE_URL;
+                    
+  const supabaseKey = process.env.SUPABASE_ANON_KEY || 
+                      process.env.VITE_SUPABASE_ANON_KEY || 
+                      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  
+  if (!supabaseUrl || !supabaseKey) {
+    return res.status(200).json({
+      success: false,
+      message: 'Supabase configuration missing',
+      data: []
+    });
+  }
+  
+  try {
+    // Initialize Supabase client
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    
+    // Get all tracks
+    const { data: tracks, error } = await supabase
+      .from('tracks')
+      .select('*')
+      .order('title');
+    
+    if (error) {
+      console.error(`Error fetching tracks: ${error.message}`);
+      return res.status(200).json({
+        success: false,
+        message: `Error fetching tracks: ${error.message}`,
+        data: []
+      });
+    }
+    
+    console.log(`Found ${tracks.length} tracks`);
+    
+    return res.status(200).json({
+      success: true,
+      message: `Found ${tracks.length} tracks`,
+      data: tracks
+    });
+  } catch (error) {
+    console.error(`Unexpected error in handleAllTracks: ${error.message}`);
+    return res.status(200).json({
+      success: false,
+      message: `Error: ${error.message}`,
+      data: []
+    });
+  }
+}
+
+async function handleSingleTrack(req, res, trackId) {
+  console.log(`Handling request for single track ${trackId}`);
+  
+  const supabaseUrl = process.env.SUPABASE_URL || 
+                     process.env.VITE_SUPABASE_URL || 
+                     process.env.NEXT_PUBLIC_SUPABASE_URL;
+                    
+  const supabaseKey = process.env.SUPABASE_ANON_KEY || 
+                      process.env.VITE_SUPABASE_ANON_KEY || 
+                      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  
+  if (!supabaseUrl || !supabaseKey) {
+    return res.status(200).json({
+      success: false,
+      message: 'Supabase configuration missing',
+      data: null
+    });
+  }
+  
+  try {
+    // Initialize Supabase client
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    
+    // Get track by ID
+    const { data: track, error } = await supabase
+      .from('tracks')
+      .select('*')
+      .eq('id', trackId)
+      .single();
+    
+    if (error) {
+      console.error(`Error fetching track ${trackId}: ${error.message}`);
+      return res.status(200).json({
+        success: false,
+        message: `Error fetching track ${trackId}: ${error.message}`,
+        data: null
+      });
+    }
+    
+    if (!track) {
+      return res.status(200).json({
+        success: false,
+        message: `Track with ID ${trackId} not found`,
+        data: null
+      });
+    }
+    
+    console.log(`Found track: ${track.title}`);
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Track found',
+      data: track
+    });
+  } catch (error) {
+    console.error(`Unexpected error in handleSingleTrack: ${error.message}`);
+    return res.status(200).json({
+      success: false,
+      message: `Error: ${error.message}`,
+      data: null
+    });
+  }
 }

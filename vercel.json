@@ -35,7 +35,7 @@
       }
     },
     {
-      "src": "api/*.js",
+      "src": "api/api-consolidated.js",
       "use": "@vercel/node"
     },
     {
@@ -46,79 +46,7 @@
   "routes": [
     { 
       "src": "/api/status",
-      "dest": "/api/status.js",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type"
-      }
-    },
-    { 
-      "src": "/api/debug",
-      "dest": "/api/debug.js",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type"
-      }
-    },
-    { 
-      "src": "/api/v2/artists",
       "dest": "/api/api-consolidated.js",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type"
-      }
-    },
-    { 
-      "src": "/api/v2/releases",
-      "dest": "/api/api-consolidated.js",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type"
-      }
-    },
-    { 
-      "src": "/api/health-check",
-      "dest": "/api/health-check.js",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type"
-      }
-    },
-    { 
-      "src": "/api/healthcheck",
-      "dest": "/api/health-check.js",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type"
-      }
-    },
-    { 
-      "src": "/api/health",
-      "dest": "/api/health.js",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type"
-      }
-    },
-    {
-      "src": "/api/artist/([^/]+)/releases",
-      "dest": "/api/artist.js?id=$1&endpoint=releases",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type"
-      }
-    },
-    {
-      "src": "/api/artist/([^/]+)",
-      "dest": "/api/artist.js?id=$1",
       "headers": {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -127,7 +55,43 @@
     },
     {
       "src": "/api/artist",
-      "dest": "/api/artist.js",
+      "dest": "/api/api-consolidated.js",
+      "headers": {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type"
+      }
+    },
+    {
+      "src": "/api/artists",
+      "dest": "/api/api-consolidated.js",
+      "headers": {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type"
+      }
+    },
+    {
+      "src": "/api/artist/([^/]+)",
+      "dest": "/api/api-consolidated.js?id=$1",
+      "headers": {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type"
+      }
+    },
+    {
+      "src": "/api/artists/([^/]+)",
+      "dest": "/api/api-consolidated.js?id=$1",
+      "headers": {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type"
+      }
+    },
+    {
+      "src": "/api/artist/([^/]+)/releases",
+      "dest": "/api/api-consolidated.js?id=$1&sub=releases",
       "headers": {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -136,43 +100,7 @@
     },
     {
       "src": "/api/artists/([^/]+)/releases",
-      "dest": "/api/artist.js?id=$1&endpoint=releases",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type"
-      }
-    },
-    {
-      "src": "/api/artists/([^/]+)",
-      "dest": "/api/artist.js?id=$1",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type"
-      }
-    },
-    {
-      "src": "/api/artists",
-      "dest": "/api/artist.js",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type"
-      }
-    },
-    {
-      "src": "/api/release/([^/]+)/tracks",
-      "dest": "/api/release.js?id=$1&endpoint=tracks",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type"
-      }
-    },
-    {
-      "src": "/api/release/([^/]+)",
-      "dest": "/api/release.js?id=$1",
+      "dest": "/api/api-consolidated.js?id=$1&sub=releases",
       "headers": {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -181,16 +109,7 @@
     },
     {
       "src": "/api/release",
-      "dest": "/api/release.js",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type"
-      }
-    },
-    {
-      "src": "/api/releases/([^/]+)",
-      "dest": "/api/release.js?id=$1",
+      "dest": "/api/api-consolidated.js",
       "headers": {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -199,7 +118,7 @@
     },
     {
       "src": "/api/releases",
-      "dest": "/api/release.js",
+      "dest": "/api/api-consolidated.js",
       "headers": {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -207,8 +126,35 @@
       }
     },
     {
-      "src": "/api/track/([^/]+)",
-      "dest": "/api/track.js?id=$1",
+      "src": "/api/release/([^/]+)",
+      "dest": "/api/api-consolidated.js?id=$1",
+      "headers": {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type"
+      }
+    },
+    {
+      "src": "/api/releases/([^/]+)",
+      "dest": "/api/api-consolidated.js?id=$1",
+      "headers": {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type"
+      }
+    },
+    {
+      "src": "/api/release/([^/]+)/tracks",
+      "dest": "/api/api-consolidated.js?id=$1&sub=tracks",
+      "headers": {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type"
+      }
+    },
+    {
+      "src": "/api/releases/([^/]+)/tracks",
+      "dest": "/api/api-consolidated.js?id=$1&sub=tracks",
       "headers": {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -217,16 +163,7 @@
     },
     {
       "src": "/api/track",
-      "dest": "/api/track.js",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type"
-      }
-    },
-    {
-      "src": "/api/tracks/([^/]+)",
-      "dest": "/api/track.js?id=$1",
+      "dest": "/api/api-consolidated.js",
       "headers": {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -235,7 +172,7 @@
     },
     {
       "src": "/api/tracks",
-      "dest": "/api/track.js",
+      "dest": "/api/api-consolidated.js",
       "headers": {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -243,150 +180,38 @@
       }
     },
     {
-      "src": "/api/label/([^/]+)",
-      "dest": "/api/label.js?id=$1",
+      "src": "/api/track/([^/]+)",
+      "dest": "/api/api-consolidated.js?id=$1",
       "headers": {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type"
-      }
-    },
-    {
-      "src": "/api/label",
-      "dest": "/api/label.js",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type"
-      }
-    },
-    {
-      "src": "/api/diagnostic",
-      "dest": "/api/health.js?extended=true",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type"
-      }
-    },
-    {
-      "src": "/api/artists/label/([^/]+)",
-      "dest": "/api/artist.js?label=$1",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type"
-      }
-    },
-    {
-      "src": "/api/artists",
-      "dest": "/api/artist.js",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type"
-      }
-    },
-    {
-      "src": "/api/releases",
-      "dest": "/api/release.js",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type"
-      }
-    },
-    {
-      "src": "/records/artists",
-      "dest": "/api/artist.js",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type"
-      }
-    },
-    {
-      "src": "/records/artists/([^/]+)",
-      "dest": "/api/artist.js?id=$1",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type"
-      }
-    },
-    {
-      "src": "/records/releases",
-      "dest": "/api/release.js",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type"
-      }
-    },
-    {
-      "src": "/records/releases/([^/]+)",
-      "dest": "/api/release.js?id=$1",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type"
-      }
-    },
-    {
-      "src": "/api/tracks",
-      "dest": "/api/track.js",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type"
-      }
-    },
-    {
-      "src": "/api/artists/([^/]+)",
-      "dest": "/api/artist.js?id=$1",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type"
-      }
-    },
-    {
-      "src": "/api/releases/([^/]+)",
-      "dest": "/api/release.js?id=$1",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, OPTIONS",
         "Access-Control-Allow-Headers": "Content-Type"
       }
     },
     {
       "src": "/api/tracks/([^/]+)",
-      "dest": "/api/track.js?id=$1",
+      "dest": "/api/api-consolidated.js?id=$1",
+      "headers": {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type"
+      }
+    },
+    {
+      "src": "/api/health-check",
+      "dest": "/api/api-consolidated.js",
       "headers": {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, OPTIONS",
         "Access-Control-Allow-Headers": "Content-Type"
       }
-    },
-    {
-      "src": "/(tech|records|deep)/(.*)",
-      "dest": "dist/index.html"
-    },
-    {
-      "src": "/admin/(.*)",
-      "dest": "dist/index.html"
-    },
-    {
-      "src": "/(artists|releases|playlists|submit|legal|about|contact)/(.*)",
-      "dest": "dist/index.html"
-    },
-    {
-      "src": "/(records|tech|deep)/(artists|releases|playlists|submit|legal|about|contact)/(.*)",
-      "dest": "dist/index.html"
     },
     {
       "src": "/(.*)",
-      "dest": "dist/$1"
+      "dest": "/dist/$1",
+      "headers": {
+        "Cache-Control": "public, max-age=86400, immutable"
+      }
     }
   ],
   "env": {
@@ -396,19 +221,7 @@
     "ADMIN_USERNAME": "admin",
     "ADMIN_PASSWORD_HASH": "$2a$10$nQ0oN9pavoYZiAjdPdstL.S.Vi/3012suNyKxHX/CI39wB424l9Ya",
     "JWT_SECRET": "buildit_records_jwt_secret_2025",
-    "VITE_SUPABASE_URL": "https://liuaozuvkmvanmchndzl.supabase.co",
-    "VITE_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxpdWFvenV2a212YW5tY2huZHpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU4NDg0MzQsImV4cCI6MjA1MTQyNDQzNH0.tlHgYcid26cTNuDoKZkHacwfaJ7BWR9d35EtAxtTB_g",
-    "NEXT_PUBLIC_SUPABASE_URL": "https://liuaozuvkmvanmchndzl.supabase.co",
-    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxpdWFvenV2a212YW5tY2huZHpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU4NDg0MzQsImV4cCI6MjA1MTQyNDQzNH0.tlHgYcid26cTNuDoKZkHacwfaJ7BWR9d35EtAxtTB_g",
-    "SUPABASE_URL": "https://liuaozuvkmvanmchndzl.supabase.co",
-    "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxpdWFvenV2a212YW5tY2huZHpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU4NDg0MzQsImV4cCI6MjA1MTQyNDQzNH0.tlHgYcid26cTNuDoKZkHacwfaJ7BWR9d35EtAxtTB_g"
-  },
-  "git": {
-    "deploymentEnabled": {
-      "main": true,
-      "master": true,
-      "vercel-deploy-fix": true
-    }
-  },
-  "public": true
+    "REACT_APP_API_URL": "/api",
+    "REACT_APP_ENV": "production"
+  }
 }
