@@ -63,6 +63,24 @@
       }
     },
     { 
+      "src": "/api/v2/artists",
+      "dest": "/api/api-consolidated.js",
+      "headers": {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type"
+      }
+    },
+    { 
+      "src": "/api/v2/releases",
+      "dest": "/api/api-consolidated.js",
+      "headers": {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type"
+      }
+    },
+    { 
       "src": "/api/health-check",
       "dest": "/api/health-check.js",
       "headers": {
