@@ -7,8 +7,10 @@
  * - /api/artist/[id]/releases - Get releases for an artist
  */
 
-const { createClient } = require('@supabase/supabase-js') // eslint-disable-line @typescript-eslint/no-var-requires;
-const { addCorsHeaders, getPool, formatResponse, hasColumn, getTableSchema } = require('./utils/db-utils') // eslint-disable-line @typescript-eslint/no-var-requires;
+/* eslint-disable @typescript-eslint/no-var-requires */
+const { createClient } = require('@supabase/supabase-js')
+const { addCorsHeaders, getPool, formatResponse, hasColumn, getTableSchema } = require('./utils/db-utils')
+/* eslint-enable @typescript-eslint/no-var-requires */
 
 // Initialize database connection for PostgreSQL direct access
 let pool;
@@ -95,29 +97,42 @@ async function getAllArtistsHandler(req, res) {
   // Initialize Supabase client
   const supabase = createClient(supabaseUrl, supabaseKey);
   
-  // Get all artists from Supabase
-  const { data: artists, error } = await supabase
-    .from('artists')
-    .select('*');
-  
-  if (error) {
-    console.error(`Error fetching artists: ${error.message}`);
+  try {
+    // Get all artists from Supabase
+    const { data: artists, error } = await supabase
+      .from('artists')
+      .select('*');
+    
+    if (error) {
+      console.error(`Error fetching artists: ${error.message}`);
+      return res.status(200).json({
+        success: false,
+        message: `Error fetching artists: ${error.message}`,
+        data: {
+          artists: [] // Return empty array instead of null
+        }
+      });
+    }
+    
+    console.log(`Found ${artists?.length || 0} artists`);
+    
+    return res.status(200).json({
+      success: true,
+      message: `Found ${artists?.length || 0} artists`,
+      data: {
+        artists: artists || [] // Ensure we return an array even if null
+      }
+    });
+  } catch (error) {
+    console.error(`Unexpected error in getAllArtistsHandler: ${error.message}`);
     return res.status(200).json({
       success: false,
-      message: `Error fetching artists: ${error.message}`,
-      data: null
+      message: `Error fetching artist artists: ${error.message}`,
+      data: {
+        artists: [] // Return empty array instead of null
+      }
     });
   }
-  
-  console.log(`Found ${artists.length} artists`);
-  
-  return res.status(200).json({
-    success: true,
-    message: `Found ${artists.length} artists`,
-    data: {
-      artists: artists
-    }
-  });
 }
 
 // Handler for GET /api/artist?label=[id] - List artists by label

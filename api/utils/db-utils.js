@@ -100,7 +100,7 @@ function hasColumn(schema, columnName) {
  */
 async function getAllTables(client) {
   try {
-    console.log('Fetching all tables in database');
+    console.log('Attempting to query all tables in the database');
     const query = `
       SELECT table_name 
       FROM information_schema.tables 
@@ -108,6 +108,7 @@ async function getAllTables(client) {
       ORDER BY table_name;
     `;
     const result = await client.query(query);
+    console.log(`Found ${result.rows.length} tables in the database`);
     return result.rows.map(row => row.table_name);
   } catch (error) {
     console.error('Error fetching tables:', error.message);
@@ -138,22 +139,41 @@ function logResponse(data, endpoint) {
 }
 
 /**
- * Add CORS headers helper function
+ * Format a standardized API response
+ * @param {boolean} success - Was the operation successful
+ * @param {string} message - Human-readable message
+ * @param {any} data - Response data
+ * @returns {Object} Formatted response object
+ */
+function formatResponse(success, message, data) {
+  // Log detailed information about the response for debugging
+  console.log(`API Response: success=${success}, message=${message}, data=${data ? 'present' : 'null'}`);
+  if (data && typeof data === 'object') {
+    console.log(`Data type: ${Array.isArray(data) ? 'array' : 'object'}, length: ${Array.isArray(data) ? data.length : Object.keys(data).length}`);
+  }
+  
+  return {
+    success,
+    message,
+    data
+  };
+}
+
+/**
+ * Add CORS headers to a response
  * @param {Object} res - Express response object
  */
 function addCorsHeaders(res) {
-  // Allow requests from any origin
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
-  res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,content-type');
-  res.setHeader('Access-Control-Allow-Credentials', true);
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 }
 
 module.exports = {
   getPool,
+  getAllTables,
   getTableSchema,
   hasColumn,
-  logResponse,
-  getAllTables,
+  formatResponse,
   addCorsHeaders
 };

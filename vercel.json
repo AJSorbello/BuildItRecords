@@ -52,6 +52,14 @@
         "Access-Control-Allow-Methods": "GET, OPTIONS"
       }
     },
+    { 
+      "src": "/api/health-check(/.*)?", 
+      "dest": "/api/health-check.js",
+      "headers": {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, OPTIONS"
+      }
+    },
     {
       "src": "/api/artist/([^/]+)/releases",
       "dest": "/api/artist.js?id=$1&endpoint=releases",
