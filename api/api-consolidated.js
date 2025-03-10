@@ -88,6 +88,9 @@ module.exports = async (req, res) => {
         // Handle all artists request
         return await handleAllArtists(req, res);
       }
+    } else if (resourceType === 'releases' && pathSegments[2] === 'releases' && pathSegments[3]) {
+      // Handle "/api/artists/releases/:id" pattern
+      return await handleArtistReleases(req, res, pathSegments[3]);
     } else if (resourceType === 'release') {
       if (resourceId) {
         // Handle specific release request

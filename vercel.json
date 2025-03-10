@@ -108,6 +108,24 @@
       }
     },
     {
+      "src": "/api/artist/releases/([^/]+)",
+      "dest": "/api/api-consolidated.js?id=$1&sub=releases",
+      "headers": {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type"
+      }
+    },
+    {
+      "src": "/api/artists/releases/([^/]+)",
+      "dest": "/api/api-consolidated.js?id=$1&sub=releases",
+      "headers": {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type"
+      }
+    },
+    {
       "src": "/api/release",
       "dest": "/api/api-consolidated.js",
       "headers": {
