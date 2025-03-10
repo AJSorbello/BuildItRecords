@@ -15,9 +15,12 @@ const { addCorsHeaders, getPool, formatResponse, hasColumn, getTableSchema } = r
 // Initialize database connection for PostgreSQL direct access
 let pool;
 try {
+  console.log('Attempting to initialize database pool...');
   pool = getPool();
+  console.log('Database pool initialized successfully!');
 } catch (error) {
-  console.error('Database pool initialization error (non-fatal):', error.message);
+  console.error(`Database pool initialization error (detailed): ${error.message}`, error);
+  console.error('Database connection parameters may be missing or incorrect');
 }
 
 module.exports = async (req, res) => {
@@ -99,7 +102,7 @@ module.exports = async (req, res) => {
 
 // Handler for GET /api/artist - List all artists
 async function getAllArtistsHandler(req, res) {
-  console.log('Fetching all artists');
+  console.log('Fetching all artists - handler entry point');
   
   const supabaseUrl = process.env.SUPABASE_URL || 
                       process.env.VITE_SUPABASE_URL || 
@@ -108,6 +111,11 @@ async function getAllArtistsHandler(req, res) {
   const supabaseKey = process.env.SUPABASE_ANON_KEY || 
                       process.env.VITE_SUPABASE_ANON_KEY || 
                       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  
+  console.log('Supabase configuration check:', {
+    hasUrl: !!supabaseUrl,
+    hasKey: !!supabaseKey
+  });
   
   if (!supabaseUrl || !supabaseKey) {
     return res.status(200).json({
@@ -121,10 +129,12 @@ async function getAllArtistsHandler(req, res) {
     // Use direct SQL query approach instead of Supabase ORM to avoid JSON parsing issues
     if (pool) {
       try {
+        console.log('Pool available - using direct SQL approach');
         const query = 'SELECT * FROM artists ORDER BY name';
         console.log('Executing direct SQL query:', query);
         
         const result = await pool.query(query);
+        console.log(`SQL query completed with ${result.rows?.length || 0} rows`);
         const artists = result.rows || [];
         
         console.log(`Found ${artists.length} artists using direct SQL`);
@@ -137,9 +147,12 @@ async function getAllArtistsHandler(req, res) {
           }
         });
       } catch (sqlError) {
-        console.error(`SQL error in getAllArtistsHandler: ${sqlError.message}`);
+        console.error(`SQL error in getAllArtistsHandler (detailed): ${sqlError.message}`, sqlError);
+        console.log('Falling back to Supabase client due to SQL error');
         // Fall back to Supabase client if SQL fails
       }
+    } else {
+      console.log('No pool available - skipping direct SQL approach');
     }
     
     // Fallback to Supabase client if direct SQL is not available
@@ -147,12 +160,13 @@ async function getAllArtistsHandler(req, res) {
     const supabase = createClient(supabaseUrl, supabaseKey);
     
     // Get all artists from Supabase - explicitly using .select()
+    console.log('Executing Supabase query: from("artists").select("*")');
     const { data: artists, error } = await supabase
       .from('artists')
       .select('*');
     
     if (error) {
-      console.error(`Error fetching artists: ${error.message}`);
+      console.error(`Error fetching artists via Supabase (detailed): ${error.message}`, error);
       return res.status(200).json({
         success: false,
         message: `Error fetching artists: ${error.message}`,
@@ -172,7 +186,7 @@ async function getAllArtistsHandler(req, res) {
       }
     });
   } catch (error) {
-    console.error(`Unexpected error in getAllArtistsHandler: ${error.message}`);
+    console.error(`Unexpected error in getAllArtistsHandler (detailed): ${error.message}`, error);
     return res.status(200).json({
       success: false,
       message: `Error fetching artists: ${error.message}`,
