@@ -249,7 +249,7 @@ async function getAllReleasesHandler(req, res) {
       return res.status(200).json({
         success: false,
         message: `Error fetching releases: ${fetchError.message}`,
-        data: []
+        data: [] // Return empty array as last resort
       });
     }
   } catch (error) {
@@ -258,7 +258,7 @@ async function getAllReleasesHandler(req, res) {
     return res.status(200).json({
       success: false,
       message: `Server error: ${error.message}`,
-      data: []
+      data: [] // Return empty array on error
     });
   }
 }
