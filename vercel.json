@@ -54,6 +54,15 @@
       }
     },
     { 
+      "src": "/api/debug",
+      "dest": "/api/debug.js",
+      "headers": {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type"
+      }
+    },
+    { 
       "src": "/api/health-check",
       "dest": "/api/health-check.js",
       "headers": {
