@@ -142,11 +142,24 @@ async function getArtistsByLabelHandler(labelId, req, res) {
   // Helper function to send a consistent response format
   const sendResponse = (success, message, artistsData) => {
     console.log(`Sending response: success=${success}, message=${message}`);
+    
+    // Ensure we're always returning an array for artists
+    let artists = [];
+    
+    if (Array.isArray(artistsData)) {
+      artists = artistsData;
+    } else if (artistsData && artistsData.artists) {
+      artists = artistsData.artists;
+    } else if (artistsData) {
+      // Convert a single artist object to an array if needed
+      artists = [artistsData];
+    }
+    
     return res.status(200).json({
       success,
       message,
       data: {
-        artists: artistsData && artistsData.artists ? artistsData.artists : (artistsData || [])
+        artists: artists
       }
     });
   };

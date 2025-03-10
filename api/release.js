@@ -78,15 +78,17 @@ module.exports = async (req, res) => {
 async function getAllReleasesHandler(req, res) {
   console.log('Fetching all releases');
   
+  // Get environment variables
   const supabaseUrl = process.env.SUPABASE_URL || 
-                      process.env.VITE_SUPABASE_URL || 
-                      process.env.NEXT_PUBLIC_SUPABASE_URL;
+                     process.env.VITE_SUPABASE_URL || 
+                     process.env.NEXT_PUBLIC_SUPABASE_URL;
                      
   const supabaseKey = process.env.SUPABASE_ANON_KEY || 
-                      process.env.VITE_SUPABASE_ANON_KEY || 
-                      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+                     process.env.VITE_SUPABASE_ANON_KEY || 
+                     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   
   if (!supabaseUrl || !supabaseKey) {
+    console.error('Supabase configuration missing');
     return res.status(200).json({
       success: false,
       message: 'Supabase configuration missing',
@@ -94,168 +96,87 @@ async function getAllReleasesHandler(req, res) {
     });
   }
   
+  // Initialize Supabase client
+  const supabase = createClient(supabaseUrl, supabaseKey);
+  
+  // Multi-step approach to avoid relationship errors
   try {
-    // Initialize Supabase client
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    console.log('Using multi-step approach to fetch releases and related data');
     
-    // Get all releases from Supabase without artist embedding first
-    console.log('Attempt 1: Fetching releases without artist embedding');
-    const { data: basicReleases, error: basicError } = await supabase
+    // Step 1: Get all releases first
+    const { data: releases, error: releasesError } = await supabase
       .from('releases')
       .select('*');
     
-    if (!basicError && basicReleases) {
-      console.log(`Successfully retrieved ${basicReleases.length} releases (basic info only)`);
+    if (releasesError) {
+      console.error(`Error fetching releases: ${releasesError.message}`);
+      return res.status(200).json({
+        success: false,
+        message: `Error fetching releases: ${releasesError.message}`,
+        data: {
+          releases: [] // Return empty array instead of null
+        }
+      });
+    }
+    
+    if (!releases || releases.length === 0) {
+      console.log('No releases found');
+      return res.status(200).json({
+        success: true,
+        message: 'No releases found',
+        data: {
+          releases: []
+        }
+      });
+    }
+    
+    console.log(`Found ${releases.length} releases`);
+    
+    // Step 2: Prepare release data with placeholder for artist info
+    const releasesWithArtists = releases.map(release => ({
+      ...release,
+      artist: null // Placeholder for artist data
+    }));
+    
+    // Step 3: Get artist information for each release
+    for (let i = 0; i < releasesWithArtists.length; i++) {
+      const release = releasesWithArtists[i];
+      const artistId = release.artist_id;
       
-      // Now try to get artist info separately to avoid relationship errors
-      try {
-        console.log('Attempt 2: Fetching artist info separately');
-        // Create a map of release IDs to releases for easy lookup
-        const releasesMap = {};
-        basicReleases.forEach(release => {
-          releasesMap[release.id] = {...release, artist: null};
-        });
-        
-        // Get artist info for each release that has an artist_id
-        const releaseIdsWithArtists = basicReleases
-          .filter(release => release.artist_id)
-          .map(release => release.artist_id);
-        
-        if (releaseIdsWithArtists.length > 0) {
-          const { data: artists } = await supabase
+      if (artistId) {
+        try {
+          const { data: artist, error: artistError } = await supabase
             .from('artists')
             .select('*')
-            .in('id', releaseIdsWithArtists);
+            .eq('id', artistId)
+            .single();
           
-          if (artists && artists.length > 0) {
-            console.log(`Retrieved ${artists.length} artists for releases`);
-            
-            // Map artists to their respective releases
-            basicReleases.forEach(release => {
-              if (release.artist_id) {
-                const matchingArtist = artists.find(artist => artist.id === release.artist_id);
-                if (matchingArtist) {
-                  releasesMap[release.id].artist = matchingArtist;
-                }
-              }
-            });
+          if (!artistError && artist) {
+            releasesWithArtists[i].artist = artist;
+          } else {
+            console.log(`Could not find artist with id ${artistId}: ${artistError?.message || 'No error message'}`);
           }
+        } catch (err) {
+          console.error(`Error fetching artist for release ${release.id}: ${err.message}`);
         }
-        
-        // Convert back to array
-        const releasesWithArtists = Object.values(releasesMap);
-        
-        return res.status(200).json({
-          success: true,
-          message: `Found ${releasesWithArtists.length} releases`,
-          data: {
-            releases: releasesWithArtists
-          }
-        });
-      } catch (artistError) {
-        console.error(`Error fetching artist info: ${artistError.message}`);
-        // Fall back to returning just the basic releases
-        return res.status(200).json({
-          success: true,
-          message: `Found ${basicReleases.length} releases (artist data unavailable)`,
-          data: {
-            releases: basicReleases
-          }
-        });
       }
     }
     
-    // If basic query fails, try direct database query as fallback
-    console.log('Attempt 3: Falling back to direct database query');
-    if (pool) {
-      try {
-        console.log('Using PostgreSQL connection pool');
-        const client = await pool.connect();
-        
-        // Inspect schema to handle correct column references
-        console.log('Inspecting schema for releases query...');
-        const releasesSchema = await getTableSchema(client, 'releases');
-        const artistsSchema = await getTableSchema(client, 'artists');
-        
-        console.log('Schema inspection completed, constructing query');
-        
-        try {
-          // Primary query with all joins - use proper column references based on schema
-          const releaseIdColumn = hasColumn(releasesSchema, 'id') ? 'r.id' : 'r.release_id';
-          const artistIdColumn = hasColumn(releasesSchema, 'artist_id') ? 'r.artist_id' : 'r.artistId';
-          
-          const query = `
-            SELECT r.*, to_json(a.*) as artist_data
-            FROM releases r
-            LEFT JOIN artists a ON ${artistIdColumn} = a.id
-          `;
-          
-          console.log('Executing primary release query:', query);
-          const result = await client.query(query);
-          client.release();
-          
-          // Process the results to properly structure artist data
-          const formattedReleases = result.rows.map(row => {
-            const { artist_data, ...release } = row;
-            return {
-              ...release,
-              artist: artist_data && Object.keys(artist_data).length > 0 ? artist_data : null
-            };
-          });
-          
-          console.log(`Found ${formattedReleases.length} releases via direct query`);
-          
-          return res.status(200).json({
-            success: true,
-            message: `Found ${formattedReleases.length} releases`,
-            data: {
-              releases: formattedReleases
-            }
-          });
-        } catch (primaryQueryError) {
-          console.error(`Primary query failed: ${primaryQueryError.message}`);
-          
-          // Fallback to simpler query that just gets releases
-          const fallbackQuery = 'SELECT * FROM releases';
-          const fallbackResult = await client.query(fallbackQuery);
-          client.release();
-          
-          console.log(`Found ${fallbackResult.rows.length} releases via fallback query`);
-          
-          return res.status(200).json({
-            success: true,
-            message: `Found ${fallbackResult.rows.length} releases (artist data unavailable)`,
-            data: {
-              releases: fallbackResult.rows
-            }
-          });
-        }
-      } catch (dbError) {
-        console.error(`Direct database query error: ${dbError.message}`);
-        return res.status(200).json({
-          success: false,
-          message: `Error fetching releases: ${dbError.message}`,
-          data: {
-            releases: []
-          }
-        });
-      }
-    }
+    console.log(`Completed processing ${releasesWithArtists.length} releases with artist data`);
     
-    // If all attempts fail, return an empty array
-    console.error('All attempts to fetch releases failed');
     return res.status(200).json({
-      success: false,
-      message: 'Error fetching release releases: All query methods failed',
+      success: true,
+      message: `Found ${releasesWithArtists.length} releases`,
       data: {
-        releases: []
+        releases: releasesWithArtists
       }
     });
+    
   } catch (error) {
     console.error(`Unexpected error in getAllReleasesHandler: ${error.message}`);
     return res.status(200).json({
       success: false,
-      message: `Error: ${error.message}`,
+      message: `Error fetching release releases: ${error.message}`,
       data: {
         releases: []
       }
