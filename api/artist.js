@@ -21,54 +21,77 @@ try {
 }
 
 module.exports = async (req, res) => {
-  // Add CORS headers
-  addCorsHeaders(res);
-
-  // Handle OPTIONS request (preflight)
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-
-  console.log(`Artist API Request: ${req.method} ${req.url}`);
-  
-  // Parse the URL to determine which endpoint was requested
-  const url = new URL(req.url, `http://${req.headers.host}`);
-  const pathSegments = url.pathname.split('/').filter(Boolean);
-  
   try {
+    // Add CORS headers
+    addCorsHeaders(res);
+    
+    // Handle OPTIONS request (preflight)
+    if (req.method === 'OPTIONS') {
+      return res.status(200).end();
+    }
+    
+    console.log(`API Request: ${req.method} ${req.url}`);
+    
+    // Parse the URL to determine which endpoint was requested
+    const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+    const pathSegments = url.pathname.split('/').filter(Boolean);
+    
+    // Extract query parameters
+    const params = {};
+    for (const [key, value] of url.searchParams.entries()) {
+      params[key] = value;
+    }
+    
+    // Get label parameter if present
+    const label = params.label || null;
+    // Get id parameter if present (either from query or path)
+    const id = params.id || (pathSegments.length > 1 ? pathSegments[1] : null);
+    const endpoint = params.endpoint || (pathSegments.length > 2 ? pathSegments[2] : null);
+    
+    console.log('Path segments:', pathSegments);
+    console.log('Query parameters:', params);
+    console.log(`Handling artist request with id: ${id}, label: ${label}, endpoint: ${endpoint}`);
+    
     // GET /api/artist - List all artists
     if (pathSegments.length === 1) {
       // Check if there's a label query parameter
       const labelId = url.searchParams.get('label');
       
       if (labelId) {
+        console.log(`Fetching artists for label: ${labelId}`);
         return await getArtistsByLabelHandler(labelId, req, res);
       } else {
+        console.log('Fetching all artists');
         return await getAllArtistsHandler(req, res);
       }
     }
-    // GET /api/artist/[id] - Get artist by ID
+
+    // GET /api/artist/:id - Get artist by ID
     else if (pathSegments.length === 2) {
       const artistId = pathSegments[1];
+      console.log(`Fetching artist with ID: ${artistId}`);
       return await getArtistByIdHandler(artistId, req, res);
     }
-    // GET /api/artist/[id]/releases - Get releases for an artist
+
+    // GET /api/artist/:id/releases - Get releases by artist ID
     else if (pathSegments.length === 3 && pathSegments[2] === 'releases') {
       const artistId = pathSegments[1];
+      console.log(`Fetching releases for artist: ${artistId}`);
       return await getArtistReleasesHandler(artistId, req, res);
     }
-    else {
-      return res.status(404).json({
-        success: false,
-        message: `Not found: ${req.url}`,
-        data: null
-      });
-    }
-  } catch (error) {
-    console.error(`Artist endpoint error: ${error.message}`);
+    
+    // If no route matches, return 404
+    console.error('Unsupported artist endpoint');
     return res.status(200).json({
       success: false,
-      message: `Error: ${error.message}`,
+      message: 'Endpoint not found',
+      data: null
+    });
+  } catch (error) {
+    console.error(`Unexpected error in artist API handler: ${error.message}`);
+    return res.status(200).json({
+      success: false,
+      message: `Server error: ${error.message}`,
       data: null
     });
   }
@@ -98,7 +121,7 @@ async function getAllArtistsHandler(req, res) {
   const supabase = createClient(supabaseUrl, supabaseKey);
   
   try {
-    // Get all artists from Supabase
+    // Get all artists from Supabase - explicitly using .select()
     const { data: artists, error } = await supabase
       .from('artists')
       .select('*');
@@ -127,7 +150,7 @@ async function getAllArtistsHandler(req, res) {
     console.error(`Unexpected error in getAllArtistsHandler: ${error.message}`);
     return res.status(200).json({
       success: false,
-      message: `Error fetching artist artists: ${error.message}`,
+      message: `Error fetching artists: ${error.message}`,
       data: {
         artists: [] // Return empty array instead of null
       }
@@ -139,223 +162,71 @@ async function getAllArtistsHandler(req, res) {
 async function getArtistsByLabelHandler(labelId, req, res) {
   console.log(`Fetching artists for label ID: ${labelId}`);
   
-  // Helper function to send a consistent response format
-  const sendResponse = (success, message, artistsData) => {
-    console.log(`Sending response: success=${success}, message=${message}`);
-    
-    // Ensure we're always returning an array for artists
-    let artists = [];
-    
-    if (Array.isArray(artistsData)) {
-      artists = artistsData;
-    } else if (artistsData && artistsData.artists) {
-      artists = artistsData.artists;
-    } else if (artistsData) {
-      // Convert a single artist object to an array if needed
-      artists = [artistsData];
-    }
-    
+  const pool = await getPool();
+  if (!pool) {
+    console.error('Database connection pool not available');
     return res.status(200).json({
-      success,
-      message,
+      success: false,
+      message: 'Database connection failed',
       data: {
-        artists: artists
+        artists: [] // Return empty array instead of null
       }
     });
-  };
-  
-  // Try direct database query first for better control over the results
-  if (pool) {
-    console.log('Using PostgreSQL connection pool');
-    try {
-      const client = await pool.connect();
-      
-      // Check table schema to use correct column names
-      console.log('Inspecting schema for artists query...');
-      const artistsSchema = await getTableSchema(client, 'artists');
-      const labelsSchema = await getTableSchema(client, 'labels');
-      
-      console.log('Schema inspection results:');
-      console.log('- Artists columns:', artistsSchema.map(col => col.column_name).join(', '));
-      console.log('- Labels columns:', labelsSchema.map(col => col.column_name).join(', '));
-      
-      // Determine the correct column names based on the schema
-      const labelIdColumn = hasColumn(labelsSchema, 'id') ? 'id' : 'label_id';
-      const artistLabelColumn = hasColumn(artistsSchema, 'label_id') ? 'label_id' : 'labelId';
-      
-      // --- APPROACH 1: Direct query with exact match ---
-      console.log('Trying direct query with exact match');
-      const directQuery = `
-        SELECT * FROM artists 
-        WHERE ${artistLabelColumn} = $1 
-           OR ${artistLabelColumn}::text = $1
-      `;
-      
-      console.log(`Executing direct query with label ID: ${labelId}`);
-      let result = await client.query(directQuery, [labelId]);
-      
-      if (result.rows.length > 0) {
-        console.log(`Found ${result.rows.length} artists via direct query`);
-        client.release();
-        return sendResponse(true, `Found ${result.rows.length} artists for label ${labelId}`, result.rows);
-      }
-      
-      // --- APPROACH 2: Try with label name matching ---
-      console.log('Trying with label name matching');
-      let labelName = '';
-      
-      try {
-        const labelQuery = 'SELECT name FROM labels WHERE id = $1 OR id::text = $1';
-        const labelResult = await client.query(labelQuery, [labelId]);
-        
-        if (labelResult.rows.length > 0) {
-          labelName = labelResult.rows[0].name;
-          console.log(`Found label name: ${labelName}`);
-        }
-      } catch (labelError) {
-        console.error(`Error finding label name: ${labelError.message}`);
-        // Continue with other approaches
-      }
-      
-      if (labelName) {
-        const nameMatchQuery = `
-          SELECT a.* FROM artists a
-          WHERE a.${artistLabelColumn}::text = $1
-             OR EXISTS (
-               SELECT 1 FROM labels l 
-               WHERE l.name ILIKE $2 
-                 AND (a.${artistLabelColumn}::text = l.${labelIdColumn}::text 
-                   OR a.${artistLabelColumn}::text = $1)
-             )
-        `;
-        
-        console.log(`Executing name match query with: ${labelId}, %${labelName}%`);
-        result = await client.query(nameMatchQuery, [labelId, `%${labelName}%`]);
-        
-        if (result.rows.length > 0) {
-          console.log(`Found ${result.rows.length} artists via name match query`);
-          client.release();
-          return sendResponse(true, `Found ${result.rows.length} artists for label ${labelId}`, result.rows);
-        }
-      }
-      
-      // --- APPROACH 3: Try LIKE pattern matching ---
-      console.log('Trying with pattern matching');
-      const patternQuery = `
-        SELECT * FROM artists 
-        WHERE ${artistLabelColumn}::text LIKE $1
-      `;
-      
-      console.log(`Executing pattern matching query with: %${labelId}%`);
-      result = await client.query(patternQuery, [`%${labelId}%`]);
-      
-      if (result.rows.length > 0) {
-        console.log(`Found ${result.rows.length} artists via pattern matching`);
-        client.release();
-        return sendResponse(true, `Found ${result.rows.length} artists for label ${labelId}`, result.rows);
-      }
-      
-      // Release the client before moving to the next method
-      client.release();
-      console.log('No artists found with any query method');
-      
-    } catch (dbError) {
-      console.error(`Database error for artists by label: ${dbError.message}`);
-      // Continue to Supabase fallback
-    }
-  }
-  
-  // If direct queries unsuccessful, try Supabase client
-  console.log('Direct database queries unsuccessful, trying Supabase...');
-  const supabaseUrl = process.env.SUPABASE_URL || 
-                    process.env.VITE_SUPABASE_URL || 
-                    process.env.NEXT_PUBLIC_SUPABASE_URL;
-                   
-  const supabaseKey = process.env.SUPABASE_ANON_KEY || 
-                    process.env.VITE_SUPABASE_ANON_KEY || 
-                    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  
-  if (!supabaseUrl || !supabaseKey) {
-    return sendResponse(false, 'Supabase configuration missing', null);
   }
   
   try {
-    console.log('Initializing Supabase client');
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const client = await pool.connect();
     
-    // --- APPROACH 1: Direct query by label_id ---
-    console.log(`Querying Supabase for artists with label_id = ${labelId}`);
-    let { data: artists, error } = await supabase
-      .from('artists')
-      .select('*')
-      .eq('label_id', labelId);
+    // Debug: Check schema and columns
+    console.log('Inspecting schema for labels table...');
+    const labelColumns = await client.query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'labels'
+    `);
+    console.log('Label columns:', labelColumns.rows.map(row => row.column_name));
     
-    if (!error && artists && artists.length > 0) {
-      console.log(`Found ${artists.length} artists via direct Supabase query`);
-      return sendResponse(true, `Found ${artists.length} artists for label ${labelId}`, artists);
-    }
+    // Use proper column references based on actual schema
+    const query = `
+      SELECT a.* 
+      FROM artists a
+      JOIN labels l ON a.label_id = l.id
+      WHERE l.id = $1
+    `;
     
-    // --- APPROACH 2: Try more flexible matching ---
-    if (error || !artists || artists.length === 0) {
-      console.log('Direct query unsuccessful, trying with OR conditions');
-      
-      // Try to get label name first if we have a numeric ID
-      let labelName = '';
-      if (!isNaN(labelId)) {
-        try {
-          const { data: labelData } = await supabase
-            .from('labels')
-            .select('name')
-            .eq('id', parseInt(labelId))
-            .single();
-          
-          if (labelData) {
-            labelName = labelData.name;
-            console.log(`Found label name: ${labelName}`);
-          }
-        } catch (labelError) {
-          console.error(`Error fetching label: ${labelError.message}`);
+    console.log(`Executing query with label ID: ${labelId}`);
+    const result = await client.query(query, [labelId]);
+    
+    if (result.rows.length === 0) {
+      console.log(`No artists found for label ID: ${labelId}`);
+      client.release();
+      return res.status(200).json({
+        success: true,
+        message: `No artists found for label ID: ${labelId}`,
+        data: {
+          artists: []
         }
-      }
-      
-      // Build a flexible OR query with all the matching patterns
-      let orCondition = `label_id.eq.${labelId},label_id.ilike.%${labelId}%`;
-      if (labelName) {
-        orCondition += `,label_name.ilike.%${labelName}%`;
-      }
-      
-      console.log(`Using OR condition: ${orCondition}`);
-      const { data: flexibleArtists, error: flexibleError } = await supabase
-        .from('artists')
-        .select('*')
-        .or(orCondition);
-      
-      if (!flexibleError && flexibleArtists && flexibleArtists.length > 0) {
-        console.log(`Found ${flexibleArtists.length} artists via flexible Supabase query`);
-        return sendResponse(true, `Found ${flexibleArtists.length} artists for label ${labelId}`, flexibleArtists);
-      }
+      });
     }
     
-    // --- APPROACH 3: Handle special case for buildit-records label ---
-    if (labelId === 'buildit-records' || labelId === '1') {
-      console.log('Trying special case for buildit-records label');
-      const { data: buildItArtists, error: buildItError } = await supabase
-        .from('artists')
-        .select('*')
-        .eq('label_id', 1);
-      
-      if (!buildItError && buildItArtists && buildItArtists.length > 0) {
-        console.log(`Found ${buildItArtists.length} artists for buildit-records label`);
-        return sendResponse(true, `Found ${buildItArtists.length} artists for buildit-records`, buildItArtists);
+    console.log(`Found ${result.rows.length} artists via direct query`);
+    client.release();
+    return res.status(200).json({
+      success: true,
+      message: `Found ${result.rows.length} artists for label ${labelId}`,
+      data: {
+        artists: result.rows
       }
-    }
-    
-    // If all approaches failed, return empty array instead of null
-    console.log('All Supabase approaches failed, returning empty array');
-    return sendResponse(true, `No artists found for label ${labelId}`, []);
-  } catch (supabaseError) {
-    console.error(`Unexpected error in Supabase query: ${supabaseError.message}`);
-    return sendResponse(true, 'Error fetching artists, returning empty array', []);
+    });
+  } catch (error) {
+    console.error(`Error in getArtistsByLabelHandler: ${error.message}`);
+    return res.status(200).json({
+      success: false,
+      message: `Database error: ${error.message}`,
+      data: {
+        artists: []
+      }
+    });
   }
 }
 
