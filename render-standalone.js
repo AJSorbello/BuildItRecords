@@ -29,9 +29,19 @@ app.get('/', (req, res) => {
 app.get('/health', (req, res) => {
   res.status(200).json({
     success: true,
-    message: 'BuildIt Records API health check passed',
-    environment: process.env.NODE_ENV || 'development',
-    timestamp: new Date().toISOString()
+    message: 'BuildIt Records API is healthy',
+    version: process.env.npm_package_version || '0.1.1',
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+// Additional health check endpoint for Render's specific path
+app.get('/healthz', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'BuildIt Records API is healthy',
+    version: process.env.npm_package_version || '0.1.1',
+    environment: process.env.NODE_ENV || 'development'
   });
 });
 
