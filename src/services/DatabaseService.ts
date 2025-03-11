@@ -33,11 +33,12 @@ interface Album {
 
 interface ApiResponse<T = unknown> {
   success?: boolean;
-  data?: T;
+  data?: T[];
   message?: string;
   error?: string;
   tracks?: Track[];
   releases?: Release[];
+  artists?: Artist[];
   total?: number;
   offset?: number;
   limit?: number;
@@ -245,17 +246,6 @@ class DatabaseService {
           console.log('[DEBUG] Fetching diagnostic data to check database state');
           const diagnosticData = await this.fetchApi<any>(`/diagnostic`);
           console.log('[DEBUG] Diagnostic data received:', !!diagnosticData);
-          
-          if (diagnosticData && diagnosticData.diagnosticResults) {
-            console.log('[DEBUG] Database has tables:', diagnosticData.diagnosticResults.tables);
-            
-            // Check if we can find the correct label value from diagnostic info
-            if (diagnosticData.diagnosticResults.labelInfo && 
-                diagnosticData.diagnosticResults.labelInfo.possibleBuilditLabels) {
-              console.log('[DEBUG] Possible BuildIt label values:', 
-                diagnosticData.diagnosticResults.labelInfo.possibleBuilditLabels);
-            }
-          }
         } catch (diagError) {
           console.error('[DEBUG] Error fetching diagnostic data:', diagError);
         }
@@ -265,10 +255,25 @@ class DatabaseService {
         `/releases?label=${labelId}&offset=${offset}&limit=${limit}`
       );
       
-      if (response.releases && Array.isArray(response.releases)) {
+      // Check for the data property first (Render API format)
+      if (response.data && Array.isArray(response.data)) {
+        console.log(`[DEBUG] Found releases in response.data: ${response.data.length} items`);
+        // Process the data array as releases
+        const processedReleases = await this.processReleases({ releases: response.data });
+        const total = response.total || response.data.length || 0;
+
+        return {
+          releases: processedReleases,
+          totalReleases: total,
+          totalTracks: response.count || processedReleases.length || 0,
+          hasMore: offset + processedReleases.length < total
+        };
+      }
+      // Fall back to checking for releases property (legacy format)
+      else if (response.releases && Array.isArray(response.releases)) {
         console.log(`Received ${response.releases.length} releases for label ${labelId}`);
         const processedReleases = await this.processReleases({ releases: response.releases });
-        const total = response.total || 0;
+        const total = response.total || response.releases.length || 0;
 
         return {
           releases: processedReleases,
@@ -285,16 +290,25 @@ class DatabaseService {
         
         // Try an alternative approach for the production environment
         try {
-          console.log('[DEBUG] Trying alternative query for buildit-records with ILIKE search');
-          // Try fetching with the /api/diagnostic endpoint which has our special ILIKE search
-          const alternativeResponse = await this.fetchApi<any>(`/diagnostic`);
-          console.log('[DEBUG] Alternative query response received');
+          console.log('[DEBUG] Trying alternative query for buildit-records with numeric ID');
+          // Try with label ID "1" instead of string "buildit-records"
+          const alternativeResponse = await this.fetchApi<ApiResponse>(
+            `/releases?label=1&offset=${offset}&limit=${limit}`
+          );
           
-          if (alternativeResponse && alternativeResponse.diagnosticResults && 
-              alternativeResponse.diagnosticResults.releasesInfo && 
-              alternativeResponse.diagnosticResults.releasesInfo.likeBuilditCount) {
-            console.log('[DEBUG] Found potential releases with LIKE %buildit%:', 
-              alternativeResponse.diagnosticResults.releasesInfo.likeBuilditCount);
+          if (alternativeResponse.data && Array.isArray(alternativeResponse.data)) {
+            console.log(`[DEBUG] Alternative query succeeded with ${alternativeResponse.data.length} releases`);
+            const processedReleases = await this.processReleases({ releases: alternativeResponse.data });
+            const total = alternativeResponse.total || alternativeResponse.data.length || 0;
+            
+            return {
+              releases: processedReleases,
+              totalReleases: total,
+              totalTracks: alternativeResponse.count || processedReleases.length || 0,
+              hasMore: offset + processedReleases.length < total
+            };
+          } else {
+            console.log('[DEBUG] Alternative query failed to return valid data');
           }
         } catch (altError) {
           console.error('[DEBUG] Error in alternative query:', altError);
@@ -325,20 +339,22 @@ class DatabaseService {
       console.log(`Getting top releases for label: ${labelId}`);
       const response = await this.fetchApi<ApiResponse>(`/releases/top?label=${labelId}`);
       
-      if (response.releases && Array.isArray(response.releases)) {
+      // Check for data property first (Render API format)
+      if (response.data && Array.isArray(response.data)) {
+        console.log(`Received ${response.data.length} top releases in data for label ${labelId}`);
+        return this.processReleases({ releases: response.data });
+      }
+      // Fall back to checking for releases property (legacy format)
+      else if (response.releases && Array.isArray(response.releases)) {
         console.log(`Received ${response.releases.length} top releases for label ${labelId}`);
         return this.processReleases({ releases: response.releases });
       }
       
-      console.warn(`Received empty or invalid top releases array for label ${labelId}`);
+      console.warn(`No releases found in top releases response for label ${labelId}`);
       return [];
     } catch (error) {
-      if (error instanceof DatabaseError && error.message.includes('404')) {
-        console.warn(`Label not found: ${labelId}`);
-        return [];
-      }
-      console.error('Error fetching top releases:', error);
-      throw error;
+      console.error(`Error fetching top releases for label ${labelId}:`, error);
+      return [];
     }
   }
 
@@ -368,61 +384,39 @@ class DatabaseService {
   }
 
   public async processReleases(response: { releases: any[] }): Promise<Release[]> {
-    try {
-      const releases = response.releases.map((release) => {
-        // Create a properly typed Release object
-        const typedRelease: Release = {
-          id: release.id || '',
-          name: release.name || '',
-          title: release.name || '',
-          type: 'album',
-          release_date: release.release_date || '',
-          images: Array.isArray(release.images) ? release.images : 
-                 (release.artwork_url ? [{ url: release.artwork_url, height: 300, width: 300 }] : []),
-          artists: Array.isArray(release.artists) ? 
-                  release.artists.map((artist: any) => this.mapSpotifyArtistToArtist(artist)) : [],
-          label_id: release.label_id || '',
-          label_name: release.label_name || null,
-          total_tracks: release.total_tracks || 0,
-          external_urls: { 
-            spotify: release.external_urls?.spotify || release.spotify_url || '' 
-          },
-          spotify_url: release.spotify_url || release.external_urls?.spotify || '',
-          spotify_uri: release.spotify_uri || release.uri || '',
-          uri: release.uri || release.spotify_uri || '',
-          tracks: Array.isArray(release.tracks) ? 
-                 release.tracks.map((track: any) => this.createTrack(track)) : [],
-          status: release.status || 'active'
-        };
-
-        return typedRelease;
-      });
-
-      return releases;
-    } catch (error) {
-      console.error('Error processing releases:', error);
+    if (!response.releases) {
+      console.warn('No releases found in response');
       return [];
     }
+
+    // Map the releases
+    return response.releases.map(release => {
+      // Ensure release has an artwork_url
+      if (!release.artwork_url && release.images && release.images.length > 0) {
+        release.artwork_url = release.images[0].url;
+      }
+
+      // Check if we need to add the official website tag for Render-formatted releases
+      if (release.spotify_url && !release.spotify_url.startsWith('http')) {
+        release.spotify_url = `https://open.spotify.com/album/${release.spotify_url}`;
+      }
+
+      return release as Release;
+    });
   }
 
   public async processTracks(response: { tracks: any[] }): Promise<Track[]> {
-    try {
-      if (!response.tracks || !Array.isArray(response.tracks)) {
-        console.error('Invalid tracks data:', response);
-        return [];
-      }
-      
-      // Use the createTrack method to ensure proper typing
-      const tracks: Track[] = response.tracks.map(track => this.createTrack(track));
-      
-      return tracks;
-    } catch (error) {
-      console.error('Error processing tracks:', error);
+    if (!response.tracks || !Array.isArray(response.tracks)) {
+      console.warn('Invalid tracks data in response');
       return [];
     }
+    
+    // Use the createTrack method to ensure proper typing
+    const tracks: Track[] = response.tracks.map((track: any) => this.createTrack(track));
+    
+    return tracks;
   }
 
-  // Helper function to create a properly typed Track object from API response
   private createTrack(trackData: any): Track {
     // Create a properly typed Track object
     const track: Track = {
@@ -435,7 +429,7 @@ class DatabaseService {
       preview_url: trackData.preview_url || null,
       spotify_url: trackData.spotify_url || '',
       spotify_uri: trackData.spotify_uri || trackData.uri || '',
-      artists: Array.isArray(trackData.artists) ? trackData.artists.map((a: any) => this.mapSpotifyArtistToArtist(a)) : [],
+      artists: Array.isArray(trackData.artists) ? trackData.artists.map((a: any) => this.formatArtist(a)) : [],
       isrc: trackData.isrc || '',
       external_urls: { spotify: trackData.external_urls?.spotify || trackData.spotify_url || '' },
       type: 'track',
@@ -444,7 +438,7 @@ class DatabaseService {
     
     // Add release data if available
     if (trackData.release) {
-      const albumData = trackData.release;
+      const albumData = trackData.release as any; // Type assertion to avoid unknown type errors
       track.release = {
         id: albumData.id || '',
         name: albumData.name || '',
@@ -462,7 +456,7 @@ class DatabaseService {
     
     return track;
   }
-  
+
   public async getTracksByLabel(
     labelId: string,
     offset = 0,
@@ -567,85 +561,24 @@ class DatabaseService {
   public async getArtistsForLabel(labelId: string | { id: string }): Promise<Artist[]> {
     try {
       const id = typeof labelId === 'string' ? labelId : labelId.id;
-      console.log(`[DEBUG] Fetching artists for label: ${id}`);
+      console.log('[DEBUG] Fetching artists for label:', id);
+      const response = await this.fetchApi<ApiResponse<Artist>>(`/artists?label=${id}`);
       
-      // Special handling for buildit-records
-      if (id === 'buildit-records') {
-        console.log('[DEBUG] Fetching artists for buildit-records label');
-        
-        // Try using the diagnostic endpoint first to get information
-        try {
-          console.log('[DEBUG] Fetching diagnostic data to understand database state');
-          const diagnosticData = await this.fetchApi<any>(`/diagnostic`);
-          
-          if (diagnosticData && diagnosticData.diagnosticResults) {
-            const artists = diagnosticData.diagnosticResults.artistsInfo || {};
-            console.log('[DEBUG] Artist diagnostic info:', {
-              totalArtists: artists.totalCount,
-              builditArtistsCount: artists.builditRecordsCount,
-              caseInsensitiveCount: artists.caseInsensitiveCount
-            });
-          }
-        } catch (diagError) {
-          console.error('[DEBUG] Error fetching artists diagnostic:', diagError);
-        }
+      // Check for data property first (Render API format)
+      if (response.data && Array.isArray(response.data)) {
+        console.log(`[DEBUG] Response data count: ${response.data.length}`);
+        return response.data.map((artist: any) => this.formatArtist(artist));
+      } 
+      // Check for legacy format
+      else if (response.artists && Array.isArray(response.artists)) {
+        console.log(`Retrieved ${response.artists.length} artists for label ${id}`);
+        return response.artists.map((artist: any) => this.formatArtist(artist));
       }
       
-      const response = await this.fetchApi<{
-        success: boolean;
-        message?: string;
-        data: any[] | { artists: any[] };
-      }>(`/artists?label=${id}`);
-      
-      console.log('[DEBUG] Response data count:', Array.isArray(response?.data) ? response.data.length : response?.data?.artists?.length);
-      
-      // Handle both formats: 
-      // 1. New API format: { success: true, data: [...] }
-      // 2. Old API format: { success: true, data: { artists: [...] } }
-      if (!response?.success || (!Array.isArray(response?.data) && !response?.data?.artists)) {
-        console.error('Invalid response format from server:', response);
-        
-        // For buildit-records, attempt alternative approaches
-        if (id === 'buildit-records') {
-          console.log('[DEBUG] Trying alternative approach for buildit-records artists');
-          
-          try {
-            // Try fetching directly with the enhanced diagnostic endpoint
-            const diagnosticData = await this.fetchApi<any>(`/diagnostic`);
-            if (diagnosticData && diagnosticData.diagnosticResults && 
-                diagnosticData.diagnosticResults.artistsInfo && 
-                diagnosticData.diagnosticResults.artistsInfo.sampleArtists) {
-              
-              console.log('[DEBUG] Diagnostic endpoint returned sample artists');
-              return diagnosticData.diagnosticResults.artistsInfo.sampleArtists;
-            }
-          } catch (altError) {
-            console.error('[DEBUG] Alternative artist approach failed:', altError);
-          }
-        }
-        
-        return [];
-      }
-
-      // Extra logging for buildit-records
-      if (id === 'buildit-records') {
-        const artistCount = Array.isArray(response.data) ? response.data.length : response.data.artists?.length || 0;
-        console.log(`[DEBUG] Found ${artistCount} artists for buildit-records`);
-        
-        if (artistCount > 0) {
-          const sampleArtist = Array.isArray(response.data) ? response.data[0] : response.data.artists[0];
-          console.log('[DEBUG] Sample artist:', {
-            id: sampleArtist.id,
-            name: sampleArtist.name,
-            labelId: sampleArtist.label_id
-          });
-        }
-      }
-
-      return Array.isArray(response.data) ? response.data.map(artist => this.mapSpotifyArtistToArtist(artist)) : response.data.artists.map(artist => this.mapSpotifyArtistToArtist(artist));
+      return [];
     } catch (error) {
-      console.error('Error fetching artists for label:', error);
-      throw new DatabaseError('Failed to fetch artists');
+      console.error(`Error fetching artists for label ${labelId}:`, error);
+      return [];
     }
   }
 
@@ -736,8 +669,17 @@ class DatabaseService {
   }
 
   private formatArtist(artist: any): Artist {
-    // Use our standard artist mapping method for consistent handling
-    return this.mapSpotifyArtistToArtist(artist);
+    // Fix missing image URLs if needed
+    if (!artist.image_url && artist.images && artist.images.length > 0) {
+      artist.image_url = artist.images[0].url;
+    }
+    
+    // Ensure spotify_url has the full URL if it's just an ID
+    if (artist.spotify_url && !artist.spotify_url.startsWith('http')) {
+      artist.spotify_url = `https://open.spotify.com/artist/${artist.spotify_url}`;
+    }
+    
+    return artist as Artist;
   }
   
   private createTrackFromSnapshot(trackSnapshot: any): Track {
@@ -819,6 +761,25 @@ class DatabaseService {
     } catch (error) {
       console.error('Error fetching tracks by artist:', error);
       throw error;
+    }
+  }
+
+  // Get releases by artist without using the /releases endpoint
+  private async getReleasesForArtist(artistId: string): Promise<Release[]> {
+    try {
+      console.log(`Getting releases for artist via standalone request: ${artistId}`);
+      const response = await this.fetchApi<ApiResponse<Release>>(`/artists/${artistId}/releases`);
+      
+      if (response.data && Array.isArray(response.data)) {
+        return this.processReleases({ releases: response.data });
+      } else if (response.releases && Array.isArray(response.releases)) {
+        return this.processReleases({ releases: response.releases });
+      }
+      
+      return [];
+    } catch (error) {
+      console.error(`Error getting releases for artist ${artistId}:`, error);
+      return [];
     }
   }
 }
