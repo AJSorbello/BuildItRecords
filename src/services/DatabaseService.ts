@@ -240,27 +240,41 @@ class DatabaseService {
         console.log('[DEBUG] Detected buildit-records label request');
         console.log('[DEBUG] Current environment:', process.env.NODE_ENV);
         console.log('[DEBUG] Making request to:', `${this.baseUrl}/releases?label=${labelId}`);
-        
-        // Try fetching the diagnostic data first to understand the database state
-        try {
-          console.log('[DEBUG] Fetching diagnostic data to check database state');
-          const diagnosticData = await this.fetchApi<any>(`/diagnostic`);
-          console.log('[DEBUG] Diagnostic data received:', !!diagnosticData);
-        } catch (diagError) {
-          console.error('[DEBUG] Error fetching diagnostic data:', diagError);
-        }
       }
       
+      // Use the specific label ID in the request
       const response = await this.fetchApi<ApiResponse>(
-        `/releases?label=${labelId}&offset=${offset}&limit=${limit}`
+        `/releases?label=${encodeURIComponent(labelId)}&offset=${offset}&limit=${limit}`
       );
       
       // Check for the data property first (Render API format)
       if (response.data && Array.isArray(response.data)) {
         console.log(`[DEBUG] Found releases in response.data: ${response.data.length} items`);
-        // Process the data array as releases
-        const processedReleases = await this.processReleases({ releases: response.data });
-        const total = response.total || response.data.length || 0;
+        
+        // Ensure the releases are actually for this label
+        const filteredReleases = response.data.filter((release: any) => {
+          const releaseLabel = release.label_id || 
+                             (release.label && typeof release.label === 'object' ? release.label.id : release.label);
+          
+          // Convert both to strings for comparison to handle numeric vs string IDs
+          const releaseLabelStr = String(releaseLabel).toLowerCase();
+          const requestedLabelStr = String(labelId).toLowerCase();
+          
+          // Check if the release belongs to the requested label
+          const matches = releaseLabelStr === requestedLabelStr;
+          
+          if (!matches) {
+            console.log(`[DEBUG] Filtering out release ${release.id} (${release.title || 'Untitled'}) - label ${releaseLabelStr} doesn't match ${requestedLabelStr}`);
+          }
+          
+          return matches;
+        });
+        
+        console.log(`[DEBUG] After filtering by label ID, found ${filteredReleases.length} out of ${response.data.length} releases`);
+        
+        // Process the filtered releases
+        const processedReleases = await this.processReleases({ releases: filteredReleases });
+        const total = response.total || filteredReleases.length || 0;
 
         return {
           releases: processedReleases,
@@ -272,8 +286,20 @@ class DatabaseService {
       // Fall back to checking for releases property (legacy format)
       else if (response.releases && Array.isArray(response.releases)) {
         console.log(`Received ${response.releases.length} releases for label ${labelId}`);
-        const processedReleases = await this.processReleases({ releases: response.releases });
-        const total = response.total || response.releases.length || 0;
+        
+        // Ensure the releases are actually for this label
+        const filteredReleases = response.releases.filter((release: any) => {
+          const releaseLabel = release.label_id || 
+                             (release.label && typeof release.label === 'object' ? release.label.id : release.label);
+          
+          // Convert both to strings for comparison to handle numeric vs string IDs
+          return String(releaseLabel).toLowerCase() === String(labelId).toLowerCase();
+        });
+        
+        console.log(`[DEBUG] After filtering by label ID, found ${filteredReleases.length} out of ${response.releases.length} releases`);
+        
+        const processedReleases = await this.processReleases({ releases: filteredReleases });
+        const total = response.total || filteredReleases.length || 0;
 
         return {
           releases: processedReleases,
@@ -299,38 +325,31 @@ class DatabaseService {
           if (alternativeResponse.data && Array.isArray(alternativeResponse.data)) {
             console.log(`[DEBUG] Alternative query succeeded with ${alternativeResponse.data.length} releases`);
             const processedReleases = await this.processReleases({ releases: alternativeResponse.data });
-            const total = alternativeResponse.total || alternativeResponse.data.length || 0;
-            
             return {
               releases: processedReleases,
-              totalReleases: total,
-              totalTracks: alternativeResponse.count || processedReleases.length || 0,
-              hasMore: offset + processedReleases.length < total
+              totalReleases: alternativeResponse.data.length,
+              totalTracks: alternativeResponse.count || 0,
+              hasMore: offset + processedReleases.length < alternativeResponse.data.length
             };
-          } else {
-            console.log('[DEBUG] Alternative query failed to return valid data');
+          } else if (alternativeResponse.releases && Array.isArray(alternativeResponse.releases)) {
+            console.log(`[DEBUG] Alternative query succeeded with ${alternativeResponse.releases.length} releases (legacy format)`);
+            const processedReleases = await this.processReleases({ releases: alternativeResponse.releases });
+            return {
+              releases: processedReleases,
+              totalReleases: alternativeResponse.releases.length,
+              totalTracks: alternativeResponse.count || 0,
+              hasMore: offset + processedReleases.length < alternativeResponse.releases.length
+            };
           }
         } catch (altError) {
-          console.error('[DEBUG] Error in alternative query:', altError);
+          console.error('[DEBUG] Alternative query failed:', altError);
         }
-      } else {
-        console.warn(`Received empty or invalid releases array for label ${labelId}`);
       }
-      return {
-        releases: [],
-        totalReleases: 0,
-        totalTracks: 0,
-        hasMore: false
-      };
+
+      return { releases: [], totalReleases: 0, totalTracks: 0, hasMore: false };
     } catch (error) {
-      console.error(`Error fetching releases for label ${labelId}:`, error);
-      // Return empty array instead of throwing to make UI more resilient
-      return {
-        releases: [],
-        totalReleases: 0,
-        totalTracks: 0,
-        hasMore: false
-      };
+      console.error(`Error getting releases for label ${labelId}:`, error);
+      return { releases: [], totalReleases: 0, totalTracks: 0, hasMore: false };
     }
   }
 
@@ -389,16 +408,66 @@ class DatabaseService {
       return [];
     }
 
+    console.log(`Processing ${response.releases.length} releases`);
+    console.log(`[DEBUG] Release types present:`, JSON.stringify(
+      [...new Set(response.releases.map((r: any) => r.type || 'unknown'))]
+    ));
+
     // Map the releases
-    return response.releases.map(release => {
+    return response.releases.map((release: any) => {
+      // Log details about the release for debugging
+      console.log(`[DEBUG] Processing release: ${release.id} ${release.title || release.name} (${release.type || 'unknown type'})`);
+      console.log(`[DEBUG] Release has artwork_url: ${!!release.artwork_url}, has images: ${!!(release.images && release.images.length)}`);
+      
       // Ensure release has an artwork_url
-      if (!release.artwork_url && release.images && release.images.length > 0) {
-        release.artwork_url = release.images[0].url;
+      if (!release.artwork_url) {
+        if (release.images && release.images.length > 0) {
+          release.artwork_url = release.images[0].url;
+          console.log(`[DEBUG] Set release artwork from images array: ${release.artwork_url}`);
+        } else if (release.cover_url) {
+          release.artwork_url = release.cover_url;
+          console.log(`[DEBUG] Set release artwork from cover_url: ${release.artwork_url}`);
+        } else if (release.cover && release.cover.url) {
+          release.artwork_url = release.cover.url;
+          console.log(`[DEBUG] Set release artwork from cover object: ${release.artwork_url}`);
+        } else {
+          // Set a placeholder image
+          release.artwork_url = 'https://via.placeholder.com/300?text=No+Artwork';
+          console.log(`[DEBUG] Set placeholder artwork for release ${release.id}`);
+        }
+      }
+
+      // Make sure the release title is populated
+      if (!release.title && release.name) {
+        release.title = release.name;
+      } else if (!release.title) {
+        release.title = 'Untitled Release';
       }
 
       // Check if we need to add the official website tag for Render-formatted releases
       if (release.spotify_url && !release.spotify_url.startsWith('http')) {
         release.spotify_url = `https://open.spotify.com/album/${release.spotify_url}`;
+      }
+
+      // Ensure type field is correctly populated
+      if (!release.type) {
+        // Try to determine type from metadata
+        if (release.release_type) {
+          release.type = release.release_type.toLowerCase();
+        } else if (release.num_tracks && release.num_tracks <= 4) {
+          release.type = 'single';
+        } else if (release.num_tracks && release.num_tracks <= 8) {
+          release.type = 'ep';
+        } else {
+          release.type = 'album';
+        }
+      }
+
+      // Standardize label_id format - could be either a string ID or an object with an id property
+      if (release.label && typeof release.label === 'object' && release.label.id) {
+        release.label_id = release.label.id;
+      } else if (!release.label_id && release.label) {
+        release.label_id = typeof release.label === 'string' ? release.label : String(release.label);
       }
 
       return release as Release;
@@ -455,6 +524,46 @@ class DatabaseService {
     }
     
     return track;
+  }
+
+  private createTrackFromSnapshot(trackSnapshot: any): Track {
+    if (!trackSnapshot) {
+      return {
+        id: '',
+        title: '',
+        name: '',
+        duration: 0,
+        track_number: 0,
+        disc_number: 0,
+        preview_url: null,
+        spotify_url: '',
+        spotify_uri: '',
+        artists: [],
+        isrc: '',
+        external_urls: { spotify: '' },
+        type: 'track'
+      };
+    }
+    
+    // Use the standard createTrack method for consistent handling
+    return this.createTrack(trackSnapshot);
+  }
+
+  /**
+   * Maps a Spotify artist to our internal Artist interface
+   * @param artist The Spotify artist object
+   * @returns An Artist object
+   */
+  private mapSpotifyArtistToArtist(artist: Record<string, any>): Artist {
+    return {
+      id: artist.id || '',
+      name: artist.name || 'Unknown Artist',
+      uri: artist.uri || artist.spotify_uri || '',
+      external_urls: artist.external_urls || { spotify: artist.spotify_url || '' },
+      spotify_url: artist.spotify_url || artist.external_urls?.spotify || '',
+      image_url: artist.images?.[0]?.url || '',
+      type: 'artist'
+    };
   }
 
   public async getTracksByLabel(
@@ -599,7 +708,7 @@ class DatabaseService {
         console.log(`Successfully found ${response.data.length} releases for artist ${artistId}`);
         
         // Transform the data and use type assertion to bypass TypeScript checking
-        return response.data.map(release => {
+        return response.data.map((release: any) => {
           // Create a release object with the properties we have
           const releaseObj = {
             id: release.id || '',
@@ -611,7 +720,7 @@ class DatabaseService {
             artists: release.artists || [],
             label_id: release.label_id || '',
             total_tracks: release.total_tracks || 0,
-            tracks: (release.tracks || []).map(track => this.createTrack(track)),
+            tracks: (release.tracks || []).map((track: any) => this.createTrack(track)),
             label: release.label || { name: release.label_name ? String(release.label_name) : '' }
           };
           
@@ -640,7 +749,7 @@ class DatabaseService {
         console.log(`[DatabaseService] Got ${response.artists.length} artists`);
         
         // Process the artists to match the exact Artist interface from index.ts
-        const processedArtists = response.artists.map(artist => {
+        const processedArtists = response.artists.map((artist: any) => {
           return {
             id: artist.id,
             name: artist.name,
@@ -669,9 +778,36 @@ class DatabaseService {
   }
 
   private formatArtist(artist: any): Artist {
-    // Fix missing image URLs if needed
-    if (!artist.image_url && artist.images && artist.images.length > 0) {
-      artist.image_url = artist.images[0].url;
+    // Log the artist object to help with debugging
+    console.log(`[DEBUG] Formatting artist:`, JSON.stringify({
+      id: artist.id,
+      name: artist.name,
+      hasImageUrl: !!artist.image_url,
+      hasImages: !!(artist.images && artist.images.length),
+    }));
+    
+    // Fix missing image URLs - check all possible image locations
+    if (!artist.image_url) {
+      // Try the images array first
+      if (artist.images && artist.images.length > 0) {
+        artist.image_url = artist.images[0].url;
+        console.log(`[DEBUG] Set artist image from images array: ${artist.image_url}`);
+      } 
+      // Try image property if present
+      else if (artist.image && artist.image.url) {
+        artist.image_url = artist.image.url;
+        console.log(`[DEBUG] Set artist image from image object: ${artist.image_url}`);
+      }
+      // Try photo_url if present 
+      else if (artist.photo_url) {
+        artist.image_url = artist.photo_url;
+        console.log(`[DEBUG] Set artist image from photo_url: ${artist.image_url}`);
+      }
+      // Set a default if nothing is found
+      else {
+        artist.image_url = 'https://via.placeholder.com/300?text=Artist+Image';
+        console.log(`[DEBUG] Set default artist image`);
+      }
     }
     
     // Ensure spotify_url has the full URL if it's just an ID
@@ -679,47 +815,11 @@ class DatabaseService {
       artist.spotify_url = `https://open.spotify.com/artist/${artist.spotify_url}`;
     }
     
-    return artist as Artist;
-  }
-  
-  private createTrackFromSnapshot(trackSnapshot: any): Track {
-    if (!trackSnapshot) {
-      return {
-        id: '',
-        title: '',
-        name: '',
-        duration: 0,
-        track_number: 0,
-        disc_number: 0,
-        preview_url: null,
-        spotify_url: '',
-        spotify_uri: '',
-        artists: [],
-        isrc: '',
-        external_urls: { spotify: '' },
-        type: 'track'
-      };
-    }
+    // Ensure other required properties have values to display
+    artist.name = artist.name || 'Unknown Artist';
+    artist.type = artist.type || 'artist';
     
-    // Use the standard createTrack method for consistent handling
-    return this.createTrack(trackSnapshot);
-  }
-
-  /**
-   * Maps a Spotify artist to our internal Artist interface
-   * @param artist The Spotify artist object
-   * @returns An Artist object
-   */
-  private mapSpotifyArtistToArtist(artist: Record<string, any>): Artist {
-    return {
-      id: artist.id || '',
-      name: artist.name || 'Unknown Artist',
-      uri: artist.uri || artist.spotify_uri || '',
-      external_urls: artist.external_urls || { spotify: artist.spotify_url || '' },
-      spotify_url: artist.external_urls?.spotify || artist.spotify_url || '',
-      image_url: artist.images?.[0]?.url || '',
-      type: 'artist'
-    };
+    return artist as Artist;
   }
 
   public async adminLogin(username: string, password: string): Promise<AdminLoginResponse> {
@@ -770,7 +870,7 @@ class DatabaseService {
       console.log(`Getting releases for artist via standalone request: ${artistId}`);
       const response = await this.fetchApi<ApiResponse<Release>>(`/artists/${artistId}/releases`);
       
-      if (response.data && Array.isArray(response.data)) {
+      if (response?.data && Array.isArray(response.data)) {
         return this.processReleases({ releases: response.data });
       } else if (response.releases && Array.isArray(response.releases)) {
         return this.processReleases({ releases: response.releases });
