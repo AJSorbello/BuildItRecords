@@ -17,6 +17,7 @@
   "scripts": {
     "dev": "vite",
     "build": "echo 'API-only deployment - no frontend assets to build'",
+    "build:render": "echo 'Render API-only deployment'",
     "serve": "vite preview",
     "start": "node render-standalone.js",
     "start:frontend": "npm run dev",
