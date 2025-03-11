@@ -65,6 +65,7 @@ app.get('/', (req, res) => {
     endpoints: [
       '/health',
       '/healthz',
+      '/api/supabase-status',
       '/api/artists',
       '/api/artists/:id',
       '/api/releases',
@@ -72,6 +73,70 @@ app.get('/', (req, res) => {
       '/api/artist-releases/:id'
     ]
   });
+});
+
+// Add Supabase status endpoint
+app.get('/api/supabase-status', async (req, res) => {
+  try {
+    // Check if Supabase clients are initialized
+    if (!supabase || !supabaseAdmin) {
+      return res.status(500).json({
+        success: false,
+        message: 'Supabase clients not properly initialized',
+        env: {
+          SUPABASE_URL: process.env.SUPABASE_URL ? 'Set' : 'Not set',
+          SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY ? 'Set' : 'Not set',
+          SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY ? 'Set' : 'Not set'
+        }
+      });
+    }
+
+    // Test query - get a small sample of data
+    const [artistsResponse, labelsResponse, releasesResponse] = await Promise.allSettled([
+      supabase.from('artists').select('id, name').limit(1),
+      supabase.from('labels').select('id, name').limit(1),
+      supabase.from('releases').select('id, title').limit(1)
+    ]);
+
+    // Collect test results
+    const testResults = {
+      artists: artistsResponse.status === 'fulfilled' 
+        ? (artistsResponse.value.error ? `Error: ${artistsResponse.value.error.message}` : 'Success') 
+        : 'Failed',
+      labels: labelsResponse.status === 'fulfilled' 
+        ? (labelsResponse.value.error ? `Error: ${labelsResponse.value.error.message}` : 'Success') 
+        : 'Failed',
+      releases: releasesResponse.status === 'fulfilled' 
+        ? (releasesResponse.value.error ? `Error: ${releasesResponse.value.error.message}` : 'Success') 
+        : 'Failed'
+    };
+
+    // Include samples of data if successful
+    const samples = {};
+    if (artistsResponse.status === 'fulfilled' && !artistsResponse.value.error) {
+      samples.artists = artistsResponse.value.data;
+    }
+    if (labelsResponse.status === 'fulfilled' && !labelsResponse.value.error) {
+      samples.labels = labelsResponse.value.data;
+    }
+    if (releasesResponse.status === 'fulfilled' && !releasesResponse.value.error) {
+      samples.releases = releasesResponse.value.data;
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Supabase connection status',
+      environment: process.env.NODE_ENV,
+      testResults,
+      samples
+    });
+  } catch (error) {
+    console.error(`Error checking Supabase status: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      message: `Error checking Supabase status: ${error.message}`
+    });
+  }
 });
 
 // Import route modules
