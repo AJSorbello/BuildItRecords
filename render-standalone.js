@@ -10,6 +10,13 @@ const { getSupabase, getSupabaseAdmin } = require('./utils/database');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Enhanced CORS configuration
+const corsOptions = {
+  origin: '*', // Allow all origins
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+
 // Create Supabase client instances
 let supabase, supabaseAdmin;
 try {
@@ -25,7 +32,7 @@ app.locals.supabase = supabase;
 app.locals.supabaseAdmin = supabaseAdmin;
 
 // Middleware
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev')); // Request logging
@@ -35,6 +42,33 @@ app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.originalUrl}`);
   next();
 });
+
+// Timeout middleware for long-running queries
+const timeoutMiddleware = (req, res, next) => {
+  // Set a default timeout of 25 seconds
+  const timeout = 25000;
+  
+  // Create a timeout that will send a 503 if the request takes too long
+  const timeoutId = setTimeout(() => {
+    console.error(`Request timeout for ${req.method} ${req.originalUrl}`);
+    res.status(503).json({
+      success: false,
+      message: 'Request timed out',
+      timeout: timeout,
+      path: req.originalUrl
+    });
+  }, timeout);
+  
+  // Clear the timeout when the response is sent
+  res.on('finish', () => {
+    clearTimeout(timeoutId);
+  });
+  
+  next();
+};
+
+// Apply timeout middleware to all API routes
+app.use('/api', timeoutMiddleware);
 
 // Health check endpoints (required by Render) - MUST BE DEFINED BEFORE ANY OTHER ROUTES
 app.get('/health', (req, res) => {
@@ -66,10 +100,10 @@ app.get('/', (req, res) => {
       '/health',
       '/healthz',
       '/api/supabase-status',
-      '/api/artists',
-      '/api/artists/:id',
-      '/api/releases',
-      '/api/releases/:id',
+      '/api/artists', '/api/artist',
+      '/api/artists/:id', '/api/artist/:id',
+      '/api/releases', '/api/release',
+      '/api/releases/:id', '/api/release/:id',
       '/api/artist-releases/:id'
     ]
   });
@@ -146,8 +180,27 @@ const artistReleasesRouter = require('./routes/artist-releases');
 // 1. API Routes at /api path (for compatibility with frontend requests)
 app.use('/api/artist-releases', artistReleasesRouter);
 
-// Simplified API for common endpoints
-app.get('/api/artists', async (req, res) => {
+// Helper function for safe database queries
+const safeDbQuery = async (queryFn, fallbackData = [], errorMessage = 'Database query error') => {
+  try {
+    const { data, error } = await queryFn();
+    
+    if (error) {
+      console.error(`[SafeDbQuery] ${errorMessage}:`, error.message);
+      return { success: false, data: fallbackData, error: error.message };
+    }
+    
+    return { success: true, data, error: null };
+  } catch (err) {
+    console.error(`[SafeDbQuery] Exception in query:`, err.message);
+    return { success: false, data: fallbackData, error: err.message };
+  }
+};
+
+// Simplified API for common endpoints - SUPPORTING BOTH SINGULAR AND PLURAL FORMS
+
+// Artists endpoints (both /api/artists and /api/artist)
+const handleArtistsRequest = async (req, res) => {
   try {
     const labelId = req.query.label;
     let query = supabase.from('artists').select('*');
@@ -157,94 +210,160 @@ app.get('/api/artists', async (req, res) => {
       query = query.eq('label_id', labelId);
     }
     
-    const { data, error } = await query;
+    const result = await safeDbQuery(
+      () => query,
+      [],
+      `Error fetching artists${labelId ? ` for label ${labelId}` : ''}`
+    );
     
-    if (error) throw error;
+    if (!result.success) {
+      return res.status(200).json({
+        success: false,
+        message: result.error,
+        data: []
+      });
+    }
     
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
-      data
+      data: result.data
     });
   } catch (error) {
-    console.error(`Error fetching artists: ${error.message}`);
-    res.status(500).json({
+    console.error(`Error in artists request handler: ${error.message}`);
+    return res.status(200).json({
       success: false,
-      message: error.message
+      message: error.message,
+      data: []
     });
   }
-});
+};
 
-app.get('/api/artists/:id', async (req, res) => {
+// Artist by ID endpoints (both /api/artists/:id and /api/artist/:id)
+const handleArtistByIdRequest = async (req, res) => {
   try {
     const { id } = req.params;
-    const { data, error } = await supabase
-      .from('artists')
-      .select('*')
-      .eq('id', id)
-      .single();
     
-    if (error) throw error;
+    console.log(`Fetching artist with ID: ${id}`);
     
-    res.status(200).json({
+    const result = await safeDbQuery(
+      () => supabase.from('artists').select('*').eq('id', id).single(),
+      null,
+      `Error fetching artist with ID ${id}`
+    );
+    
+    if (!result.success) {
+      return res.status(200).json({
+        success: false,
+        message: result.error,
+        data: null
+      });
+    }
+    
+    if (!result.data) {
+      return res.status(200).json({
+        success: false,
+        message: `Artist with ID ${id} not found`,
+        data: null
+      });
+    }
+    
+    return res.status(200).json({
       success: true,
-      data
+      data: result.data
     });
   } catch (error) {
-    console.error(`Error fetching artist: ${error.message}`);
-    res.status(500).json({
+    console.error(`Error in artist-by-id request handler: ${error.message}`);
+    return res.status(200).json({
       success: false,
-      message: error.message
+      message: error.message,
+      data: null
     });
   }
-});
+};
 
-app.get('/api/releases', async (req, res) => {
+// Releases endpoints (both /api/releases and /api/release)
+const handleReleasesRequest = async (req, res) => {
   try {
-    const { data, error } = await supabase
-      .from('releases')
-      .select('*');
+    const result = await safeDbQuery(
+      () => supabase.from('releases').select('*'),
+      [],
+      'Error fetching releases'
+    );
     
-    if (error) throw error;
+    if (!result.success) {
+      return res.status(200).json({
+        success: false,
+        message: result.error,
+        data: []
+      });
+    }
     
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
-      data
+      data: result.data
     });
   } catch (error) {
-    console.error(`Error fetching releases: ${error.message}`);
-    res.status(500).json({
+    console.error(`Error in releases request handler: ${error.message}`);
+    return res.status(200).json({
       success: false,
-      message: error.message
+      message: error.message,
+      data: []
     });
   }
-});
+};
 
-app.get('/api/releases/:id', async (req, res) => {
+// Release by ID endpoints (both /api/releases/:id and /api/release/:id)
+const handleReleaseByIdRequest = async (req, res) => {
   try {
     const { id } = req.params;
-    const { data, error } = await supabase
-      .from('releases')
-      .select('*')
-      .eq('id', id)
-      .single();
     
-    if (error) throw error;
+    console.log(`Fetching release with ID: ${id}`);
     
-    res.status(200).json({
+    const result = await safeDbQuery(
+      () => supabase.from('releases').select('*').eq('id', id).single(),
+      null,
+      `Error fetching release with ID ${id}`
+    );
+    
+    if (!result.success) {
+      return res.status(200).json({
+        success: false,
+        message: result.error,
+        data: null
+      });
+    }
+    
+    if (!result.data) {
+      return res.status(200).json({
+        success: false,
+        message: `Release with ID ${id} not found`,
+        data: null
+      });
+    }
+    
+    return res.status(200).json({
       success: true,
-      data
+      data: result.data
     });
   } catch (error) {
-    console.error(`Error fetching release: ${error.message}`);
-    res.status(500).json({
+    console.error(`Error in release-by-id request handler: ${error.message}`);
+    return res.status(200).json({
       success: false,
-      message: error.message
+      message: error.message,
+      data: null
     });
   }
-});
+};
 
-// Also mount routes at root for compatibility with some frontend configurations
-app.use('/artist-releases', artistReleasesRouter);
+// Register routes for both plural and singular forms
+app.get('/api/artists', handleArtistsRequest);
+app.get('/api/artist', handleArtistsRequest);
+app.get('/api/artists/:id', handleArtistByIdRequest);
+app.get('/api/artist/:id', handleArtistByIdRequest);
+app.get('/api/releases', handleReleasesRequest);
+app.get('/api/release', handleReleasesRequest);
+app.get('/api/releases/:id', handleReleaseByIdRequest);
+app.get('/api/release/:id', handleReleaseByIdRequest);
 
 // Enhanced diagnostic endpoint
 app.get('/api/diagnostic', (req, res) => {
@@ -264,7 +383,8 @@ app.get('/api/diagnostic', (req, res) => {
       // Don't expose sensitive information
       SUPABASE_URL: process.env.SUPABASE_URL ? '[REDACTED]' : 'not set',
       SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY ? '[REDACTED]' : 'not set',
-      SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY ? '[REDACTED]' : 'not set'
+      SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY ? '[REDACTED]' : 'not set',
+      CORS_ORIGIN: process.env.CORS_ORIGIN || '*'
     }
   };
   
@@ -288,6 +408,7 @@ app.use((req, res) => {
 const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 BuildItRecords API Server running on port ${PORT} and listening on all interfaces (0.0.0.0)`);
   console.log(`✅ Health check endpoints available at /health and /healthz`);
+  console.log(`📝 API supports both singular and plural endpoints (e.g., /api/artist and /api/artists)`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });
 
@@ -301,4 +422,11 @@ app.use((err, req, res, next) => {
   });
 });
 
-module.exports = app;
+// Handle process termination
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
+});
