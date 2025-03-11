@@ -867,6 +867,40 @@ class DatabaseService {
     }
   }
 
+  /**
+   * Get all releases for a specific artist
+   * @param artistId The ID of the artist
+   * @returns Promise resolving to an object with releases array
+   */
+  public async getArtistReleases(artistId: string): Promise<{releases: Release[]}> {
+    try {
+      console.log(`Fetching releases for artist: ${artistId}`);
+      
+      // Use the dedicated artist-releases endpoint format
+      const apiUrl = `/artist-releases/${artistId}`;
+      console.log(`[DEBUG] Using artist releases endpoint: ${apiUrl}`);
+      
+      const response = await this.fetchApi<ApiResponse>(apiUrl);
+      
+      let processedReleases: Release[] = [];
+      
+      if (response.data && Array.isArray(response.data)) {
+        console.log(`[DEBUG] Found ${response.data.length} releases in artist-releases response.data`);
+        processedReleases = await this.processReleases({ releases: response.data });
+      } else if (response.releases && Array.isArray(response.releases)) {
+        console.log(`[DEBUG] Found ${response.releases.length} releases in artist-releases response.releases`);
+        processedReleases = await this.processReleases(response as { releases: any[] });
+      } else {
+        console.warn(`No releases found for artist ${artistId}`);
+      }
+      
+      return { releases: processedReleases };
+    } catch (error) {
+      console.error(`Error fetching releases for artist ${artistId}:`, error);
+      return { releases: [] };
+    }
+  }
+
   private formatArtist(artist: any): Artist {
     if (!artist) {
       console.warn('[DEBUG] Attempt to format null or undefined artist');

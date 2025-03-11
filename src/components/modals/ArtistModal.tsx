@@ -177,7 +177,7 @@ class ArtistModalClass extends Component<ArtistModalProps, ArtistModalState> {
     
     try {
       console.log(`Fetching releases for artist: ${artist.name} (${artist.id})`);
-      const releases = await databaseService.getReleasesByArtist(artist.id);
+      const { releases } = await databaseService.getArtistReleases(artist.id);
       console.log('Releases response:', releases);
       
       // Log Spotify URLs for debugging
