@@ -3,7 +3,7 @@
  * 
  * This module provides consistent API URL handling for different environments:
  * - Local development: Uses localhost:3003
- * - Production: Uses the Render API URL (https://builditrecords.onrender.com/api)
+ * - Production: Always uses the Render API URL (https://builditrecords.onrender.com/api)
  */
 
 /**
@@ -37,8 +37,10 @@ export const getApiBaseUrl = (): string => {
   // In browser environment
   if (typeof window !== 'undefined') {
     // Production environment (including Vercel)
-    if (process.env.NODE_ENV === 'production' || window.location.hostname.includes('vercel.app')) {
-      // Use the Render API URL instead of the same origin
+    if (process.env.NODE_ENV === 'production' || 
+        window.location.hostname.includes('vercel.app') || 
+        window.location.hostname.includes('builditrecords.com')) {
+      // ALWAYS use the Render API URL for production
       const renderApiUrl = 'https://builditrecords.onrender.com/api';
       console.log('Using Render API URL:', renderApiUrl);
       return renderApiUrl;
@@ -51,12 +53,6 @@ export const getApiBaseUrl = (): string => {
 };
 
 /**
- * The base API URL without the trailing /api
- * This is useful for constructing URLs to static assets
- */
-export const API_URL = getApiBaseUrl().replace(/\/api$/, '');
-
-/**
  * Constructs a complete API URL for a given endpoint
  */
 export const getApiUrl = (endpoint: string): string => {
@@ -65,6 +61,13 @@ export const getApiUrl = (endpoint: string): string => {
   // Remove any leading slash from the endpoint to avoid double slashes
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint.substring(1) : endpoint;
   
+  // Check if baseUrl already includes /api to avoid duplication
+  if (baseUrl.endsWith('/api')) {
+    console.log('URL construction verification - this URL already includes /api suffix');
+    const url = `${baseUrl}/${cleanEndpoint}`;
+    return url;
+  }
+  
   return `${baseUrl}/${cleanEndpoint}`;
 };
 
@@ -72,27 +75,35 @@ export const getApiUrl = (endpoint: string): string => {
  * Helper function to make API requests with consistent error handling
  */
 export const fetchApi = async (endpoint: string, options: RequestInit = {}): Promise<any> => {
+  const url = getApiUrl(endpoint);
+  
+  // Debug logging
+  console.log('[DEBUG] Environment:', process.env.NODE_ENV);
+  console.log('[DEBUG] API Base URL:', getApiBaseUrl());
+  console.log('[DEBUG] Full API URL:', url);
+  console.log('[DEBUG] Sending GET request to', url);
+  
   try {
-    const url = getApiUrl(endpoint);
-    console.log(`Making API request to: ${url}`);
-    
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
-    });
+    const response = await fetch(url, options);
+    console.log('[DEBUG] Response status:', response.status, response.statusText);
     
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`API Error (${response.status}): ${errorText}`);
-      throw new Error(`API Error (${response.status}): ${errorText}`);
+      console.log('API Error:', response.status, '-', response.statusText);
+      let errorDetail = '';
+      
+      try {
+        const errorData = await response.json();
+        errorDetail = errorData.message || JSON.stringify(errorData);
+      } catch (e) {
+        console.log('Could not parse error response as JSON');
+      }
+      
+      throw new Error(`API Error ${response.status}: ${errorDetail}`);
     }
     
     return await response.json();
   } catch (error) {
-    console.error(`API request failed for ${endpoint}:`, error);
+    console.log('API Request Failed:', error);
     throw error;
   }
 };
