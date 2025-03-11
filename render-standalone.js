@@ -30,7 +30,13 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev')); // Request logging
 
-// Health check endpoints (required by Render)
+// Log incoming requests for debugging
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.originalUrl}`);
+  next();
+});
+
+// Health check endpoints (required by Render) - MUST BE DEFINED BEFORE ANY OTHER ROUTES
 app.get('/health', (req, res) => {
   console.log('Health check received at /health');
   res.status(200).json({ 
@@ -49,18 +55,31 @@ app.get('/healthz', (req, res) => {
   });
 });
 
+// Root path handler
+app.get('/', (req, res) => {
+  console.log('Request received at root path');
+  res.status(200).json({
+    status: 'online',
+    message: 'BuildItRecords API is running',
+    version: '0.1.1',
+    endpoints: [
+      '/health',
+      '/healthz',
+      '/api/artists',
+      '/api/artists/:id',
+      '/api/releases',
+      '/api/releases/:id',
+      '/api/artist-releases/:id'
+    ]
+  });
+});
+
 // Import route modules
 const artistReleasesRouter = require('./routes/artist-releases');
 
 // Mount API routes
 // 1. API Routes at /api path (for compatibility with frontend requests)
 app.use('/api/artist-releases', artistReleasesRouter);
-
-// Log incoming requests for debugging
-app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.originalUrl}`);
-  next();
-});
 
 // Simplified API for common endpoints
 app.get('/api/artists', async (req, res) => {
@@ -164,35 +183,47 @@ app.use('/artist-releases', artistReleasesRouter);
 
 // Enhanced diagnostic endpoint
 app.get('/api/diagnostic', (req, res) => {
-  // Check environment variables
-  const environmentVars = {
-    NODE_ENV: process.env.NODE_ENV || 'not set',
-    PORT: process.env.PORT || 'not set',
-    SUPABASE_URL: process.env.SUPABASE_URL ? 'set' : 'not set',
-    SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY ? 'set' : 'not set',
-    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY ? 'set' : 'not set'
+  const diagnosticInfo = {
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+    nodeVersion: process.version,
+    processUptime: process.uptime(),
+    memoryUsage: process.memoryUsage(),
+    platform: process.platform,
+    hostname: require('os').hostname(),
+    cpuInfo: require('os').cpus(),
+    networkInterfaces: require('os').networkInterfaces(),
+    envVars: {
+      PORT: process.env.PORT,
+      NODE_ENV: process.env.NODE_ENV,
+      // Don't expose sensitive information
+      SUPABASE_URL: process.env.SUPABASE_URL ? '[REDACTED]' : 'not set',
+      SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY ? '[REDACTED]' : 'not set',
+      SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY ? '[REDACTED]' : 'not set'
+    }
   };
-
+  
   res.status(200).json({
     success: true,
-    message: 'Diagnostic information',
-    data: {
-      environment: process.env.NODE_ENV || 'development',
-      timestamp: new Date().toISOString(),
-      server: 'render-standalone',
-      environment_variables: environmentVars,
-      headers: req.headers
-    }
+    message: 'API diagnostic information',
+    data: diagnosticInfo
   });
 });
 
-// Basic API routes
-app.get('/api/health', (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: 'API health check passed',
-    timestamp: new Date().toISOString()
+// Handle 404 - Keep this as the last route
+app.use((req, res) => {
+  console.error(`404 - Not Found: ${req.method} ${req.originalUrl}`);
+  res.status(404).json({
+    success: false,
+    message: `Route not found: ${req.method} ${req.originalUrl}`
   });
+});
+
+// Start the server
+const server = app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 BuildItRecords API Server running on port ${PORT} and listening on all interfaces (0.0.0.0)`);
+  console.log(`✅ Health check endpoints available at /health and /healthz`);
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });
 
 // Error handling middleware
@@ -203,13 +234,6 @@ app.use((err, req, res, next) => {
     message: 'Internal server error',
     error: err.message
   });
-});
-
-// Start the server
-app.listen(PORT, () => {
-  console.log(`🚀 BuildItRecords API Server running on port ${PORT}`);
-  console.log(`✅ Health check endpoints available at /health and /healthz`);
-  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });
 
 module.exports = app;
