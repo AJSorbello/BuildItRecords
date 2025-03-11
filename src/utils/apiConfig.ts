@@ -3,7 +3,7 @@
  * 
  * This module provides consistent API URL handling for different environments:
  * - Local development: Uses localhost:3003
- * - Production (Vercel): Uses relative URLs that work with Vercel's API routing or the full API URL
+ * - Production: Uses the Render API URL (https://builditrecords.onrender.com/api)
  */
 
 /**
@@ -38,10 +38,10 @@ export const getApiBaseUrl = (): string => {
   if (typeof window !== 'undefined') {
     // Production environment (including Vercel)
     if (process.env.NODE_ENV === 'production' || window.location.hostname.includes('vercel.app')) {
-      const apiUrl = `${window.location.origin}/api`;
-      console.log('Using production API URL with origin:', apiUrl);
-      console.log('URL construction verification - this URL already includes /api suffix');
-      return apiUrl;
+      // Use the Render API URL instead of the same origin
+      const renderApiUrl = 'https://builditrecords.onrender.com/api';
+      console.log('Using Render API URL:', renderApiUrl);
+      return renderApiUrl;
     }
   }
   
