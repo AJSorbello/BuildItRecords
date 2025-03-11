@@ -367,9 +367,9 @@ class DatabaseService {
           release.artwork_url = release.cover.url;
           console.log(`[DEBUG] Set release artwork from cover object: ${release.artwork_url}`);
         } else if (release.id) {
-          // Try to get a Spotify artwork URL based on the ID
-          release.artwork_url = `https://i.scdn.co/image/${release.id}`;
-          console.log(`[DEBUG] Set release artwork from Spotify ID: ${release.artwork_url}`);
+          // Correctly format Spotify image URL - need to use AB67616500001 format for album artwork
+          release.artwork_url = `https://i.scdn.co/image/ab67616d0000b273${release.id.substring(0, 22)}`;
+          console.log(`[DEBUG] Set release artwork from Spotify ID with correct format: ${release.artwork_url}`);
         } else {
           // Set a direct placeholder image URL instead of a relative path
           release.artwork_url = 'https://via.placeholder.com/300?text=No+Artwork';
@@ -803,6 +803,66 @@ class DatabaseService {
     } catch (error) {
       console.error('[DatabaseService] Error fetching artists by label:', error);
       // Return empty array instead of throwing to make UI more resilient
+      return [];
+    }
+  }
+
+  /**
+   * Get top performing releases for a specific label
+   * @param labelId The ID of the label (can be string 'buildit-records' or numeric id)
+   * @returns Promise resolving to an array of top releases
+   */
+  public async getTopReleases(labelId: string): Promise<Release[]> {
+    try {
+      console.log(`Getting top releases for label: ${labelId}`);
+      
+      // Special handling for buildit-records label
+      const isBuilditLabel = labelId === 'buildit-records' || labelId === '1';
+      
+      let apiUrl = `/releases/top?`;
+      
+      // Add label parameter in the format the backend expects
+      if (isBuilditLabel) {
+        apiUrl += `label=buildit-records`;
+      } else {
+        apiUrl += `label=${labelId}`;
+      }
+      
+      console.log(`[DEBUG] Requesting top releases: ${this.baseUrl}${apiUrl}`);
+      
+      const response = await this.fetchApi<ApiResponse>(apiUrl);
+      
+      // Check for data property first (Render API format)
+      if (response.data && Array.isArray(response.data)) {
+        console.log(`[DEBUG] Found ${response.data.length} top releases in response.data`);
+        return this.processReleases({ releases: response.data });
+      }
+      // Fall back to checking for releases property (legacy format)
+      else if (response.releases && Array.isArray(response.releases)) {
+        console.log(`[DEBUG] Found ${response.releases.length} top releases in response.releases`);
+        return this.processReleases(response as { releases: any[] });
+      }
+      
+      // Special handling for error message about JSON object
+      if (response.message && response.message.includes("JSON object")) {
+        console.log(`[DEBUG] Backend returned JSON object error: ${response.message}`);
+        
+        // Try alternative approach with numeric label ID if we're using string ID
+        if (labelId === 'buildit-records') {
+          console.log(`[DEBUG] Trying fallback with numeric ID for top releases`);
+          return this.getTopReleases('1');
+        }
+        
+        // Create some default top releases based on regular releases
+        console.log(`[DEBUG] Creating default top releases from standard releases`);
+        const regularReleases = await this.getReleasesByLabel(labelId, 1, 6);
+        return regularReleases.releases.slice(0, 3); // Return top 3 as "featured"
+      }
+      
+      console.warn(`No releases found in top releases response for label ${labelId}`);
+      return [];
+    } catch (error) {
+      console.error(`Error fetching top releases for label ${labelId}:`, error);
       return [];
     }
   }
