@@ -6,11 +6,33 @@ const bodyParser = require('body-parser');
  * @param {Object} app - Express app instance
  */
 function setupCommonMiddleware(app) {
-  // Enable CORS for all routes
+  // Read CORS origins from environment
+  const allowedOrigins = process.env.CORS_ORIGIN?.split(',').map(origin => origin.trim()) || ['*'];
+  console.log('Configured CORS allowed origins:', allowedOrigins);
+
+  // Enable CORS for all routes with proper configuration
   app.use(cors({
-    origin: '*',
+    origin: function(origin, callback) {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+      
+      if (allowedOrigins.indexOf(origin) === -1 && allowedOrigins[0] !== '*') {
+        console.log(`CORS blocked origin: ${origin}`);
+        console.log(`Allowed origins:`, allowedOrigins);
+      }
+      
+      // Allow any of the configured origins or all origins if '*' is set
+      if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins[0] === '*' || !origin) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    credentials: true, // Allow credentials (cookies, auth headers, etc)
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'Accept'],
+    preflightContinue: false,
+    optionsSuccessStatus: 204
   }));
   
   // Parse JSON request bodies
