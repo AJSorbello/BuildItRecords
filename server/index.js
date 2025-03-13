@@ -131,13 +131,17 @@ async function startServer() {
     // Make sequelize instance available globally
     global.sequelize = sequelize;
 
-    // Verify email configuration
-    const emailConfigValid = await verifyEmailConfig();
-    if (!emailConfigValid) {
-      logger.error('Email configuration verification failed');
-      process.exit(1);
+    // Verify email configuration - but don't crash if it fails
+    try {
+      const emailConfigValid = await verifyEmailConfig();
+      if (!emailConfigValid) {
+        logger.warn('Email configuration verification failed, email features will be disabled');
+      } else {
+        logger.info('Email configuration verified successfully');
+      }
+    } catch (error) {
+      logger.warn('Email verification error, continuing anyway:', error.message);
     }
-    logger.info('Email configuration verified successfully');
 
     // Start server
     app.listen(PORT, () => {
