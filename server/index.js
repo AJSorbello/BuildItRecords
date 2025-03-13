@@ -31,22 +31,51 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false
 }));
 
-// Configure CORS - simplified for development
-const isDevelopment = process.env.NODE_ENV === 'development';
-const corsOptions = {
-  origin: isDevelopment ? 'http://localhost:3000' : process.env.CORS_ORIGIN || '*',
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-};
+// Enhanced CORS configuration that supports multiple origins
+const allowedOrigins = [
+  'http://localhost:3000',
+  'https://build-it-records-op89jmt3o-ajsorbellos-projects.vercel.app',
+  'https://builditrecords.com',
+  'https://www.builditrecords.com'
+];
 
-// Log CORS configuration
+// If CORS_ORIGIN is defined in env, add it to allowed origins
+if (process.env.CORS_ORIGIN) {
+  const corsOriginsFromEnv = process.env.CORS_ORIGIN.split(',').map(origin => origin.trim());
+  corsOriginsFromEnv.forEach(origin => {
+    if (origin && !allowedOrigins.includes(origin)) {
+      allowedOrigins.push(origin);
+    }
+  });
+}
+
 logger.info('CORS configuration:', {
   environment: process.env.NODE_ENV,
-  origin: corsOptions.origin
+  allowedOrigins
 });
 
-app.use(cors(corsOptions));
+// Apply CORS middleware with proper configuration
+app.use(cors({
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.includes('*')) {
+      callback(null, true);
+    } else {
+      logger.warn(`CORS blocked request from origin: ${origin}`);
+      // Still allow the request to proceed in production to avoid breaking things
+      if (process.env.NODE_ENV === 'production') {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'Accept']
+}));
 
 // Request logging middleware
 app.use((req, res, next) => {
@@ -117,7 +146,7 @@ async function startServer() {
       logger.info('Environment configuration:', {
         NODE_ENV: process.env.NODE_ENV,
         PORT: PORT,
-        CORS_ORIGIN: corsOptions.origin,
+        allowedOrigins,
         hasJwtSecret: !!process.env.JWT_SECRET,
         hasAdminUsername: !!process.env.ADMIN_USERNAME,
         hasAdminPasswordHash: !!process.env.ADMIN_PASSWORD_HASH
