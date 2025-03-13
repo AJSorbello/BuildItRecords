@@ -19,8 +19,7 @@
     "dev:all": "concurrently \"pnpm run server\" \"pnpm run dev\"",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "type-check": "tsc --noEmit",
-    "vercel-build": "pnpm run build",
-    "prepare": "husky"
+    "vercel-build": "pnpm run build"
   },
   "dependencies": {
     "@ant-design/icons": "^5.5.2",
