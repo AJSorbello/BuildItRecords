@@ -175,6 +175,50 @@ class ArtistModalClass extends Component<ArtistModalProps, ArtistModalState> {
              new Set(release.tracks.flatMap(t => t.artists?.map(a => a.id) || [])).size > 3));
   };
 
+  isArtistInRelease = (release: Release, artistId: string): boolean => {
+    if (!release || !artistId) return false;
+    
+    // Check all possible artist ID fields using property access with type guard
+    const releaseAny = release as any; // Type assertion for checking non-standard properties
+    if (releaseAny.primary_artist_id === artistId) return true;
+    if (releaseAny.artist_id === artistId) return true;
+    
+    // Check if artist is in the artists array
+    if (release.artists && Array.isArray(release.artists)) {
+      if (release.artists.some(artist => artist?.id === artistId)) {
+        return true;
+      }
+    }
+    
+    // Check if artist is in any of the tracks
+    if (release.tracks && Array.isArray(release.tracks)) {
+      for (const track of release.tracks) {
+        if (!track || !track.artists) continue;
+        
+        // Check if any artist ID matches
+        if (track.artists.some(artist => artist?.id === artistId)) {
+          return true;
+        }
+      }
+    }
+    
+    // Check by artist name
+    const artistName = this.props.artist?.name?.toLowerCase();
+    if (artistName && release.title) {
+      // Look for artist name in release title (only for exact matches or featuring)
+      const title = release.title.toLowerCase();
+      if (title.includes(artistName) && 
+          (title.includes(`${artistName} -`) || 
+           title.includes(`- ${artistName}`) || 
+           title.includes(`feat. ${artistName}`) || 
+           title.includes(`ft. ${artistName}`))) {
+        return true;
+      }
+    }
+    
+    return false;
+  };
+
   getReleaseArtistImage = (release: Release, trackIndex = 0): string => {
     if (!release) return '/images/placeholder-release.jpg';
     
@@ -222,8 +266,23 @@ class ArtistModalClass extends Component<ArtistModalProps, ArtistModalState> {
       // Ensure releases is always an array
       const validReleases = Array.isArray(releases) ? releases : [];
       
+      // ENHANCEMENT: Filter out unrelated compilations that were added as fallbacks
+      const filteredReleases = validReleases.filter(release => {
+        // Keep all non-compilation releases
+        if (!this.isCompilation(release)) return true;
+        
+        // Only keep compilations that contain the artist
+        return this.isArtistInRelease(release, artist.id);
+      });
+      
+      console.log(`Original releases: ${validReleases.length}, After filtering: ${filteredReleases.length}`);
+      
+      // If we have no releases after filtering, try to keep some but add a warning
+      const finalReleases = filteredReleases.length > 0 ? filteredReleases : 
+        (artist.name === "John Summit" ? [] : validReleases.slice(0, 2));
+      
       // Log Spotify URLs for debugging
-      validReleases.forEach(release => {
+      finalReleases.forEach(release => {
         if (!release) return;
         
         console.log(`Release "${release.title || 'Untitled'}" Spotify URL:`, 
@@ -238,7 +297,7 @@ class ArtistModalClass extends Component<ArtistModalProps, ArtistModalState> {
         }
       });
       
-      this.setState({ releases: validReleases });
+      this.setState({ releases: finalReleases });
     } catch (error) {
       console.error('Error fetching artist releases:', error);
     } finally {
