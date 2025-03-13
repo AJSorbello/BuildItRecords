@@ -16,6 +16,7 @@
     "start": "node index.js",
     "dev": "nodemon",
     "build": "tsc",
+    "deploy": "npm install --production",
     "lint": "eslint . --ext .ts",
     "type-check": "tsc --noEmit",
     "db:migrate": "sequelize-cli db:migrate",
