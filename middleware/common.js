@@ -23,23 +23,37 @@ function setupCommonMiddleware(app) {
   app.use(cors({
     origin: function(origin, callback) {
       // Allow requests with no origin (like mobile apps or curl requests)
-      if (!origin) return callback(null, true);
-      
-      // Check if origin exactly matches one of our allowed origins
-      if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins[0] === '*') {
+      if (!origin) {
+        console.log('Allowing request with no origin');
         return callback(null, true);
       }
       
-      // Special handling for Vercel preview deployments
-      if (origin.includes('vercel.app') || origin.includes('-ajsorbellos-projects.vercel.app')) {
-        console.log(`Allowing Vercel preview URL: ${origin}`);
-        return callback(null, true);
+      try {
+        // Check if origin exactly matches one of our allowed origins
+        if (allowedOrigins.includes(origin) || allowedOrigins[0] === '*') {
+          console.log(`Allowing exact match: ${origin}`);
+          return callback(null, true);
+        }
+        
+        // Special handling for Vercel preview deployments
+        if (
+          origin.includes('vercel.app') || 
+          origin.includes('-ajsorbellos-projects.vercel.app') ||
+          origin.includes('localhost')
+        ) {
+          console.log(`Allowing Vercel preview URL: ${origin}`);
+          return callback(null, true);
+        }
+        
+        // Log blocked origins for debugging
+        console.log(`CORS blocked origin: ${origin}`);
+        console.log(`Allowed origins:`, allowedOrigins);
+        callback(new Error('Not allowed by CORS'));
+      } catch (error) {
+        console.error('Error in CORS origin validation:', error);
+        // Default to allowing the request in case of error to prevent crashes
+        callback(null, true);
       }
-      
-      // Log blocked origins for debugging
-      console.log(`CORS blocked origin: ${origin}`);
-      console.log(`Allowed origins:`, allowedOrigins);
-      callback(new Error('Not allowed by CORS'));
     },
     credentials: true, // Allow credentials (cookies, auth headers, etc)
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
