@@ -16,7 +16,7 @@
     "start": "node index.js",
     "dev": "nodemon",
     "build": "tsc",
-    "deploy": "npm install --production",
+    "deploy": "npm install",
     "lint": "eslint . --ext .ts",
     "type-check": "tsc --noEmit",
     "db:migrate": "sequelize-cli db:migrate",
@@ -27,6 +27,7 @@
   },
   "dependencies": {
     "@types/nodemailer": "^6.4.17",
+    "axios": "^1.6.7",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
