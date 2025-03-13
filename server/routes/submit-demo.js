@@ -3,6 +3,7 @@ const router = express.Router();
 const { body, validationResult } = require('express-validator');
 const { DemoSubmission } = require('../models');
 const emailService = require('../services/email.service.js');
+const logger = require('../utils/logger');
 
 // Validation middleware
 const validateSubmission = [
@@ -49,15 +50,28 @@ router.post('/', validateSubmission, async (req, res) => {
       genre: track.genre
     });
 
-    // Send email notification
-    await emailService.sendDemoSubmissionEmail({
-      artistName: artist.name,
-      trackTitle: track.name,
-      genre: track.genre,
-      soundCloudLink: track.soundCloudPrivateLink,
-      email: artist.email,
-      country: artist.country
-    });
+    // Try to send email notification, but don't fail if it doesn't work
+    try {
+      const emailResult = await emailService.sendDemoSubmissionEmail({
+        artistName: artist.name,
+        trackTitle: track.name,
+        genre: track.genre,
+        soundCloudLink: track.soundCloudPrivateLink,
+        email: artist.email,
+        country: artist.country
+      });
+      
+      logger.info('Email notification sent for demo submission', { 
+        submissionId: submission.id,
+        emailResult 
+      });
+    } catch (emailError) {
+      // Log the error but don't fail the request
+      logger.error('Failed to send email notification for demo submission', {
+        error: emailError.message,
+        submissionId: submission.id
+      });
+    }
 
     res.status(201).json({
       success: true,
@@ -67,7 +81,7 @@ router.post('/', validateSubmission, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error processing demo submission:', error);
+    logger.error('Error processing demo submission:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to process submission. Please try again.'
