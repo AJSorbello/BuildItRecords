@@ -5,22 +5,15 @@ const getSpotifyService = require('../services/SpotifyService');
 const logger = require('../utils/logger');
 const { Op } = require('sequelize');
 
-// Debug: Log available models
-console.log('Available models in labels.js:', {
-  Artist: !!Artist,
-  Label: !!Label,
-  Release: !!Release,
-  Track: !!Track,
-  TrackArtist: !!TrackArtist
-});
-
-// Debug: Log model methods
-console.log('Model methods in labels.js:', {
-  Artist: Artist ? Object.keys(Artist) : null,
-  Label: Label ? Object.keys(Label) : null,
-  Release: Release ? Object.keys(Release) : null,
-  Track: Track ? Object.keys(Track) : null,
-  TrackArtist: TrackArtist ? Object.keys(TrackArtist) : null
+// Simplified debug logging
+logger.info('Labels route initialized', {
+  modelsAvailable: {
+    Artist: !!Artist,
+    Label: !!Label,
+    Release: !!Release,
+    Track: !!Track,
+    TrackArtist: !!TrackArtist
+  }
 });
 
 const axios = require('axios');
@@ -311,6 +304,7 @@ const importTracksForLabel = async (labelId) => {
             include: [{
               model: Release,
               as: 'releases',
+              attributes: [],
               required: true,
               where: { label_id: label.id }
             }],
