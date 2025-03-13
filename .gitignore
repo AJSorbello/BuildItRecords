@@ -47,3 +47,4 @@ update-label-associations.js
 # Backup files
 api-backup/
 backup_redundant_files/
+.vercel
