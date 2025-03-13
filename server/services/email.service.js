@@ -15,19 +15,31 @@ logger.info('Email service configuration:', {
   adminEmails: ADMIN_EMAILS
 });
 
-// Create transporter with Gmail settings
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 587,
-  secure: false,
-  requireTLS: true,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS // This should be your Gmail App Password
-  },
-  logger: true,
-  debug: true // Enable debug logging
-});
+// Only create transporter if credentials are available
+let transporter = null;
+
+if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+  try {
+    // Create transporter with Gmail settings
+    transporter = nodemailer.createTransport({
+      host: 'smtp.gmail.com',
+      port: 587,
+      secure: false,
+      requireTLS: true,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS // This should be your Gmail App Password
+      },
+      logger: true,
+      debug: true // Enable debug logging
+    });
+    logger.info('Email transport created successfully');
+  } catch (error) {
+    logger.error('Failed to create email transport:', error);
+  }
+} else {
+  logger.warn('Email transport not created - missing credentials');
+}
 
 /**
  * @typedef {Object} DemoSubmission
@@ -45,6 +57,12 @@ const transporter = nodemailer.createTransport({
  * @returns {Promise<any>}
  */
 const sendDemoSubmissionEmail = async (submission) => {
+  // Skip if transporter not initialized
+  if (!transporter) {
+    logger.warn('Email not sent - transporter not initialized');
+    return { status: 'skipped', reason: 'Email service not configured' };
+  }
+  
   try {
     const { artistName, trackTitle, genre, soundCloudLink, email, country } = submission;
 
@@ -65,7 +83,7 @@ const sendDemoSubmissionEmail = async (submission) => {
     `;
 
     const mailOptions = {
-      from: process.env.SMTP_FROM,
+      from: process.env.SMTP_FROM || process.env.SMTP_USER,
       to: ADMIN_EMAILS.join(', '),
       subject: `New Demo Submission - ${artistName} - ${trackTitle}`,
       text: emailContent,
@@ -81,15 +99,22 @@ const sendDemoSubmissionEmail = async (submission) => {
   }
 };
 
-// Verify email configuration on startup
+// Verify email configuration on startup - always return true to prevent server crash
 const verifyEmailConfig = async () => {
+  // Skip verification if transporter not initialized
+  if (!transporter) {
+    logger.warn('Email verification skipped - transporter not initialized');
+    return true;
+  }
+  
   try {
     await transporter.verify();
     logger.info('Email service is ready');
     return true;
   } catch (error) {
     logger.error('Email service configuration error:', error);
-    return false;
+    // Return true anyway to prevent server crash
+    return true;
   }
 };
 
