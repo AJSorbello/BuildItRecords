@@ -167,6 +167,8 @@ class ArtistModalClass extends Component<ArtistModalProps, ArtistModalState> {
 
   isCompilation = (release: Release): boolean => {
     // Check common indicators of a compilation
+    if (!release) return false;
+    
     return (release.title?.toLowerCase().includes('compilation') || 
             release.title?.toLowerCase().includes('various') ||
             (release.tracks && release.tracks.length > 2 && 
@@ -217,19 +219,26 @@ class ArtistModalClass extends Component<ArtistModalProps, ArtistModalState> {
       const { releases } = await databaseService.getArtistReleases(artist.id);
       console.log('Releases response:', releases);
       
+      // Ensure releases is always an array
+      const validReleases = Array.isArray(releases) ? releases : [];
+      
       // Log Spotify URLs for debugging
-      releases.forEach(release => {
-        console.log(`Release "${release.title}" Spotify URL:`, 
+      validReleases.forEach(release => {
+        if (!release) return;
+        
+        console.log(`Release "${release.title || 'Untitled'}" Spotify URL:`, 
           release.external_urls?.spotify || release.spotify_url || 'None');
-        if (release.tracks && release.tracks.length > 0) {
+        if (release.tracks && Array.isArray(release.tracks) && release.tracks.length > 0) {
           release.tracks.forEach(track => {
-            console.log(`  Track "${track.title}" Spotify URL:`, 
+            if (!track) return;
+            
+            console.log(`  Track "${track.title || 'Untitled'}" Spotify URL:`, 
               track.external_urls?.spotify || (track as any).spotify_url || track.spotifyUrl || 'None');
           });
         }
       });
       
-      this.setState({ releases });
+      this.setState({ releases: validReleases });
     } catch (error) {
       console.error('Error fetching artist releases:', error);
     } finally {
@@ -279,8 +288,9 @@ class ArtistModalClass extends Component<ArtistModalProps, ArtistModalState> {
                 <TableBody>
                   {labelReleases.map((release) => {
                     // Extract track with Spotify URL if available
-                    const firstTrackWithSpotify = release.tracks && release.tracks.length > 0 
+                    const firstTrackWithSpotify = release && release.tracks && release.tracks.length > 0 
                       ? release.tracks.find(t => {
+                          if (!t) return false;
                           // Use type assertion to handle both naming conventions
                           return t.external_urls?.spotify || 
                                  (t as any).spotify_url || 
@@ -330,7 +340,7 @@ class ArtistModalClass extends Component<ArtistModalProps, ArtistModalState> {
                             let trackIndex = 0;
                             // For compilations, use track at index 1 if available
                             if ((release.title && release.title.toLowerCase().includes('compilation')) && 
-                                release.tracks.length > 1 && 
+                                release.tracks && release.tracks.length > 1 && 
                                 release.tracks[1].artists && 
                                 release.tracks[1].artists.length > 0) {
                               trackIndex = 1;
@@ -373,7 +383,7 @@ class ArtistModalClass extends Component<ArtistModalProps, ArtistModalState> {
 
                             // Return the artists from the selected track
                             // Safety check for artists array existence
-                            const artists = release.tracks[trackIndex].artists || [];
+                            const artists = release.tracks?.[trackIndex]?.artists || [];
                             return artists.length > 0 ? artists.map((artist, index) => {
                               // Use type assertion to access extended artist properties that may come from different API formats
                               const extendedArtist = artist as Artist & { 
@@ -413,11 +423,12 @@ class ArtistModalClass extends Component<ArtistModalProps, ArtistModalState> {
                           })()}
                         </TableCell>
                         <TableCell>
-                          {release.tracks && release.tracks.length > 0 && release.tracks[0].duration_ms !== undefined && 
-                            this.formatTrackDuration(release.tracks[0].duration_ms)}
+                          {release.tracks && Array.isArray(release.tracks) && release.tracks.length > 0 && release.tracks[0]?.duration_ms !== undefined
+                            ? this.formatTrackDuration(release.tracks[0].duration_ms)
+                            : '--:--'}
                         </TableCell>
                         <TableCell>
-                          {formatDate(release.release_date)}
+                          {release.release_date ? formatDate(release.release_date) : 'Unknown'}
                         </TableCell>
                         <TableCell align="center">
                           {spotifyUrl ? (

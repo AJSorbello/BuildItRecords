@@ -1,3 +1,11 @@
+// Type definitions for @testing-library/jest-dom
+// Project: https://github.com/testing-library/jest-dom
+// Typings by BuildItRecords
+
+declare module '@testing-library/jest-dom' {
+  // Module exports nothing, it extends Jest's matchers
+}
+
 declare namespace jest {
   interface Matchers<R> {
     toBeInTheDocument(): R;
@@ -19,5 +27,3 @@ declare namespace jest {
     toHaveValue(value?: string | string[] | number): R;
   }
 }
-
-declare module '@testing-library/jest-dom';

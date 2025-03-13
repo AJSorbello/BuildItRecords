@@ -21,10 +21,10 @@
     "jsx": "react-jsx",
     "outDir": "./dist",
     "baseUrl": ".",
+    "types": ["node", "jest", "@testing-library/jest-dom"],
     "typeRoots": [
       "./node_modules/@types",
-      "./src/types",
-      "./src/types/custom"
+      "./src/types"
     ],
     "paths": {
       "@/*": [
@@ -46,7 +46,8 @@
   },
   "include": [
     "src/**/*",
-    "src/types/**/*.ts"
+    "src/types/**/*.ts",
+    "src/types/custom/**/*.d.ts"
   ],
   "exclude": [
     "node_modules",

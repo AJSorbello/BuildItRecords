@@ -383,12 +383,22 @@ class DatabaseService {
           if (release.images && release.images.length > 0) {
             release.artwork_url = release.images[0].url;
           } else if (release.id && release.id.length > 10) {
-            // Format Spotify image URL correctly
-            // The proper format is https://i.scdn.co/image/ab67616d0000b273{id}
-            release.artwork_url = `https://i.scdn.co/image/ab67616d0000b273${release.id.substring(0, 22)}`;
-            console.log(`[DEBUG] Set release artwork from Spotify ID: ${release.artwork_url}`);
+            // Format Spotify image URL correctly with proper format
+            // Spotify Album URLs use this format: https://i.scdn.co/image/ab67616d0000b273{albumId}
+            // But we need the actual albumId, not just our ID
+            if (release.spotify_url) {
+              const spotifyIdMatch = release.spotify_url.match(/album\/([a-zA-Z0-9]+)/);
+              if (spotifyIdMatch && spotifyIdMatch[1]) {
+                release.artwork_url = `https://i.scdn.co/image/ab67616d0000b273${spotifyIdMatch[1]}`;
+                console.log(`[DEBUG] Set release artwork from Spotify URL: ${release.artwork_url}`);
+              } else {
+                release.artwork_url = '/images/placeholder-release.jpg';
+              }
+            } else {
+              release.artwork_url = '/images/placeholder-release.jpg';
+            }
           } else {
-            release.artwork_url = 'https://via.placeholder.com/300?text=No+Artwork';
+            release.artwork_url = '/images/placeholder-release.jpg';
           }
         } else if (release.artwork_url.includes("i.scdn.co/image/") && !release.artwork_url.includes("ab67616d0000b273")) {
           // Fix malformatted Spotify URLs
@@ -1000,9 +1010,20 @@ class DatabaseService {
           : artist.profile_image.url || '';
         console.log(`[DEBUG] Set artist image from profile_image: ${artist.image_url}`);
       }
-      // Set a default if nothing is found
-      else {
-        artist.image_url = 'https://via.placeholder.com/300?text=Artist+Image';
+      // Check for Spotify URLs and IDs
+      else if (artist.spotify_url) {
+        // Extract the actual artist ID from Spotify URL
+        const spotifyIdMatch = artist.spotify_url.match(/artist\/([a-zA-Z0-9]+)/);
+        if (spotifyIdMatch && spotifyIdMatch[1]) {
+          // Use the proper format for Spotify artist images
+          artist.image_url = `https://i.scdn.co/image/ab6761610000e5eb${spotifyIdMatch[1]}`;
+          console.log(`[DEBUG] Set artist image from Spotify URL: ${artist.image_url}`);
+        } else {
+          artist.image_url = '/images/placeholder-artist.jpg';
+          console.log(`[DEBUG] Set default artist image`);
+        }
+      } else {
+        artist.image_url = '/images/placeholder-artist.jpg';
         console.log(`[DEBUG] Set default artist image`);
       }
     }
