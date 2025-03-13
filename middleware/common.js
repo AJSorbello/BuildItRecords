@@ -25,17 +25,21 @@ function setupCommonMiddleware(app) {
       // Allow requests with no origin (like mobile apps or curl requests)
       if (!origin) return callback(null, true);
       
-      if (allowedOrigins.indexOf(origin) === -1 && allowedOrigins[0] !== '*') {
-        console.log(`CORS blocked origin: ${origin}`);
-        console.log(`Allowed origins:`, allowedOrigins);
+      // Check if origin exactly matches one of our allowed origins
+      if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins[0] === '*') {
+        return callback(null, true);
       }
       
-      // Allow any of the configured origins or all origins if '*' is set
-      if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins[0] === '*' || !origin) {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
+      // Special handling for Vercel preview deployments
+      if (origin.includes('vercel.app') || origin.includes('-ajsorbellos-projects.vercel.app')) {
+        console.log(`Allowing Vercel preview URL: ${origin}`);
+        return callback(null, true);
       }
+      
+      // Log blocked origins for debugging
+      console.log(`CORS blocked origin: ${origin}`);
+      console.log(`Allowed origins:`, allowedOrigins);
+      callback(new Error('Not allowed by CORS'));
     },
     credentials: true, // Allow credentials (cookies, auth headers, etc)
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
