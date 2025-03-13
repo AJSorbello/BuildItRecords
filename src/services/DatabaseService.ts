@@ -968,7 +968,10 @@ class DatabaseService {
         spotify_url: '',
         type: 'artist',
         external_urls: { spotify: '' },
-        uri: ''
+        uri: '',
+        profile_image_url: '',
+        profile_image_large_url: '',
+        profile_image_small_url: ''
       };
     }
     
@@ -1045,7 +1048,10 @@ class DatabaseService {
       type: artist.type || 'artist',
       external_urls: artist.external_urls || { spotify: artist.spotify_url || '' },
       spotify_url: artist.spotify_url || artist.external_urls?.spotify || '',
-      image_url: artist.image_url || ''
+      image_url: artist.image_url || '',
+      profile_image_url: artist.profile_image_url || artist.image_url || '',
+      profile_image_large_url: artist.profile_image_large_url || artist.image_url || '',
+      profile_image_small_url: artist.profile_image_small_url || artist.image_url || ''
     };
     
     return standardizedArtist;

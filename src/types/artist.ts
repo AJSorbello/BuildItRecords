@@ -11,6 +11,12 @@ export interface ArtistBase {
   name: string;
 }
 
+// Interface for Spotify followers
+export interface Followers {
+  href?: string | null;
+  total?: number;
+}
+
 // Full Artist interface with all properties
 export interface Artist extends ArtistBase {
   uri?: string;
@@ -20,6 +26,8 @@ export interface Artist extends ArtistBase {
   profile_image_url?: string;
   profile_image_large_url?: string;
   profile_image_small_url?: string;
+  genres?: string[];
+  followers?: Followers;
   type: 'artist';
 }
 
