@@ -11,6 +11,14 @@ import { DatabaseError } from '../utils/errors';
 import { RecordLabelId } from '../types/labels'; 
 import { getApiBaseUrl } from '../utils/apiConfig';
 
+// Error class for API-specific errors
+export class DatabaseApiError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'DatabaseApiError';
+  }
+}
+
 interface ArtistWithReleases extends Artist {
   releases: Release[];
 }

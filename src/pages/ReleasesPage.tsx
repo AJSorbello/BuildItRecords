@@ -52,7 +52,7 @@ const isValidRelease = (release: any): release is Release => {
 };
 
 interface ReleasesPageProps {
-  label?: RecordLabel;
+  label?: RecordLabel | string;
 }
 
 interface ReleasesPageState {

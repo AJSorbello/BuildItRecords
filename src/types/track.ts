@@ -36,6 +36,7 @@ export type Track = {
   external_urls?: SpotifyExternalUrls;
   spotify_uri: string;
   release?: Album;
+  album?: Album;
   artists: Artist[];
   remixer?: Artist;
   isrc: string;

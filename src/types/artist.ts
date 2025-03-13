@@ -5,9 +5,14 @@
 
 import type { SpotifyExternalUrls } from './spotify';
 
-export interface Artist {
+// Basic artist properties that are always required
+export interface ArtistBase {
   id: string;
   name: string;
+}
+
+// Full Artist interface with all properties
+export interface Artist extends ArtistBase {
   uri?: string;
   external_urls?: SpotifyExternalUrls;
   spotify_url?: string;
@@ -16,6 +21,14 @@ export interface Artist {
   profile_image_large_url?: string;
   profile_image_small_url?: string;
   type: 'artist';
+}
+
+// Simplified interface for tests and other scenarios
+export interface SimpleArtist extends ArtistBase {
+  uri?: string;
+  type?: 'artist';
+  external_urls?: SpotifyExternalUrls;
+  spotify_url?: string;
 }
 
 export interface ArtistWithReleases extends Artist {
