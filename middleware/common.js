@@ -1,4 +1,3 @@
-const cors = require('cors');
 const bodyParser = require('body-parser');
 
 /**
@@ -6,62 +5,25 @@ const bodyParser = require('body-parser');
  * @param {Object} app - Express app instance
  */
 function setupCommonMiddleware(app) {
-  // Read CORS origins from environment
-  const allowedOrigins = process.env.CORS_ORIGIN?.split(',').map(origin => origin.trim()) || ['*'];
-  
-  // Ensure www.builditrecords.com is always included
-  if (!allowedOrigins.includes('https://www.builditrecords.com')) {
-    allowedOrigins.push('https://www.builditrecords.com');
-  }
-  if (!allowedOrigins.includes('https://builditrecords.com')) {
-    allowedOrigins.push('https://builditrecords.com');
-  }
-  
-  console.log('Configured CORS allowed origins:', allowedOrigins);
+  // Enable required middleware including Express body parsing
+  // Read CORS origins from environment or default to all
+  const corsOrigins = process.env.CORS_ORIGIN || '*';
+  console.log('CORS configuration:', { corsOrigins });
 
-  // Enable CORS for all routes with proper configuration
-  app.use(cors({
-    origin: function(origin, callback) {
-      // Allow requests with no origin (like mobile apps or curl requests)
-      if (!origin) {
-        console.log('Allowing request with no origin');
-        return callback(null, true);
-      }
-      
-      try {
-        // Check if origin exactly matches one of our allowed origins
-        if (allowedOrigins.includes(origin) || allowedOrigins[0] === '*') {
-          console.log(`Allowing exact match: ${origin}`);
-          return callback(null, true);
-        }
-        
-        // Special handling for Vercel preview deployments
-        if (
-          origin.includes('vercel.app') || 
-          origin.includes('-ajsorbellos-projects.vercel.app') ||
-          origin.includes('localhost')
-        ) {
-          console.log(`Allowing Vercel preview URL: ${origin}`);
-          return callback(null, true);
-        }
-        
-        // Log blocked origins for debugging
-        console.log(`CORS blocked origin: ${origin}`);
-        console.log(`Allowed origins:`, allowedOrigins);
-        callback(new Error('Not allowed by CORS'));
-      } catch (error) {
-        console.error('Error in CORS origin validation:', error);
-        // Default to allowing the request in case of error to prevent crashes
-        callback(null, true);
-      }
-    },
-    credentials: true, // Allow credentials (cookies, auth headers, etc)
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'Accept'],
-    preflightContinue: false,
-    optionsSuccessStatus: 204
-  }));
-  
+  // Simple CORS configuration that won't crash the server
+  app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Origin, Accept');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    
+    // Handle preflight requests
+    if (req.method === 'OPTIONS') {
+      return res.status(204).send();
+    }
+    next();
+  });
+
   // Parse JSON request bodies
   app.use(bodyParser.json());
   
