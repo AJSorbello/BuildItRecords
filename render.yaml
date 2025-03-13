@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: builditrecords-api
+    env: node
+    buildCommand: cd server && pnpm install && pnpm run build
+    startCommand: cd server && pnpm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DB_HOST
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: CORS_ORIGIN
+        value: https://builditrecords.com
+    autoDeploy: true

@@ -68,9 +68,20 @@ class DatabaseService {
   private baseUrl: string;
 
   private constructor() {
-    const apiUrl = process.env.REACT_APP_API_URL;
-    this.baseUrl = apiUrl || 'http://localhost:3001/api';
-    console.log('DatabaseService initialized with baseUrl:', this.baseUrl);
+    // Log environment detection information
+    console.log('[DatabaseService] Environment:', import.meta.env.MODE);
+    console.log('[DatabaseService] API URL from env:', import.meta.env.VITE_API_URL);
+    console.log('[DatabaseService] Running on:', typeof window !== 'undefined' ? window.location.origin : 'server');
+    
+    // For production, always use the Render API
+    if (import.meta.env.MODE === 'production') {
+      this.baseUrl = 'https://builditrecords-api.onrender.com/api';
+      console.log('[DatabaseService] Using production Render API URL:', this.baseUrl);
+    } else {
+      // For development, use local or specified API
+      this.baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+      console.log('[DatabaseService] Using development API URL:', this.baseUrl);
+    }
   }
 
   public static getInstance(): DatabaseService {

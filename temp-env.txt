@@ -1,0 +1,27 @@
+# Frontend Vite Variables (VITE_ prefix is required for browser access)
+VITE_API_URL=http://localhost:3001/api
+VITE_SPOTIFY_CLIENT_ID=your_spotify_client_id
+VITE_SPOTIFY_CLIENT_SECRET=your_spotify_client_secret
+
+# Backend Variables
+NODE_ENV=development
+PORT=3001
+CORS_ORIGIN=http://localhost:3000
+
+# Database Configuration (Supabase)
+DB_HOST=db.your-project-id.supabase.co
+DB_USER=postgres
+DB_PASSWORD=your_supabase_password
+DB_NAME=builditrecords
+DB_PORT=5432
+
+# Authentication
+JWT_SECRET=your_jwt_secret_key
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD_HASH=your_hashed_password
+
+# Email Configuration
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your_email@gmail.com
+SMTP_PASS=your_app_password

@@ -22,7 +22,10 @@ const config = {
     }
   },
   dialectOptions: {
-    ssl: false,
+    ssl: process.env.NODE_ENV === 'production' ? {
+      require: true,
+      rejectUnauthorized: false // Important for Supabase connection
+    } : false,
     statement_timeout: 10000, // 10 second timeout for queries
     idle_in_transaction_session_timeout: 10000
   },
