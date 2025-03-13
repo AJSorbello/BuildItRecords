@@ -4,7 +4,7 @@ require('dotenv').config({ path: '../.env' });
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const { Sequelize } = require('sequelize');
+const db = require('./models'); // Import the db with the sequelize instance
 const apiRoutes = require('./routes/api.routes');
 const logger = require('./utils/logger');
 
@@ -18,8 +18,7 @@ logger.info('Server starting with environment:', {
   hasPasswordHash: !!process.env.ADMIN_PASSWORD_HASH,
   hasJwtSecret: !!process.env.JWT_SECRET,
   hasSmtpUser: !!process.env.SMTP_USER,
-  hasSmtpPass: !!process.env.SMTP_PASS,
-  smtpUser: process.env.SMTP_USER
+  hasSmtpPass: !!process.env.SMTP_PASS
 });
 
 // Body parsing middleware
@@ -35,7 +34,7 @@ app.use(helmet({
 // Configure CORS - simplified for development
 const isDevelopment = process.env.NODE_ENV === 'development';
 const corsOptions = {
-  origin: isDevelopment ? 'http://localhost:3000' : process.env.CORS_ORIGIN,
+  origin: isDevelopment ? 'http://localhost:3000' : process.env.CORS_ORIGIN || '*',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -97,38 +96,18 @@ app.use('*', (req, res) => {
 
 async function startServer() {
   try {
-    // Initialize database connection
-    const sequelize = new Sequelize(
-      process.env.DB_NAME || 'builditrecords',
-      process.env.DB_USER || 'postgres',
-      process.env.DB_PASSWORD,
-      {
-        host: process.env.DB_HOST || 'localhost',
-        port: parseInt(process.env.DB_PORT) || 5432,
-        dialect: 'postgres',
-        logging: (msg) => logger.debug(msg),
-        dialectOptions: {
-          ssl: false
-        },
-        define: {
-          timestamps: true,
-          underscored: true
-        },
-        pool: {
-          max: 5,
-          min: 0,
-          acquire: 30000,
-          idle: 10000
-        }
-      }
-    );
-
-    // Test database connection
-    await sequelize.authenticate();
-    logger.info('Database connection established successfully');
-
-    // Make sequelize instance available globally
-    global.sequelize = sequelize;
+    // Use the sequelize instance from models/index.js instead of creating a new one
+    // Test the connection, but don't exit if it fails
+    try {
+      await db.sequelize.authenticate();
+      logger.info('Database connection verified successfully');
+    } catch (dbError) {
+      logger.error('Database connection verification failed, but continuing startup:', {
+        error: dbError.message,
+        stack: dbError.stack
+      });
+      // Don't exit here - allow the server to start anyway
+    }
 
     // Start server
     app.listen(PORT, () => {
@@ -141,13 +120,16 @@ async function startServer() {
         CORS_ORIGIN: corsOptions.origin,
         hasJwtSecret: !!process.env.JWT_SECRET,
         hasAdminUsername: !!process.env.ADMIN_USERNAME,
-        hasAdminPasswordHash: !!process.env.ADMIN_PASSWORD_HASH,
-        dbConnected: true
+        hasAdminPasswordHash: !!process.env.ADMIN_PASSWORD_HASH
       });
     });
   } catch (error) {
-    logger.error('Unable to connect to the database:', error);
-    process.exit(1);
+    logger.error('Failed to start server:', {
+      error: error.message,
+      stack: error.stack
+    });
+    // Don't exit process, but log the error
+    logger.warn('Server startup encountered errors but will attempt to continue');
   }
 }
 
