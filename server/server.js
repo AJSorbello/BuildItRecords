@@ -26,11 +26,14 @@ console.log('Starting server with environment configuration:', {
 // Middleware
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
-    ? ['https://builditrecords.com', 'https://www.builditrecords.com', /.vercel\.app$/] 
+    ? ['https://builditrecords.com', 'https://www.builditrecords.com', 
+       'https://build-it-records-881156910-ajsorbellos-projects.vercel.app', 
+       /.vercel\.app$/] 
     : '*',
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
-
 app.use(helmet({
   contentSecurityPolicy: false,
   crossOriginEmbedderPolicy: false
