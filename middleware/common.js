@@ -8,6 +8,15 @@ const bodyParser = require('body-parser');
 function setupCommonMiddleware(app) {
   // Read CORS origins from environment
   const allowedOrigins = process.env.CORS_ORIGIN?.split(',').map(origin => origin.trim()) || ['*'];
+  
+  // Ensure www.builditrecords.com is always included
+  if (!allowedOrigins.includes('https://www.builditrecords.com')) {
+    allowedOrigins.push('https://www.builditrecords.com');
+  }
+  if (!allowedOrigins.includes('https://builditrecords.com')) {
+    allowedOrigins.push('https://builditrecords.com');
+  }
+  
   console.log('Configured CORS allowed origins:', allowedOrigins);
 
   // Enable CORS for all routes with proper configuration
