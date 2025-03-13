@@ -266,7 +266,7 @@ class ArtistModalClass extends Component<ArtistModalProps, ArtistModalState> {
       // Ensure releases is always an array
       const validReleases = Array.isArray(releases) ? releases : [];
       
-      // ENHANCEMENT: Filter out unrelated compilations that were added as fallbacks
+      // Filter out unrelated compilations that were added as fallbacks
       const filteredReleases = validReleases.filter(release => {
         // Keep all non-compilation releases
         if (!this.isCompilation(release)) return true;
