@@ -12,6 +12,9 @@ export interface Artist {
   external_urls?: SpotifyExternalUrls;
   spotify_url?: string;
   image_url?: string;
+  profile_image_url?: string;
+  profile_image_large_url?: string;
+  profile_image_small_url?: string;
   type: 'artist';
 }
 

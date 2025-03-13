@@ -19,6 +19,7 @@ export type Album = {
   total_tracks: number;
   artists?: Artist[];
   tracks?: Track[];
+  label?: { id: string, name?: string };
 };
 
 export type Track = {
@@ -29,13 +30,15 @@ export type Track = {
   track_number: number;
   disc_number: number;
   preview_url?: string | null;
-  spotify_url: string;
+  duration_ms?: number;
+  spotifyUrl?: string;
+  spotify_url?: string;
+  external_urls?: SpotifyExternalUrls;
   spotify_uri: string;
   release?: Album;
   artists: Artist[];
   remixer?: Artist;
   isrc: string;
-  external_urls: { spotify: string };
   type: 'track';
 };
 

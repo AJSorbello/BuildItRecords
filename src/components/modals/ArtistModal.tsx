@@ -101,9 +101,20 @@ class ArtistModalClass extends Component<ArtistModalProps, ArtistModalState> {
   };
 
   getArtistImage = (artist: Artist) => {
-    return artist.profile_image_url || 
-           artist.profile_image_large_url || 
-           artist.profile_image_small_url || 
+    // Check if artist is valid and has profile image properties
+    if (!artist) return '/images/placeholder-artist.jpg';
+    
+    // Type assertion to support multiple API response formats
+    const extendedArtist = artist as Artist & { 
+      profile_image_url?: string;
+      profile_image_large_url?: string;
+      profile_image_small_url?: string;
+    };
+    
+    return extendedArtist.profile_image_url || 
+           extendedArtist.profile_image_large_url || 
+           extendedArtist.profile_image_small_url || 
+           artist.image_url ||
            '/images/placeholder-artist.jpg';
   };
 
@@ -126,12 +137,26 @@ class ArtistModalClass extends Component<ArtistModalProps, ArtistModalState> {
       acc[labelId].push(track);
       return acc;
     }, {});
-  };
+  }
 
   releasesByLabel = () => {
     const { releases } = this.state;
     return releases.reduce((acc: Record<string, Release[]>, release) => {
-      const labelId = release.label_id || release.label?.id || 'unknown';
+      // Safely handle both string and object label formats
+      let labelId = 'unknown';
+      
+      if (typeof release.label_id === 'string') {
+        labelId = release.label_id;
+      } else if (release.label && typeof release.label === 'object') {
+        // Type assertion to handle the label object correctly
+        const labelObj = release.label as { id?: string, name?: string };
+        if (labelObj.id) {
+          labelId = labelObj.id;
+        }
+      } else if (typeof release.labelId === 'string') {
+        labelId = release.labelId;
+      }
+      
       if (!acc[labelId]) {
         acc[labelId] = [];
       }
@@ -149,6 +174,8 @@ class ArtistModalClass extends Component<ArtistModalProps, ArtistModalState> {
   };
 
   getReleaseArtistImage = (release: Release, trackIndex = 0): string => {
+    if (!release) return '/images/placeholder-release.jpg';
+    
     if (this.isCompilation(release)) {
       // For compilations, use the album artwork
       return release.artwork_url || '/images/placeholder-release.jpg';
@@ -160,9 +187,19 @@ class ArtistModalClass extends Component<ArtistModalProps, ArtistModalState> {
         release.tracks[trackIndex].artists && 
         release.tracks[trackIndex].artists.length > 0) {
       const artist = release.tracks[trackIndex].artists[0];
-      return artist.profile_image_small_url || 
-             artist.profile_image_url || 
-             artist.profile_image_large_url || 
+      // Type assertion to support multiple API formats
+      const extendedArtist = artist as Artist & { 
+        profile_image_small_url?: string;
+        profile_image_url?: string;
+        profile_image_large_url?: string;
+        image_url?: string;
+      };
+      
+      // Use nullish coalescing to handle missing properties
+      return extendedArtist.profile_image_small_url ?? 
+             extendedArtist.profile_image_url ?? 
+             extendedArtist.profile_image_large_url ?? 
+             extendedArtist.image_url ??
              '/images/placeholder-artist.jpg';
     }
 
@@ -187,7 +224,7 @@ class ArtistModalClass extends Component<ArtistModalProps, ArtistModalState> {
         if (release.tracks && release.tracks.length > 0) {
           release.tracks.forEach(track => {
             console.log(`  Track "${track.title}" Spotify URL:`, 
-              track.external_urls?.spotify || track.spotify_url || 'None');
+              track.external_urls?.spotify || (track as any).spotify_url || track.spotifyUrl || 'None');
           });
         }
       });
@@ -205,18 +242,16 @@ class ArtistModalClass extends Component<ArtistModalProps, ArtistModalState> {
     
     if (releasesLoading) {
       return (
-        <Box display="flex" justifyContent="center" alignItems="center" py={4}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
           <CircularProgress />
         </Box>
       );
     }
-
+    
     if (!releases || releases.length === 0) {
       return (
-        <Box textAlign="center" py={4}>
-          <Typography variant="body1" color="textSecondary">
-            No releases found for this artist
-          </Typography>
+        <Box sx={{ p: 3, textAlign: 'center' }}>
+          <Typography color="text.secondary">No releases found for this artist</Typography>
         </Box>
       );
     }
@@ -230,7 +265,6 @@ class ArtistModalClass extends Component<ArtistModalProps, ArtistModalState> {
             <Typography variant="subtitle1" fontWeight="bold" color="primary" gutterBottom>
               {this.formatLabelName(labelId)} ({labelReleases.length})
             </Typography>
-            
             <TableContainer component={Paper} variant="outlined" sx={{ mb: 3, borderRadius: 2 }}>
               <Table size="small">
                 <TableHead>
@@ -246,17 +280,26 @@ class ArtistModalClass extends Component<ArtistModalProps, ArtistModalState> {
                   {labelReleases.map((release) => {
                     // Extract track with Spotify URL if available
                     const firstTrackWithSpotify = release.tracks && release.tracks.length > 0 
-                      ? release.tracks.find(t => t.spotify_url || t.external_urls?.spotify) 
+                      ? release.tracks.find(t => {
+                          // Use type assertion to handle both naming conventions
+                          return t.external_urls?.spotify || 
+                                 (t as any).spotify_url || 
+                                 t.spotifyUrl;
+                        }) 
                       : null;
                     
                     // Get the best available Spotify URL
-                    const spotifyUrl = 
-                      (firstTrackWithSpotify?.external_urls?.spotify) || 
-                      (firstTrackWithSpotify?.spotify_url) ||
+                    const spotifyUrl = firstTrackWithSpotify ? (
+                      // Access properties safely
+                      firstTrackWithSpotify.external_urls?.spotify || 
+                      (firstTrackWithSpotify as any).spotify_url ||
+                      firstTrackWithSpotify.spotifyUrl
+                    ) : (
                       (release.external_urls?.spotify) || 
                       (release.spotify_url) ||
-                      '';
-                      
+                      ''
+                    );
+                    
                     return (
                       <TableRow key={release.id} hover>
                         <TableCell>
@@ -312,25 +355,65 @@ class ArtistModalClass extends Component<ArtistModalProps, ArtistModalState> {
                               );
                             }
                             
-                            // Return the artists from the selected track
-                            return release.tracks[trackIndex].artists?.map((artist, index) => (
-                              <Box key={artist.id} sx={{ display: 'flex', alignItems: 'center' }}>
-                                {artist.profile_image_small_url && (
+                            // Safety check - if tracks don't exist or the index is out of bounds
+                            if (!release.tracks || !release.tracks[trackIndex]) {
+                              return (
+                                <Box key="unknown-artist" sx={{ display: 'flex', alignItems: 'center' }}>
                                   <Avatar 
-                                    src={artist.profile_image_small_url} 
-                                    alt={artist.name}
+                                    src={'/images/placeholder-artist.jpg'} 
+                                    alt="Unknown Artist"
                                     sx={{ width: 24, height: 24, mr: 0.5 }}
                                   />
-                                )}
+                                  <Typography variant="body2">
+                                    {release.artist_name || "Unknown Artist"}
+                                  </Typography>
+                                </Box>
+                              );
+                            }
+
+                            // Return the artists from the selected track
+                            // Safety check for artists array existence
+                            const artists = release.tracks[trackIndex].artists || [];
+                            return artists.length > 0 ? artists.map((artist, index) => {
+                              // Use type assertion to access extended artist properties that may come from different API formats
+                              const extendedArtist = artist as Artist & { 
+                                profile_image_small_url?: string;
+                                profile_image_url?: string;
+                                profile_image_large_url?: string;
+                                image_url?: string;
+                              };
+                              
+                              return (
+                                <Box key={artist.id || `artist-${index}`} sx={{ display: 'flex', alignItems: 'center' }}>
+                                  <Avatar 
+                                    src={extendedArtist.profile_image_small_url || 
+                                         extendedArtist.profile_image_url || 
+                                         extendedArtist.image_url || 
+                                         '/images/placeholder-artist.jpg'} 
+                                    alt={artist.name || "Artist"}
+                                    sx={{ width: 24, height: 24, mr: 0.5 }}
+                                  />
+                                  <Typography variant="body2">
+                                    {artist.name || "Unknown"}{index < artists.length - 1 ? ' & ' : ''}
+                                  </Typography>
+                                </Box>
+                              );
+                            }) : (
+                              <Box key="fallback-artist" sx={{ display: 'flex', alignItems: 'center' }}>
+                                <Avatar 
+                                  src={'/images/placeholder-artist.jpg'} 
+                                  alt="Artist"
+                                  sx={{ width: 24, height: 24, mr: 0.5 }}
+                                />
                                 <Typography variant="body2">
-                                  {artist.name}{index < release.tracks[trackIndex].artists.length - 1 ? ' & ' : ''}
+                                  {release.artist_name || "Unknown Artist"}
                                 </Typography>
                               </Box>
-                            ));
+                            );
                           })()}
                         </TableCell>
                         <TableCell>
-                          {release.tracks && release.tracks.length > 0 && 
+                          {release.tracks && release.tracks.length > 0 && release.tracks[0].duration_ms !== undefined && 
                             this.formatTrackDuration(release.tracks[0].duration_ms)}
                         </TableCell>
                         <TableCell>
@@ -363,12 +446,28 @@ class ArtistModalClass extends Component<ArtistModalProps, ArtistModalState> {
   }
 
   renderLabels() {
-    const labelIdsSet = new Set();
+    const labelIdsSet = new Set<string>();
     this.state.releases.forEach(release => {
-      if (release.label?.id) labelIdsSet.add(release.label.id);
+      // Handle all possible label formats from both API response types
+      // First check for object with id property
+      if (release.label && typeof release.label === 'object') {
+        // Need to use any to safely access potential id property
+        const labelWithId = release.label as any;
+        if (labelWithId.id) {
+          labelIdsSet.add(labelWithId.id);
+        }
+      } 
+      // Then check for direct label_id string (used in some API responses)
+      else if (typeof release.label_id === 'string') {
+        labelIdsSet.add(release.label_id);
+      } 
+      // Finally check for labelId alternative naming
+      else if (typeof release.labelId === 'string') {
+        labelIdsSet.add(release.labelId);
+      }
     });
     
-    const labelIds = Array.from(labelIdsSet) as string[];
+    const labelIds = Array.from(labelIdsSet);
     
     if (labelIds.length === 0) {
       return (

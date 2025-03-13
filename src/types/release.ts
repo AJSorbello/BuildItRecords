@@ -22,6 +22,8 @@ export interface Release {
   spotify_uri?: string;
   status?: 'active' | 'draft' | 'archived';
   name?: string; // For backward compatibility
+  catalog_number?: string; // Added for catalog numbers
+  artist_name?: string; // Added for fallback artist name
 }
 
 export interface ReleaseDetails extends Release {
