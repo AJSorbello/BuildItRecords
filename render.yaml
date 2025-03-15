@@ -3,9 +3,10 @@ services:
     name: builditrecords-api
     env: node
     plan: free
-    buildCommand: npm install && npm run build:render
-    startCommand: npm start
-    healthCheckPath: /healthz
+    rootDir: server
+    buildCommand: npm install && npm audit fix --production
+    startCommand: node index.js
+    healthCheckPath: /
     envVars:
       - key: NODE_ENV
         value: production
@@ -17,4 +18,6 @@ services:
         sync: false
       - key: PORT
         value: 3001
+      - key: CORS_ORIGIN
+        value: "https://builditrecords.com,https://www.builditrecords.com,https://*.vercel.app"
     autoDeploy: true
