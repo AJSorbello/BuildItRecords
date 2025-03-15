@@ -51,45 +51,22 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false
 }));
 
-// Enhanced CORS configuration that handles dynamic domains
-const allowedOrigins = [
-  'http://localhost:3000', 
-  'https://builditrecords.com',
-  'https://www.builditrecords.com'
-];
-
-// If CORS_ORIGIN is defined in env, add it to allowed origins
-if (process.env.CORS_ORIGIN) {
-  const corsOriginsFromEnv = process.env.CORS_ORIGIN.split(',').map(origin => origin.trim());
-  corsOriginsFromEnv.forEach(origin => {
-    if (origin && !allowedOrigins.includes(origin)) {
-      allowedOrigins.push(origin);
-    }
-  });
-}
-
-logger.info('CORS configuration:', {
-  environment: process.env.NODE_ENV,
-  allowedOrigins,
-  corsFromEnv: process.env.CORS_ORIGIN || 'not set'
-});
-
-// Add simple CORS middleware that will not fail
+// CRITICAL FIX: Use permissive CORS that will always work
 app.use((req, res, next) => {
-  // Log preflight requests for debugging
-  if (req.method === 'OPTIONS') {
-    console.log('Received preflight OPTIONS request from:', req.headers.origin);
-  }
+  const origin = req.headers.origin;
   
-  // Allow all origins in production for stability
+  // Log all requests with their origin for debugging
+  console.log(`Request from origin: ${origin || 'unknown'} to ${req.method} ${req.url}`);
+  
+  // Always allow all origins in production for stability
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Origin, Accept');
-  res.header('Access-Control-Allow-Credentials', 'true');
   
   // Handle preflight requests
   if (req.method === 'OPTIONS') {
-    return res.status(204).send();
+    console.log('Handling OPTIONS preflight request');
+    return res.status(204).end();
   }
   
   next();
