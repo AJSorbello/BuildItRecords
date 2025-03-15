@@ -19,7 +19,7 @@ export interface Followers {
 
 // Full Artist interface with all properties
 export interface Artist extends ArtistBase {
-  uri?: string;
+  uri: string;
   external_urls?: SpotifyExternalUrls;
   spotify_url?: string;
   image_url?: string;

@@ -83,6 +83,9 @@ export interface Artist {
   external_urls: ExternalUrls;
   spotify_url: string;
   image_url?: string;
+  profile_image_url?: string;
+  profile_image_large_url?: string;
+  profile_image_small_url?: string;
 }
 
 export interface Album {
@@ -182,7 +185,6 @@ export const isArtist = (obj: any): obj is Artist => {
   return obj &&
     typeof obj.id === 'string' &&
     typeof obj.name === 'string' &&
-    typeof obj.uri === 'string' &&
     typeof obj.external_urls?.spotify === 'string' &&
     typeof obj.spotify_url === 'string' &&
     obj.type === 'artist';
