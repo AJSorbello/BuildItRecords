@@ -10,40 +10,42 @@ require('dotenv').config();
 // Test data for fallback when database connection fails
 // This ensures the API responds with something meaningful even if DB is unavailable
 const FALLBACK_TEST_DATA = {
-  releases: Array(10).fill().map((_, i) => ({
+  releases: Array(20).fill().map((_, i) => ({
     id: i + 1,
-    title: `Release ${i + 1}`,
-    artwork_url: `https://placehold.co/600x600?text=Release+${i + 1}`,
+    title: `Test Release ${i + 1}`,
+    artwork_url: `https://placehold.co/400x400/666/fff?text=Release+${i + 1}`,
     spotify_url: `https://open.spotify.com/album/${Math.random().toString(36).substring(2, 10)}`,
     release_date: new Date(2020 + Math.floor(i/4), i % 12, 1 + (i % 28)).toISOString().split('T')[0],
-    label_id: 1,
-    artist_id: (i % 5) + 1,
+    label_id: Math.floor(i / 7) + 1, // Distribute releases among labels
+    artist_id: (i % 9) + 1, // Distribute across 9 artists
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     artist: {
-      id: (i % 5) + 1,
-      name: `Artist ${(i % 5) + 1}`,
-      image_url: `https://placehold.co/600x600?text=Artist+${(i % 5) + 1}`,
+      id: (i % 9) + 1,
+      name: `Test Artist ${(i % 9) + 1}`,
+      image_url: `https://placehold.co/400x400/333/fff?text=Artist+${(i % 9) + 1}`,
       spotify_url: `https://open.spotify.com/artist/${Math.random().toString(36).substring(2, 10)}`,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     }
   })),
   
-  artists: Array(5).fill().map((_, i) => ({
+  artists: Array(9).fill().map((_, i) => ({
     id: i + 1,
-    name: `Artist ${i + 1}`,
-    image_url: `https://placehold.co/600x600?text=Artist+${i + 1}`,
+    name: i === 0 ? "Test Artist" : (i === 1 ? "Alicia Moore" : `Test Artist ${i}`),
+    image_url: `https://placehold.co/400x400/333/fff?text=Artist+${i + 1}`,
     spotify_url: `https://open.spotify.com/artist/${Math.random().toString(36).substring(2, 10)}`,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
+    // Assign artists to specific labels
+    label_id: i < 3 ? 1 : (i < 6 ? 2 : 3),
     releases: Array(2).fill().map((_, j) => ({
       id: i * 2 + j + 1,
       title: `Release ${i * 2 + j + 1}`,
-      artwork_url: `https://placehold.co/600x600?text=Release+${i * 2 + j + 1}`,
+      artwork_url: `https://placehold.co/400x400/666/fff?text=Release+${i * 2 + j + 1}`,
       spotify_url: `https://open.spotify.com/album/${Math.random().toString(36).substring(2, 10)}`,
       release_date: new Date(2020 + Math.floor(i/2), (i + j) % 12, 1 + ((i + j) % 28)).toISOString().split('T')[0],
-      label_id: 1,
+      label_id: i < 3 ? 1 : (i < 6 ? 2 : 3),
       artist_id: i + 1
     }))
   })),
@@ -52,6 +54,18 @@ const FALLBACK_TEST_DATA = {
     {
       id: 1,
       name: 'Build It Records',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    {
+      id: 2,
+      name: 'Build It Tech',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    {
+      id: 3,
+      name: 'Build It Deep',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }
@@ -207,13 +221,20 @@ router.get('/releases', async (req, res) => {
       const offsetNum = parseInt(offset, 10) || 0;
       const limitNum = parseInt(limit, 10) || 10;
       
-      const testReleases = FALLBACK_TEST_DATA.releases
-        .slice(offsetNum, offsetNum + limitNum);
+      // Filter by label if provided
+      let filteredReleases = FALLBACK_TEST_DATA.releases;
+      if (label) {
+        const labelId = parseInt(label, 10);
+        filteredReleases = filteredReleases.filter(release => release.label_id === labelId);
+      }
+      
+      const paginatedReleases = filteredReleases.slice(offsetNum, offsetNum + limitNum);
       
       return res.json({
         success: true,
-        data: testReleases,
-        count: FALLBACK_TEST_DATA.releases.length,
+        data: paginatedReleases,
+        releases: paginatedReleases, // Include both formats for compatibility
+        count: filteredReleases.length,
         offset: offsetNum,
         limit: limitNum
       });
@@ -409,13 +430,20 @@ router.get('/artists', async (req, res) => {
       const offsetNum = parseInt(offset, 10) || 0;
       const limitNum = parseInt(limit, 10) || 10;
       
-      const testArtists = FALLBACK_TEST_DATA.artists
-        .slice(offsetNum, offsetNum + limitNum);
+      // Filter by label if provided
+      let filteredArtists = FALLBACK_TEST_DATA.artists;
+      if (label) {
+        const labelId = parseInt(label, 10);
+        filteredArtists = filteredArtists.filter(artist => artist.label_id === labelId);
+      }
+      
+      const paginatedArtists = filteredArtists.slice(offsetNum, offsetNum + limitNum);
       
       return res.json({
         success: true,
-        data: testArtists,
-        count: FALLBACK_TEST_DATA.artists.length,
+        data: paginatedArtists,
+        artists: paginatedArtists, // Include both formats for compatibility
+        count: filteredArtists.length,
         offset: offsetNum,
         limit: limitNum
       });
@@ -589,15 +617,30 @@ router.get('/artist/:id', async (req, res) => {
     // Check if we should use test data
     if (shouldUseTestData()) {
       logger.info(`Using test data for /api/artist/${artistId} endpoint`);
-      const artist = FALLBACK_TEST_DATA.artists.find(a => a.id.toString() === artistId.toString());
+      
+      // Convert id to number for comparison
+      const id = parseInt(artistId, 10);
+      const artist = FALLBACK_TEST_DATA.artists.find(a => a.id === id);
       
       if (!artist) {
-        return res.status(404).json({ success: false, error: 'Artist not found' });
+        return res.status(404).json({
+          success: false,
+          error: `Artist with ID ${artistId} not found`
+        });
       }
+      
+      // Filter releases to only include those for this artist
+      const artistReleases = FALLBACK_TEST_DATA.releases.filter(r => r.artist_id === id);
+      
+      const artistWithReleases = {
+        ...artist,
+        releases: artistReleases
+      };
       
       return res.json({
         success: true,
-        data: artist
+        data: artistWithReleases,
+        artist: artistWithReleases // Include both formats for compatibility
       });
     }
     
