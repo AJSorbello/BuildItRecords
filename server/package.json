@@ -13,7 +13,7 @@
     "libpq": "npm:@vercel/noop"
   },
   "scripts": {
-    "start": "node server-only.js",
+    "start": "node index.js",
     "dev": "nodemon",
     "build": "tsc",
     "deploy": "npm install",
