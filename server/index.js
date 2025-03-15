@@ -9,16 +9,36 @@ const apiRoutes = require('./routes/api.routes');
 const logger = require('./utils/logger');
 
 const app = express();
+// CRITICAL: Use the PORT that Render assigns, default to 3001 for local development
 const PORT = process.env.PORT || 3001;
+
+// Log the environment very early for debugging
+console.log('============= SERVER STARTING =============');
+console.log(`Environment: ${process.env.NODE_ENV}`);
+console.log(`PORT: ${PORT}`);
+console.log(`Current directory: ${process.cwd()}`);
+console.log('============================================');
 
 // Debug: Log environment loading
 logger.info('Server starting with environment:', {
   NODE_ENV: process.env.NODE_ENV,
+  PORT: PORT,
   hasUsername: !!process.env.ADMIN_USERNAME,
   hasPasswordHash: !!process.env.ADMIN_PASSWORD_HASH,
   hasJwtSecret: !!process.env.JWT_SECRET,
   hasSmtpUser: !!process.env.SMTP_USER,
-  hasSmtpPass: !!process.env.SMTP_PASS
+  hasSmtpPass: !!process.env.SMTP_PASS,
+  currentDir: process.cwd()
+});
+
+// Add uncaught exception handler to prevent crashes
+process.on('uncaughtException', (err) => {
+  console.error('UNCAUGHT EXCEPTION! Server will continue running:');
+  console.error(err);
+  logger.error('Uncaught exception', {
+    error: err.message,
+    stack: err.stack
+  });
 });
 
 // Body parsing middleware
@@ -54,69 +74,23 @@ logger.info('CORS configuration:', {
   corsFromEnv: process.env.CORS_ORIGIN || 'not set'
 });
 
-// Apply CORS middleware with dynamic origin validation
-app.use(cors({
-  origin: function(origin, callback) {
-    // Allow requests with no origin (like mobile apps, curl, etc.)
-    if (!origin) return callback(null, true);
-    
-    // Allow any origin in production, but log it for monitoring
-    if (process.env.NODE_ENV === 'production') {
-      // Always allow known origins
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-      
-      // Check for vercel preview domains (ajsorbellos-projects.vercel.app)
-      if (origin.includes('vercel.app') && 
-          (origin.includes('builditrecords') || 
-           origin.includes('build-it-records') || 
-           origin.includes('ajsorbellos-projects'))) {
-        logger.info(`Allowing Vercel preview domain: ${origin}`);
-        return callback(null, true);
-      }
-      
-      // In production, allow but log unknown origins for monitoring
-      logger.warn(`Allowing request from non-whitelist origin in production: ${origin}`);
-      return callback(null, true);
-    }
-    
-    // For development, be stricter about origins
-    if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
-      callback(null, true);
-    } else {
-      logger.warn(`CORS blocked request from origin in development: ${origin}`);
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'Accept']
-}));
-
-// CORS preflight response for all routes
-app.options('*', cors());
-
-// Add middleware to explicitly set CORS headers for all responses
+// Add simple CORS middleware that will not fail
 app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  if (origin) {
-    // For Vercel preview domains or known origins, add the explicit header
-    if (origin.includes('vercel.app') || 
-        origin.includes('builditrecords.com') || 
-        allowedOrigins.includes(origin)) {
-      res.header('Access-Control-Allow-Origin', origin);
-    } else {
-      // For other origins in production, still set the header
-      if (process.env.NODE_ENV === 'production') {
-        res.header('Access-Control-Allow-Origin', origin);
-      }
-    }
+  // Log preflight requests for debugging
+  if (req.method === 'OPTIONS') {
+    console.log('Received preflight OPTIONS request from:', req.headers.origin);
   }
   
+  // Allow all origins in production for stability
+  res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Origin, Accept');
   res.header('Access-Control-Allow-Credentials', 'true');
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.status(204).send();
+  }
   
   next();
 });
@@ -126,12 +100,9 @@ app.use((req, res, next) => {
   logger.info('Incoming request:', {
     method: req.method,
     url: req.url,
-    query: req.query,
-    body: req.method === 'POST' ? req.body : undefined,
-    headers: {
-      'content-type': req.headers['content-type'],
-      'authorization': req.headers.authorization ? 'present' : 'missing'
-    }
+    ip: req.ip,
+    userAgent: req.get('user-agent'),
+    origin: req.get('origin')
   });
   next();
 });
@@ -149,16 +120,16 @@ app.get('/', (req, res) => {
   });
 });
 
-// Error handling
+// Application error handler
 app.use((err, req, res, next) => {
-  logger.error('Server error:', {
-    error: err.message,
+  logger.error('Application error:', {
+    message: err.message,
     stack: err.stack,
     path: req.path,
     method: req.method
   });
   
-  res.status(500).json({
+  res.status(err.status || 500).json({
     error: 'Internal server error',
     message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
   });
@@ -192,18 +163,31 @@ async function startServer() {
       // Don't exit here - allow the server to start anyway
     }
 
-    // Start server
-    app.listen(PORT, () => {
-      logger.info(`Server is running on port ${PORT}`);
+    // Start server and explicitly log which port we're binding to
+    // This is CRITICAL for Render to work properly
+    const server = app.listen(PORT, '0.0.0.0', () => {
+      console.log(`⚡ Server is running on port ${PORT} (NODE_ENV: ${process.env.NODE_ENV})`);
+      logger.info(`Server started successfully on port ${PORT}`);
       
       // Log important environment variables (without sensitive values)
       logger.info('Environment configuration:', {
         NODE_ENV: process.env.NODE_ENV,
         PORT: PORT,
+        listening: true,
+        address: server.address(),
         corsMode: process.env.NODE_ENV === 'production' ? 'permissive' : 'strict',
         hasJwtSecret: !!process.env.JWT_SECRET,
         hasAdminUsername: !!process.env.ADMIN_USERNAME,
         hasAdminPasswordHash: !!process.env.ADMIN_PASSWORD_HASH
+      });
+    });
+
+    // Log any server errors
+    server.on('error', (err) => {
+      console.error('SERVER ERROR:', err);
+      logger.error('Server error event:', {
+        error: err.message,
+        stack: err.stack
       });
     });
   } catch (error) {
@@ -216,4 +200,9 @@ async function startServer() {
   }
 }
 
-startServer();
+// Immediately invoked function to allow for top-level await
+(async () => {
+  console.log('Starting server initialization...');
+  await startServer();
+  console.log('Server initialization complete.');
+})();
