@@ -97,20 +97,30 @@ interface ImportResponse {
 class DatabaseService {
   private static instance: DatabaseService;
   private baseUrl: string;
+  // Define environment variables with class-level scope
+  private NODE_ENV: string;
+  private REACT_APP_API_URL: string | undefined;
+  private clientOrigin: string;
 
   private constructor() {
-    // Log environment detection information
-    console.log('[DatabaseService] Environment:', process.env.NODE_ENV);
-    console.log('[DatabaseService] API URL from env:', process.env.REACT_APP_API_URL);
-    console.log('[DatabaseService] Running on:', typeof window !== 'undefined' ? window.location.origin : 'server');
+    // Initialize environment variables with fallbacks for browser
+    this.NODE_ENV = typeof process !== 'undefined' && process.env ? process.env.NODE_ENV : 'development';
+    this.REACT_APP_API_URL = typeof process !== 'undefined' && process.env ? process.env.REACT_APP_API_URL : undefined;
+    this.clientOrigin = typeof window !== 'undefined' ? window.location.origin : 'server';
     
-    // For local development, temporarily use direct connection to avoid proxy issues
-    if (process.env.NODE_ENV === 'development') {
-      this.baseUrl = 'http://localhost:3003';
-      console.log('[DatabaseService] Using direct local API URL for development:', this.baseUrl);
-    } else {
-      this.baseUrl = getApiBaseUrl();
-      console.log('[DatabaseService] Using API URL:', this.baseUrl);
+    // Log environment detection information
+    console.log('[DatabaseService] Environment:', this.NODE_ENV);
+    console.log('[DatabaseService] API URL from env:', this.REACT_APP_API_URL);
+    console.log('[DatabaseService] Running on:', this.clientOrigin);
+    
+    try {
+      // Use the apiConfig utility to get the base URL
+      this.baseUrl = getApiBaseUrl().replace(/\/api$/, '');
+      console.log('[DatabaseService] Using API base URL:', this.baseUrl);
+    } catch (error) {
+      // Fallback to direct local API URL if there's an error
+      this.baseUrl = 'http://localhost:3001';
+      console.log('[DatabaseService] Fallback to local API URL:', this.baseUrl);
     }
   }
 
@@ -127,9 +137,9 @@ class DatabaseService {
     const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     let apiUrl: string;
     
-    if (isLocalhost && process.env.NODE_ENV === 'development') {
+    if (isLocalhost && this.NODE_ENV === 'development') {
       // In development, use direct connection to the API server to avoid proxy issues
-      apiUrl = `http://localhost:3003${endpoint}`;
+      apiUrl = `http://localhost:3001${endpoint}`;
       console.log(`Development: Using direct API URL: ${apiUrl}`);
     } else {
       // In production, this.baseUrl already includes /api from getApiBaseUrl()
@@ -145,7 +155,7 @@ class DatabaseService {
     }
     
     // Debugging helper for Vercel deployment
-    console.log('[DEBUG] Environment:', process.env.NODE_ENV);
+    console.log('[DEBUG] Environment:', this.NODE_ENV);
     console.log('[DEBUG] API Base URL:', this.baseUrl);
     console.log('[DEBUG] Full API URL:', apiUrl);
     
@@ -255,7 +265,7 @@ class DatabaseService {
       
       if (isBuilditLabel) {
         console.log(`[DEBUG] Detected buildit-records label request`);
-        console.log(`[DEBUG] Current environment: ${process.env.NODE_ENV || 'development'}`);
+        console.log(`[DEBUG] Current environment: ${this.NODE_ENV || 'development'}`);
       }
 
       // Calculate offset for pagination (page 1 starts at offset 1, not 0)
@@ -494,7 +504,7 @@ class DatabaseService {
         return {
           id: release?.id || 'unknown',
           title: release?.title || 'Unknown Release',
-          artwork_url: 'https://via.placeholder.com/300?text=Error',
+          artwork_url: 'https://placehold.co/300x300/222/fff?text=Error',
           spotify_url: release?.spotify_url || '',
           release_type: 'unknown',
           artists: [{ id: 'unknown', name: 'Unknown Artist', type: 'artist' }],
@@ -964,7 +974,7 @@ class DatabaseService {
       return {
         id: '',
         name: 'Unknown Artist',
-        image_url: 'https://via.placeholder.com/300?text=Artist+Image',
+        image_url: 'https://placehold.co/300x300/222/fff?text=Artist+Image',
         spotify_url: '',
         type: 'artist',
         external_urls: { spotify: '' },

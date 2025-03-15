@@ -14,7 +14,7 @@
   },
   "scripts": {
     "start": "node index.js",
-    "dev": "nodemon",
+    "dev": "nodemon server.js",
     "build": "tsc",
     "deploy": "npm install",
     "lint": "eslint . --ext .ts",

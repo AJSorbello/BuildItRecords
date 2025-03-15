@@ -2,11 +2,24 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 import { fileURLToPath } from 'url';
+import { spaFallbackPlugin } from './src/vite-fallback-plugin';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    spaFallbackPlugin()
+  ],
+  define: {
+    // Provide process.env to the browser environment
+    'process.env': {
+      NODE_ENV: JSON.stringify(process.env.NODE_ENV || 'development'),
+      REACT_APP_API_URL: JSON.stringify(process.env.REACT_APP_API_URL || ''),
+      REACT_APP_SPOTIFY_CLIENT_ID: JSON.stringify(process.env.REACT_APP_SPOTIFY_CLIENT_ID || 'spotify-client-id'),
+      REACT_APP_SPOTIFY_CLIENT_SECRET: JSON.stringify(process.env.REACT_APP_SPOTIFY_CLIENT_SECRET || 'spotify-client-secret'),
+    }
+  },
   server: {
     port: 3000,
     strictPort: true,
@@ -18,6 +31,8 @@ export default defineConfig({
       }
     }
   },
+  base: '/',
+  publicDir: 'public',
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

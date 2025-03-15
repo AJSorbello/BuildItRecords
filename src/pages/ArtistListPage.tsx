@@ -107,11 +107,11 @@ const ArtistListPage: React.FC = () => {
       } else {
         console.log('No Spotify image found for artist:', primaryArtist);
         // Fall back to track album cover if no artist image found
-        return track.artwork || 'https://via.placeholder.com/300';
+        return track.artwork || 'https://placehold.co/300x300/222/fff?text=Album';
       }
     } catch (error) {
       console.error('Error fetching artist image:', error);
-      return track.artwork || 'https://via.placeholder.com/300';
+      return track.artwork || 'https://placehold.co/300x300/222/fff?text=Album';
     }
   };
 

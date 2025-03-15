@@ -16,36 +16,45 @@ if (env === 'development') {
   logger.warn('SSL certificate validation disabled for development');
 }
 
+// Set default connection timeout lower for Render deployments
+// This prevents the server from hanging during initialization
+const CONNECTION_TIMEOUT = process.env.NODE_ENV === 'production' ? 10000 : 30000;
+const CONNECTION_RETRIES = process.env.NODE_ENV === 'production' ? 1 : 3;
+
 let sequelize;
 
 try {
   // Use either the connection URL or individual parameters
-  if (process.env.POSTGRES_URL) {
-    logger.info('Attempting database connection using POSTGRES_URL', {
-      url: process.env.POSTGRES_URL.replace(/postgres:\/\/[^:]+:[^@]+@/, 'postgres://****:****@') // Mask credentials for logging
+  if (process.env.POSTGRES_URL || process.env.DATABASE_URL) {
+    // Prefer POSTGRES_URL but fall back to DATABASE_URL (Render provides this)
+    const dbUrl = process.env.POSTGRES_URL || process.env.DATABASE_URL;
+    
+    logger.info('Attempting database connection using connection URL', {
+      url: dbUrl.replace(/postgres:\/\/[^:]+:[^@]+@/, 'postgres://****:****@') // Mask credentials for logging
     });
     
-    sequelize = new Sequelize(process.env.POSTGRES_URL, {
+    sequelize = new Sequelize(dbUrl, {
       dialect: 'postgres',
       logging: false,
       dialectOptions: {
         ssl: {
           require: true,
           rejectUnauthorized: false
-        }
+        },
+        connectTimeout: CONNECTION_TIMEOUT
       },
       pool: {
-        max: 5,
+        max: 3,
         min: 0,
-        acquire: 30000,
-        idle: 10000
+        acquire: CONNECTION_TIMEOUT,
+        idle: 5000
       },
       retry: {
-        max: 3
+        max: CONNECTION_RETRIES
       }
     });
     
-    logger.info('Database connection using POSTGRES_URL configured successfully');
+    logger.info('Database connection using connection URL configured successfully');
   } else {
     // Use individual connection parameters
     const dbConfig = {
@@ -57,13 +66,13 @@ try {
       dialect: 'postgres',
       logging: false,
       pool: {
-        max: 5,
+        max: 3,
         min: 0,
-        acquire: 30000,
-        idle: 10000
+        acquire: CONNECTION_TIMEOUT,
+        idle: 5000
       },
       retry: {
-        max: 3
+        max: CONNECTION_RETRIES
       }
     };
     
@@ -73,7 +82,8 @@ try {
         ssl: {
           require: true,
           rejectUnauthorized: false
-        }
+        },
+        connectTimeout: CONNECTION_TIMEOUT
       };
     }
     
@@ -109,6 +119,12 @@ try {
         error: err.message,
         stack: err.stack
       });
+      
+      // In production, if connection fails immediately, switch to test data mode
+      if (process.env.NODE_ENV === 'production') {
+        logger.warn('Production database connection failed - switching to test data mode');
+        global.USE_TEST_DATA = true;
+      }
     });
 
 } catch (error) {

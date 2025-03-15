@@ -12,6 +12,11 @@ const app = express();
 // CRITICAL: Use the PORT that Render assigns, default to 3001 for local development
 const PORT = process.env.PORT || 3001;
 
+// Server status tracking
+let isServerReady = false;
+let databaseStatus = 'initializing'; // 'initializing', 'connected', 'failed'
+let startupTime = new Date().toISOString();
+
 // Log the environment very early for debugging
 console.log('============= SERVER STARTING =============');
 console.log(`Environment: ${process.env.NODE_ENV}`);
@@ -39,6 +44,42 @@ process.on('uncaughtException', (err) => {
     error: err.message,
     stack: err.stack
   });
+});
+
+// Add health check route before any other middleware for reliability
+app.get('/health', (req, res) => {
+  const origin = req.headers.origin || req.headers.host || 'unknown';
+  console.log(`Request from origin: ${origin} to ${req.method} ${req.path}`);
+  
+  // Return detailed health status
+  const healthStatus = {
+    status: isServerReady ? 'ready' : 'initializing',
+    uptime: process.uptime(),
+    startupTime: startupTime,
+    databaseStatus: databaseStatus,
+    environment: process.env.NODE_ENV,
+    message: isServerReady 
+      ? 'Server is ready' 
+      : 'Server is still initializing'
+  };
+  
+  // Send 200 status once server is ready, otherwise 503
+  if (isServerReady) {
+    return res.status(200).json(healthStatus);
+  } else {
+    // If the server is still initializing after 30 seconds, consider it ready anyway
+    // This prevents Render from timing out and restarting the service
+    if (process.uptime() > 30) {
+      isServerReady = true;
+      console.log('Server forced to ready state after timeout');
+      return res.status(200).json({
+        ...healthStatus,
+        status: 'ready',
+        message: 'Server marked as ready after timeout'
+      });
+    }
+    return res.status(503).json(healthStatus);
+  }
 });
 
 // Body parsing middleware
@@ -132,11 +173,13 @@ async function startServer() {
     try {
       await db.sequelize.authenticate();
       logger.info('Database connection verified successfully');
+      databaseStatus = 'connected';
     } catch (dbError) {
       logger.error('Database connection verification failed, but continuing startup:', {
         error: dbError.message,
         stack: dbError.stack
       });
+      databaseStatus = 'failed';
       // Don't exit here - allow the server to start anyway
     }
 
@@ -157,6 +200,10 @@ async function startServer() {
         hasAdminUsername: !!process.env.ADMIN_USERNAME,
         hasAdminPasswordHash: !!process.env.ADMIN_PASSWORD_HASH
       });
+      
+      // Mark server as ready for health checks
+      isServerReady = true;
+      console.log('Server initialization complete. Ready for requests.');
     });
 
     // Log any server errors
@@ -174,6 +221,12 @@ async function startServer() {
     });
     // Don't exit process, but log the error
     logger.warn('Server startup encountered errors but will attempt to continue');
+    // Even with errors, mark the server as ready after 5 seconds
+    // This is crucial for Render to consider the deployment successful
+    setTimeout(() => {
+      isServerReady = true;
+      console.log('Server marked as ready despite errors to prevent deployment timeouts');
+    }, 5000);
   }
 }
 

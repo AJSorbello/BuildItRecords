@@ -113,7 +113,7 @@ const Home: React.FC = () => {
                   height: 250,
                   objectFit: 'cover',
                 }}
-                image={track.albumArt || 'https://via.placeholder.com/300'}
+                image={track.albumArt || 'https://placehold.co/300x300/222/fff?text=Album'}
                 alt={track.title}
               />
               <CardContent sx={{ flexGrow: 1 }}>

@@ -25,8 +25,8 @@ export const generateCodeChallenge = async (codeVerifier: string): Promise<strin
 
 // Spotify authentication configuration
 export const spotifyConfig = {
-  clientId: process.env.REACT_APP_SPOTIFY_CLIENT_ID as string,
-  clientSecret: process.env.REACT_APP_SPOTIFY_CLIENT_SECRET as string,
+  clientId: (typeof process !== 'undefined' && process.env && process.env.REACT_APP_SPOTIFY_CLIENT_ID) || 'spotify-client-id',
+  clientSecret: (typeof process !== 'undefined' && process.env && process.env.REACT_APP_SPOTIFY_CLIENT_SECRET) || 'spotify-client-secret',
   redirectUri: 'http://localhost:3000/callback',
   authEndpoint: 'https://accounts.spotify.com/authorize',
   tokenEndpoint: 'https://accounts.spotify.com/api/token',

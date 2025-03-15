@@ -43,8 +43,8 @@ const server = http.createServer((req, res) => {
     res.end(JSON.stringify({
       success: true,
       data: [
-        { id: 1, name: 'Test Artist 1', image_url: 'https://via.placeholder.com/300' },
-        { id: 2, name: 'Test Artist 2', image_url: 'https://via.placeholder.com/300' }
+        { id: 1, name: 'Test Artist 1', image_url: 'https://placehold.co/300x300/222/fff?text=Artist' },
+        { id: 2, name: 'Test Artist 2', image_url: 'https://placehold.co/300x300/222/fff?text=Artist' }
       ]
     }));
     return;
@@ -59,13 +59,13 @@ const server = http.createServer((req, res) => {
         { 
           id: 1, 
           title: 'Test Release 1', 
-          artwork_url: 'https://via.placeholder.com/500',
+          artwork_url: 'https://placehold.co/500x500/222/fff?text=Release',
           spotify_url: 'https://open.spotify.com/album/1234567890'
         },
         { 
           id: 2, 
           title: 'Test Release 2', 
-          artwork_url: 'https://via.placeholder.com/500',
+          artwork_url: 'https://placehold.co/500x500/222/fff?text=Release',
           spotify_url: 'https://open.spotify.com/album/0987654321'
         }
       ]
