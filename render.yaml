@@ -4,20 +4,14 @@ services:
     env: node
     plan: free
     rootDir: server
-    buildCommand: npm install && npm audit fix --production
+    buildCommand: npm install
     startCommand: node index.js
     healthCheckPath: /
     envVars:
       - key: NODE_ENV
         value: production
-      - key: SUPABASE_URL
-        sync: false
-      - key: SUPABASE_ANON_KEY
-        sync: false
-      - key: SUPABASE_SERVICE_ROLE_KEY
-        sync: false
       - key: PORT
-        value: 3001
+        value: 10000
       - key: CORS_ORIGIN
         value: "https://builditrecords.com,https://www.builditrecords.com,https://*.vercel.app"
     autoDeploy: true
