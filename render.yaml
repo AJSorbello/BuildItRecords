@@ -4,14 +4,12 @@ services:
     env: node
     plan: free
     rootDir: server
-    buildCommand: npm install express cors
-    startCommand: node minimal.js
-    healthCheckPath: /
+    buildCommand: echo "No build required"
+    startCommand: node server-only.js
+    healthCheckPath: /health
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 10000
-      - key: CORS_ORIGIN
-        value: "*"
     autoDeploy: true

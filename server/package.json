@@ -13,10 +13,10 @@
     "libpq": "npm:@vercel/noop"
   },
   "scripts": {
-    "start": "node index.js",
+    "start": "node server-only.js",
     "dev": "nodemon",
     "build": "tsc",
-    "deploy": "npm install && npm audit fix --production",
+    "deploy": "npm install",
     "lint": "eslint . --ext .ts",
     "type-check": "tsc --noEmit",
     "db:migrate": "sequelize-cli db:migrate",
