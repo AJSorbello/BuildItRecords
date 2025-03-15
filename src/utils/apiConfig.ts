@@ -3,13 +3,15 @@
  * 
  * This module provides consistent API URL handling for different environments:
  * - Local development: Uses localhost:3003
- * - Production: Always uses the Render API URL (https://builditrecords-1.onrender.com/api)
+ * - Production: Always uses the Render API URL (https://builditrecords.onrender.com/api)
  */
 
 /**
  * Determines the base API URL depending on the current environment
  */
 export const getApiBaseUrl = (): string => {
+  const RENDER_API_URL = 'https://builditrecords.onrender.com/api';
+  
   // For debugging - log detection information
   if (typeof window !== 'undefined') {
     console.log('Environment detection:');
@@ -18,6 +20,15 @@ export const getApiBaseUrl = (): string => {
     console.log('- Window location:', window.location.origin);
     console.log('- Window hostname:', window.location.hostname);
     console.log('- Is production build:', process.env.NODE_ENV === 'production');
+    console.log('- Will use Render API URL:', RENDER_API_URL);
+  }
+  
+  // For Vercel deployments, ALWAYS use the Render API
+  if (typeof window !== 'undefined' && 
+      (window.location.hostname.includes('vercel.app') || 
+       window.location.hostname.includes('builditrecords'))) {
+    console.log('Vercel deployment detected - using Render API URL:', RENDER_API_URL);
+    return RENDER_API_URL;
   }
   
   // Check for explicit API URL from environment
@@ -39,11 +50,10 @@ export const getApiBaseUrl = (): string => {
     // Production environment (including Vercel)
     if (process.env.NODE_ENV === 'production' || 
         window.location.hostname.includes('vercel.app') || 
-        window.location.hostname.includes('builditrecords.com')) {
+        window.location.hostname.includes('builditrecords')) {
       // ALWAYS use the Render API URL for production
-      const renderApiUrl = 'https://builditrecords-1.onrender.com/api';
-      console.log('Using Render API URL:', renderApiUrl);
-      return renderApiUrl;
+      console.log('Production environment detected - using Render API URL:', RENDER_API_URL);
+      return RENDER_API_URL;
     }
   }
   
@@ -63,9 +73,9 @@ export const getApiUrl = (endpoint: string): string => {
   
   // Check if baseUrl already includes /api to avoid duplication
   if (baseUrl.endsWith('/api')) {
-    console.log('URL construction verification - this URL already includes /api suffix');
-    const url = `${baseUrl}/${cleanEndpoint}`;
-    return url;
+    const apiPath = cleanEndpoint.startsWith('api/') ? cleanEndpoint.substring(4) : cleanEndpoint;
+    console.log(`URL construction: ${baseUrl}/${apiPath}`);
+    return `${baseUrl}/${apiPath}`;
   }
   
   return `${baseUrl}/${cleanEndpoint}`;
@@ -103,7 +113,7 @@ export const fetchApi = async (endpoint: string, options: RequestInit = {}): Pro
     
     return await response.json();
   } catch (error) {
-    console.log('API Request Failed:', error);
+    console.error('API request failed:', error);
     throw error;
   }
 };
