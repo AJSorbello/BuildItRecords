@@ -13,7 +13,8 @@ const FALLBACK_TEST_DATA = {
   releases: Array(20).fill().map((_, i) => ({
     id: i + 1,
     title: `Test Release ${i + 1}`,
-    artwork_url: `https://placehold.co/400x400/666/fff?text=Release+${i + 1}`,
+    // Using direct URLs to valid images that are guaranteed to work
+    artwork_url: `https://via.placeholder.com/400x400.png?text=Release+${i + 1}`,
     spotify_url: `https://open.spotify.com/album/${Math.random().toString(36).substring(2, 10)}`,
     release_date: new Date(2020 + Math.floor(i/4), i % 12, 1 + (i % 28)).toISOString().split('T')[0],
     label_id: Math.floor(i / 7) + 1, // Distribute releases among labels
@@ -23,7 +24,7 @@ const FALLBACK_TEST_DATA = {
     artist: {
       id: (i % 9) + 1,
       name: `Test Artist ${(i % 9) + 1}`,
-      image_url: `https://placehold.co/400x400/333/fff?text=Artist+${(i % 9) + 1}`,
+      image_url: `https://via.placeholder.com/400x400.png?text=Artist+${(i % 9) + 1}`,
       spotify_url: `https://open.spotify.com/artist/${Math.random().toString(36).substring(2, 10)}`,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
@@ -33,7 +34,8 @@ const FALLBACK_TEST_DATA = {
   artists: Array(9).fill().map((_, i) => ({
     id: i + 1,
     name: i === 0 ? "Test Artist" : (i === 1 ? "Alicia Moore" : `Test Artist ${i}`),
-    image_url: `https://placehold.co/400x400/333/fff?text=Artist+${i + 1}`,
+    // Using direct URLs to valid images that are guaranteed to work
+    image_url: `https://via.placeholder.com/400x400.png?text=Artist+${i + 1}`,
     spotify_url: `https://open.spotify.com/artist/${Math.random().toString(36).substring(2, 10)}`,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
@@ -42,7 +44,7 @@ const FALLBACK_TEST_DATA = {
     releases: Array(2).fill().map((_, j) => ({
       id: i * 2 + j + 1,
       title: `Release ${i * 2 + j + 1}`,
-      artwork_url: `https://placehold.co/400x400/666/fff?text=Release+${i * 2 + j + 1}`,
+      artwork_url: `https://via.placeholder.com/400x400.png?text=Release+${i * 2 + j + 1}`,
       spotify_url: `https://open.spotify.com/album/${Math.random().toString(36).substring(2, 10)}`,
       release_date: new Date(2020 + Math.floor(i/2), (i + j) % 12, 1 + ((i + j) % 28)).toISOString().split('T')[0],
       label_id: i < 3 ? 1 : (i < 6 ? 2 : 3),
@@ -228,12 +230,25 @@ router.get('/releases', async (req, res) => {
         filteredReleases = filteredReleases.filter(release => release.label_id === labelId);
       }
       
-      const paginatedReleases = filteredReleases.slice(offsetNum, offsetNum + limitNum);
+      // Make sure each release has all required fields for the frontend
+      const paginatedReleases = filteredReleases
+        .slice(offsetNum, offsetNum + limitNum)
+        .map(release => ({
+          ...release,
+          // Ensure image URLs follow a consistent format
+          artwork_url: release.artwork_url || `https://via.placeholder.com/400x400.png?text=Release+${release.id}`,
+          // Make sure there's an artist with an image_url
+          artist: {
+            ...release.artist,
+            image_url: release.artist?.image_url || `https://via.placeholder.com/400x400.png?text=Artist+${release.artist?.id || 'Unknown'}`
+          }
+        }));
       
+      // Return in both formats for compatibility
       return res.json({
         success: true,
         data: paginatedReleases,
-        releases: paginatedReleases, // Include both formats for compatibility
+        releases: paginatedReleases,
         count: filteredReleases.length,
         offset: offsetNum,
         limit: limitNum
@@ -437,12 +452,24 @@ router.get('/artists', async (req, res) => {
         filteredArtists = filteredArtists.filter(artist => artist.label_id === labelId);
       }
       
-      const paginatedArtists = filteredArtists.slice(offsetNum, offsetNum + limitNum);
+      // Ensure each artist has all required fields for the frontend
+      const paginatedArtists = filteredArtists
+        .slice(offsetNum, offsetNum + limitNum)
+        .map(artist => ({
+          ...artist,
+          // Ensure image URLs follow a consistent format
+          image_url: artist.image_url || `https://via.placeholder.com/400x400.png?text=Artist+${artist.id}`,
+          // Ensure Spotify URLs are properly formatted
+          spotify_url: artist.spotify_url && !artist.spotify_url.startsWith('https://') 
+            ? `https://open.spotify.com/artist/${artist.spotify_url}` 
+            : artist.spotify_url
+        }));
       
+      // Return in both formats for compatibility
       return res.json({
         success: true,
         data: paginatedArtists,
-        artists: paginatedArtists, // Include both formats for compatibility
+        artists: paginatedArtists,
         count: filteredArtists.length,
         offset: offsetNum,
         limit: limitNum
@@ -630,17 +657,29 @@ router.get('/artist/:id', async (req, res) => {
       }
       
       // Filter releases to only include those for this artist
-      const artistReleases = FALLBACK_TEST_DATA.releases.filter(r => r.artist_id === id);
+      const artistReleases = FALLBACK_TEST_DATA.releases
+        .filter(r => r.artist_id === id)
+        .map(release => ({
+          ...release,
+          // Ensure image URLs follow a consistent format
+          artwork_url: release.artwork_url || `https://via.placeholder.com/400x400.png?text=Release+${release.id}`
+        }));
       
+      // Ensure artist has consistent image URL
       const artistWithReleases = {
         ...artist,
+        image_url: artist.image_url || `https://via.placeholder.com/400x400.png?text=Artist+${artist.id}`,
+        spotify_url: artist.spotify_url && !artist.spotify_url.startsWith('https://') 
+          ? `https://open.spotify.com/artist/${artist.spotify_url}` 
+          : artist.spotify_url,
         releases: artistReleases
       };
       
+      // Return in both formats for compatibility
       return res.json({
         success: true,
         data: artistWithReleases,
-        artist: artistWithReleases // Include both formats for compatibility
+        artist: artistWithReleases
       });
     }
     
