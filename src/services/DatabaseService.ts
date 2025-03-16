@@ -612,3 +612,9 @@ class DatabaseService {
 
   // Rest of the code remains the same
 }
+
+// Export the singleton instance as a named export
+export const databaseService = DatabaseService.getInstance();
+
+// Also export the class as the default export
+export default DatabaseService;
