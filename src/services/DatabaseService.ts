@@ -610,6 +610,61 @@ class DatabaseService {
     return testReleases;
   }
 
+  /**
+   * Get artists for a specific label
+   * @param labelId The ID of the label
+   * @param page The page number (for pagination)
+   * @param limit Maximum number of artists to return
+   * @returns Promise resolving to an array of artists
+   */
+  public async getArtistsForLabel(
+    labelId: string | number,
+    page = 1,
+    limit = 50
+  ): Promise<Artist[]> {
+    console.log(`[DatabaseService] Fetching artists for label: ${labelId}, page: ${page}, limit: ${limit}`);
+    
+    const offset = (page - 1) * limit;
+    let apiUrl = `${this.baseUrl}/api/artist?label=${labelId}&limit=${limit}&offset=${offset}`;
+    
+    try {
+      // First try with the label name or ID directly
+      console.log(`[DatabaseService] Trying artist endpoint with label=${labelId}`);
+      const response = await this.fetchApi<ApiResponse<Artist>>(apiUrl);
+      
+      if (response.success && (response.data || response.artists)) {
+        const artistsArray = response.data || response.artists || [];
+        console.log(`[DatabaseService] Successfully fetched ${artistsArray.length} artists for label ${labelId}`);
+        return artistsArray;
+      } else {
+        throw new Error('No artists returned in the response');
+      }
+    } catch (error) {
+      console.error(`[DatabaseService] Error fetching artists for label ${labelId}:`, error);
+      
+      // Try with numeric label ID if the original labelId is a string
+      if (typeof labelId === 'string' && isNaN(Number(labelId))) {
+        try {
+          console.log(`[DatabaseService] Trying fallback with numeric label ID = 1`);
+          const fallbackUrl = `${this.baseUrl}/api/artist?label=1&limit=${limit}&offset=${offset}`;
+          const fallbackResponse = await this.fetchApi<ApiResponse<Artist>>(fallbackUrl);
+          
+          if (fallbackResponse.success && (fallbackResponse.data || fallbackResponse.artists)) {
+            const artistsArray = fallbackResponse.data || fallbackResponse.artists || [];
+            console.log(`[DatabaseService] Successfully fetched ${artistsArray.length} artists with fallback approach`);
+            return artistsArray;
+          }
+        } catch (fallbackError) {
+          console.error('[DatabaseService] Fallback approach for artists also failed:', fallbackError);
+        }
+      }
+      
+      // Return empty array as last resort
+      console.warn('[DatabaseService] All approaches for fetching artists failed, returning empty array');
+      return [];
+    }
+  }
+
   // Rest of the code remains the same
 }
 
