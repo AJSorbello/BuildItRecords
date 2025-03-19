@@ -16,6 +16,22 @@ interface ApiResponse<T> {
   success: boolean;
   data: T | null;
   message: string;
+  error?: string;
+}
+
+// Response interface with optional fields for different API response formats
+interface ApiResponseExtended<T> {
+  success?: boolean;
+  data?: T[];
+  message?: string;
+  error?: string;
+  releases?: T[];
+  artists?: T[];
+  tracks?: T[];
+  total?: number;
+  offset?: number;
+  limit?: number;
+  count?: number;
 }
 
 // Error class for API-specific errors
@@ -75,20 +91,6 @@ interface Album {
   total_tracks: number;
   artists?: Artist[];
   tracks?: Track[];
-}
-
-interface ApiResponse<T = unknown> {
-  success?: boolean;
-  data?: T[];
-  message?: string;
-  error?: string;
-  tracks?: Track[];
-  releases?: Release[];
-  artists?: Artist[];
-  total?: number;
-  offset?: number;
-  limit?: number;
-  count?: number;
 }
 
 interface AdminLoginResponse {
@@ -157,7 +159,7 @@ class DatabaseService {
     console.log('[DatabaseService] Using API base URL:', this.baseUrl);
 
     // Initialize processReleases method to handle multiple API response formats
-    this.processReleases = async (response: ApiResponse<ExtendedRelease>): Promise<Release[]> => {
+    this.processReleases = async (response: ApiResponseExtended<ExtendedRelease>): Promise<Release[]> => {
       console.log('[DatabaseService] Processing releases from API response:', response);
       
       // Check which format the response is in and extract the releases array
@@ -269,17 +271,35 @@ class DatabaseService {
    * @param options Optional fetch options
    * @returns Promise resolving to the API response
    */
-  private async fetchApi<T>(
+  public async fetchApi<T>(
     endpoint: string,
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
     try {
+      // Get base URL first
       const baseUrl = this.getBaseUrl();
       
-      // Construct proper URL, preventing /api/api/ duplications
-      let url = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-      if (!url.startsWith('/api') && !baseUrl.endsWith('/api')) {
-        url = `/api${url}`;
+      // Clean the endpoint to avoid path issues
+      const cleanEndpoint = endpoint.startsWith('/') ? endpoint.substring(1) : endpoint;
+      
+      // Handle API path construction carefully to avoid duplicates
+      let url = '';
+      
+      // If baseUrl already includes /api and endpoint also starts with api/, remove api/ from endpoint
+      if (baseUrl.endsWith('/api') && cleanEndpoint.startsWith('api/')) {
+        url = `/${cleanEndpoint.substring(4)}`;
+      } 
+      // If baseUrl includes /api and endpoint doesn't start with api/
+      else if (baseUrl.endsWith('/api')) {
+        url = `/${cleanEndpoint}`;
+      }
+      // If baseUrl doesn't include /api and endpoint starts with api/
+      else if (cleanEndpoint.startsWith('api/')) {
+        url = `/api/${cleanEndpoint.substring(4)}`;
+      }
+      // If neither includes /api
+      else {
+        url = `/api/${cleanEndpoint}`;
       }
       
       const fullUrl = `${baseUrl}${url}`;
@@ -335,6 +355,16 @@ class DatabaseService {
    * Get the base URL for API calls based on current environment
    */
   private getBaseUrl(): string {
+    // Check if we're in a Vercel deployment
+    if (typeof window !== 'undefined' && 
+        (window.location.hostname.includes('vercel.app') || 
+         window.location.hostname.includes('builditrecords.com'))) {
+      // Always use the Render API for Vercel deployments
+      const renderApiUrl = 'https://builditrecords.onrender.com/api';
+      console.log('Vercel deployment detected - using Render API URL:', renderApiUrl);
+      return renderApiUrl;
+    }
+    
     // Try to use the current window origin in the browser to adapt to any port
     if (typeof window !== 'undefined') {
       // For local development using localhost:3001 directly
@@ -388,7 +418,7 @@ class DatabaseService {
         console.log(`[DatabaseService] Fetching releases from: ${apiUrl}${queryParams}`);
         
         // Make the API call
-        const response = await this.fetchApi<ApiResponse<ExtendedRelease>>(`${apiUrl}${queryParams}`);
+        const response = await this.fetchApi<ApiResponseExtended<ExtendedRelease>>(`${apiUrl}${queryParams}`);
         console.log(`[DatabaseService] Releases API response status:`, response?.success);
         
         // Check if we got a valid response with data or releases property
@@ -441,7 +471,7 @@ class DatabaseService {
           
           console.log(`[DatabaseService] Trying alternative label ID: ${alternativeLabelId}`);
           
-          const response = await this.fetchApi<ApiResponse<ExtendedRelease>>(`${apiUrl}${queryParams}`);
+          const response = await this.fetchApi<ApiResponseExtended<ExtendedRelease>>(`${apiUrl}${queryParams}`);
           console.log(`[DatabaseService] Alternative response:`, response);
           
           if (response && (
@@ -515,7 +545,7 @@ class DatabaseService {
           // This is a more reliable approach for browser environments
           const proxyUrl = `/proxy-api/releases?label=${encodeURIComponent(labelId)}&offset=${offset}&limit=${limit}`;
           
-          const response = await this.fetchApi<ApiResponse<ExtendedRelease>>(proxyUrl);
+          const response = await this.fetchApi<ApiResponseExtended<ExtendedRelease>>(proxyUrl);
           console.log(`[DatabaseService] Proxy response:`, response);
           
           if (response && (
@@ -595,189 +625,115 @@ class DatabaseService {
     limit = 50
   ): Promise<Artist[]> {
     try {
+      const labelQuery = typeof labelId === 'number' ? `label=${labelId}` : `label=${labelId}`;
       const offset = (page - 1) * limit;
+      
       console.log(`[DatabaseService] Fetching artists for label ${labelId}, page ${page}, limit ${limit}`);
       
-      // Normalize the labelId - handle both numeric and string formats
-      const normalizedLabelId = String(labelId).toLowerCase();
+      // Primary approach: Try the structure /api/artists?label=1
+      console.log(`[DatabaseService] Primary approach: Using new API endpoint`);
+      const primaryApiUrl = `api/artists?${labelQuery}&limit=${limit}&offset=${offset}&sort=name`;
+      console.log(`[DatabaseService] Fetching from: ${this.baseUrl}/${primaryApiUrl}`);
       
-      // Try multiple approaches to fetch artists, with fallbacks
+      // Make the API call with the label ID
+      const primaryResponse = await this.fetchApi<ApiResponseExtended<Artist>>(primaryApiUrl);
+      console.log(`[DatabaseService] Primary API response:`, primaryResponse);
       
-      // First approach: Primary API endpoint
-      try {
-        console.log('[DatabaseService] Primary approach: Using new API endpoint');
-        
-        // Use the same URL construction logic to avoid /api/api issues
-        const apiPath = this.baseUrl.includes('/api') ? '/artists' : '/api/artists';
-        const apiUrl = `${this.baseUrl}${apiPath}`;
-        const queryParams = `?label=${encodeURIComponent(String(labelId))}&limit=${limit}&offset=${offset}&sort=name`;
-        console.log(`[DatabaseService] Fetching from: ${apiUrl}${queryParams}`);
-        
-        const primaryResponse = await this.fetchApi<ApiResponse<Artist>>(apiUrl + queryParams);
-        console.log('[DatabaseService] Primary API response:', primaryResponse);
-        
-        if (primaryResponse.success && (primaryResponse.data || primaryResponse.artists)) {
-          const allArtists = primaryResponse.data || primaryResponse.artists || [];
-          
-          // Filter the artists by the labelId if possible
-          // This is a client-side fallback filter since the API filtering failed
-          let filteredArtists = allArtists;
-          
-          if (allArtists.length > 0 && (allArtists[0] as ArtistBase).labels) {
-            filteredArtists = allArtists.filter(artist => {
-              // Check if the artist has the current label in their labels array
-              const extendedArtist = artist as ArtistBase;
-              if (!extendedArtist.labels) return false;
-              
-              const labelIdStr = String(labelId).toLowerCase();
-              return extendedArtist.labels.some((label: { id: string; name?: string }) => 
-                String(label.id).toLowerCase() === labelIdStr || 
-                (label.name && label.name.toLowerCase() === labelIdStr)
-              );
-            });
-          }
-          
-          console.log(`[DatabaseService] Primary approach returned ${filteredArtists.length} artists after filtering from ${allArtists.length} total`);
-          
-          // Sort artists alphabetically by name
-          const sortedArtists = [...filteredArtists].sort((a, b) => 
-            (a.name || '').localeCompare(b.name || '')
-          );
-          
-          return this.processArtists(sortedArtists);
-        }
-      } catch (error) {
-        console.error('[DatabaseService] Primary approach failed:', error);
-      }
+      // Extract artists from response in various formats
+      let artists: Artist[] = [];
       
-      // Second approach: Alternative format or fallback endpoint
-      try {
-        console.log('[DatabaseService] Secondary approach: Trying alternative API format');
-        // Try using a different format for the labelId (numerical vs string)
-        let alternativeFormat = '';
-        
-        // Handle different label formats properly - don't default to just label 1
-        if (isNaN(Number(labelId))) {
-          // If not a number, try label ID 1 or 2 based on name
-          if (normalizedLabelId.includes('deep')) {
-            alternativeFormat = '2'; // Build It Deep
-          } else {
-            alternativeFormat = '1'; // Build It Records default
-          }
-        } else {
-          // If it's already a number, map it to the appropriate label name
-          if (String(labelId) === '1') {
-            alternativeFormat = 'buildit-records';
-          } else if (String(labelId) === '2') {
-            alternativeFormat = 'buildit-deep';
-          } else {
-            alternativeFormat = 'buildit-records'; // Default fallback
-          }
+      if (primaryResponse?.success) {
+        if (primaryResponse.data && Array.isArray(primaryResponse.data)) {
+          artists = primaryResponse.data;
+        } else if (primaryResponse.artists && Array.isArray(primaryResponse.artists)) {
+          artists = primaryResponse.artists;
         }
         
-        const fallbackUrl = `${this.baseUrl}/artists?label=${encodeURIComponent(alternativeFormat)}&limit=${limit}&offset=${offset}&sort=name`;
-        console.log(`[DatabaseService] Fetching from: ${fallbackUrl}`);
-        
-        const secondaryResponse = await this.fetchApi<ApiResponse<Artist>>(fallbackUrl);
-        console.log('[DatabaseService] Secondary API response:', secondaryResponse);
-        
-        if (secondaryResponse.success && (secondaryResponse.data || secondaryResponse.artists)) {
-          const artistsArray = secondaryResponse.data || secondaryResponse.artists || [];
-          console.log(`[DatabaseService] Secondary approach returned ${artistsArray.length} artists`);
-          
-          // Sort artists alphabetically by name
-          const sortedArtists = [...artistsArray].sort((a, b) => 
-            (a.name || '').localeCompare(b.name || '')
-          );
-          
-          return this.processArtists(sortedArtists);
+        if (artists.length > 0) {
+          console.log(`[DatabaseService] Found ${artists.length} artists from primary approach`);
+          return this.processArtists(artists);
         }
-      } catch (error) {
-        console.error('[DatabaseService] Secondary approach failed:', error);
-      }
-      
-      // Last resort: Get all artists without filtering and filter client-side
-      try {
-        console.log('[DatabaseService] Last resort approach: Fetching all artists and filtering client-side');
-        // Get all artists without filter
-        const allArtistsUrl = `${this.baseUrl}/artists?limit=1000&sort=name`; // Increased limit to get more artists
-        console.log(`[DatabaseService] Fetching from: ${allArtistsUrl}`);
-        
-        const lastResortResponse = await this.fetchApi<ApiResponse<Artist>>(allArtistsUrl);
-        console.log('[DatabaseService] Last resort API response:', lastResortResponse);
-        
-        if (lastResortResponse.success && (lastResortResponse.data || lastResortResponse.artists)) {
-          const allArtists = lastResortResponse.data || lastResortResponse.artists || [];
-          
-          // Filter the artists by the labelId if possible
-          // This is a client-side fallback filter since the API filtering failed
-          let filteredArtists = allArtists;
-          
-          // Improved filtering logic to handle artists with multiple labels
-          if (allArtists.length > 0) {
-            filteredArtists = allArtists.filter(artist => {
-              // Check if the artist has the current label in their labels array
-              const extendedArtist = artist as ArtistBase;
-              
-              // Handle artists with labels array
-              if (extendedArtist.labels && Array.isArray(extendedArtist.labels)) {
-                const labelIdStr = String(labelId).toLowerCase();
-                return extendedArtist.labels.some((label: { id: string; name?: string }) => 
-                  String(label.id).toLowerCase() === labelIdStr || 
-                  (label.name && label.name.toLowerCase().includes(labelIdStr))
-                );
-              }
-              
-              // If artist has label_id property (direct property), check that
-              if (extendedArtist.label_id) {
-                return String(extendedArtist.label_id).toLowerCase() === String(labelId).toLowerCase();
-              }
-              
-              // If artist has a labelId property, check that too
-              if (extendedArtist.labelId) {
-                return String(extendedArtist.labelId).toLowerCase() === String(labelId).toLowerCase();
-              }
-              
-              // Last resort: check if label name is in the artist name or bio
-              if (labelId === '2' || normalizedLabelId.includes('deep')) {
-                return (
-                  (extendedArtist.name && extendedArtist.name.toLowerCase().includes('deep')) || 
-                  (extendedArtist.bio && extendedArtist.bio.toLowerCase().includes('build it deep'))
-                );
-              } else if (labelId === '1' || normalizedLabelId.includes('record')) {
-                // Only match Build It Records if explicit mention and no Deep mention
-                return (
-                  ((extendedArtist.name && extendedArtist.name.toLowerCase().includes('records')) || 
-                   (extendedArtist.bio && extendedArtist.bio.toLowerCase().includes('build it records'))) &&
-                  !((extendedArtist.name && extendedArtist.name.toLowerCase().includes('deep')) || 
-                    (extendedArtist.bio && extendedArtist.bio.toLowerCase().includes('build it deep')))
-                );
-              }
-              
-              return false;
-            });
-          }
-          
-          console.log(`[DatabaseService] Last resort approach returned ${filteredArtists.length} artists after filtering from ${allArtists.length} total`);
-          
-          // Sort artists alphabetically by name
-          const sortedArtists = [...filteredArtists].sort((a, b) => 
-            (a.name || '').localeCompare(b.name || '')
-          );
-          
-          return this.processArtists(sortedArtists);
-        }
-      } catch (error) {
-        console.error('[DatabaseService] Last resort approach failed:', error);
       }
 
-      // If all else fails, return empty array
-      console.log('[DatabaseService] All API approaches failed, returning empty array');
-      return this.getTestArtists();
+      // Secondary approach: Try with the label name (buildit-records instead of ID)
+      console.log(`[DatabaseService] Secondary approach: Trying alternative API format`);
+      const secondaryLabelQuery = labelId === 1 || labelId === '1' ? 'buildit-records' : labelId;
+      const secondaryApiUrl = `artists?label=${secondaryLabelQuery}&limit=${limit}&offset=${offset}&sort=name`;
+      console.log(`[DatabaseService] Fetching from: ${this.baseUrl}/${secondaryApiUrl}`);
       
+      const secondaryResponse = await this.fetchApi<ApiResponseExtended<Artist>>(secondaryApiUrl);
+      console.log(`[DatabaseService] Secondary API response:`, secondaryResponse);
+      
+      if (secondaryResponse?.success) {
+        if (secondaryResponse.data && Array.isArray(secondaryResponse.data)) {
+          artists = secondaryResponse.data;
+        } else if (secondaryResponse.artists && Array.isArray(secondaryResponse.artists)) {
+          artists = secondaryResponse.artists;
+        }
+        
+        if (artists.length > 0) {
+          console.log(`[DatabaseService] Found ${artists.length} artists from secondary approach`);
+          return this.processArtists(artists);
+        }
+      }
+      
+      // Last resort: Fetch all artists and filter by label on client side
+      console.log(`[DatabaseService] Last resort approach: Fetching all artists and filtering client-side`);
+      const allArtistsUrl = `artists?limit=1000&sort=name`;
+      console.log(`[DatabaseService] Fetching from: ${this.baseUrl}/${allArtistsUrl}`);
+      
+      const allArtistsResponse = await this.fetchApi<ApiResponseExtended<Artist>>(allArtistsUrl);
+      console.log(`[DatabaseService] Last resort API response:`, allArtistsResponse);
+      
+      let allArtists: Artist[] = [];
+      if (allArtistsResponse?.success) {
+        if (allArtistsResponse.data && Array.isArray(allArtistsResponse.data)) {
+          allArtists = allArtistsResponse.data;
+        } else if (allArtistsResponse.artists && Array.isArray(allArtistsResponse.artists)) {
+          allArtists = allArtistsResponse.artists;
+        }
+        
+        // Filter artists by the label ID
+        if (allArtists.length > 0) {
+          // Convert labelId to number if it's a string to match potential numeric IDs in the data
+          const numericLabelId = typeof labelId === 'string' ? 
+            (labelId === 'buildit-records' ? 1 : parseInt(labelId, 10)) : 
+            labelId;
+          
+          const filteredArtists = allArtists.filter((artist: Artist) => {
+            // Check various label properties that might exist
+            const artistLabelId = artist.labelId || artist.label_id;
+            if (artistLabelId) {
+              // Convert to number to match safely
+              const artistNumericLabelId = typeof artistLabelId === 'string' ? 
+                parseInt(artistLabelId, 10) : artistLabelId;
+                
+              return artistNumericLabelId === numericLabelId;
+            }
+            
+            // Check if it has a labels array
+            if (artist.labels && Array.isArray(artist.labels)) {
+              return artist.labels.some(label => {
+                const labelNumericId = typeof label.id === 'string' ? 
+                  parseInt(label.id, 10) : label.id;
+                return labelNumericId === numericLabelId;
+              });
+            }
+            
+            return false;
+          });
+          
+          if (filteredArtists.length > 0) {
+            console.log(`[DatabaseService] Found ${filteredArtists.length} artists from all artists (filtered from ${allArtists.length} total)`);
+            return this.processArtists(filteredArtists);
+          }
+        }
+      }
+      
+      console.log(`[DatabaseService] All API approaches failed, returning empty array`);
+      return [];
     } catch (error) {
-      console.error('[DatabaseService] Error fetching artists:', error);
-      // Return empty array as fallback
+      console.error('[DatabaseService] Error fetching artists for label:', error);
       return this.getTestArtists();
     }
   }
