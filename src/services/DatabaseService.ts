@@ -10,7 +10,6 @@ import { SpotifyImage } from '../types/spotify';
 import { DatabaseError } from '../utils/errors';
 import { RecordLabelId } from '../types/labels'; 
 import { getApiBaseUrl } from '../utils/apiConfig';
-import { fallbackArtists, fallbackReleases, getReleasesByLabel, getArtistsByLabel } from '../data/fallbackData';
 
 // Define standard API response interface
 interface ApiResponse<T> {
@@ -580,7 +579,7 @@ class DatabaseService {
   private getTestReleases(): Release[] {
     console.error('[DatabaseService] API call failed - using fallback release data');
     // Return all releases from the fallback data
-    return fallbackReleases;
+    return [];
   }
 
   /**
