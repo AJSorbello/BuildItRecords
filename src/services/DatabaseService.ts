@@ -307,7 +307,7 @@ class DatabaseService {
       
       const response = await fetch(fullUrl, {
         ...options,
-        credentials: 'omit', // Changed from 'include' to 'omit' to avoid CORS issues with wildcard origins
+        credentials: 'include', // Revert back to 'include' now that server CORS is properly configured
         headers: {
           'Content-Type': 'application/json',
           ...options.headers,

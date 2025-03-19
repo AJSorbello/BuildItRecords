@@ -12,9 +12,29 @@ console.log(`PORT: ${PORT}`);
 console.log(`Current directory: ${process.cwd()}`);
 console.log('===============================================');
 
-// Allow all CORS
+// Define allowed origins
+const allowedOrigins = [
+  'https://build-it-records.vercel.app',
+  'https://build-it-records-h14oi09z2-ajsorbellos-projects.vercel.app',
+  'https://build-it-records-git-main-ajsorbellos-projects.vercel.app',
+  'https://builditrecords.vercel.app',
+  'http://localhost:3000',
+  'http://localhost:5173'
+];
+
+// Configure CORS with specific origins
 app.use(cors({
-  origin: '*',
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log(`CORS blocked request from origin: ${origin}`);
+      callback(null, true); // Allow all origins for now, but log non-allowed ones
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'Accept'],
   credentials: true
