@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Box from '@mui/material/Box';
 import { 
   createBrowserRouter, 
@@ -14,6 +14,7 @@ import { SnackbarProvider } from 'notistack';
 // Components
 import ProtectedRoute from './components/ProtectedRoute';
 import { Layout } from './components/Layout';
+import DebugConsole from './components/DebugConsole';
 
 // Pages
 import AdminLogin from './pages/admin/AdminLogin';
@@ -79,6 +80,23 @@ const router = createBrowserRouter(
 );
 
 const App: React.FC = () => {
+  const [isDevEnvironment, setIsDevEnvironment] = useState(false);
+
+  useEffect(() => {
+    // Detect if we're in development mode
+    // We avoid using process.env directly since it can cause issues in the build
+    const isDev = window.location.hostname === 'localhost' || 
+                 window.location.hostname === '127.0.0.1' ||
+                 window.location.hostname.includes('.local');
+    setIsDevEnvironment(isDev);
+    
+    // Log deployment information for debugging
+    console.log('Environment Info:');
+    console.log('- Hostname:', window.location.hostname);
+    console.log('- Origin:', window.location.origin);
+    console.log('- Development Mode:', isDev);
+  }, []);
+
   return (
     <CustomThemeProvider>
       <MuiThemeProvider theme={createTheme({
@@ -96,6 +114,7 @@ const App: React.FC = () => {
         <SnackbarProvider maxSnack={3} anchorOrigin={{ vertical: 'top', horizontal: 'right' }}>
           <Box sx={{ display: 'flex', minHeight: '100vh' }}>
             <RouterProvider router={router} />
+            {(isDevEnvironment || window.location.search.includes('debug=true')) && <DebugConsole />}
           </Box>
         </SnackbarProvider>
       </MuiThemeProvider>

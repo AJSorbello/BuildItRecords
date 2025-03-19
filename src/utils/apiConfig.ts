@@ -7,77 +7,44 @@
  */
 
 /**
- * Safely access environment variables to avoid "process is not defined" errors
+ * Safely access environment variables without relying on import.meta directly
+ * This is a simplified approach that avoids runtime errors during build
  */
 const getEnv = (key: string): string | undefined => {
-  try {
-    // For Vite, use import.meta.env
-    if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[key]) {
-      return import.meta.env[key];
-    }
-    
-    // Traditional Node.js env access (fallback)
-    if (typeof process !== 'undefined' && process.env && process.env[key]) {
-      return process.env[key];
-    }
-    
-    return undefined;
-  } catch (e) {
-    console.warn(`Error accessing env var ${key}:`, e);
-    return undefined;
-  }
+  // For browser environments, we can't directly access process.env
+  // Instead, rely on the environment detection in getApiBaseUrl
+  return undefined;
 };
 
 /**
  * Determines the base API URL depending on the current environment
  */
 export const getApiBaseUrl = (): string => {
-  // Default Render API URL
+  // Default Render API URL for production environments
   const RENDER_API_URL = 'https://builditrecords.onrender.com/api';
   
   // For debugging - log detection information
   console.log('Environment detection:');
-  try {
-    console.log('- NODE_ENV:', getEnv('NODE_ENV'));
-    console.log('- VITE_API_URL:', import.meta?.env?.VITE_API_URL);
-    console.log('- import.meta.env:', import.meta?.env);
-  } catch (e) {
-    console.log('- Error accessing env vars:', e);
-  }
   
+  // Check if we're running in a browser environment
   if (typeof window !== 'undefined') {
     console.log('- Window location:', window.location.origin);
     console.log('- Window hostname:', window.location.hostname);
-  }
-  
-  // For Vercel deployments or production, use the Render API
-  if (typeof window !== 'undefined' && 
-      (window.location.hostname.includes('vercel.app') || 
-       window.location.hostname.includes('builditrecords'))) {
-    console.log('Production deployment detected - using Render API URL:', RENDER_API_URL);
-    return RENDER_API_URL;
-  }
-  
-  // Check for explicit API URL from Vite environment
-  try {
-    const viteApiUrl = import.meta?.env?.VITE_API_URL;
-    if (viteApiUrl && typeof viteApiUrl === 'string' && viteApiUrl.length > 0) {
-      console.log('Using VITE_API_URL:', viteApiUrl);
-      return viteApiUrl;
+    
+    // For Vercel deployments or production domains, always use the Render API
+    if (window.location.hostname.includes('vercel.app') || 
+        window.location.hostname.includes('builditrecords')) {
+      console.log('Production deployment detected - using Render API URL:', RENDER_API_URL);
+      return RENDER_API_URL;
     }
-  } catch (e) {
-    console.warn('Error accessing Vite env vars:', e);
-  }
-  
-  // For local development, use current origin or fallback to localhost:3000
-  if (typeof window !== 'undefined') {
-    // Use the current origin so it automatically adapts to any port
+    
+    // For local development, use current origin
     const localApiUrl = `${window.location.origin}/api`;
     console.log('Using current origin for API URL:', localApiUrl);
     return localApiUrl;
   }
   
-  // Default for development
+  // Default for any other environment (Node.js, etc.)
   const defaultUrl = 'http://localhost:3000/api';
   console.log('Using default development API URL:', defaultUrl);
   return defaultUrl;

@@ -150,7 +150,7 @@ fi
 
 # Run build using npx to ensure we use the local version
 echo "🏗️ Building the application"
-VITE_CJS_TRACE=1 npx vite build --debug
+VITE_CJS_TRACE=1 VITE_DEBUG=1 npx vite build --debug
 BUILD_RESULT=$?
 
 if [ $BUILD_RESULT -ne 0 ]; then
@@ -164,6 +164,10 @@ if [ $BUILD_RESULT -ne 0 ]; then
   ls -la node_modules/esbuild || echo "No esbuild module found"
   echo "Full package.json:"
   cat package.json
+  echo "Environment variables (masked):"
+  env | grep -v -E '(PASSWORD|SECRET|KEY|TOKEN)' | sort
+  echo "API Config file content:"
+  cat src/utils/apiConfig.ts
   exit $BUILD_RESULT
 fi
 
