@@ -7,6 +7,10 @@ interface LogEntry {
   timestamp: string;
 }
 
+interface StyleProps {
+  [key: string]: React.CSSProperties;
+}
+
 const DebugConsole: React.FC = () => {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -54,7 +58,7 @@ const DebugConsole: React.FC = () => {
         return String(arg);
       }).join(' ');
 
-      setLogs(prevLogs => [
+      setLogs((prevLogs: LogEntry[]) => [
         ...prevLogs,
         {
           level,
@@ -101,7 +105,7 @@ const DebugConsole: React.FC = () => {
           borderRadius: '5px',
           cursor: 'pointer',
           zIndex: 9999
-        }}
+        } as StyleProps}
         onClick={toggleExpanded}
       >
         Debug Console ({logs.length})
@@ -125,7 +129,7 @@ const DebugConsole: React.FC = () => {
         zIndex: 9999,
         display: 'flex',
         flexDirection: 'column'
-      }}
+      } as StyleProps}
     >
       <div
         style={{
@@ -134,7 +138,7 @@ const DebugConsole: React.FC = () => {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center'
-        }}
+        } as StyleProps}
       >
         <span>Debug Console ({logs.length} entries)</span>
         <div>
@@ -146,7 +150,7 @@ const DebugConsole: React.FC = () => {
               padding: '4px 8px',
               marginRight: '8px',
               borderRadius: '3px'
-            }}
+            } as StyleProps}
             onClick={runApiTest}
           >
             Test API Config
@@ -159,7 +163,7 @@ const DebugConsole: React.FC = () => {
               padding: '4px 8px',
               marginRight: '8px',
               borderRadius: '3px'
-            }}
+            } as StyleProps}
             onClick={clearLogs}
           >
             Clear
@@ -171,7 +175,7 @@ const DebugConsole: React.FC = () => {
               color: 'white',
               padding: '4px 8px',
               borderRadius: '3px'
-            }}
+            } as StyleProps}
             onClick={toggleExpanded}
           >
             Minimize
@@ -185,7 +189,7 @@ const DebugConsole: React.FC = () => {
           flexGrow: 1,
           fontFamily: 'monospace',
           fontSize: '14px'
-        }}
+        } as StyleProps}
       >
         {logs.map((log, index) => (
           <div
@@ -198,7 +202,7 @@ const DebugConsole: React.FC = () => {
                 log.level === 'error' ? '#5a1e1e' : 
                 log.level === 'warn' ? '#5a4e1e' : 
                 '#1e3a5a'
-            }}
+            } as StyleProps}
           >
             <span style={{ fontSize: '12px', color: '#999' }}>
               {new Date(log.timestamp).toLocaleTimeString()}{' '}
