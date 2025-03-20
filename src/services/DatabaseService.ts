@@ -72,6 +72,7 @@ interface ArtistBase {
   bio?: string;
   genres?: string[];
   tags?: string[];
+  // Make sure labels definition matches the one in Artist interface
   labels?: Array<{ id: string; name?: string }>;
   images?: Array<{ url: string; height?: number; width?: number }>;
   url?: string;
@@ -316,7 +317,7 @@ class DatabaseService {
       try {
         const response = await fetch(fullUrl, {
           ...options,
-          credentials: 'include', // Required for cookies, but needs specific CORS settings
+          credentials: 'omit', // Changed from 'include' to 'omit' to fix CORS issues with wildcard origins
           headers: {
             'Content-Type': 'application/json',
             ...options.headers,
