@@ -73,6 +73,21 @@ export const getApiUrl = (endpoint: string): string => {
     return url;
   }
   
+  // For full URLs (that might have been incorrectly passed), extract just the path
+  if (cleanEndpoint.startsWith('http')) {
+    console.log(`Warning: Found full URL in endpoint parameter: ${cleanEndpoint}`);
+    try {
+      const url = new URL(cleanEndpoint);
+      // Extract just the pathname and search params
+      const path = url.pathname.replace(/^\/api\//, '');
+      const fullPath = path + url.search;
+      console.log(`Converted to path: ${fullPath}`);
+      return `${baseUrl}/${fullPath}`;
+    } catch (e) {
+      console.error(`[apiConfig] Error parsing URL: ${e}`);
+    }
+  }
+  
   const url = `${baseUrl}/${cleanEndpoint}`;
   console.log(`URL construction: ${url}`);
   return url;

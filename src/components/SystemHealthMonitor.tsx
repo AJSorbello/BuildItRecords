@@ -1,238 +1,182 @@
-import * as React from 'react';
-import { monitoringService, SystemHealth, HealthStatus } from '../services/MonitoringService';
+import React from 'react';
+import { Box, Paper, Typography, IconButton, Collapse } from '@mui/material';
+import { ExpandLess, ExpandMore } from '@mui/icons-material';
 
+// Define the props for the SystemHealthMonitor component
 interface SystemHealthMonitorProps {
-  minimized?: boolean;
-  onToggleMinimize?: () => void;
   showAlways?: boolean;
+  minimized?: boolean;
+  onToggleMinimize: () => void;
 }
 
-// Component to display system health status
-const SystemHealthMonitor: React.FC<SystemHealthMonitorProps> = ({ 
-  minimized = true, 
-  onToggleMinimize,
-  showAlways = false
+// Component for monitoring and displaying system health status
+const SystemHealthMonitor: React.FC<SystemHealthMonitorProps> = ({
+  showAlways = false,
+  minimized = true,
+  onToggleMinimize
 }) => {
-  const [health, setHealth] = React.useState<SystemHealth | null>(null);
-  const [expanded, setExpanded] = React.useState(false);
-  const [visible, setVisible] = React.useState(false);
-  
+  const [apiStatus, setApiStatus] = React.useState<'healthy' | 'degraded' | 'down' | 'unknown'>('unknown');
+  const [lastChecked, setLastChecked] = React.useState<Date | null>(null);
+  const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+
+  // Check API health on component mount and periodically
   React.useEffect(() => {
-    // Subscribe to health status updates
-    const unsubscribe = monitoringService.subscribe((newHealth: SystemHealth) => {
-      setHealth(newHealth);
-      
-      // Show the monitor if any service is unhealthy or degraded
-      const hasIssues = Object.values(newHealth)
-        .some(status => status.status === 'unhealthy' || status.status === 'degraded');
-      
-      if (hasIssues || showAlways) {
-        setVisible(true);
+    checkApiHealth();
+    const interval = setInterval(checkApiHealth, 60000); // Check every minute
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Function to check API health status
+  const checkApiHealth = async () => {
+    // Try multiple possible health endpoints
+    const endpoints = [
+      '/api/health', 
+      '/health',
+      'https://builditrecords.onrender.com/api/health'
+    ];
+    
+    for (const endpoint of endpoints) {
+      try {
+        console.log(`[SystemHealthMonitor] Checking health endpoint: ${endpoint}`);
+        
+        // Use proper URL construction if it's a relative path
+        const apiUrl = endpoint.startsWith('http') 
+          ? endpoint 
+          : new URL(endpoint, window.location.origin).toString();
+        
+        const response = await fetch(apiUrl, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          // Omit credentials to avoid CORS issues
+          credentials: 'omit',
+          // Short timeout to prevent long waits
+          signal: AbortSignal.timeout(3000)
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log(`[SystemHealthMonitor] Health check response:`, data);
+          
+          if (data.success) {
+            setApiStatus('healthy');
+            setErrorMessage(null);
+            // Successfully checked health, no need to try other endpoints
+            return;
+          } else {
+            setApiStatus('degraded');
+            setErrorMessage(data.message || 'API performance is degraded');
+          }
+        } else {
+          console.log(`[SystemHealthMonitor] Health check failed with status: ${response.status}`);
+          // Continue trying other endpoints
+        }
+      } catch (error) {
+        console.log(`[SystemHealthMonitor] Error checking ${endpoint}:`, error);
+        // Continue trying other endpoints
       }
-    });
-    
-    // Initial health check
-    monitoringService.checkAllServices();
-    
-    return () => {
-      unsubscribe();
-    };
-  }, [showAlways]);
-  
-  // Format timestamp to readable time
-  const formatTime = (timestamp: string): string => {
-    try {
-      const date = new Date(timestamp);
-      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } catch (e) {
-      return 'Unknown';
     }
+    
+    // If we get here, all health checks failed
+    setApiStatus('down');
+    setErrorMessage('API is unreachable. Please check your network connection.');
+    setLastChecked(new Date());
   };
+
+  // Determine if the component should be shown
+  const shouldShow = showAlways || apiStatus !== 'healthy';
   
-  // Get status icon and color
-  const getStatusInfo = (s: HealthStatus): { icon: string, color: string } => {
-    switch (s.status) {
-      case 'healthy':
-        return { icon: '✓', color: '#10b981' };
-      case 'degraded':
-        return { icon: '⚠️', color: '#f59e0b' };
-      case 'unhealthy':
-        return { icon: '✕', color: '#ef4444' };
-      default:
-        return { icon: '?', color: '#6b7280' };
-    }
-  };
-  
-  // If there's no health data or the monitor shouldn't be visible, don't render
-  if (!health || (!visible && !showAlways)) {
+  if (!shouldShow) {
     return null;
   }
-  
-  // Count issues by status
-  const issues = Object.entries(health)
-    .filter(([key, data]) => key !== 'overall' && data.status !== 'healthy')
-    .reduce((acc, [_, data]) => {
-      acc[data.status] = (acc[data.status] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-  
-  const issueCount = Object.values(issues).reduce((sum, count) => sum + count, 0);
-  
-  // Check if the system is healthy overall
-  const isHealthy = health.overall.status === 'healthy';
-  
+
+  // Handle button click for minimize/expand
+  const handleExpandClick = (event: any) => {
+    // Prevent event from bubbling up
+    event.stopPropagation();
+    onToggleMinimize();
+  };
+
+  // Get status color based on API status
+  const getStatusColor = () => {
+    switch (apiStatus) {
+      case 'healthy': return 'green';
+      case 'degraded': return 'orange';
+      case 'down': return 'red';
+      default: return 'gray';
+    }
+  };
+
   return (
-    <div
-      style={{
+    <Paper 
+      elevation={3}
+      sx={{
         position: 'fixed',
-        bottom: '20px',
-        right: '20px',
-        backgroundColor: 'rgba(0, 0, 0, 0.75)',
-        borderRadius: '8px',
+        bottom: 20,
+        right: 20,
+        zIndex: 1000,
+        width: minimized ? 'auto' : 300,
+        backgroundColor: '#222',
         color: 'white',
-        fontFamily: 'monospace',
-        fontSize: '12px',
-        maxWidth: minimized ? '200px' : '400px',
-        maxHeight: minimized ? '40px' : '80vh',
-        overflow: 'hidden',
-        transition: 'all 0.3s ease',
-        zIndex: 9999,
-        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-        border: `1px solid ${isHealthy ? '#10b981' : health.overall.status === 'degraded' ? '#f59e0b' : '#ef4444'}`
+        borderRadius: 2,
+        border: `1px solid ${getStatusColor()}`
       }}
     >
-      <div
-        style={{
-          padding: '8px 12px',
+      <Box 
+        sx={{ 
+          p: 1,
           display: 'flex',
-          justifyContent: 'space-between',
           alignItems: 'center',
-          backgroundColor: isHealthy ? '#0f766e' : health.overall.status === 'degraded' ? '#b45309' : '#b91c1c',
+          justifyContent: 'space-between',
           cursor: 'pointer'
         }}
-        onClick={onToggleMinimize}
+        onClick={() => onToggleMinimize()}
       >
-        <div style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <span>System Status: {health.overall.status.toUpperCase()}</span>
-          {!isHealthy && issueCount > 0 && (
-            <span style={{ 
-              backgroundColor: 'rgba(0, 0, 0, 0.3)', 
-              borderRadius: '4px', 
-              padding: '2px 6px',
-              fontSize: '10px'
-            }}>
-              {issueCount} {issueCount === 1 ? 'issue' : 'issues'}
-            </span>
-          )}
-        </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button 
-            style={{
-              background: 'none',
-              border: 'none',
-              color: 'white',
-              cursor: 'pointer',
-              padding: '0',
-              fontSize: '14px'
-            }}
-            onClick={(e) => {
-              e.stopPropagation();
-              monitoringService.checkAllServices();
-            }}
-            title="Refresh Status"
-          >
-            🔄
-          </button>
-          <span style={{ cursor: 'pointer' }}>
-            {minimized ? '▼' : '▲'}
-          </span>
-        </div>
-      </div>
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Box 
+            sx={{ 
+              width: 12, 
+              height: 12, 
+              borderRadius: '50%',
+              backgroundColor: getStatusColor(),
+              mr: 1
+            }} 
+          />
+          <Typography variant="body2">
+            API Status: {apiStatus.charAt(0).toUpperCase() + apiStatus.slice(1)}
+          </Typography>
+        </Box>
+        <IconButton 
+          size="small" 
+          onClick={handleExpandClick}
+          sx={{ color: 'white' }}
+        >
+          {minimized ? <ExpandMore /> : <ExpandLess />}
+        </IconButton>
+      </Box>
       
-      {!minimized && (
-        <div style={{ padding: '12px', maxHeight: '70vh', overflowY: 'auto' }}>
-          <div>
-            <div style={{ marginBottom: '8px', fontWeight: 'bold', borderBottom: '1px solid rgba(255, 255, 255, 0.2)', paddingBottom: '4px' }}>
-              Service Status
-            </div>
-            
-            {Object.entries(health)
-              .filter(([key]) => key !== 'overall')
-              .map(([key, status]) => {
-                const statusInfo = getStatusInfo(status);
-                return (
-                  <div 
-                    key={key}
-                    style={{ 
-                      marginBottom: '8px', 
-                      padding: '6px',
-                      backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                      borderRadius: '4px',
-                      cursor: 'pointer'
-                    }}
-                    onClick={() => {
-                      if (key === 'vercel' || key === 'render' || key === 'database') {
-                        monitoringService.checkServiceHealth(key);
-                      }
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ fontWeight: 'bold', textTransform: 'capitalize' }}>
-                        {key} <span style={{ color: statusInfo.color }}>{statusInfo.icon}</span>
-                      </div>
-                      <div style={{ fontSize: '10px', color: 'rgba(255, 255, 255, 0.7)' }}>
-                        {status.timestamp ? formatTime(status.timestamp) : 'Unknown'}
-                      </div>
-                    </div>
-                    
-                    <div style={{ fontSize: '11px', marginTop: '4px', color: 'rgba(255, 255, 255, 0.9)' }}>
-                      {status.message}
-                    </div>
-                    
-                    {status.lastSuccessful && (
-                      <div style={{ fontSize: '10px', marginTop: '4px', color: 'rgba(255, 255, 255, 0.7)' }}>
-                        Last Success: {formatTime(status.lastSuccessful)}
-                      </div>
-                    )}
-                    
-                    {status.details && expanded && (
-                      <pre style={{ 
-                        fontSize: '10px', 
-                        marginTop: '8px',
-                        padding: '4px',
-                        backgroundColor: 'rgba(0, 0, 0, 0.3)',
-                        borderRadius: '4px',
-                        overflowX: 'auto',
-                        whiteSpace: 'pre-wrap',
-                        wordBreak: 'break-all'
-                      }}>
-                        {JSON.stringify(status.details, null, 2)}
-                      </pre>
-                    )}
-                  </div>
-                );
-              })}
-              
-            <button
-              style={{
-                width: '100%',
-                padding: '6px',
-                backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                border: 'none',
-                color: 'white',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                marginTop: '8px',
-                fontSize: '11px'
-              }}
-              onClick={() => setExpanded(!expanded)}
-            >
-              {expanded ? 'Hide Details' : 'Show Details'}
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
+      <Collapse in={!minimized}>
+        <Box sx={{ p: 2, pt: 0 }}>
+          {errorMessage && (
+            <Typography variant="body2" color="error" sx={{ mt: 1 }}>
+              Error: {errorMessage}
+            </Typography>
+          )}
+          
+          {lastChecked && (
+            <Typography variant="caption" display="block" sx={{ mt: 1, color: '#aaa' }}>
+              Last checked: {lastChecked.toLocaleTimeString()}
+            </Typography>
+          )}
+          
+          <Typography variant="caption" display="block" sx={{ mt: 1, color: '#aaa' }}>
+            Click to {minimized ? 'expand' : 'collapse'}
+          </Typography>
+        </Box>
+      </Collapse>
+    </Paper>
   );
 };
 

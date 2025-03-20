@@ -284,209 +284,73 @@ class DatabaseService {
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
     try {
-      // Determine the baseUrl for the API request
-      const baseUrl = this.baseUrl;
+      // Clean up the endpoint to prevent URL issues
+      // If endpoint is a full URL, extract just the path to avoid double URL prefixing
+      let url;
+      const cleanEndpoint = endpoint.startsWith('/') ? endpoint.substring(1) : endpoint;
       
-      // Clean the endpoint of leading/trailing slashes
-      const cleanEndpoint = endpoint.replace(/^\/+|\/+$/g, '');
-      
-      // Construct the full URL based on baseUrl and endpoint structure
-      let url: string;
-      
-      // Handle different combinations of baseUrl and endpoint paths
-      // If both baseUrl and endpoint include /api, avoid duplication
-      if (baseUrl.includes('/api') && cleanEndpoint.startsWith('api/')) {
-        url = `/${cleanEndpoint.substring(4)}`;
-      } 
-      // If baseUrl includes /api and endpoint doesn't start with api/
-      else if (baseUrl.endsWith('/api')) {
-        url = `/${cleanEndpoint}`;
-      }
-      // If baseUrl doesn't include /api and endpoint starts with api/
-      else if (cleanEndpoint.startsWith('api/')) {
-        url = `/api/${cleanEndpoint.substring(4)}`;
-      }
-      // If neither includes /api
-      else {
-        url = `/api/${cleanEndpoint}`;
-      }
-      
-      const fullUrl = `${baseUrl}${url}`;
-      console.log(`🌐 API Request: ${options.method || 'GET'} ${fullUrl}`);
-      
-      try {
-        const response = await fetch(fullUrl, {
-          ...options,
-          credentials: 'omit', // Changed from 'include' to 'omit' to fix CORS issues with wildcard origins
-          headers: {
-            'Content-Type': 'application/json',
-            ...options.headers,
-          },
-        });
-
-        // Log response status
-        console.log(`🌐 API Response: ${response.status} ${response.statusText} for ${fullUrl}`);
-        
-        // Clone the response before reading it as json to avoid "body already read" errors
-        const responseClone = response.clone();
-        
-        // Update monitoring service with successful API call
-        import('./MonitoringService').then(({ monitoringService }) => {
-          // If this is a health check endpoint, don't try to update health again to avoid infinite loops
-          if (!endpoint.includes('health')) {
-            if (fullUrl.includes('builditrecords.onrender.com')) {
-              monitoringService.updateServiceHealth('render', {
-                status: 'healthy',
-                message: 'API request succeeded',
-                timestamp: new Date().toISOString(),
-                lastSuccessful: new Date().toISOString(),
-              });
-            } else if (fullUrl.includes('vercel.app') || fullUrl.includes(window.location.origin)) {
-              monitoringService.updateServiceHealth('vercel', {
-                status: 'healthy',
-                message: 'API request succeeded',
-                timestamp: new Date().toISOString(),
-                lastSuccessful: new Date().toISOString(),
-              });
-            }
-          }
-        }).catch(err => console.error("Failed to import MonitoringService:", err));
-        
-        // Check if the response was successful
-        if (!response.ok) {
-          let errorBody;
-          try {
-            // Try to parse the error response as JSON
-            errorBody = await responseClone.json();
-            console.error(`🔴 API Error: ${response.status} ${response.statusText}`, errorBody);
-          } catch (e) {
-            // If parsing fails, use text
-            errorBody = { error: await responseClone.text() };
-            console.error(`🔴 API Error: ${response.status} ${response.statusText}`, errorBody);
-          }
-          
-          return {
-            success: false,
-            data: null,
-            message: errorBody?.message || `API error: ${response.status} ${response.statusText}`,
-            error: errorBody?.error || response.statusText
-          };
-        }
-        
-        // Try to parse the response as JSON
+      // Check if the endpoint is a full URL (starts with http)
+      if (cleanEndpoint.startsWith('http')) {
+        console.warn(`[DatabaseService] Received full URL as endpoint: ${cleanEndpoint}`);
         try {
-          const data = await response.json();
-          
-          // Handle different API response formats
-          if (data.success === false) {
-            // API explicitly returns { success: false, ... }
-            return {
-              success: false,
-              data: null,
-              message: data.message || 'API returned success: false',
-              error: data.error || 'Unknown error'
-            };
-          } else if (data.success === undefined && data.error) {
-            // API returns { error: "..." } format
-            return {
-              success: false,
-              data: null,
-              message: data.message || 'API error',
-              error: data.error
-            };
-          } else if (data.data !== undefined) {
-            // API returns { success: true, data: ... } format
-            return {
-              success: true,
-              data: data.data as T,
-              message: data.message || 'Success'
-            };
-          } else {
-            // Assume the response itself is the data we want
-            return {
-              success: true,
-              data: data as T,
-              message: 'Success'
-            };
-          }
+          // Parse the URL and extract the path and query parameters
+          const urlObj = new URL(cleanEndpoint);
+          // Remove any /api prefix from the pathname
+          const path = urlObj.pathname.replace(/^\/api\//, '');
+          url = `${this.baseUrl}/${path}${urlObj.search}`;
         } catch (error) {
-          console.error('Error parsing API response:', error);
-          return {
-            success: false,
-            data: null,
-            message: 'Failed to parse API response',
-            error: error instanceof Error ? error.message : String(error)
-          };
+          console.error(`[DatabaseService] Error parsing URL: ${error}`);
+          // If URL parsing fails, just use the baseUrl with the endpoint
+          url = `${this.baseUrl}/${cleanEndpoint}`;
         }
-      } catch (error) {
-        // Handle network errors, CORS errors, etc.
-        console.error(`🔴 Network Error for ${fullUrl}:`, error);
-        
-        // Handle common error types with informative messages
-        let errorMessage = 'Network error occurred';
-        let errorDetails = '';
-        
-        if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-          errorMessage = 'Failed to connect to API server';
-          errorDetails = 'The server may be down or network connectivity issues may exist';
-        } else if (error instanceof DOMException && error.name === 'AbortError') {
-          errorMessage = 'Request was aborted';
-          errorDetails = 'The request took too long and timed out';
-        } else if (error instanceof Error) {
-          // Try to detect CORS errors from the error message
-          if (error.message.includes('CORS') || 
-              error.message.includes('cross-origin') || 
-              error.message.includes('Access-Control-Allow-Origin')) {
-            errorMessage = 'CORS error: Cross-origin request blocked';
-            errorDetails = 'The server is not configured to allow requests from this origin';
-            
-            // Update monitoring service specifically for CORS errors
-            import('./MonitoringService').then(({ monitoringService }) => {
-              if (fullUrl.includes('builditrecords.onrender.com')) {
-                monitoringService.updateServiceHealth('render', {
-                  status: 'unhealthy',
-                  message: 'CORS error: API server blocking requests from this origin',
-                  timestamp: new Date().toISOString(),
-                  details: { 
-                    error: error.message,
-                    originUrl: window.location.origin,
-                    targetUrl: fullUrl
-                  }
-                });
-              } else {
-                monitoringService.updateServiceHealth('vercel', {
-                  status: 'unhealthy',
-                  message: 'CORS error: API server blocking requests from this origin',
-                  timestamp: new Date().toISOString(),
-                  details: { 
-                    error: error.message,
-                    originUrl: window.location.origin,
-                    targetUrl: fullUrl
-                  }
-                });
-              }
-            }).catch(err => console.error("Failed to import MonitoringService:", err));
-          } else {
-            errorMessage = error.message;
-            errorDetails = error.stack || '';
-          }
+      } else {
+        // Normal endpoint processing
+        // If both baseUrl and endpoint include /api, remove from one
+        if (this.baseUrl.includes('/api') && cleanEndpoint.startsWith('api/')) {
+          url = `${this.baseUrl}/${cleanEndpoint.substring(4)}`;
+        } 
+        // If baseUrl includes /api and endpoint doesn't start with api/
+        else if (this.baseUrl.includes('/api')) {
+          url = `${this.baseUrl}/${cleanEndpoint}`;
         }
-        
+        // If baseUrl doesn't include /api and endpoint starts with api/
+        else if (cleanEndpoint.startsWith('api/')) {
+          url = `${this.baseUrl}/${cleanEndpoint}`;
+        }
+        // If neither includes /api
+        else {
+          url = `${this.baseUrl}/api/${cleanEndpoint}`;
+        }
+      }
+      
+      console.log(`[DatabaseService] Making API request to: ${url}`);
+      
+      const response = await fetch(url, {
+        ...options,
+        credentials: 'omit', // Changed from 'include' to fix CORS issues
+      });
+      
+      // Check if the response is JSON
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const data = await response.json();
+        return data as ApiResponse<T>;
+      } else {
+        // Return a basic success response for non-JSON responses
         return {
-          success: false,
+          success: response.ok,
           data: null,
-          message: errorMessage,
-          error: errorDetails || String(error)
+          message: response.ok ? 'Success' : `Error: ${response.status} ${response.statusText}`
         };
       }
-    } catch (outerError) {
-      // Catch any uncaught errors in the method
-      console.error('Uncaught error in fetchApi:', outerError);
+    } catch (error) {
+      console.error('🔴 Network Error for', endpoint, ':', error);
+      // Return a failed response
       return {
         success: false,
         data: null,
-        message: 'Uncaught error in API request',
-        error: outerError instanceof Error ? outerError.message : String(outerError)
+        message: error instanceof Error ? error.message : String(error),
+        error: error instanceof Error ? error.stack : String(error)
       };
     }
   }
@@ -555,7 +419,6 @@ class DatabaseService {
       // Construct the full API URL for releases - ensure /api prefix only appears once
       // If the baseUrl already contains /api, don't add it again
       const apiPath = this.baseUrl.includes('/api') ? '/releases' : '/api/releases';
-      const apiUrl = `${this.baseUrl}${apiPath}`;
       
       // Build query parameters
       let queryParams = `?label=${encodeURIComponent(labelId)}&offset=${offset}&limit=${limit}`;
@@ -565,11 +428,11 @@ class DatabaseService {
         queryParams += `&type=${encodeURIComponent(releaseType)}`;
       }
       
-      console.log(`[DatabaseService] Fetching releases from: ${apiUrl}${queryParams}`);
+      console.log(`[DatabaseService] Fetching releases from endpoint: ${apiPath}${queryParams}`);
       
       // Make the API call
       try {
-        const response = await this.fetchApi<ApiResponseExtended<ExtendedRelease>>(`releases${queryParams}`);
+        const response = await this.fetchApi<ApiResponseExtended<ExtendedRelease>>(`${apiPath}${queryParams}`);
         console.log(`[DatabaseService] Releases API response status:`, response?.success);
         
         // Check if we got a valid response with data or releases property
@@ -616,14 +479,12 @@ class DatabaseService {
             alternativeLabelId = 'buildit-tech';
           }
           
-          // Construct API URL with the same path handling logic
-          const apiPath = this.baseUrl.includes('/api') ? '/releases' : '/api/releases';
-          const apiUrl = `${this.baseUrl}${apiPath}`;
           const queryParams = `?label=${encodeURIComponent(alternativeLabelId)}&offset=${offset}&limit=${limit}`;
           
           console.log(`[DatabaseService] Trying alternative label ID: ${alternativeLabelId}`);
+          console.log(`[DatabaseService] Fetching from endpoint: ${apiPath}${queryParams}`);
           
-          const response = await this.fetchApi<ApiResponseExtended<ExtendedRelease>>(`releases${queryParams}`);
+          const response = await this.fetchApi<ApiResponseExtended<ExtendedRelease>>(`${apiPath}${queryParams}`);
           console.log(`[DatabaseService] Alternative response:`, response);
           
           if (response && (
@@ -649,29 +510,26 @@ class DatabaseService {
           // Try direct API call as last option
           try {
             // First try buildit-records label ID
-            const directApiUrl = 'https://buildit-records-api.onrender.com/releases';
+            const directApiEndpoint = 'releases';
             const queryParams = `?label=${encodeURIComponent(labelId === '1' ? 'buildit-records' : labelId)}&offset=${offset}&limit=${limit}`;
             
-            // Create a special fetch call with SSL certificate handling
-            const response = await fetch(directApiUrl + queryParams, {
-              method: 'GET',
-              headers: { 'Content-Type': 'application/json' },
-            });
+            console.log(`[DatabaseService] Trying direct API call: ${directApiEndpoint}${queryParams}`);
             
-            if (response.ok) {
-              const data = await response.json();
-              if (data && ((data.data && Array.isArray(data.data)) || (data.releases && Array.isArray(data.releases)))) {
-                const releases = await this.processReleases(data);
-                const total = data.total || data.count || releases.length;
-                const totalReleasesCount = typeof total === 'number' ? total : releases.length;
-                
-                return {
-                  releases,
-                  totalReleases: totalReleasesCount,
-                  totalTracks: 0,
-                  hasMore: releases.length >= limit && (offset + limit) < totalReleasesCount
-                };
-              }
+            // Use our fetchApi method for consistent URL handling and error handling
+            const directResponse = await this.fetchApi<ApiResponseExtended<ExtendedRelease>>(`${directApiEndpoint}${queryParams}`);
+            
+            if (directResponse && ((directResponse.data && Array.isArray(directResponse.data)) || 
+                                 (directResponse.releases && Array.isArray(directResponse.releases)))) {
+              const releases = await this.processReleases(directResponse);
+              const total = directResponse.total || directResponse.count || releases.length;
+              const totalReleasesCount = typeof total === 'number' ? total : releases.length;
+              
+              return {
+                releases,
+                totalReleases: totalReleasesCount,
+                totalTracks: 0,
+                hasMore: releases.length >= limit && (offset + limit) < totalReleasesCount
+              };
             }
           } catch (finalError) {
             console.error(`[DatabaseService] All API approaches failed:`, finalError);
@@ -739,7 +597,7 @@ class DatabaseService {
       // Primary approach: Try the structure /api/artists?label=1
       console.log(`[DatabaseService] Primary approach: Using new API endpoint`);
       const primaryApiUrl = `api/artists?${labelQuery}&limit=${limit}&offset=${offset}&sort=name`;
-      console.log(`[DatabaseService] Fetching from: ${this.baseUrl}/${primaryApiUrl}`);
+      console.log(`[DatabaseService] Fetching from: ${primaryApiUrl}`);
       
       // Make the API call with the label ID
       const primaryResponse = await this.fetchApi<ApiResponseExtended<Artist>>(primaryApiUrl);
@@ -765,7 +623,7 @@ class DatabaseService {
       console.log(`[DatabaseService] Secondary approach: Trying alternative API format`);
       const secondaryLabelQuery = labelId === 1 || labelId === '1' ? 'buildit-records' : labelId;
       const secondaryApiUrl = `artists?label=${secondaryLabelQuery}&limit=${limit}&offset=${offset}&sort=name`;
-      console.log(`[DatabaseService] Fetching from: ${this.baseUrl}/${secondaryApiUrl}`);
+      console.log(`[DatabaseService] Fetching from: ${secondaryApiUrl}`);
       
       const secondaryResponse = await this.fetchApi<ApiResponseExtended<Artist>>(secondaryApiUrl);
       console.log(`[DatabaseService] Secondary API response:`, secondaryResponse);
@@ -786,7 +644,7 @@ class DatabaseService {
       // Last resort: Fetch all artists and filter by label on client side
       console.log(`[DatabaseService] Last resort approach: Fetching all artists and filtering client-side`);
       const allArtistsUrl = `artists?limit=1000&sort=name`;
-      console.log(`[DatabaseService] Fetching from: ${this.baseUrl}/${allArtistsUrl}`);
+      console.log(`[DatabaseService] Fetching from: ${allArtistsUrl}`);
       
       const allArtistsResponse = await this.fetchApi<ApiResponseExtended<Artist>>(allArtistsUrl);
       console.log(`[DatabaseService] Last resort API response:`, allArtistsResponse);
@@ -953,12 +811,11 @@ class DatabaseService {
       const offset = (page - 1) * limit;
       // Use the same URL construction logic to avoid /api/api issues
       const apiPath = this.baseUrl.includes('/api') ? '/tracks' : '/api/tracks';
-      const apiUrl = `${this.baseUrl}${apiPath}`;
       const queryParams = `?label=${encodeURIComponent(labelId)}&sort=${sortBy}&offset=${offset}&limit=${limit}`;
       
-      console.log(`[DatabaseService] Fetching tracks from: ${apiUrl}${queryParams}`);
+      console.log(`[DatabaseService] Fetching tracks from: ${apiPath}${queryParams}`);
       
-      const response = await this.fetchApi<ApiResponse<Track>>(`tracks${queryParams}`);
+      const response = await this.fetchApi<ApiResponse<Track>>(`${apiPath}${queryParams}`);
       console.log('[DatabaseService] Tracks response:', response);
       
       // Extract tracks array and ensure it's properly typed
@@ -999,11 +856,10 @@ class DatabaseService {
       
       // Use the same URL construction logic to avoid /api/api issues
       const apiPath = this.baseUrl.includes('/api') ? '/admin/import-tracks' : '/api/admin/import-tracks';
-      const apiUrl = `${this.baseUrl}${apiPath}`;
       
-      console.log(`[DatabaseService] Sending import request to: ${apiUrl}`);
+      console.log(`[DatabaseService] Sending import request to: ${apiPath}`);
       
-      const response = await this.fetchApi<ImportResponse>(apiUrl, {
+      const response = await this.fetchApi<ImportResponse>(apiPath, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1043,15 +899,16 @@ class DatabaseService {
    * @param limit Optional limit parameter, defaults to 10
    * @returns Promise resolving to an array of releases
    */
-  async getTopReleases(
+  public async getTopReleases(
     labelId: string | RecordLabelId,
     limit = 10
   ): Promise<Release[]> {
     try {
-      console.log(`[DatabaseService] Getting top releases for label ${labelId}, limit ${limit}`);
+      console.log(`[DatabaseService] Getting top ${limit} releases for label ${labelId}`);
       
-      // First, fetch releases from the label
-      const releaseResult = await this.getReleasesByLabel(labelId, 1, 50);
+      // Use getReleasesByLabel method for consistency but request a higher limit
+      // to ensure we have enough releases to sort and filter from
+      const releaseResult = await this.getReleasesByLabel(labelId.toString(), 1, 50);
       
       if (!releaseResult.releases || releaseResult.releases.length === 0) {
         console.warn(`[DatabaseService] No releases found for label ${labelId}`);
