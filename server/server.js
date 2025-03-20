@@ -18,6 +18,9 @@ const allowedOrigins = [
   'https://build-it-records-h14oi09z2-ajsorbellos-projects.vercel.app',
   'https://build-it-records-git-main-ajsorbellos-projects.vercel.app',
   'https://build-it-records-kx97hqchx-ajsorbellos-projects.vercel.app',
+  'https://build-it-records-6r3lg3s9x-ajsorbellos-projects.vercel.app',
+  'https://build-it-records-ek4rtnk9w-ajsorbellos-projects.vercel.app',
+  'https://build-it-records-itmufu57f-ajsorbellos-projects.vercel.app',
   'https://builditrecords.vercel.app',
   'http://localhost:3000',
   'http://localhost:5173'
@@ -29,9 +32,16 @@ app.use(cors({
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
+    // Check if the origin is in our allowedOrigins list
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
-    } else {
+    } 
+    // Check if it's a Vercel preview URL
+    else if (origin.includes('vercel.app')) {
+      console.log(`Allowing Vercel preview deployment: ${origin}`);
+      callback(null, true);
+    } 
+    else {
       console.log(`CORS blocked request from origin: ${origin}`);
       callback(new Error(`CORS error: Origin ${origin} not allowed`), false);
     }
