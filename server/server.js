@@ -165,22 +165,51 @@ app.get('/api/artists', (req, res) => {
 
 // Test endpoint for releases
 app.get('/api/releases', (req, res) => {
+  // Extract query parameters
+  const { label, type } = req.query;
+  
+  // For debugging, log the query parameters
+  console.log('Release endpoint called with query params:', req.query);
+  
+  let releases = [
+    { 
+      id: '1', 
+      title: 'Test Release 1',
+      type: 'album',
+      artwork_url: 'https://via.placeholder.com/500',
+      spotify_url: 'https://open.spotify.com/album/1234567890'
+    },
+    { 
+      id: '2', 
+      title: 'Test Single',
+      type: 'single',
+      artwork_url: 'https://via.placeholder.com/500',
+      spotify_url: 'https://open.spotify.com/album/0987654321'
+    },
+    { 
+      id: '3', 
+      title: 'Test EP',
+      type: 'single',
+      artwork_url: 'https://via.placeholder.com/500',
+      spotify_url: 'https://open.spotify.com/album/5555555555'
+    },
+    { 
+      id: '4', 
+      title: 'Test Compilation',
+      type: 'compilation',
+      artwork_url: 'https://via.placeholder.com/500',
+      spotify_url: 'https://open.spotify.com/album/6666666666'
+    }
+  ];
+  
+  // Apply type filtering if type parameter is provided
+  if (type) {
+    releases = releases.filter(release => release.type === type);
+  }
+  
   res.json({
     success: true,
-    data: [
-      { 
-        id: 1, 
-        title: 'Test Release 1', 
-        artwork_url: 'https://via.placeholder.com/500',
-        spotify_url: 'https://open.spotify.com/album/1234567890'
-      },
-      { 
-        id: 2, 
-        title: 'Test Release 2', 
-        artwork_url: 'https://via.placeholder.com/500',
-        spotify_url: 'https://open.spotify.com/album/0987654321'
-      }
-    ]
+    data: releases
   });
 });
 
