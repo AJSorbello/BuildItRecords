@@ -500,7 +500,7 @@ class DatabaseService {
         (window.location.hostname.includes('vercel.app') || 
          window.location.hostname.includes('builditrecords.com'))) {
       // Always use the Render API for Vercel deployments
-      const renderApiUrl = 'https://builditrecords.onrender.com/api';
+      const renderApiUrl = 'https://buildit-records-api.onrender.com';
       console.log('Vercel deployment detected - using Render API URL:', renderApiUrl);
       return renderApiUrl;
     }
@@ -529,35 +529,46 @@ class DatabaseService {
    * @param labelId The ID of the label (can be string 'buildit-records' or numeric id)
    * @param page The page number to fetch (used for pagination)
    * @param limit Optional limit parameter, defaults to 50
+   * @param releaseType Optional filter by release type: 'album', 'single', 'compilation'
    * @returns An object containing the releases and pagination info
    */
   public async getReleasesByLabel(
     labelId: string, 
     page = 1,
-    limit = 50
+    limit = 50,
+    releaseType?: 'album' | 'single' | 'compilation'
   ): Promise<{
     releases: Release[];
     totalReleases: number;
     totalTracks: number;
     hasMore: boolean;
   }> {
+    console.log(`[DatabaseService] Getting releases for label: ${labelId}, page: ${page}, limit: ${limit}${releaseType ? ', type: ' + releaseType : ''}`);
+    
+    // Convert page + limit to offset/limit for API
+    const offset = (page - 1) * limit;
+    
+    // Log that we're going to fetch from the API to help debug
+    console.log(`[DatabaseService] Will fetch releases from API with base URL: ${this.baseUrl}`);
+    
     try {
-      console.log(`[DatabaseService] Getting releases for label: ${labelId}, page: ${page}, limit: ${limit}`);
-      const offset = (page - 1) * limit;
+      // Construct the full API URL for releases - ensure /api prefix only appears once
+      // If the baseUrl already contains /api, don't add it again
+      const apiPath = this.baseUrl.includes('/api') ? '/releases' : '/api/releases';
+      const apiUrl = `${this.baseUrl}${apiPath}`;
       
-      // Log that we're going to fetch from the API to help debug
-      console.log(`[DatabaseService] Will fetch releases from API with base URL: ${this.baseUrl}`);
+      // Build query parameters
+      let queryParams = `?label=${encodeURIComponent(labelId)}&offset=${offset}&limit=${limit}`;
       
+      // Add release type if specified
+      if (releaseType) {
+        queryParams += `&type=${encodeURIComponent(releaseType)}`;
+      }
+      
+      console.log(`[DatabaseService] Fetching releases from: ${apiUrl}${queryParams}`);
+      
+      // Make the API call
       try {
-        // Construct the full API URL for releases - ensure /api prefix only appears once
-        // If the baseUrl already contains /api, don't add it again
-        const apiPath = this.baseUrl.includes('/api') ? '/releases' : '/api/releases';
-        const apiUrl = `${this.baseUrl}${apiPath}`;
-        const queryParams = `?label=${encodeURIComponent(labelId)}&offset=${offset}&limit=${limit}`;
-        
-        console.log(`[DatabaseService] Fetching releases from: ${apiUrl}${queryParams}`);
-        
-        // Make the API call
         const response = await this.fetchApi<ApiResponseExtended<ExtendedRelease>>(`releases${queryParams}`);
         console.log(`[DatabaseService] Releases API response status:`, response?.success);
         
@@ -634,91 +645,45 @@ class DatabaseService {
           }
         } catch (alternativeError) {
           console.error(`[DatabaseService] Alternative approach also failed:`, alternativeError);
-        }
-        
-        // Try with a direct API call to fetch releases with proper SSL handling
-        try {
-          console.log('[DatabaseService] Trying direct API call with SSL handling');
           
-          // First try buildit-records label ID
-          const directApiUrl = 'https://buildit-records-api.onrender.com/releases';
-          const queryParams = `?label=${encodeURIComponent(labelId === '1' ? 'buildit-records' : labelId)}&offset=${offset}&limit=${limit}`;
-          
-          // Create a special fetch call with SSL certificate handling
-          const response = await fetch(directApiUrl + queryParams, {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            // The rejectUnauthorized option would be set in a Node.js environment
-          });
-          
-          if (response.ok) {
-            const data = await response.json();
-            console.log('[DatabaseService] Direct API call succeeded:', data);
+          // Try direct API call as last option
+          try {
+            // First try buildit-records label ID
+            const directApiUrl = 'https://buildit-records-api.onrender.com/releases';
+            const queryParams = `?label=${encodeURIComponent(labelId === '1' ? 'buildit-records' : labelId)}&offset=${offset}&limit=${limit}`;
             
-            if (data && ((data.data && Array.isArray(data.data)) || (data.releases && Array.isArray(data.releases)))) {
-              const releases = await this.processReleases(data);
-              console.log(`[DatabaseService] Processed ${releases.length} releases from direct API`);
-              
-              const total = data.total || data.count || releases.length;
-              const totalReleasesCount = typeof total === 'number' ? total : releases.length;
-              
-              return {
-                releases,
-                totalReleases: totalReleasesCount,
-                totalTracks: 0,
-                hasMore: releases.length >= limit && (offset + limit) < totalReleasesCount
-              };
+            // Create a special fetch call with SSL certificate handling
+            const response = await fetch(directApiUrl + queryParams, {
+              method: 'GET',
+              headers: { 'Content-Type': 'application/json' },
+            });
+            
+            if (response.ok) {
+              const data = await response.json();
+              if (data && ((data.data && Array.isArray(data.data)) || (data.releases && Array.isArray(data.releases)))) {
+                const releases = await this.processReleases(data);
+                const total = data.total || data.count || releases.length;
+                const totalReleasesCount = typeof total === 'number' ? total : releases.length;
+                
+                return {
+                  releases,
+                  totalReleases: totalReleasesCount,
+                  totalTracks: 0,
+                  hasMore: releases.length >= limit && (offset + limit) < totalReleasesCount
+                };
+              }
             }
-          } else {
-            console.error(`[DatabaseService] Direct API call failed: ${response.status} ${response.statusText}`);
+          } catch (finalError) {
+            console.error(`[DatabaseService] All API approaches failed:`, finalError);
           }
-        } catch (directError) {
-          console.error(`[DatabaseService] Direct API approach failed:`, directError);
         }
-        
-        // As a last resort, try with a proxy approach
-        try {
-          console.log('[DatabaseService] Trying proxy approach');
-          
-          // Use a CORS proxy to bypass SSL certificate issues
-          // This is a more reliable approach for browser environments
-          const proxyUrl = `/proxy-api/releases?label=${encodeURIComponent(labelId)}&offset=${offset}&limit=${limit}`;
-          
-          const response = await this.fetchApi<ApiResponseExtended<ExtendedRelease>>(proxyUrl);
-          console.log(`[DatabaseService] Proxy response:`, response);
-          
-          if (response && (
-              (response.data && Array.isArray(response.data)) || 
-              (response.releases && Array.isArray(response.releases))
-          )) {
-            const releases = await this.processReleases(response);
-            console.log(`[DatabaseService] Processed ${releases.length} releases from proxy`);
-            
-            const total = response.total || response.count || releases.length;
-            const totalReleasesCount = typeof total === 'number' ? total : releases.length;
-            
-            return {
-              releases,
-              totalReleases: totalReleasesCount,
-              totalTracks: 0,
-              hasMore: releases.length >= limit && (offset + limit) < totalReleasesCount
-            };
-          }
-        } catch (proxyError) {
-          console.error(`[DatabaseService] Proxy approach failed:`, proxyError);
-        }
-        
-        // All approaches have failed, return empty results
-        console.warn('[DatabaseService] All API approaches failed, returning empty results');
-        return this.getFallbackReleases(labelId, limit, offset);
       }
-    } catch (error) {
-      console.error('[DatabaseService] Error in getReleasesByLabel:', error);
-      // Make sure to capture and use the current offset value from the parent function
-      const currentOffset = (page - 1) * limit;
-      return this.getFallbackReleases(labelId, limit, currentOffset);
+      
+      // If all attempts failed, fall back to default data
+      return this.getFallbackReleases(labelId, limit, offset);
+    } catch (generalError) {
+      console.error('[DatabaseService] General error in getReleasesByLabel:', generalError);
+      return this.getFallbackReleases(labelId, limit, offset);
     }
   }
   
@@ -971,7 +936,7 @@ class DatabaseService {
    * @param sortBy Optional field to sort by (created_at, title, etc.)
    * @param page Optional page number for pagination
    * @param limit Optional limit parameter
-   * @returns An object containing the tracks
+   * @returns Promise resolving to an array of tracks
    */
   async getTracksByLabel(
     labelId: string | RecordLabelId,
