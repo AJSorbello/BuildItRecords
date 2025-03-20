@@ -558,7 +558,7 @@ class DatabaseService {
         console.log(`[DatabaseService] Fetching releases from: ${apiUrl}${queryParams}`);
         
         // Make the API call
-        const response = await this.fetchApi<ApiResponseExtended<ExtendedRelease>>(`${apiUrl}${queryParams}`);
+        const response = await this.fetchApi<ApiResponseExtended<ExtendedRelease>>(`releases${queryParams}`);
         console.log(`[DatabaseService] Releases API response status:`, response?.success);
         
         // Check if we got a valid response with data or releases property
@@ -612,7 +612,7 @@ class DatabaseService {
           
           console.log(`[DatabaseService] Trying alternative label ID: ${alternativeLabelId}`);
           
-          const response = await this.fetchApi<ApiResponseExtended<ExtendedRelease>>(`${apiUrl}${queryParams}`);
+          const response = await this.fetchApi<ApiResponseExtended<ExtendedRelease>>(`releases${queryParams}`);
           console.log(`[DatabaseService] Alternative response:`, response);
           
           if (response && (
@@ -993,7 +993,7 @@ class DatabaseService {
       
       console.log(`[DatabaseService] Fetching tracks from: ${apiUrl}${queryParams}`);
       
-      const response = await this.fetchApi<ApiResponse<Track>>(`${apiUrl}${queryParams}`);
+      const response = await this.fetchApi<ApiResponse<Track>>(`tracks${queryParams}`);
       console.log('[DatabaseService] Tracks response:', response);
       
       // Extract tracks array and ensure it's properly typed
