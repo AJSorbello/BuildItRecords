@@ -1,0 +1,930 @@
+{
+  "timestamp": "2025-03-16T02:40:20.358Z",
+  "apiBaseUrl": "https://builditrecords.onrender.com",
+  "totalReleasesAPI": 6,
+  "totalArtistsAPI": 67,
+  "databaseStats": {
+    "releases": 174,
+    "artists": 203
+  },
+  "releaseTypeAnalysis": {
+    "compilation": {
+      "count": 5,
+      "examples": [
+        {
+          "id": "519BsOBqRPl6ykwFIh9qgS",
+          "title": "Build It Records: Best of 2016"
+        },
+        {
+          "id": "4GMIOFv1k6CqOL9dNNjkeF",
+          "title": "Build It Records: The Collection, Vol. 3"
+        },
+        {
+          "id": "7DgXEtXehE7wORbBNtiiRu",
+          "title": "Build It Records Summer Compilation 2024"
+        },
+        {
+          "id": "3nMaIAkXTQnXUtL8ojDuEO",
+          "title": "Build It Records G House Compilation, Vol. 1"
+        },
+        {
+          "id": "1cw6xKxSvtWSUvsxPGQKLv",
+          "title": "Build It Records: The Collection, Vol. 2"
+        }
+      ]
+    },
+    "album": {
+      "count": 1,
+      "examples": [
+        {
+          "id": "2oS30oG4XIRIyYM3Nk7HbQ",
+          "title": "Build It Records: Starter Kit Vol. 1"
+        }
+      ]
+    }
+  },
+  "labelResults": {
+    "1": {
+      "id": "1",
+      "name": "Build It Records",
+      "releases": {
+        "count": 6,
+        "items": [
+          {
+            "id": "519BsOBqRPl6ykwFIh9qgS",
+            "title": "Build It Records: Best of 2016",
+            "release_type": null,
+            "artist_id": null,
+            "artist_name": "Unknown"
+          },
+          {
+            "id": "4GMIOFv1k6CqOL9dNNjkeF",
+            "title": "Build It Records: The Collection, Vol. 3",
+            "release_type": null,
+            "artist_id": null,
+            "artist_name": "Unknown"
+          },
+          {
+            "id": "7DgXEtXehE7wORbBNtiiRu",
+            "title": "Build It Records Summer Compilation 2024",
+            "release_type": null,
+            "artist_id": null,
+            "artist_name": "Unknown"
+          },
+          {
+            "id": "3nMaIAkXTQnXUtL8ojDuEO",
+            "title": "Build It Records G House Compilation, Vol. 1",
+            "release_type": null,
+            "artist_id": null,
+            "artist_name": "Unknown"
+          },
+          {
+            "id": "1cw6xKxSvtWSUvsxPGQKLv",
+            "title": "Build It Records: The Collection, Vol. 2",
+            "release_type": null,
+            "artist_id": null,
+            "artist_name": "Unknown"
+          },
+          {
+            "id": "2oS30oG4XIRIyYM3Nk7HbQ",
+            "title": "Build It Records: Starter Kit Vol. 1",
+            "release_type": null,
+            "artist_id": null,
+            "artist_name": "Unknown"
+          }
+        ],
+        "successfulFormat": "1"
+      },
+      "artists": {
+        "count": 66,
+        "items": [
+          {
+            "id": "0LyfQWJT6nXafLPZqxe9Of",
+            "name": "Various Artists"
+          },
+          {
+            "id": "test1",
+            "name": "Test Artist 1"
+          },
+          {
+            "id": "test123",
+            "name": "Test Artist"
+          },
+          {
+            "id": "6Ip8FS7vWT1uKkJSweANQK",
+            "name": "Dave"
+          },
+          {
+            "id": "40vGNEPfFybJbwyfnId4vq",
+            "name": "Hoodrat"
+          },
+          {
+            "id": "6Qr4m5n3KUKo7ZYetgDHws",
+            "name": "UPTWN"
+          },
+          {
+            "id": "64aA4P3Ub9VVkAYCNioolq",
+            "name": "Alicia Moore"
+          },
+          {
+            "id": "4YR9PfAeCaFOVgJPiG8ZMp",
+            "name": "Gaz Trigg"
+          },
+          {
+            "id": "0D6I1KUKltLyc9kWUmwGVQ",
+            "name": "Dodger"
+          },
+          {
+            "id": "7kNqXtgeIwFtelmRjWv205",
+            "name": "John Summit"
+          },
+          {
+            "id": "0jI2Kfa17d4JoMdLerNpSx",
+            "name": "Chris Gresswell"
+          },
+          {
+            "id": "4VYCC1OsCe1aaER3vYOY5A",
+            "name": "sant jord"
+          },
+          {
+            "id": "7aohnUnt4vWtzvhBSZTAbF",
+            "name": "FractaLL"
+          },
+          {
+            "id": "4Vtz0dLKpfOtv8m0npgkE0",
+            "name": "Sanka"
+          },
+          {
+            "id": "5kjLSnLC92rIy7B5knTIH3",
+            "name": "Kwal"
+          },
+          {
+            "id": "5hEExJgwx7NVIhwmPxsXcW",
+            "name": "Daniels Jack"
+          },
+          {
+            "id": "77wqg7m8PWTCVEWQRZGnoS",
+            "name": "Mikhail Rado"
+          },
+          {
+            "id": "6uuUmaH6yzvpnPgDcdl0y4",
+            "name": "Alfonso Tan"
+          },
+          {
+            "id": "3fGBAngoskMUXoLvsDkqpD",
+            "name": "TUSK"
+          },
+          {
+            "id": "3J27JLe2O8R3EvNFFjWXdJ",
+            "name": "Bumpy Fool"
+          },
+          {
+            "id": "4Ou7Mb398zSYNP714EP1h7",
+            "name": "JedX"
+          },
+          {
+            "id": "17lRBwcCqKBpqgfnUkop3r",
+            "name": "Kendoll"
+          },
+          {
+            "id": "750ruOD31OKMP4ndBP7fRY",
+            "name": "MAONRO"
+          },
+          {
+            "id": "2V2EY85GY6oQYZZ6LGJc4O",
+            "name": "Screwface"
+          },
+          {
+            "id": "1vFGvmhvZYBc0XpgpoAzUf",
+            "name": "FKLS"
+          },
+          {
+            "id": "4iSvYDaOQy8BwojPxf8P6V",
+            "name": "Absintheminded"
+          },
+          {
+            "id": "6hOUe5iEVbbezCH4n6uiYR",
+            "name": "Domestique"
+          },
+          {
+            "id": "2vp2B6RPA9twgYPKbPaffz",
+            "name": "im kyle"
+          },
+          {
+            "id": "5oznV9DBpgEcgx0UgKKbLk",
+            "name": "POSYDON"
+          },
+          {
+            "id": "6ymXZSd6Qsf3snMm2CKxk4",
+            "name": "MarQ"
+          },
+          {
+            "id": "4LRSqGtcsX0OUvT49pgz0d",
+            "name": "Frederique"
+          },
+          {
+            "id": "6ZJASbg0cD5tdvQgqH5HLf",
+            "name": "Rance & Maff"
+          },
+          {
+            "id": "7CsGIfqoq13hyMuyEcz7jR",
+            "name": "Hot Keys"
+          },
+          {
+            "id": "7tFPiRyBXpG4rLbwhRjO0b",
+            "name": "MARQ"
+          },
+          {
+            "id": "2SyuXmouzHiUSjNLNxRNiL",
+            "name": "Oxymoron"
+          },
+          {
+            "id": "5sobBegrP0b7zmE5Edc8C6",
+            "name": "BELLO"
+          },
+          {
+            "id": "04MM8XFEOwzjlytvJyYqOV",
+            "name": "Haelix"
+          },
+          {
+            "id": "1VFBRTZO7ZX9VrqzjK2bcy",
+            "name": "Mayv Bell"
+          },
+          {
+            "id": "4XKm2kHUPp6EixvzcoqjAe",
+            "name": "Helder Simz"
+          },
+          {
+            "id": "5hKQVA377hopQ9HWPOseXF",
+            "name": "Aaron Jackson"
+          },
+          {
+            "id": "7DREdfV4mKhlrQiiOPNiIa",
+            "name": "Justin Lawson"
+          },
+          {
+            "id": "7B38d0XXdEY3vC5eddO6r6",
+            "name": "N1MA"
+          },
+          {
+            "id": "5iD9mn2inFzm1u3jvr9egi",
+            "name": "Sloth"
+          },
+          {
+            "id": "7EroDVPELCYcB8zyB2XN9F",
+            "name": "Sillaz"
+          },
+          {
+            "id": "0gIwYJ6XYry8I7aK73eK3d",
+            "name": "Gouzy"
+          },
+          {
+            "id": "1W9pJsla05m0YLC25BaPzW",
+            "name": "Caique Carvalho"
+          },
+          {
+            "id": "66iu65cpuC4OTiT4fEItm6",
+            "name": "John Okins"
+          },
+          {
+            "id": "2Ygebw1ybw5wMSAb0ken6I",
+            "name": "THATSOUND"
+          },
+          {
+            "id": "1FBSojGveT9qgrTyA948NX",
+            "name": "Vianna"
+          },
+          {
+            "id": "21T0dUcy5Bgr2LUrJ8BNd9",
+            "name": "Danny Samaei"
+          },
+          {
+            "id": "6yjsvVut7MsLmMiAfyNL5m",
+            "name": "Fatty"
+          },
+          {
+            "id": "5NCIFb4JfQobJI1V6tndrR",
+            "name": "Kelvin Richard"
+          },
+          {
+            "id": "7lDZhKkcXxWZ9Wc7KhNkAr",
+            "name": "Resonant"
+          },
+          {
+            "id": "5s7VM2QEv0CSEE1RwPAaBi",
+            "name": "CLAASSEN"
+          },
+          {
+            "id": "5vMnh9zUMuyulSXf3xZ9T9",
+            "name": "Jay Peeki"
+          },
+          {
+            "id": "7mXyW5kPIUrSRGkV0I9Ilo",
+            "name": "FeelGood"
+          },
+          {
+            "id": "1bn0UcIaEKHWx15s0GyH55",
+            "name": "Jamie Brennan"
+          },
+          {
+            "id": "1iGopxKoGRFIEyBfdncWzJ",
+            "name": "Bella Goldwin"
+          },
+          {
+            "id": "4faEPF6tSntuUDfcoZ5Rud",
+            "name": "REESE PARK"
+          },
+          {
+            "id": "4k5XJa1mHBuKNvx4zt4Ogc",
+            "name": "Marques"
+          },
+          {
+            "id": "6c9oLha6ToammQblPashS9",
+            "name": "Allen Oh"
+          },
+          {
+            "id": "5ze5OzM2pqb5HQyBqZBXq4",
+            "name": "Arky"
+          },
+          {
+            "id": "2qgl5yiniO2qykrPxMkCPz",
+            "name": "Lux Esto"
+          },
+          {
+            "id": "1e6Slp9egbeuYW1dXXZdHH",
+            "name": "Anmol Jhanb"
+          },
+          {
+            "id": "5fU2v3rxLJ7GEI41LXiu0I",
+            "name": "Law Mark"
+          },
+          {
+            "id": "0xhXLXPVNbgslNtqcjFLPp",
+            "name": "TUKKO"
+          }
+        ],
+        "successfulFormat": "1"
+      }
+    },
+    "2": {
+      "id": "2",
+      "name": "Build It Deep",
+      "releases": {
+        "count": 6,
+        "items": [
+          {
+            "id": "519BsOBqRPl6ykwFIh9qgS",
+            "title": "Build It Records: Best of 2016",
+            "release_type": null,
+            "artist_id": null,
+            "artist_name": "Unknown"
+          },
+          {
+            "id": "4GMIOFv1k6CqOL9dNNjkeF",
+            "title": "Build It Records: The Collection, Vol. 3",
+            "release_type": null,
+            "artist_id": null,
+            "artist_name": "Unknown"
+          },
+          {
+            "id": "7DgXEtXehE7wORbBNtiiRu",
+            "title": "Build It Records Summer Compilation 2024",
+            "release_type": null,
+            "artist_id": null,
+            "artist_name": "Unknown"
+          },
+          {
+            "id": "3nMaIAkXTQnXUtL8ojDuEO",
+            "title": "Build It Records G House Compilation, Vol. 1",
+            "release_type": null,
+            "artist_id": null,
+            "artist_name": "Unknown"
+          },
+          {
+            "id": "1cw6xKxSvtWSUvsxPGQKLv",
+            "title": "Build It Records: The Collection, Vol. 2",
+            "release_type": null,
+            "artist_id": null,
+            "artist_name": "Unknown"
+          },
+          {
+            "id": "2oS30oG4XIRIyYM3Nk7HbQ",
+            "title": "Build It Records: Starter Kit Vol. 1",
+            "release_type": null,
+            "artist_id": null,
+            "artist_name": "Unknown"
+          }
+        ],
+        "successfulFormat": "2"
+      },
+      "artists": {
+        "count": 1,
+        "items": [
+          {
+            "id": "2l9bjRfEhr9BleTsYAJ4kc",
+            "name": "BURNTECH"
+          }
+        ],
+        "successfulFormat": "2"
+      }
+    },
+    "3": {
+      "id": "3",
+      "name": "Build It Tech",
+      "releases": {
+        "count": 6,
+        "items": [
+          {
+            "id": "519BsOBqRPl6ykwFIh9qgS",
+            "title": "Build It Records: Best of 2016",
+            "release_type": null,
+            "artist_id": null,
+            "artist_name": "Unknown"
+          },
+          {
+            "id": "4GMIOFv1k6CqOL9dNNjkeF",
+            "title": "Build It Records: The Collection, Vol. 3",
+            "release_type": null,
+            "artist_id": null,
+            "artist_name": "Unknown"
+          },
+          {
+            "id": "7DgXEtXehE7wORbBNtiiRu",
+            "title": "Build It Records Summer Compilation 2024",
+            "release_type": null,
+            "artist_id": null,
+            "artist_name": "Unknown"
+          },
+          {
+            "id": "3nMaIAkXTQnXUtL8ojDuEO",
+            "title": "Build It Records G House Compilation, Vol. 1",
+            "release_type": null,
+            "artist_id": null,
+            "artist_name": "Unknown"
+          },
+          {
+            "id": "1cw6xKxSvtWSUvsxPGQKLv",
+            "title": "Build It Records: The Collection, Vol. 2",
+            "release_type": null,
+            "artist_id": null,
+            "artist_name": "Unknown"
+          },
+          {
+            "id": "2oS30oG4XIRIyYM3Nk7HbQ",
+            "title": "Build It Records: Starter Kit Vol. 1",
+            "release_type": null,
+            "artist_id": null,
+            "artist_name": "Unknown"
+          }
+        ],
+        "successfulFormat": "3"
+      },
+      "artists": {
+        "count": 0,
+        "items": [],
+        "successfulFormat": null
+      }
+    }
+  },
+  "buildItRecordsStats": {
+    "id": "1",
+    "name": "Build It Records",
+    "releases": {
+      "count": 6,
+      "items": [
+        {
+          "id": "519BsOBqRPl6ykwFIh9qgS",
+          "title": "Build It Records: Best of 2016",
+          "release_type": null,
+          "artist_id": null,
+          "artist_name": "Unknown"
+        },
+        {
+          "id": "4GMIOFv1k6CqOL9dNNjkeF",
+          "title": "Build It Records: The Collection, Vol. 3",
+          "release_type": null,
+          "artist_id": null,
+          "artist_name": "Unknown"
+        },
+        {
+          "id": "7DgXEtXehE7wORbBNtiiRu",
+          "title": "Build It Records Summer Compilation 2024",
+          "release_type": null,
+          "artist_id": null,
+          "artist_name": "Unknown"
+        },
+        {
+          "id": "3nMaIAkXTQnXUtL8ojDuEO",
+          "title": "Build It Records G House Compilation, Vol. 1",
+          "release_type": null,
+          "artist_id": null,
+          "artist_name": "Unknown"
+        },
+        {
+          "id": "1cw6xKxSvtWSUvsxPGQKLv",
+          "title": "Build It Records: The Collection, Vol. 2",
+          "release_type": null,
+          "artist_id": null,
+          "artist_name": "Unknown"
+        },
+        {
+          "id": "2oS30oG4XIRIyYM3Nk7HbQ",
+          "title": "Build It Records: Starter Kit Vol. 1",
+          "release_type": null,
+          "artist_id": null,
+          "artist_name": "Unknown"
+        }
+      ],
+      "successfulFormat": "1"
+    },
+    "artists": {
+      "count": 66,
+      "items": [
+        {
+          "id": "0LyfQWJT6nXafLPZqxe9Of",
+          "name": "Various Artists"
+        },
+        {
+          "id": "test1",
+          "name": "Test Artist 1"
+        },
+        {
+          "id": "test123",
+          "name": "Test Artist"
+        },
+        {
+          "id": "6Ip8FS7vWT1uKkJSweANQK",
+          "name": "Dave"
+        },
+        {
+          "id": "40vGNEPfFybJbwyfnId4vq",
+          "name": "Hoodrat"
+        },
+        {
+          "id": "6Qr4m5n3KUKo7ZYetgDHws",
+          "name": "UPTWN"
+        },
+        {
+          "id": "64aA4P3Ub9VVkAYCNioolq",
+          "name": "Alicia Moore"
+        },
+        {
+          "id": "4YR9PfAeCaFOVgJPiG8ZMp",
+          "name": "Gaz Trigg"
+        },
+        {
+          "id": "0D6I1KUKltLyc9kWUmwGVQ",
+          "name": "Dodger"
+        },
+        {
+          "id": "7kNqXtgeIwFtelmRjWv205",
+          "name": "John Summit"
+        },
+        {
+          "id": "0jI2Kfa17d4JoMdLerNpSx",
+          "name": "Chris Gresswell"
+        },
+        {
+          "id": "4VYCC1OsCe1aaER3vYOY5A",
+          "name": "sant jord"
+        },
+        {
+          "id": "7aohnUnt4vWtzvhBSZTAbF",
+          "name": "FractaLL"
+        },
+        {
+          "id": "4Vtz0dLKpfOtv8m0npgkE0",
+          "name": "Sanka"
+        },
+        {
+          "id": "5kjLSnLC92rIy7B5knTIH3",
+          "name": "Kwal"
+        },
+        {
+          "id": "5hEExJgwx7NVIhwmPxsXcW",
+          "name": "Daniels Jack"
+        },
+        {
+          "id": "77wqg7m8PWTCVEWQRZGnoS",
+          "name": "Mikhail Rado"
+        },
+        {
+          "id": "6uuUmaH6yzvpnPgDcdl0y4",
+          "name": "Alfonso Tan"
+        },
+        {
+          "id": "3fGBAngoskMUXoLvsDkqpD",
+          "name": "TUSK"
+        },
+        {
+          "id": "3J27JLe2O8R3EvNFFjWXdJ",
+          "name": "Bumpy Fool"
+        },
+        {
+          "id": "4Ou7Mb398zSYNP714EP1h7",
+          "name": "JedX"
+        },
+        {
+          "id": "17lRBwcCqKBpqgfnUkop3r",
+          "name": "Kendoll"
+        },
+        {
+          "id": "750ruOD31OKMP4ndBP7fRY",
+          "name": "MAONRO"
+        },
+        {
+          "id": "2V2EY85GY6oQYZZ6LGJc4O",
+          "name": "Screwface"
+        },
+        {
+          "id": "1vFGvmhvZYBc0XpgpoAzUf",
+          "name": "FKLS"
+        },
+        {
+          "id": "4iSvYDaOQy8BwojPxf8P6V",
+          "name": "Absintheminded"
+        },
+        {
+          "id": "6hOUe5iEVbbezCH4n6uiYR",
+          "name": "Domestique"
+        },
+        {
+          "id": "2vp2B6RPA9twgYPKbPaffz",
+          "name": "im kyle"
+        },
+        {
+          "id": "5oznV9DBpgEcgx0UgKKbLk",
+          "name": "POSYDON"
+        },
+        {
+          "id": "6ymXZSd6Qsf3snMm2CKxk4",
+          "name": "MarQ"
+        },
+        {
+          "id": "4LRSqGtcsX0OUvT49pgz0d",
+          "name": "Frederique"
+        },
+        {
+          "id": "6ZJASbg0cD5tdvQgqH5HLf",
+          "name": "Rance & Maff"
+        },
+        {
+          "id": "7CsGIfqoq13hyMuyEcz7jR",
+          "name": "Hot Keys"
+        },
+        {
+          "id": "7tFPiRyBXpG4rLbwhRjO0b",
+          "name": "MARQ"
+        },
+        {
+          "id": "2SyuXmouzHiUSjNLNxRNiL",
+          "name": "Oxymoron"
+        },
+        {
+          "id": "5sobBegrP0b7zmE5Edc8C6",
+          "name": "BELLO"
+        },
+        {
+          "id": "04MM8XFEOwzjlytvJyYqOV",
+          "name": "Haelix"
+        },
+        {
+          "id": "1VFBRTZO7ZX9VrqzjK2bcy",
+          "name": "Mayv Bell"
+        },
+        {
+          "id": "4XKm2kHUPp6EixvzcoqjAe",
+          "name": "Helder Simz"
+        },
+        {
+          "id": "5hKQVA377hopQ9HWPOseXF",
+          "name": "Aaron Jackson"
+        },
+        {
+          "id": "7DREdfV4mKhlrQiiOPNiIa",
+          "name": "Justin Lawson"
+        },
+        {
+          "id": "7B38d0XXdEY3vC5eddO6r6",
+          "name": "N1MA"
+        },
+        {
+          "id": "5iD9mn2inFzm1u3jvr9egi",
+          "name": "Sloth"
+        },
+        {
+          "id": "7EroDVPELCYcB8zyB2XN9F",
+          "name": "Sillaz"
+        },
+        {
+          "id": "0gIwYJ6XYry8I7aK73eK3d",
+          "name": "Gouzy"
+        },
+        {
+          "id": "1W9pJsla05m0YLC25BaPzW",
+          "name": "Caique Carvalho"
+        },
+        {
+          "id": "66iu65cpuC4OTiT4fEItm6",
+          "name": "John Okins"
+        },
+        {
+          "id": "2Ygebw1ybw5wMSAb0ken6I",
+          "name": "THATSOUND"
+        },
+        {
+          "id": "1FBSojGveT9qgrTyA948NX",
+          "name": "Vianna"
+        },
+        {
+          "id": "21T0dUcy5Bgr2LUrJ8BNd9",
+          "name": "Danny Samaei"
+        },
+        {
+          "id": "6yjsvVut7MsLmMiAfyNL5m",
+          "name": "Fatty"
+        },
+        {
+          "id": "5NCIFb4JfQobJI1V6tndrR",
+          "name": "Kelvin Richard"
+        },
+        {
+          "id": "7lDZhKkcXxWZ9Wc7KhNkAr",
+          "name": "Resonant"
+        },
+        {
+          "id": "5s7VM2QEv0CSEE1RwPAaBi",
+          "name": "CLAASSEN"
+        },
+        {
+          "id": "5vMnh9zUMuyulSXf3xZ9T9",
+          "name": "Jay Peeki"
+        },
+        {
+          "id": "7mXyW5kPIUrSRGkV0I9Ilo",
+          "name": "FeelGood"
+        },
+        {
+          "id": "1bn0UcIaEKHWx15s0GyH55",
+          "name": "Jamie Brennan"
+        },
+        {
+          "id": "1iGopxKoGRFIEyBfdncWzJ",
+          "name": "Bella Goldwin"
+        },
+        {
+          "id": "4faEPF6tSntuUDfcoZ5Rud",
+          "name": "REESE PARK"
+        },
+        {
+          "id": "4k5XJa1mHBuKNvx4zt4Ogc",
+          "name": "Marques"
+        },
+        {
+          "id": "6c9oLha6ToammQblPashS9",
+          "name": "Allen Oh"
+        },
+        {
+          "id": "5ze5OzM2pqb5HQyBqZBXq4",
+          "name": "Arky"
+        },
+        {
+          "id": "2qgl5yiniO2qykrPxMkCPz",
+          "name": "Lux Esto"
+        },
+        {
+          "id": "1e6Slp9egbeuYW1dXXZdHH",
+          "name": "Anmol Jhanb"
+        },
+        {
+          "id": "5fU2v3rxLJ7GEI41LXiu0I",
+          "name": "Law Mark"
+        },
+        {
+          "id": "0xhXLXPVNbgslNtqcjFLPp",
+          "name": "TUKKO"
+        }
+      ],
+      "successfulFormat": "1"
+    }
+  },
+  "buildItDeepStats": {
+    "id": "2",
+    "name": "Build It Deep",
+    "releases": {
+      "count": 6,
+      "items": [
+        {
+          "id": "519BsOBqRPl6ykwFIh9qgS",
+          "title": "Build It Records: Best of 2016",
+          "release_type": null,
+          "artist_id": null,
+          "artist_name": "Unknown"
+        },
+        {
+          "id": "4GMIOFv1k6CqOL9dNNjkeF",
+          "title": "Build It Records: The Collection, Vol. 3",
+          "release_type": null,
+          "artist_id": null,
+          "artist_name": "Unknown"
+        },
+        {
+          "id": "7DgXEtXehE7wORbBNtiiRu",
+          "title": "Build It Records Summer Compilation 2024",
+          "release_type": null,
+          "artist_id": null,
+          "artist_name": "Unknown"
+        },
+        {
+          "id": "3nMaIAkXTQnXUtL8ojDuEO",
+          "title": "Build It Records G House Compilation, Vol. 1",
+          "release_type": null,
+          "artist_id": null,
+          "artist_name": "Unknown"
+        },
+        {
+          "id": "1cw6xKxSvtWSUvsxPGQKLv",
+          "title": "Build It Records: The Collection, Vol. 2",
+          "release_type": null,
+          "artist_id": null,
+          "artist_name": "Unknown"
+        },
+        {
+          "id": "2oS30oG4XIRIyYM3Nk7HbQ",
+          "title": "Build It Records: Starter Kit Vol. 1",
+          "release_type": null,
+          "artist_id": null,
+          "artist_name": "Unknown"
+        }
+      ],
+      "successfulFormat": "2"
+    },
+    "artists": {
+      "count": 1,
+      "items": [
+        {
+          "id": "2l9bjRfEhr9BleTsYAJ4kc",
+          "name": "BURNTECH"
+        }
+      ],
+      "successfulFormat": "2"
+    }
+  },
+  "buildItTechStats": {
+    "id": "3",
+    "name": "Build It Tech",
+    "releases": {
+      "count": 6,
+      "items": [
+        {
+          "id": "519BsOBqRPl6ykwFIh9qgS",
+          "title": "Build It Records: Best of 2016",
+          "release_type": null,
+          "artist_id": null,
+          "artist_name": "Unknown"
+        },
+        {
+          "id": "4GMIOFv1k6CqOL9dNNjkeF",
+          "title": "Build It Records: The Collection, Vol. 3",
+          "release_type": null,
+          "artist_id": null,
+          "artist_name": "Unknown"
+        },
+        {
+          "id": "7DgXEtXehE7wORbBNtiiRu",
+          "title": "Build It Records Summer Compilation 2024",
+          "release_type": null,
+          "artist_id": null,
+          "artist_name": "Unknown"
+        },
+        {
+          "id": "3nMaIAkXTQnXUtL8ojDuEO",
+          "title": "Build It Records G House Compilation, Vol. 1",
+          "release_type": null,
+          "artist_id": null,
+          "artist_name": "Unknown"
+        },
+        {
+          "id": "1cw6xKxSvtWSUvsxPGQKLv",
+          "title": "Build It Records: The Collection, Vol. 2",
+          "release_type": null,
+          "artist_id": null,
+          "artist_name": "Unknown"
+        },
+        {
+          "id": "2oS30oG4XIRIyYM3Nk7HbQ",
+          "title": "Build It Records: Starter Kit Vol. 1",
+          "release_type": null,
+          "artist_id": null,
+          "artist_name": "Unknown"
+        }
+      ],
+      "successfulFormat": "3"
+    },
+    "artists": {
+      "count": 0,
+      "items": [],
+      "successfulFormat": null
+    }
+  }
+}

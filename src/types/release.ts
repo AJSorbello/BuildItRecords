@@ -1,20 +1,20 @@
 import type { Artist, Track, SpotifyImage, SpotifyExternalUrls, RecordLabelId } from '.';
 
 export interface Release {
-  label_id: string;
-  label_name: any;
+  label_id?: string;
+  label_name?: any;
   id: string;
-  title: string;
+  title?: string;
   type: 'album' | 'single' | 'compilation';
   artists: Artist[];
-  tracks: Track[];
+  tracks?: Track[];
   images: SpotifyImage[];
   artwork_url?: string;
   release_date: string;
   release_date_precision?: string;
   external_urls: SpotifyExternalUrls;
   uri: string;
-  label?: RecordLabelId;
+  label?: string | RecordLabelId;
   labelId?: RecordLabelId;
   total_tracks: number;
   spotifyUrl?: string;
@@ -24,6 +24,7 @@ export interface Release {
   name?: string; // For backward compatibility
   catalog_number?: string; // Added for catalog numbers
   artist_name?: string; // Added for fallback artist name
+  album_type?: string;  // Added for Spotify API compatibility
 }
 
 export interface ReleaseDetails extends Release {

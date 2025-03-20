@@ -5,7 +5,7 @@
 
 /* eslint-disable @typescript-eslint/no-var-requires */
 const { createClient } = require('@supabase/supabase-js');
-const { addCorsHeaders, getPool, formatResponse } = require('./utils/db-utils');
+const { addCorsHeaders, getPool, formatResponse, handleOptions } = require('./utils/db-utils');
 /* eslint-enable @typescript-eslint/no-var-requires */
 
 // Initialize database connection for PostgreSQL direct access
@@ -19,13 +19,13 @@ try {
 }
 
 module.exports = async (req, res) => {
-  // Add CORS headers
-  addCorsHeaders(res);
-
-  // Handle OPTIONS request (preflight)
+  // Handle OPTIONS request (preflight) with proper CORS headers
   if (req.method === 'OPTIONS') {
-    return res.status(200).end();
+    return handleOptions(req, res);
   }
+
+  // Add CORS headers for all other requests
+  addCorsHeaders(res);
 
   console.log(`API-Consolidated Request: ${req.method} ${req.url}`);
 

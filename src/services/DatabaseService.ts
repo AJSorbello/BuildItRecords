@@ -17,6 +17,13 @@ interface ApiResponse<T> {
   data: T | null;
   message: string;
   error?: string;
+  // Add properties from ApiResponseExtended that could also appear in ApiResponse
+  releases?: any[];
+  artists?: any[];
+  tracks?: any[];
+  total?: number;
+  count?: number;
+  details?: any;
 }
 
 // Response interface with optional fields for different API response formats
@@ -276,17 +283,18 @@ class DatabaseService {
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
     try {
-      // Get base URL first
-      const baseUrl = this.getBaseUrl();
+      // Determine the baseUrl for the API request
+      const baseUrl = this.baseUrl;
       
-      // Clean the endpoint to avoid path issues
-      const cleanEndpoint = endpoint.startsWith('/') ? endpoint.substring(1) : endpoint;
+      // Clean the endpoint of leading/trailing slashes
+      const cleanEndpoint = endpoint.replace(/^\/+|\/+$/g, '');
       
-      // Handle API path construction carefully to avoid duplicates
-      let url = '';
+      // Construct the full URL based on baseUrl and endpoint structure
+      let url: string;
       
-      // If baseUrl already includes /api and endpoint also starts with api/, remove api/ from endpoint
-      if (baseUrl.endsWith('/api') && cleanEndpoint.startsWith('api/')) {
+      // Handle different combinations of baseUrl and endpoint paths
+      // If both baseUrl and endpoint include /api, avoid duplication
+      if (baseUrl.includes('/api') && cleanEndpoint.startsWith('api/')) {
         url = `/${cleanEndpoint.substring(4)}`;
       } 
       // If baseUrl includes /api and endpoint doesn't start with api/
@@ -305,48 +313,179 @@ class DatabaseService {
       const fullUrl = `${baseUrl}${url}`;
       console.log(`🌐 API Request: ${options.method || 'GET'} ${fullUrl}`);
       
-      const response = await fetch(fullUrl, {
-        ...options,
-        credentials: 'include', // Revert back to 'include' now that server CORS is properly configured
-        headers: {
-          'Content-Type': 'application/json',
-          ...options.headers,
-        },
-      });
-
-      // Log response status
-      console.log(`🌐 API Response: ${response.status} ${response.statusText} for ${fullUrl}`);
-      
-      // Clone the response before reading it as json to avoid "body already read" errors
-      const responseClone = response.clone();
-      
       try {
-        const data = await response.json();
-        console.log('📦 API Response Data:', data);
+        const response = await fetch(fullUrl, {
+          ...options,
+          credentials: 'include', // Required for cookies, but needs specific CORS settings
+          headers: {
+            'Content-Type': 'application/json',
+            ...options.headers,
+          },
+        });
+
+        // Log response status
+        console.log(`🌐 API Response: ${response.status} ${response.statusText} for ${fullUrl}`);
         
+        // Clone the response before reading it as json to avoid "body already read" errors
+        const responseClone = response.clone();
+        
+        // Update monitoring service with successful API call
+        import('./MonitoringService').then(({ monitoringService }) => {
+          // If this is a health check endpoint, don't try to update health again to avoid infinite loops
+          if (!endpoint.includes('health')) {
+            if (fullUrl.includes('builditrecords.onrender.com')) {
+              monitoringService.updateServiceHealth('render', {
+                status: 'healthy',
+                message: 'API request succeeded',
+                timestamp: new Date().toISOString(),
+                lastSuccessful: new Date().toISOString(),
+              });
+            } else if (fullUrl.includes('vercel.app') || fullUrl.includes(window.location.origin)) {
+              monitoringService.updateServiceHealth('vercel', {
+                status: 'healthy',
+                message: 'API request succeeded',
+                timestamp: new Date().toISOString(),
+                lastSuccessful: new Date().toISOString(),
+              });
+            }
+          }
+        }).catch(err => console.error("Failed to import MonitoringService:", err));
+        
+        // Check if the response was successful
         if (!response.ok) {
-          const error = data.message || response.statusText;
-          console.error('❌ API Error:', error);
-          return { success: false, message: error, data: null };
+          let errorBody;
+          try {
+            // Try to parse the error response as JSON
+            errorBody = await responseClone.json();
+            console.error(`🔴 API Error: ${response.status} ${response.statusText}`, errorBody);
+          } catch (e) {
+            // If parsing fails, use text
+            errorBody = { error: await responseClone.text() };
+            console.error(`🔴 API Error: ${response.status} ${response.statusText}`, errorBody);
+          }
+          
+          return {
+            success: false,
+            data: null,
+            message: errorBody?.message || `API error: ${response.status} ${response.statusText}`,
+            error: errorBody?.error || response.statusText
+          };
         }
         
-        return { success: true, data: data.data || data, message: data.message || 'Success' };
-      } catch (jsonError) {
-        // If we can't parse the response as JSON, try to get the text
-        const textData = await responseClone.text();
-        console.error('⚠️ Failed to parse JSON response:', textData, jsonError);
-        return { 
-          success: false, 
-          message: `Failed to parse response: ${jsonError}`, 
-          data: null 
+        // Try to parse the response as JSON
+        try {
+          const data = await response.json();
+          
+          // Handle different API response formats
+          if (data.success === false) {
+            // API explicitly returns { success: false, ... }
+            return {
+              success: false,
+              data: null,
+              message: data.message || 'API returned success: false',
+              error: data.error || 'Unknown error'
+            };
+          } else if (data.success === undefined && data.error) {
+            // API returns { error: "..." } format
+            return {
+              success: false,
+              data: null,
+              message: data.message || 'API error',
+              error: data.error
+            };
+          } else if (data.data !== undefined) {
+            // API returns { success: true, data: ... } format
+            return {
+              success: true,
+              data: data.data as T,
+              message: data.message || 'Success'
+            };
+          } else {
+            // Assume the response itself is the data we want
+            return {
+              success: true,
+              data: data as T,
+              message: 'Success'
+            };
+          }
+        } catch (error) {
+          console.error('Error parsing API response:', error);
+          return {
+            success: false,
+            data: null,
+            message: 'Failed to parse API response',
+            error: error instanceof Error ? error.message : String(error)
+          };
+        }
+      } catch (error) {
+        // Handle network errors, CORS errors, etc.
+        console.error(`🔴 Network Error for ${fullUrl}:`, error);
+        
+        // Handle common error types with informative messages
+        let errorMessage = 'Network error occurred';
+        let errorDetails = '';
+        
+        if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+          errorMessage = 'Failed to connect to API server';
+          errorDetails = 'The server may be down or network connectivity issues may exist';
+        } else if (error instanceof DOMException && error.name === 'AbortError') {
+          errorMessage = 'Request was aborted';
+          errorDetails = 'The request took too long and timed out';
+        } else if (error instanceof Error) {
+          // Try to detect CORS errors from the error message
+          if (error.message.includes('CORS') || 
+              error.message.includes('cross-origin') || 
+              error.message.includes('Access-Control-Allow-Origin')) {
+            errorMessage = 'CORS error: Cross-origin request blocked';
+            errorDetails = 'The server is not configured to allow requests from this origin';
+            
+            // Update monitoring service specifically for CORS errors
+            import('./MonitoringService').then(({ monitoringService }) => {
+              if (fullUrl.includes('builditrecords.onrender.com')) {
+                monitoringService.updateServiceHealth('render', {
+                  status: 'unhealthy',
+                  message: 'CORS error: API server blocking requests from this origin',
+                  timestamp: new Date().toISOString(),
+                  details: { 
+                    error: error.message,
+                    originUrl: window.location.origin,
+                    targetUrl: fullUrl
+                  }
+                });
+              } else {
+                monitoringService.updateServiceHealth('vercel', {
+                  status: 'unhealthy',
+                  message: 'CORS error: API server blocking requests from this origin',
+                  timestamp: new Date().toISOString(),
+                  details: { 
+                    error: error.message,
+                    originUrl: window.location.origin,
+                    targetUrl: fullUrl
+                  }
+                });
+              }
+            }).catch(err => console.error("Failed to import MonitoringService:", err));
+          } else {
+            errorMessage = error.message;
+            errorDetails = error.stack || '';
+          }
+        }
+        
+        return {
+          success: false,
+          data: null,
+          message: errorMessage,
+          error: errorDetails || String(error)
         };
       }
-    } catch (error: any) {
-      console.error('🔴 API Request Failed:', error);
+    } catch (outerError) {
+      // Catch any uncaught errors in the method
+      console.error('Uncaught error in fetchApi:', outerError);
       return {
         success: false,
-        message: error.message || 'Unknown error occurred',
         data: null,
+        message: 'Uncaught error in API request',
+        error: outerError instanceof Error ? outerError.message : String(outerError)
       };
     }
   }
@@ -431,7 +570,8 @@ class DatabaseService {
           console.log(`[DatabaseService] Processed ${releases.length} releases`);
           
           // Calculate pagination info
-          const total = response.total || response.count || releases.length;
+          // Access the properties using non-null assertion since we've checked for their existence above
+          const total = response.total! || response.count! || releases.length;
           const totalReleasesCount = typeof total === 'number' ? total : releases.length;
           
           return {

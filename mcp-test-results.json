@@ -1,0 +1,89 @@
+{
+  "timestamp": "2025-03-17T19:58:14.053Z",
+  "supabase": {
+    "success": true,
+    "error": null,
+    "details": {
+      "data": [
+        {
+          "id": "1",
+          "name": "BUILD IT RECORDS"
+        }
+      ]
+    }
+  },
+  "postgresql": {
+    "success": false,
+    "error": "SASL: SCRAM-SERVER-FINAL-MESSAGE: server signature is missing",
+    "details": {}
+  },
+  "render_api": {
+    "success": false,
+    "error": "Request failed with status code 502",
+    "details": {}
+  },
+  "vercel_frontend": {
+    "success": false,
+    "error": "Request failed with status code 502",
+    "details": {}
+  },
+  "label_data": {
+    "1": {
+      "id": 1,
+      "name": "Build It Records",
+      "artists": {
+        "success": false,
+        "count": 0,
+        "error": "Request failed with status code 502"
+      },
+      "releases": {
+        "success": false,
+        "count": 0,
+        "error": "Request failed with status code 502"
+      },
+      "spotify_data": {
+        "success": false,
+        "count": 0,
+        "error": "Request failed with status code 502"
+      }
+    },
+    "2": {
+      "id": 2,
+      "name": "Build It Tech",
+      "artists": {
+        "success": false,
+        "count": 0,
+        "error": "Request failed with status code 502"
+      },
+      "releases": {
+        "success": false,
+        "count": 0,
+        "error": "Request failed with status code 502"
+      },
+      "spotify_data": {
+        "success": false,
+        "count": 0,
+        "error": "Request failed with status code 502"
+      }
+    },
+    "3": {
+      "id": 3,
+      "name": "Build It Deep",
+      "artists": {
+        "success": false,
+        "count": 0,
+        "error": "Request failed with status code 502"
+      },
+      "releases": {
+        "success": false,
+        "count": 0,
+        "error": "Request failed with status code 502"
+      },
+      "spotify_data": {
+        "success": false,
+        "count": 0,
+        "error": "Request failed with status code 502"
+      }
+    }
+  }
+}

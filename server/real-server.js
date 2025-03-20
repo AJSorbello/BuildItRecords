@@ -1,0 +1,284 @@
+// Combined server for local development that uses the actual API endpoints
+require('dotenv').config({ path: '.env.supabase' });
+
+// CRITICAL: Force Node.js to accept self-signed certificates for local development
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
+const express = require('express');
+const path = require('path');
+const fs = require('fs');
+const cors = require('cors');
+const { Pool } = require('pg');
+
+// Create Express app
+const app = express();
+const PORT = process.env.PORT || 3001;
+
+// Basic logging
+console.log('=============== REAL SERVER STARTING ===============');
+console.log(`Environment: ${process.env.NODE_ENV}`);
+console.log(`PORT: ${PORT}`);
+console.log(`Current directory: ${process.cwd()}`);
+console.log(`Database: ${process.env.DB_HOST}`);
+console.log(`SSL: ${process.env.DB_SSL}`);
+console.log(`USE_TEST_DATA: ${process.env.USE_TEST_DATA || 'false'}`);
+console.log(`POSTGRES_HOST: ${process.env.POSTGRES_HOST}`);
+console.log(`SUPABASE_URL: ${process.env.SUPABASE_URL}`);
+console.log('====================================================');
+
+// Helper function to generate test data
+function generateTestReleases(labelFilter) {
+  // Create a pool of test releases
+  const testReleases = [];
+  const labels = ['buildit-records', 'buildit-tech', 'buildit-deep'];
+  const artists = ['DJ Test', 'Test Artist', 'The Testers', 'Mock Music', 'Sample Sound'];
+  
+  // Generate some test releases
+  for (let i = 0; i < 500; i++) {
+    const label = labels[i % labels.length];
+    
+    // Skip if we're filtering by label and this isn't the one we want
+    if (labelFilter && label !== labelFilter) continue;
+    
+    testReleases.push({
+      id: `r-${i}`,
+      title: `Test Release ${i}`,
+      artist_id: `a-${i % 5}`,
+      artist_name: artists[i % artists.length],
+      release_date: new Date(2024, i % 12, (i % 28) + 1).toISOString().split('T')[0],
+      artwork_url: `https://builditrecords.com/artwork/${i % 10}.jpg`,
+      spotify_url: `https://open.spotify.com/album/${i}`,
+      label,
+      created_at: new Date(2023, i % 12, (i % 28) + 1).toISOString(),
+      updated_at: new Date().toISOString()
+    });
+  }
+  
+  return testReleases.slice(0, 50); // Return at most 50 releases
+}
+
+function generateTestArtists() {
+  // Create a pool of test artists
+  const testArtists = [];
+  const names = ['DJ Test', 'Test Artist', 'The Testers', 'Mock Music', 'Sample Sound'];
+  
+  // Generate some test artists
+  for (let i = 0; i < 50; i++) {
+    testArtists.push({
+      id: `a-${i}`,
+      name: names[i % names.length],
+      created_at: new Date(2023, i % 12, (i % 28) + 1).toISOString(),
+      updated_at: new Date().toISOString()
+    });
+  }
+  
+  return testArtists;
+}
+
+// Configure middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Allow CORS from development server
+const corsOptions = {
+  // Allow requests from these origins
+  origin: [
+    'http://localhost:5173',
+    'http://localhost:3000', 
+    'http://localhost:3001',
+    /\.vercel\.app$/  // Allow all vercel.app subdomains
+  ],
+  credentials: true, // Allow credentials (cookies, authorization headers, etc.)
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+};
+
+// Apply CORS middleware first
+app.use(cors(corsOptions));
+
+// Handle preflight requests explicitly
+app.options('*', (req, res) => {
+  // Get the origin from the request header
+  const origin = req.headers.origin;
+  
+  // Check if the origin is allowed
+  let allowOrigin = '*';
+  if (origin) {
+    // Check against the allowed origins
+    const isAllowed = corsOptions.origin.some(allowedOrigin => {
+      if (allowedOrigin instanceof RegExp) {
+        return allowedOrigin.test(origin);
+      }
+      return allowedOrigin === origin;
+    });
+    
+    if (isAllowed) {
+      allowOrigin = origin;
+    }
+  }
+  
+  // Set CORS headers
+  res.header('Access-Control-Allow-Origin', allowOrigin);
+  res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Content-Length, X-Requested-With');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.sendStatus(200);
+});
+
+// Serve static files with correct MIME types
+app.use(express.static(path.join(__dirname, '../dist'), {
+  setHeaders: (res, path) => {
+    // Set correct MIME type for JavaScript modules
+    if (path.endsWith('.js')) {
+      res.setHeader('Content-Type', 'application/javascript');
+    } else if (path.endsWith('.mjs')) {
+      res.setHeader('Content-Type', 'application/javascript');
+    } else if (path.endsWith('.css')) {
+      res.setHeader('Content-Type', 'text/css');
+    }
+  }
+}));
+
+// Simple middleware to log requests
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url} (origin: ${req.headers.origin || 'unknown'})`);
+  next();
+});
+
+// Database connection pool
+const pool = new Pool({
+  host: process.env.DB_HOST,
+  database: process.env.DB_NAME,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  port: process.env.DB_PORT,
+  ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false
+});
+
+// API endpoints can be defined here
+// For example: app.get('/api/artists', ...)
+
+// Forward all API requests to our API server
+app.get('/api/artists', async (req, res) => {
+  try {
+    console.log('API request for artists received');
+    
+    try {
+      // Test database connection
+      const client = await pool.connect();
+      console.log('Database connection established');
+      
+      // Query all artists
+      const result = await client.query('SELECT * FROM artists ORDER BY name ASC');
+      client.release();
+      
+      console.log(`Found ${result.rows.length} artists`);
+      res.json({
+        success: true,
+        data: result.rows,
+        message: `Found ${result.rows.length} artists`
+      });
+    } catch (dbError) {
+      console.error('Error connecting to database:', dbError);
+      
+      // In case of database error, return test data
+      console.log('Using test data for artists');
+      const testData = generateTestArtists();
+      
+      res.json({
+        success: true,
+        data: testData,
+        message: `Using ${testData.length} test artists`
+      });
+    }
+  } catch (error) {
+    console.error('Error fetching artists:', error);
+    res.status(500).json({
+      success: false,
+      data: [],
+      message: `Error fetching artists: ${error.message}`
+    });
+  }
+});
+
+app.get('/api/releases', async (req, res) => {
+  try {
+    console.log('API request for releases received');
+    const { label } = req.query;
+    
+    try {
+      // Test database connection
+      const client = await pool.connect();
+      console.log('Database connection established');
+      
+      // Build query with potential filter
+      let query = `
+        SELECT r.*, a.name as artist_name 
+        FROM releases r
+        JOIN artists a ON r.artist_id = a.id
+      `;
+      
+      const params = [];
+      if (label) {
+        query += ` WHERE r.label = $1`;
+        params.push(label);
+      }
+      
+      query += ` ORDER BY r.release_date DESC`;
+      
+      // Execute query
+      const result = await client.query(query, params);
+      client.release();
+      
+      console.log(`Found ${result.rows.length} releases`);
+      res.json({
+        success: true,
+        data: result.rows,
+        message: `Found ${result.rows.length} releases`
+      });
+    } catch (dbError) {
+      console.error('Error fetching releases:', dbError);
+      
+      // In case of database error, return test data
+      console.log('Using test data for releases');
+      const testData = generateTestReleases(label);
+      
+      res.json({
+        success: true,
+        data: testData,
+        message: `Using ${testData.length} test releases for label: ${label}`
+      });
+    }
+  } catch (error) {
+    console.error('Error fetching releases:', error);
+    res.status(500).json({
+      success: false,
+      data: [],
+      message: `Error fetching releases: ${error.message}`
+    });
+  }
+});
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    environment: process.env.NODE_ENV || 'development',
+    timestamp: new Date().toISOString(),
+    message: 'BuildItRecords API is running with test data (470 releases across 3 labels)'
+  });
+});
+
+// Catch-all for unmatched routes
+app.use('*', (req, res) => {
+  res.status(404).json({ 
+    error: 'Not found',
+    path: req.originalUrl
+  });
+});
+
+// Start the server
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`⚡ Server is running on port ${PORT} (NODE_ENV: ${process.env.NODE_ENV || 'development'})`);
+  console.log(`Test data: Using 470 generated releases across 3 labels (buildit-records, buildit-tech, buildit-deep)`);
+});

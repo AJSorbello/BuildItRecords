@@ -10,6 +10,13 @@ module.exports = defineConfig({
       '@': path.resolve(__dirname, 'src'),
     },
   },
+  define: {
+    // Explicitly define process.env to avoid "process is not defined" errors
+    'process.env': {
+      NODE_ENV: JSON.stringify(process.env.NODE_ENV || 'development'),
+      REACT_APP_API_URL: JSON.stringify(process.env.REACT_APP_API_URL || ''),
+    }
+  },
   build: {
     outDir: 'dist',
     minify: true,
@@ -20,6 +27,7 @@ module.exports = defineConfig({
     }
   },
   server: {
+    port: 3000, // Set port to 3000 to match API expectations
     proxy: {
       '/api': {
         target: 'http://localhost:3003',

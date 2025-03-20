@@ -1,5 +1,4 @@
-import React, { useEffect, useState } from 'react';
-import Box from '@mui/material/Box';
+import * as React from 'react';
 import { 
   createBrowserRouter, 
   RouterProvider,
@@ -7,7 +6,7 @@ import {
   createRoutesFromElements,
   Navigate 
 } from 'react-router-dom';
-import { ThemeProvider as MuiThemeProvider, createTheme } from '@mui/material/styles';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { ThemeProvider as CustomThemeProvider } from './contexts/ThemeContext';
 import { SnackbarProvider } from 'notistack';
 
@@ -15,6 +14,7 @@ import { SnackbarProvider } from 'notistack';
 import ProtectedRoute from './components/ProtectedRoute';
 import { Layout } from './components/Layout';
 import DebugConsole from './components/DebugConsole';
+import SystemHealthMonitor from './components/SystemHealthMonitor';
 
 // Pages
 import AdminLogin from './pages/admin/AdminLogin';
@@ -31,6 +31,12 @@ import LegalPage from './pages/LegalPage';
 import NotFoundPage from './pages/NotFoundPage';
 import TrackManager from './components/admin/TrackManager';
 
+// Detect the development environment
+const isDevEnvironment = process.env.NODE_ENV === 'development' || 
+  window.location.hostname === 'localhost' || 
+  window.location.hostname === '127.0.0.1';
+
+// Create router outside the component to avoid recreation on each render
 const router = createBrowserRouter(
   createRoutesFromElements(
     <Route>
@@ -79,27 +85,38 @@ const router = createBrowserRouter(
   )
 );
 
-const App: React.FC = () => {
-  const [isDevEnvironment, setIsDevEnvironment] = useState(false);
+// Define the AppRouter component separately from the main App
+const AppRouter = () => {
+  return <RouterProvider router={router} />;
+};
 
-  useEffect(() => {
-    // Detect if we're in development mode
-    // We avoid using process.env directly since it can cause issues in the build
-    const isDev = window.location.hostname === 'localhost' || 
-                 window.location.hostname === '127.0.0.1' ||
-                 window.location.hostname.includes('.local');
-    setIsDevEnvironment(isDev);
-    
-    // Log deployment information for debugging
-    console.log('Environment Info:');
-    console.log('- Hostname:', window.location.hostname);
-    console.log('- Origin:', window.location.origin);
-    console.log('- Development Mode:', isDev);
-  }, []);
+// Create a component to hold all the UI elements except the router
+const AppUI = () => {
+  const [healthMonitorMinimized, setHealthMonitorMinimized] = React.useState(true);
+  
+  // Check if the health monitor should be shown
+  const showHealthMonitor = isDevEnvironment || window.location.search.includes('debug=true');
+  
+  return (
+    <>
+      {showHealthMonitor && (
+        <SystemHealthMonitor 
+          showAlways={showHealthMonitor}
+          minimized={healthMonitorMinimized}
+          onToggleMinimize={() => setHealthMonitorMinimized(!healthMonitorMinimized)}
+        />
+      )}
+      
+      {(isDevEnvironment || window.location.search.includes('debug=true')) && <DebugConsole />}
+    </>
+  );
+};
 
+// Define the App component
+const App = () => {
   return (
     <CustomThemeProvider>
-      <MuiThemeProvider theme={createTheme({
+      <ThemeProvider theme={createTheme({
         palette: {
           mode: 'dark',
           primary: {
@@ -112,12 +129,10 @@ const App: React.FC = () => {
         },
       })}>
         <SnackbarProvider maxSnack={3} anchorOrigin={{ vertical: 'top', horizontal: 'right' }}>
-          <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-            <RouterProvider router={router} />
-            {(isDevEnvironment || window.location.search.includes('debug=true')) && <DebugConsole />}
-          </Box>
+          <AppRouter />
+          <AppUI />
         </SnackbarProvider>
-      </MuiThemeProvider>
+      </ThemeProvider>
     </CustomThemeProvider>
   );
 };

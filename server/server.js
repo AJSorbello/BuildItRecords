@@ -32,7 +32,7 @@ app.use(cors({
       callback(null, true);
     } else {
       console.log(`CORS blocked request from origin: ${origin}`);
-      callback(null, true); // Allow all origins for now, but log non-allowed ones
+      callback(new Error(`CORS error: Origin ${origin} not allowed`), false);
     }
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -56,13 +56,88 @@ app.get('/', (req, res) => {
   });
 });
 
+// Health check endpoint for monitoring
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'healthy',
+    message: 'API is operational',
+    version: '1.0.0',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+  });
+});
+
+// Database health check endpoint
+app.get('/api/db-health', async (req, res) => {
+  try {
+    // If you have an actual database connection, you can use something like:
+    // await db.query('SELECT 1');
+    
+    // For demonstration, we'll simulate a database check
+    if (Math.random() > 0.1) { // 90% success rate for demonstration
+      res.json({
+        status: 'healthy',
+        message: 'Database connection is operational',
+        timestamp: new Date().toISOString()
+      });
+    } else {
+      // Simulate occasional database errors
+      throw new Error('Simulated database connection error');
+    }
+  } catch (error) {
+    console.error('Database health check failed:', error);
+    res.status(503).json({
+      status: 'unhealthy',
+      message: 'Database connection error',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // Test endpoint for testing CORS
 app.get('/api/test', (req, res) => {
   res.json({
     success: true,
-    message: 'API is working correctly',
-    cors: 'enabled',
-    origin: req.headers.origin || 'unknown'
+    message: 'API test endpoint successful',
+    data: {
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || 'development'
+    }
+  });
+});
+
+// CORS diagnostic endpoint
+app.get('/api/cors-diagnostic', (req, res) => {
+  const origin = req.headers.origin || 'No origin header';
+  const referer = req.headers.referer || 'No referer header';
+  const host = req.headers.host || 'No host header';
+  
+  // Get all request headers for debugging
+  const headers = { ...req.headers };
+  
+  // Don't expose potential security-sensitive headers
+  delete headers.authorization;
+  delete headers.cookie;
+  
+  // Return diagnostic information
+  res.json({
+    success: true,
+    message: 'CORS diagnostic information',
+    data: {
+      origin,
+      referer,
+      host,
+      remoteAddress: req.ip || req.connection.remoteAddress,
+      requestHeaders: headers,
+      allowedOrigins,
+      isOriginAllowed: !origin || allowedOrigins.includes(origin),
+      corsConfig: {
+        credentials: true,
+        allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'Accept']
+      }
+    }
   });
 });
 

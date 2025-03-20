@@ -1,0 +1,14 @@
+{
+  "timestamp": "2025-03-16T01:59:48.808Z",
+  "error": "No artists found in any API response",
+  "apiStatus": {
+    "connected": true,
+    "endpoints": {
+      "allArtists": false,
+      "label1Artists": false,
+      "label2Artists": false,
+      "label1Releases": false,
+      "label2Releases": false
+    }
+  }
+}

@@ -1,10 +1,10 @@
 import React, { Component } from 'react';
 import { AppBar, Tabs, Tab, Box, styled, useMediaQuery, useTheme, IconButton, Theme } from '@mui/material';
-import MenuIcon from '@mui/icons-material/Menu';
 import { useLocation, useNavigate, Location, NavigateFunction } from 'react-router-dom';
 import RecordsSquareLogo from '../assets/png/records/BuildIt_Records_Square.png';
 import TechSquareLogo from '../assets/png/tech/BuildIt_Tech_Square.png';
 import DeepSquareLogo from '../assets/png/deep/BuildIt_Deep_Square.png';
+import AnimatedHamburger from './AnimatedHamburger';
 
 const StyledAppBar = styled(AppBar)(({ theme }) => ({
   background: 'linear-gradient(180deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.7) 50%, rgba(0,0,0,0.5) 100%)',
@@ -176,26 +176,22 @@ class TopNavigationClass extends Component<TopNavigationProps> {
           minWidth: { xs: '360px' } 
         }}>
           {isMobile && onMenuClick && (
-            <IconButton
-              color="inherit"
-              aria-label="open drawer"
-              edge="start"
-              onClick={onMenuClick}
+            <Box
               sx={{ 
                 position: 'absolute',
                 left: 8,
                 top: '50%',
                 transform: 'translateY(-50%)',
                 zIndex: 1400,
-                backgroundColor: 'rgba(0,0,0,0.7)',
-                padding: '8px',
-                '&:hover': {
-                  backgroundColor: 'rgba(0,0,0,0.9)'
-                }
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '50px',
+                height: '50px'
               }}
             >
-              <MenuIcon />
-            </IconButton>
+              <AnimatedHamburger onClick={onMenuClick} />
+            </Box>
           )}
           <StyledTabs
             value={currentLabel}

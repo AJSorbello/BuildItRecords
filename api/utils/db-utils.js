@@ -164,9 +164,46 @@ function formatResponse(success, message, data) {
  * @param {Object} res - Express response object
  */
 function addCorsHeaders(res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  // Define allowed origins
+  const allowedOrigins = [
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'https://build-it-records.vercel.app'
+  ];
+  
+  // Get the origin from the request
+  const origin = res.req.headers.origin;
+  
+  // Set the appropriate CORS headers
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  } else {
+    // For non-matching origins or when origin is not present
+    res.setHeader('Access-Control-Allow-Origin', 'https://build-it-records.vercel.app');
+  }
+  
+  // Allow credentials (cookies, authorization headers)
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  
+  // Allow specific methods
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE');
+  
+  // Allow specific headers
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  
+  // Cache preflight response for 10 minutes (600 seconds)
+  res.setHeader('Access-Control-Max-Age', '600');
+}
+
+/**
+ * Handle preflight OPTIONS requests
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+function handleOptions(req, res) {
+  addCorsHeaders(res);
+  return res.status(200).end();
 }
 
 module.exports = {
@@ -175,5 +212,6 @@ module.exports = {
   getTableSchema,
   hasColumn,
   formatResponse,
-  addCorsHeaders
+  addCorsHeaders,
+  handleOptions
 };

@@ -86,6 +86,8 @@ export interface Artist {
   profile_image_url?: string;
   profile_image_large_url?: string;
   profile_image_small_url?: string;
+  label_id?: string | number;
+  labelId?: string | number;
 }
 
 export interface Album {

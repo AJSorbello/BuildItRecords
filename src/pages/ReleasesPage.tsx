@@ -47,7 +47,7 @@ const isValidRelease = (release: any): release is Release => {
     release &&
     typeof release === 'object' &&
     typeof release.id === 'string' &&
-    typeof release.title === 'string'
+    (typeof release.title === 'string' || typeof release.name === 'string')
   );
 };
 
@@ -128,8 +128,15 @@ export const ReleasesPage = ({ label: propLabel }: ReleasesPageProps) => {
             artworkUrl = release.images[0].url;
           }
           
+          // Make sure title is populated (preferring title over name)
+          let title = release.title;
+          if (!title && release.name) {
+            title = release.name;
+          }
+          
           return {
             ...release,
+            title,
             artwork_url: artworkUrl || '/images/placeholder-release.jpg'
           };
         });
