@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { useState } from 'react';
 import { Box, CssBaseline, useMediaQuery, IconButton } from '@mui/material';
 import { Theme, useTheme } from '@mui/material/styles';
 import MenuIcon from '@mui/icons-material/Menu';
@@ -25,12 +25,12 @@ const getLogo = (label: string) => {
 };
 
 // Wrapper component to get location and media query
-const LayoutWrapper: React.FC = () => {
+const LayoutWrapper = () => {
   const location = useLocation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-
-  return <LayoutClass location={location} isMobile={isMobile} />;
+  
+  return <LayoutFC location={location} isMobile={isMobile} />;
 };
 
 interface LayoutProps {
@@ -38,28 +38,15 @@ interface LayoutProps {
   isMobile: boolean;
 }
 
-interface LayoutState {
-  mobileOpen: boolean;
-}
+// Convert to functional component
+const LayoutFC: React.FC<LayoutProps> = ({ location, isMobile }) => {
+  const [mobileOpen, setMobileOpen] = useState(false);
 
-class LayoutClass extends Component<LayoutProps, LayoutState> {
-  constructor(props: LayoutProps) {
-    super(props);
-    this.state = {
-      mobileOpen: false
-    };
-    this.handleDrawerToggle = this.handleDrawerToggle.bind(this);
-  }
+  const handleDrawerToggle = () => {
+    setMobileOpen(prevState => !prevState);
+  };
 
-  handleDrawerToggle() {
-    this.setState(prevState => ({
-      mobileOpen: !prevState.mobileOpen
-    }));
-  }
-
-  renderSidebar() {
-    const { location, isMobile } = this.props;
-    const { mobileOpen } = this.state;
+  const renderSidebar = () => {
     const path = location.pathname;
     const pathLabel = (path.split('/')[1] || 'records').toUpperCase();
     const isAdminRoute = path.startsWith('/admin');
@@ -68,7 +55,7 @@ class LayoutClass extends Component<LayoutProps, LayoutState> {
 
     const sidebarProps = {
       mobileOpen,
-      onMobileClose: this.handleDrawerToggle,
+      onMobileClose: handleDrawerToggle,
       label: pathLabel.toLowerCase() as 'records' | 'tech' | 'deep'
     };
 
@@ -80,65 +67,66 @@ class LayoutClass extends Component<LayoutProps, LayoutState> {
       default:
         return <RecordsSidebar {...sidebarProps} />;
     }
+  };
+
+  const path = location.pathname;
+  const pathLabel = (path.split('/')[1] || 'records').toUpperCase();
+  const labelMap = {
+    'RECORDS': 'buildit-records',
+    'TECH': 'buildit-tech',
+    'DEEP': 'buildit-deep'
+  };
+  const currentLabel = pathLabel;
+  const labelId = labelMap[pathLabel as keyof typeof labelMap] || 'buildit-records';
+  const isAdminRoute = path.startsWith('/admin');
+
+  // Logging outside the render phase using setTimeout to avoid warnings
+  if (process.env.NODE_ENV === 'development') {
+    // Using setTimeout with 0 delay to move the console.log outside the render phase
+    setTimeout(() => {
+      console.log('Layout rendered:', { path, currentLabel, labelId, isAdminRoute, isMobile });
+    }, 0);
   }
 
-  render() {
-    const { location, isMobile } = this.props;
-    const { mobileOpen } = this.state;
-    const path = location.pathname;
-    const pathLabel = (path.split('/')[1] || 'records').toUpperCase();
-    const labelMap = {
-      'RECORDS': 'buildit-records',
-      'TECH': 'buildit-tech',
-      'DEEP': 'buildit-deep'
-    };
-    const currentLabel = pathLabel;
-    const labelId = labelMap[pathLabel] || 'buildit-records';
-    const isAdminRoute = path.startsWith('/admin');
+  return (
+    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
+      <CssBaseline />
+      
+      {!isAdminRoute && (
+        <>
+          <TopNavigation 
+            logo={getLogo(currentLabel)} 
+            isMobile={isMobile}
+            onMenuClick={handleDrawerToggle}
+          />
+          {!isMobile && <LogoHeader label={currentLabel} />}
+          {renderSidebar()}
+        </>
+      )}
 
-    // For debugging
-    console.log('Layout rendered:', { path, currentLabel, labelId, isAdminRoute, isMobile });
-
-    return (
-      <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
-        <CssBaseline />
-        
-        {!isAdminRoute && (
-          <>
-            <TopNavigation 
-              logo={getLogo(currentLabel)} 
-              isMobile={isMobile}
-              onMenuClick={this.handleDrawerToggle}
-            />
-            {!isMobile && <LogoHeader label={currentLabel} />}
-            {this.renderSidebar()}
-          </>
-        )}
-
-        <Box
-          component="main"
-          sx={{
-            flexGrow: 1,
-            p: 3,
-            width: { xs: '100%' },
-            marginLeft: { 
-              xs: 0,
-              md: '240px' // Drawer width
-            },
-            marginTop: '64px', // Height of TopNavigation
-            paddingTop: { xs: '16px', md: '0' },
-            minHeight: 'calc(100vh - 64px)',
-            overflow: 'auto',
-            backgroundColor: '#000000',
-            position: 'relative',
-            zIndex: 1
-          }}
-        >
-          <Outlet />
-        </Box>
+      <Box
+        component="main"
+        sx={{
+          flexGrow: 1,
+          p: 3,
+          width: { xs: '100%' },
+          marginLeft: { 
+            xs: 0,
+            md: '240px' // Drawer width
+          },
+          marginTop: '64px', // Height of TopNavigation
+          paddingTop: { xs: '16px', md: '0' },
+          minHeight: 'calc(100vh - 64px)',
+          overflow: 'auto',
+          backgroundColor: '#000000',
+          position: 'relative',
+          zIndex: 1
+        }}
+      >
+        <Outlet />
       </Box>
-    );
-  }
-}
+    </Box>
+  );
+};
 
 export { LayoutWrapper as Layout };

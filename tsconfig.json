@@ -1,63 +1,27 @@
 {
   "compilerOptions": {
-    "target": "es6",
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
-    "allowJs": true,
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
     "skipLibCheck": true,
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "strict": false,
-    "noImplicitAny": false,
-    "forceConsistentCasingInFileNames": true,
-    "noFallthroughCasesInSwitch": true,
-    "module": "esnext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
-    "outDir": "./dist",
-    "baseUrl": ".",
-    "types": ["node", "jest", "@testing-library/jest-dom"],
-    "typeRoots": [
-      "./node_modules/@types",
-      "./src/types"
-    ],
-    "paths": {
-      "@/*": [
-        "src/*"
-      ],
-      "utils/*": [
-        "src/utils/*"
-      ],
-      "hooks/*": [
-        "src/hooks/*"
-      ],
-      "types/*": [
-        "src/types/*"
-      ],
-      "services/*": [
-        "src/services/*"
-      ]
-    }
+    "strict": false,
+    "noImplicitAny": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noFallthroughCasesInSwitch": true,
+    "skipDefaultLibCheck": true,
+    "ignoreDeprecations": "5.0",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true
   },
-  "include": [
-    "src/**/*",
-    "src/types/**/*.ts",
-    "src/types/custom/**/*.d.ts"
-  ],
-  "exclude": [
-    "node_modules",
-    "**/*.spec.ts",
-    "**/*.test.ts",
-    "dist",
-    "build",
-    "coverage",
-    "server",
-    "node_modules/@spotify/**/*.d.ts"
-  ]
+  "include": ["src", "vite.config.ts"],
+  "exclude": ["**/@testing-library/jest-dom"]
 }

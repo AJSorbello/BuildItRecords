@@ -1,0 +1,6 @@
+
+    </CustomThemeProvider>
+  );
+};
+
+export default App;

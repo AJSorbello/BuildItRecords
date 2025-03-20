@@ -88,6 +88,7 @@ export interface Artist {
   profile_image_small_url?: string;
   label_id?: string | number;
   labelId?: string | number;
+  labels?: Array<{ id: string; name?: string }>;
 }
 
 export interface Album {
@@ -220,7 +221,8 @@ export const convertSpotifyArtist = (artist: SpotifyArtist): Artist => ({
   external_urls: artist.external_urls,
   spotify_url: artist.external_urls.spotify,
   image_url: artist.images?.[0]?.url,
-  type: 'artist'
+  type: 'artist',
+  labels: [] // Initialize with empty array
 });
 
 export const convertSpotifyAlbum = (album: SpotifyAlbum): Album => ({

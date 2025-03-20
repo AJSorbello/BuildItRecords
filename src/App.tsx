@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React from 'react';
 import { 
   createBrowserRouter, 
   RouterProvider,
@@ -17,17 +17,19 @@ import DebugConsole from './components/DebugConsole';
 import SystemHealthMonitor from './components/SystemHealthMonitor';
 
 // Pages
-import AdminLogin from './pages/admin/AdminLogin';
-import AdminDashboard from './pages/admin/AdminDashboard';
+import HomePage from './pages/HomePage';
+import LoginPage from './pages/LoginPage';
+import AdminPage from './pages/AdminPage';
 import RecordsPage from './pages/RecordsPage';
-import TechPage from './pages/TechPage';
-import DeepPage from './pages/DeepPage';
-import { ReleasesPage } from './pages/ReleasesPage';
+import ReleasesPage from './pages/ReleasesPage';
 import ArtistsPage from './pages/ArtistsPage';
 import ArtistDetailPage from './pages/ArtistDetailPage';
 import PlaylistPage from './pages/PlaylistPage';
 import SubmitPage from './pages/SubmitPage';
+import TechPage from './pages/TechPage';
+import DeepPage from './pages/DeepPage';
 import LegalPage from './pages/LegalPage';
+import ErrorBoundary from './components/ErrorBoundary.jsx';
 import NotFoundPage from './pages/NotFoundPage';
 import TrackManager from './components/admin/TrackManager';
 
@@ -40,16 +42,24 @@ const isDevEnvironment = process.env.NODE_ENV === 'development' ||
 const router = createBrowserRouter(
   createRoutesFromElements(
     <Route>
-      {/* Admin Routes */}
-      <Route path="/admin">
-        <Route path="login" element={<AdminLogin />} />
-        <Route path="dashboard" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
-        <Route path="tracks/import/:label" element={<ProtectedRoute><TrackManager /></ProtectedRoute>} />
-        <Route index element={<Navigate to="/admin/dashboard" replace />} />
-      </Route>
+      <Route
+        path="/"
+        element={<Layout />}
+        errorElement={<ErrorBoundary />}
+      >
+        <Route path="login" element={<LoginPage />} />
+        
+        <Route
+          path="admin"
+          element={
+            <ProtectedRoute>
+              <AdminPage />
+            </ProtectedRoute>
+          }
+        >
+          <Route path="tracks" element={<TrackManager />} />
+        </Route>
 
-      {/* Main App Routes */}
-      <Route path="/" element={<Layout />}>
         <Route path="records">
           <Route path="artists" element={<ArtistsPage label="records" />} />
           <Route path="artists/:id" element={<ArtistDetailPage />} />
@@ -95,24 +105,27 @@ const AppUI = () => {
   const [healthMonitorMinimized, setHealthMonitorMinimized] = React.useState(true);
   
   // Check if the health monitor should be shown
-  const showHealthMonitor = isDevEnvironment || window.location.search.includes('debug=true');
-  
+  const shouldShowHealthMonitor = () => {
+    // Show in dev mode or when requested via URL param
+    return isDevEnvironment || new URLSearchParams(window.location.search).has('debug');
+  };
+
   return (
     <>
-      {showHealthMonitor && (
-        <SystemHealthMonitor 
-          showAlways={showHealthMonitor}
-          minimized={healthMonitorMinimized}
-          onToggleMinimize={() => setHealthMonitorMinimized(!healthMonitorMinimized)}
-        />
+      {shouldShowHealthMonitor() && (
+        <>
+          <SystemHealthMonitor 
+            minimized={healthMonitorMinimized} 
+            onToggleMinimize={() => setHealthMonitorMinimized(!healthMonitorMinimized)} 
+          />
+          <DebugConsole />
+        </>
       )}
-      
-      {(isDevEnvironment || window.location.search.includes('debug=true')) && <DebugConsole />}
     </>
   );
 };
 
-// Define the App component
+// Main App component
 const App = () => {
   return (
     <CustomThemeProvider>
@@ -129,8 +142,10 @@ const App = () => {
         },
       })}>
         <SnackbarProvider maxSnack={3} anchorOrigin={{ vertical: 'top', horizontal: 'right' }}>
-          <AppRouter />
-          <AppUI />
+          <>
+            <AppRouter />
+            <AppUI />
+          </>
         </SnackbarProvider>
       </ThemeProvider>
     </CustomThemeProvider>

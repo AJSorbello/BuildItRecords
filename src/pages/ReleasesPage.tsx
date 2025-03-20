@@ -22,7 +22,7 @@ import { Release } from '../types/release';
 import { RecordLabel, RECORD_LABELS } from '../constants/labels';
 import { databaseService } from '../services/DatabaseService';
 import { formatDate } from '../utils/dateUtils';
-import ErrorBoundary from '../components/ErrorBoundary';
+import ErrorBoundary from '../components/ErrorBoundary.jsx';
 import { TopReleases } from '../components/TopReleases';
 import { labelColors } from '../theme/theme';
 

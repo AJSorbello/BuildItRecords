@@ -1,21 +1,9 @@
-/**
- * Global TypeScript declarations for the BuildItRecords app
- */
+// This is a declaration file for @testing-library/jest-dom
+// It allows TypeScript to recognize the custom matchers added by the library
 
-import * as React from 'react';
+import '@testing-library/jest-dom';
 
 declare global {
-  // Declare the JSX namespace for components
-  namespace JSX {
-    interface IntrinsicElements {
-      [elemName: string]: any;
-    }
-  }
-  
-  // Ensure React is available globally
-  const React: typeof import('react');
-  
-  // Add declaration for testing-library jest-dom
   namespace jest {
     interface Matchers<R> {
       toBeInTheDocument(): R;
@@ -42,8 +30,5 @@ declare global {
   }
 }
 
-// Declare the testing-library/jest-dom module
-declare module '@testing-library/jest-dom';
-
-// Need this to make the file a module
+// This empty export is necessary to make this a module
 export {};
