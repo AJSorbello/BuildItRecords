@@ -17,6 +17,7 @@ const allowedOrigins = [
   'https://build-it-records.vercel.app',
   'https://build-it-records-h14oi09z2-ajsorbellos-projects.vercel.app',
   'https://build-it-records-git-main-ajsorbellos-projects.vercel.app',
+  'https://build-it-records-kx97hqchx-ajsorbellos-projects.vercel.app',
   'https://builditrecords.vercel.app',
   'http://localhost:3000',
   'http://localhost:5173'
