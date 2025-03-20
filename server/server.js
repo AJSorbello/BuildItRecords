@@ -48,7 +48,7 @@ app.use(cors({
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'Accept'],
-  credentials: true
+  credentials: false
 }));
 
 // Simple middleware to log requests
@@ -144,7 +144,7 @@ app.get('/api/cors-diagnostic', (req, res) => {
       allowedOrigins,
       isOriginAllowed: !origin || allowedOrigins.includes(origin),
       corsConfig: {
-        credentials: true,
+        credentials: false,
         allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
         allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'Accept']
       }
