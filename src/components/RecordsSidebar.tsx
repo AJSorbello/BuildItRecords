@@ -11,7 +11,8 @@ import {
   Typography,
   Divider,
   useMediaQuery,
-  SvgIcon
+  SvgIcon,
+  Button
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -48,8 +49,18 @@ interface RecordsSidebarProps {
   onMobileClose?: () => void;
 }
 
+// Define menu items outside of component to prevent re-creation on each render
+const MENU_ITEMS = [
+  { text: 'Home', icon: <HomeIcon />, path: '/' },
+  { text: 'Artists', icon: <PeopleIcon />, path: '/records/artists' },
+  { text: 'Releases', icon: <AlbumIcon />, path: '/records/releases' },
+  { text: 'Playlists', icon: <QueueMusicIcon />, path: '/records/playlists' },
+  { text: 'Submit', icon: <ArrowBackIcon />, path: '/records/submit' },
+];
+
 // Simple RecordsSidebar that doesn't rely on hooks
 const RecordsSidebar: React.FC<RecordsSidebarProps> = (props) => {
+  // Error-proof props with defensive defaults
   const {
     open = false,
     onClose = () => {},
@@ -61,31 +72,36 @@ const RecordsSidebar: React.FC<RecordsSidebarProps> = (props) => {
     onMobileClose,
   } = props;
 
-  // Use the hook pattern directly in this component
+  // Use hooks outside of any conditional rendering
   const navigate = useNavigate();
-  const locationHook = useLocation();
+  // Wrap location access in try/catch at the top level
+  let pathName = '';
+  let locationAvailable = false;
+  try {
+    const location = useLocation();
+    if (location && typeof location.pathname === 'string') {
+      pathName = location.pathname;
+      locationAvailable = true;
+    }
+  } catch (error) {
+    console.error('Error accessing location:', error);
+  }
+
   const theme = useTheme();
   const [socialOpen, setSocialOpen] = useState(false);
-
-  // Safely extract location or provide a dummy if not available
-  const location = locationHook || { pathname: '' };
 
   // Handle props coming from different components
   const isOpen = open || mobileOpen || false;
   const handleClose = onClose || onMobileClose || (() => {});
 
-  const menuItems = [
-    { text: 'Home', icon: <HomeIcon />, path: '/' },
-    { text: 'Artists', icon: <PeopleIcon />, path: '/records/artists' },
-    { text: 'Releases', icon: <AlbumIcon />, path: '/records/releases' },
-    { text: 'Playlists', icon: <QueueMusicIcon />, path: '/records/playlists' },
-    { text: 'Submit', icon: <ArrowBackIcon />, path: '/records/submit' },
-  ];
-
   const handleNavigation = (path: string) => {
-    navigate(path);
-    if (isMobile) {
-      handleClose();
+    try {
+      navigate(path);
+      if (isMobile) {
+        handleClose();
+      }
+    } catch (error) {
+      console.error('Navigation error:', error);
     }
   };
 
@@ -93,17 +109,14 @@ const RecordsSidebar: React.FC<RecordsSidebarProps> = (props) => {
     setSocialOpen(!socialOpen);
   };
 
-  // Safe path matching that handles undefined location
+  // Safe path matching that will never throw
   const isActivePath = (itemPath: string) => {
-    try {
-      return location.pathname === itemPath;
-    } catch (error) {
-      console.warn('Error checking active path:', error);
-      return false;
-    }
+    if (!locationAvailable) return false;
+    return pathName === itemPath;
   };
 
-  const drawer = (
+  // Define the drawer content separately to avoid re-renders
+  const drawerContent = (
     <Box sx={{
       height: '100%',
       display: 'flex',
@@ -140,7 +153,7 @@ const RecordsSidebar: React.FC<RecordsSidebarProps> = (props) => {
       </Box>
       
       <List>
-        {menuItems.map((item) => (
+        {MENU_ITEMS.map((item) => (
           <ListItem 
             button 
             key={item.text}
@@ -224,45 +237,59 @@ const RecordsSidebar: React.FC<RecordsSidebarProps> = (props) => {
           </List>
         </Collapse>
       </List>
+      
+      <Box sx={{ flexGrow: 1 }} />
+      
+      <Box sx={{ p: 2, textAlign: 'center' }}>
+        <Typography variant="caption" sx={{ opacity: 0.7 }}>
+          {new Date().getFullYear()} Build It Records
+        </Typography>
+      </Box>
     </Box>
   );
-
-  return (
-    <Drawer
-      variant={variant}
-      open={isOpen}
-      onClose={handleClose}
-      ModalProps={{
-        keepMounted: true,
-        disableEnforceFocus: false,
-        disableAutoFocus: false,
-        // Improve accessibility
-        closeAfterTransition: true,
-        'aria-labelledby': 'records-sidebar-title',
-      }}
-      sx={{
-        display: { xs: 'block', md: 'block' },
-        width: drawerWidth,
-        flexShrink: 0,
-        '& .MuiDrawer-paper': {
+  
+  // Render with error boundary using try/catch
+  try {
+    return (
+      <Drawer
+        variant={variant}
+        anchor="left"
+        open={isOpen}
+        onClose={handleClose}
+        ModalProps={{
+          keepMounted: true,
+        }}
+        sx={{
           width: drawerWidth,
-          boxSizing: 'border-box',
-          backgroundColor: labelColors[label] || '#000000',
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-          border: 'none'
-        },
-      }}
-    >
-      <Typography 
-        id="records-sidebar-title" 
-        variant="body2"
-        sx={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)', clipPath: 'inset(50%)' }}
+          flexShrink: 0,
+          '& .MuiDrawer-paper': {
+            width: drawerWidth,
+            boxSizing: 'border-box',
+            border: 'none',
+          },
+        }}
       >
-        Build It Records Navigation Menu
-      </Typography>
-      {drawer}
-    </Drawer>
-  );
+        {drawerContent}
+      </Drawer>
+    );
+  } catch (error) {
+    console.error('Error rendering RecordsSidebar:', error);
+    // Return a minimal fallback UI that won't crash
+    return (
+      <Drawer
+        variant="temporary"
+        anchor="left"
+        open={isOpen}
+        onClose={handleClose}
+        sx={{ width: drawerWidth }}
+      >
+        <Box sx={{ p: 2 }}>
+          <Typography>Menu unavailable</Typography>
+          <Button onClick={handleClose}>Close</Button>
+        </Box>
+      </Drawer>
+    );
+  }
 };
 
 export default RecordsSidebar;
