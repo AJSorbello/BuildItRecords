@@ -166,13 +166,30 @@ app.get('/api/artists', async (req, res) => {
         ORDER BY a.name ASC
       `;
       
+      // Execute artist query
       const result = await client.query(query, validLabels);
+      
+      // Also get a count of all artists (for comparison)
+      const allArtistsQuery = `SELECT COUNT(*) FROM artists`;
+      const allArtistsResult = await client.query(allArtistsQuery);
+      const totalArtists = parseInt(allArtistsResult.rows[0].count, 10);
+      
+      // Count artists with direct label_id
+      const directLabelQuery = `SELECT COUNT(*) FROM artists WHERE label_id IN ($1, $2, $3)`;
+      const directLabelResult = await client.query(directLabelQuery, validLabels);
+      const directLabelArtists = parseInt(directLabelResult.rows[0].count, 10);
+      
       client.release();
       
-      console.log(`Found ${result.rows.length} artists with releases on Build It labels`);
+      console.log(`Found ${result.rows.length} artists with releases on Build It labels out of ${totalArtists} total artists`);
+      console.log(`${directLabelArtists} artists have direct label_id set to a Build It label`);
+      
       res.json({
         success: true,
         data: result.rows,
+        total: totalArtists,
+        count: result.rows.length,
+        directLabelCount: directLabelArtists,
         message: `Found ${result.rows.length} artists with releases on Build It labels`
       });
     } catch (dbError) {
@@ -222,13 +239,24 @@ app.get('/api/releases', async (req, res) => {
       
       // Execute query
       const result = await client.query(query, params);
+      
+      // Get total count of releases (for pagination)
+      let countQuery = `SELECT COUNT(*) FROM releases r JOIN artists a ON r.artist_id = a.id`;
+      if (label) {
+        countQuery += ` WHERE r.label = $1`;
+      }
+      const countResult = await client.query(countQuery, params);
+      const totalCount = parseInt(countResult.rows[0].count, 10);
+      
       client.release();
       
-      console.log(`Found ${result.rows.length} releases`);
+      console.log(`Found ${result.rows.length} releases out of ${totalCount} total`);
       res.json({
         success: true,
         data: result.rows,
-        message: `Found ${result.rows.length} releases`
+        total: totalCount,
+        count: result.rows.length,
+        message: `Found ${result.rows.length} releases out of ${totalCount} total`
       });
     } catch (dbError) {
       console.error('Error fetching releases:', dbError);
