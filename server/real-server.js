@@ -71,6 +71,8 @@ const corsOptions = {
     'https://build-it-records-hijjcdum3-ajsorbellos-projects.vercel.app',
     'https://build-it-records-fur55fkas-ajsorbellos-projects.vercel.app',
     'https://build-it-records-b8gg0fjtb-ajsorbellos-projects.vercel.app',
+    'https://build-it-records-8dlvtugib-ajsorbellos-projects.vercel.app',
+    'https://build-it-records-2co6k1ncu-ajsorbellos-projects.vercel.app',
     'https://build-it-records.vercel.app',
     /\.vercel\.app$/  // Allow all vercel.app subdomains
   ],

@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API Health Check</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    h1 { color: #333; }
+    .test-result {
+      margin-bottom: 20px;
+      padding: 10px;
+      border-radius: 5px;
+    }
+    .success { background-color: #d4edda; color: #155724; }
+    .error { background-color: #f8d7da; color: #721c24; }
+    .pending { background-color: #fff3cd; color: #856404; }
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-bottom: 20px;
+    }
+    button:hover {
+      background-color: #0069d9;
+    }
+    code {
+      display: block;
+      background-color: #f8f9fa;
+      padding: 10px;
+      border-radius: 5px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <h1>BuildIt Records API Health Check</h1>
+  <p>This page tests the connectivity to the BuildIt Records API endpoints.</p>
+  
+  <button id="run-tests">Run All Tests</button>
+  
+  <h2>Direct API Connection</h2>
+  <div id="direct-api-result" class="test-result pending">Testing direct API connection...</div>
+  
+  <h2>CORS Proxy Connection</h2>
+  <div id="proxy-api-result" class="test-result pending">Testing CORS proxy connection...</div>
+  
+  <h2>Details</h2>
+  <div id="details">
+    <p>Current location: <span id="current-url"></span></p>
+    <p>API base URL: <span id="api-base-url"></span></p>
+  </div>
+  
+  <h2>Test Output</h2>
+  <code id="debug-output"></code>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Setup
+      const currentUrl = document.getElementById('current-url');
+      const apiBaseUrl = document.getElementById('api-base-url');
+      const directApiResult = document.getElementById('direct-api-result');
+      const proxyApiResult = document.getElementById('proxy-api-result');
+      const debugOutput = document.getElementById('debug-output');
+      const runTestsBtn = document.getElementById('run-tests');
+      
+      // Display current URL and environment info
+      currentUrl.textContent = window.location.href;
+      const apiUrl = 'https://builditrecords.onrender.com/api';
+      apiBaseUrl.textContent = apiUrl;
+      
+      // Function to log output
+      function log(message) {
+        const timestamp = new Date().toISOString();
+        debugOutput.textContent += `[${timestamp}] ${message}\n`;
+      }
+      
+      // Test direct API connection
+      async function testDirectApi() {
+        directApiResult.className = 'test-result pending';
+        directApiResult.textContent = 'Testing direct API connection...';
+        
+        try {
+          log('Testing direct API connection...');
+          const startTime = performance.now();
+          
+          const response = await fetch(`${apiUrl}/health`, {
+            method: 'GET',
+            mode: 'cors',
+            credentials: 'omit',
+            headers: {
+              'Content-Type': 'application/json',
+              'Origin': window.location.origin
+            }
+          });
+          
+          const endTime = performance.now();
+          const responseTime = (endTime - startTime).toFixed(2);
+          
+          if (response.ok) {
+            const data = await response.json();
+            log(`Direct API response (${responseTime}ms): ${JSON.stringify(data)}`);
+            directApiResult.className = 'test-result success';
+            directApiResult.textContent = `✅ Direct API connection successful (${responseTime}ms)`;
+          } else {
+            log(`Direct API error: HTTP ${response.status} - ${response.statusText}`);
+            directApiResult.className = 'test-result error';
+            directApiResult.textContent = `❌ Direct API connection failed: HTTP ${response.status} - ${response.statusText}`;
+          }
+        } catch (error) {
+          log(`Direct API exception: ${error.message}`);
+          directApiResult.className = 'test-result error';
+          directApiResult.textContent = `❌ Direct API connection failed: ${error.message}`;
+        }
+      }
+      
+      // Test CORS proxy connection
+      async function testProxyApi() {
+        proxyApiResult.className = 'test-result pending';
+        proxyApiResult.textContent = 'Testing CORS proxy connection...';
+        
+        try {
+          log('Testing CORS proxy connection...');
+          const startTime = performance.now();
+          
+          const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(`${apiUrl}/health`)}`;
+          const response = await fetch(proxyUrl, {
+            method: 'GET',
+            mode: 'cors',
+            credentials: 'omit',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          const endTime = performance.now();
+          const responseTime = (endTime - startTime).toFixed(2);
+          
+          if (response.ok) {
+            const data = await response.json();
+            log(`CORS proxy response (${responseTime}ms): ${JSON.stringify(data)}`);
+            proxyApiResult.className = 'test-result success';
+            proxyApiResult.textContent = `✅ CORS proxy connection successful (${responseTime}ms)`;
+          } else {
+            log(`CORS proxy error: HTTP ${response.status} - ${response.statusText}`);
+            proxyApiResult.className = 'test-result error';
+            proxyApiResult.textContent = `❌ CORS proxy connection failed: HTTP ${response.status} - ${response.statusText}`;
+          }
+        } catch (error) {
+          log(`CORS proxy exception: ${error.message}`);
+          proxyApiResult.className = 'test-result error';
+          proxyApiResult.textContent = `❌ CORS proxy connection failed: ${error.message}`;
+        }
+      }
+      
+      // Run all tests
+      async function runAllTests() {
+        log('\n--- Starting new test run ---');
+        log(`Current time: ${new Date().toISOString()}`);
+        log(`Current URL: ${window.location.href}`);
+        log(`Testing API: ${apiUrl}`);
+        
+        // Run tests in parallel
+        await Promise.all([
+          testDirectApi(),
+          testProxyApi()
+        ]);
+        
+        log('--- Test run complete ---\n');
+      }
+      
+      // Add event listener to the button
+      runTestsBtn.addEventListener('click', runAllTests);
+      
+      // Run tests on page load
+      runAllTests();
+    });
+  </script>
+</body>
+</html>

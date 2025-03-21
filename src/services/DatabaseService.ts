@@ -338,7 +338,51 @@ class DatabaseService {
       
       console.log(`[DatabaseService] Making API request to: ${url}`);
       
-      const response = await fetch(url, {
+      // Check if we're in a CORS-sensitive environment and need to use a proxy
+      let fetchUrl = url;
+      const isProduction = typeof window !== 'undefined' && 
+        window.location.hostname.includes('vercel.app');
+      
+      // Try using CORS Anywhere proxy if in production with Vercel
+      if (isProduction) {
+        try {
+          // First attempt with direct URL
+          const response = await fetch(url, {
+            ...options,
+            credentials: 'omit', // Changed from 'include' to fix CORS issues
+            // Add mode: 'cors' explicitly
+            mode: 'cors',
+            headers: {
+              ...options.headers,
+              'Origin': window.location.origin,
+            }
+          });
+          
+          if (response.ok) {
+            // Check if the response is JSON
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+              const data = await response.json();
+              return data as ApiResponse<T>;
+            } else {
+              console.warn('[DatabaseService] Response is not JSON, converting to text');
+              const text = await response.text();
+              return { success: true, data: text as any } as ApiResponse<T>;
+            }
+          }
+          
+          // If we get here, the direct request didn't work, try with proxy
+          throw new Error('Direct request failed, trying proxy');
+        } catch (directError) {
+          console.log('[DatabaseService] Direct API request failed, trying CORS proxy', directError);
+          
+          // Fall back to using a public CORS proxy
+          fetchUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
+          console.log(`[DatabaseService] Using CORS proxy: ${fetchUrl}`);
+        }
+      }
+      
+      const response = await fetch(fetchUrl, {
         ...options,
         credentials: 'omit', // Changed from 'include' to fix CORS issues
       });
