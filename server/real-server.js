@@ -68,6 +68,9 @@ const corsOptions = {
     'http://localhost:5173',
     'http://localhost:3000', 
     'http://localhost:3001',
+    'https://build-it-records-hijjcdum3-ajsorbellos-projects.vercel.app',
+    'https://build-it-records-fur55fkas-ajsorbellos-projects.vercel.app',
+    'https://build-it-records.vercel.app',
     /\.vercel\.app$/  // Allow all vercel.app subdomains
   ],
   credentials: false, // Changed from true to false to match client's credentials: 'omit'

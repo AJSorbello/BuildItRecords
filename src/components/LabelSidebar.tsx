@@ -7,7 +7,7 @@ const drawerWidth = 240;
 
 export interface MenuItem {
   text: string;
-  icon: React.ReactNode;
+  icon: JSX.Element;
   path: string;
 }
 
@@ -100,6 +100,12 @@ const LabelSidebar: React.FC<LabelSidebarProps> = ({
       variant={variant}
       open={open}
       onClose={onClose}
+      ModalProps={{
+        // Better accessibility handling
+        keepMounted: true,
+        disableEnforceFocus: false,
+        disableAutoFocus: false
+      }}
       PaperProps={{
         sx: {
           border: 'none'

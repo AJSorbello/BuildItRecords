@@ -113,6 +113,8 @@ class DeepSidebar extends Component<DeepSidebarProps, DeepSidebarState> {
         onClose={onMobileClose}
         ModalProps={{
           keepMounted: true,
+          disableEnforceFocus: false,
+          disableAutoFocus: false
         }}
         sx={{
           display: { xs: isMobile ? 'block' : 'none', md: 'block' },
