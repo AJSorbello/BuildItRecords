@@ -187,8 +187,12 @@ class TopNavigationClass extends Component<TopNavigationProps> {
                 alignItems: 'center',
                 justifyContent: 'center',
                 width: '50px',
-                height: '50px'
+                height: '50px',
+                cursor: 'pointer'
               }}
+              onClick={onMenuClick}
+              aria-label="Toggle navigation menu"
+              role="button"
             >
               <AnimatedHamburger onClick={onMenuClick} />
             </Box>

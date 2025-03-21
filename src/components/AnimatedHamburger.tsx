@@ -25,7 +25,7 @@ const AnimatedHamburger: React.FC<AnimatedHamburgerProps> = ({ onClick }) => {
           onChange={handleClick}
         />
         <label htmlFor="menu-checkbox" id="menu-label">
-          <div id="menu-bar"></div>
+          <div id="menu-bar" data-component-name="AnimatedHamburger"></div>
         </label>
       </div>
     </div>
