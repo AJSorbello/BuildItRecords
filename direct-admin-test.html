@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Direct Admin Login</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1 {
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 10px;
+        }
+        .card {
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 20px;
+            background-color: #f9f9f9;
+        }
+        button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 10px 15px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+        }
+        #status {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #dff0d8;
+            color: #3c763d;
+        }
+        .error {
+            background-color: #f2dede;
+            color: #a94442;
+        }
+    </style>
+</head>
+<body>
+    <h1>Direct Admin Login</h1>
+    
+    <div class="card">
+        <h2>Step 1: Get Test Token</h2>
+        <p>This will get a test admin token from the API.</p>
+        <button id="getTestToken">Get Test Token</button>
+        <div id="tokenResult"></div>
+    </div>
+    
+    <div class="card">
+        <h2>Step 2: Store Token in localStorage</h2>
+        <p>This will store the token in your browser's localStorage, which is used by the React app for authentication.</p>
+        <button id="storeToken">Store Token in localStorage</button>
+    </div>
+    
+    <div class="card">
+        <h2>Step 3: Navigate to Admin Dashboard</h2>
+        <p>After storing the token, click this button to go to the admin dashboard.</p>
+        <button id="goToDashboard">Go to Admin Dashboard</button>
+    </div>
+    
+    <div id="status"></div>
+    
+    <script>
+        let testToken = '';
+        const baseUrl = window.location.origin;
+        const statusEl = document.getElementById('status');
+        
+        document.getElementById('getTestToken').addEventListener('click', async () => {
+            try {
+                statusEl.textContent = 'Getting test token...';
+                statusEl.className = '';
+                
+                const response = await fetch(`${baseUrl}/api/admin/test-login`);
+                const data = await response.json();
+                
+                if (data.success === 'success' && data.data && data.data.token) {
+                    testToken = data.data.token;
+                    document.getElementById('tokenResult').innerHTML = `
+                        <p>Token received successfully!</p>
+                        <code style="word-break: break-all;">${testToken}</code>
+                    `;
+                    statusEl.textContent = 'Token retrieved successfully!';
+                    statusEl.className = 'success';
+                } else {
+                    document.getElementById('tokenResult').innerHTML = `
+                        <p>Error getting token:</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                    statusEl.textContent = 'Error getting token.';
+                    statusEl.className = 'error';
+                }
+            } catch (error) {
+                document.getElementById('tokenResult').innerHTML = `
+                    <p>Error:</p>
+                    <pre>${error.message}</pre>
+                `;
+                statusEl.textContent = `Error: ${error.message}`;
+                statusEl.className = 'error';
+            }
+        });
+        
+        document.getElementById('storeToken').addEventListener('click', () => {
+            if (!testToken) {
+                statusEl.textContent = 'No token to store. Please get a test token first.';
+                statusEl.className = 'error';
+                return;
+            }
+            
+            localStorage.setItem('adminToken', testToken);
+            localStorage.setItem('adminUsername', 'test-admin');
+            
+            statusEl.textContent = 'Token stored in localStorage successfully!';
+            statusEl.className = 'success';
+        });
+        
+        document.getElementById('goToDashboard').addEventListener('click', () => {
+            const token = localStorage.getItem('adminToken');
+            if (!token) {
+                statusEl.textContent = 'No token in localStorage. Please store the token first.';
+                statusEl.className = 'error';
+                return;
+            }
+            
+            // Redirect to admin dashboard
+            window.location.href = `${baseUrl}/admin/dashboard`;
+        });
+    </script>
+</body>
+</html>

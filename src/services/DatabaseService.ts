@@ -279,7 +279,7 @@ class DatabaseService {
   /**
    * Get the base URL for API calls based on current environment
    */
-  private getBaseUrl(): string {
+  public getBaseUrl(): string {
     // Always use the Render API URL for consistency
     const renderApiUrl = 'https://builditrecords.onrender.com/api';
     console.log('[DatabaseService] Using Render API URL:', renderApiUrl);

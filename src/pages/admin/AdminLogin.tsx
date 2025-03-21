@@ -19,8 +19,17 @@ const AdminLogin: React.FC = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [devModeToggled, setDevModeToggled] = useState(false);
+  const isDev = process.env.NODE_ENV === 'development' || window.location.hostname === 'localhost';
 
-  const handleLogin = async (e: React.FormEvent) => {
+  console.log('AdminLogin - Environment:', {
+    NODE_ENV: process.env.NODE_ENV,
+    hostname: window.location.hostname,
+    isDev,
+    apiBaseUrl: databaseService.getBaseUrl(),
+  });
+
+  const handleLogin = async (e: any) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
@@ -29,7 +38,9 @@ const AdminLogin: React.FC = () => {
       logger.info('Attempting login with:', { 
         username,
         hasPassword: !!password,
-        apiUrl: process.env.REACT_APP_API_URL 
+        apiUrl: databaseService.getBaseUrl(),
+        env: process.env.NODE_ENV,
+        hostname: window.location.hostname
       });
 
       // First, try to login
@@ -73,6 +84,39 @@ const AdminLogin: React.FC = () => {
         }
       });
       setError(error instanceof Error ? error.message : 'An error occurred during login');
+      setLoading(false);
+    }
+  };
+
+  // Function to handle test login (dev only)
+  const handleTestLogin = async () => {
+    setError(null);
+    setLoading(true);
+    
+    try {
+      logger.info('Attempting test login');
+      
+      // Call the test login endpoint
+      const baseUrl = databaseService.getBaseUrl();
+      const response = await fetch(`${baseUrl}/api/admin/test-login`);
+      const data = await response.json();
+      
+      if (data.success !== 'success' || !data.data || !data.data.token) {
+        setError(data.message || 'Test login failed');
+        setLoading(false);
+        return;
+      }
+      
+      // Store token in localStorage
+      localStorage.setItem('adminToken', data.data.token);
+      localStorage.setItem('adminUsername', 'test-admin');
+      
+      logger.info('Test login successful');
+      setLoading(false);
+      navigate('/admin/dashboard', { replace: true });
+    } catch (error) {
+      logger.error('Test login error:', error);
+      setError(error instanceof Error ? error.message : 'An error occurred during test login');
       setLoading(false);
     }
   };
@@ -140,6 +184,43 @@ const AdminLogin: React.FC = () => {
             </Button>
           </Box>
         </form>
+
+        {isDev && (
+          <Box mt={3} textAlign="center">
+            <Button 
+              onClick={() => setDevModeToggled(!devModeToggled)} 
+              variant="text" 
+              color="secondary"
+              size="small"
+            >
+              {devModeToggled ? 'Hide Dev Options' : 'Show Dev Options'}
+            </Button>
+            
+            {devModeToggled && (
+              <Box mt={2} p={2} bgcolor="#f5f5f5" borderRadius={1}>
+                <Typography variant="subtitle2" gutterBottom>
+                  Development Tools
+                </Typography>
+                <Button
+                  onClick={handleTestLogin}
+                  variant="outlined"
+                  color="secondary"
+                  fullWidth
+                  disabled={loading}
+                  sx={{ mb: 1 }}
+                >
+                  {loading ? <CircularProgress size={24} /> : 'Use Test Login'}
+                </Button>
+                <Typography variant="caption" display="block">
+                  API Base URL: {databaseService.getBaseUrl()}
+                </Typography>
+                <Typography variant="caption" display="block">
+                  Environment: {process.env.NODE_ENV}
+                </Typography>
+              </Box>
+            )}
+          </Box>
+        )}
       </Paper>
     </Container>
   );
