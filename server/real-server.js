@@ -57,24 +57,6 @@ function generateTestReleases(labelFilter) {
   return testReleases.slice(0, 50); // Return at most 50 releases
 }
 
-function generateTestArtists() {
-  // Create a pool of test artists
-  const testArtists = [];
-  const names = ['DJ Test', 'Test Artist', 'The Testers', 'Mock Music', 'Sample Sound'];
-  
-  // Generate some test artists
-  for (let i = 0; i < 50; i++) {
-    testArtists.push({
-      id: `a-${i}`,
-      name: names[i % names.length],
-      created_at: new Date(2023, i % 12, (i % 28) + 1).toISOString(),
-      updated_at: new Date().toISOString()
-    });
-  }
-  
-  return testArtists;
-}
-
 // Configure middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -168,27 +150,33 @@ app.get('/api/artists', async (req, res) => {
       const client = await pool.connect();
       console.log('Database connection established');
       
-      // Query all artists
-      const result = await client.query('SELECT * FROM artists ORDER BY name ASC');
+      // Query artists that have releases on Build It labels
+      // Join with releases table and filter by label
+      const validLabels = ['buildit-records', 'buildit-tech', 'buildit-deep'];
+      const query = `
+        SELECT DISTINCT a.* FROM artists a
+        JOIN releases r ON a.id = r.artist_id
+        WHERE r.label IN ($1, $2, $3)
+        ORDER BY a.name ASC
+      `;
+      
+      const result = await client.query(query, validLabels);
       client.release();
       
-      console.log(`Found ${result.rows.length} artists`);
+      console.log(`Found ${result.rows.length} artists with releases on Build It labels`);
       res.json({
         success: true,
         data: result.rows,
-        message: `Found ${result.rows.length} artists`
+        message: `Found ${result.rows.length} artists with releases on Build It labels`
       });
     } catch (dbError) {
       console.error('Error connecting to database:', dbError);
       
-      // In case of database error, return test data
-      console.log('Using test data for artists');
-      const testData = generateTestArtists();
-      
+      // Return an empty array instead of test data
       res.json({
-        success: true,
-        data: testData,
-        message: `Using ${testData.length} test artists`
+        success: false,
+        data: [],
+        message: `Database error: ${dbError.message}`
       });
     }
   } catch (error) {
