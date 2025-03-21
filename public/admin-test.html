@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin API Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1 {
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 10px;
+        }
+        .card {
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 20px;
+            background-color: #f9f9f9;
+        }
+        button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 10px 15px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        pre {
+            background-color: #f0f0f0;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        input {
+            padding: 8px;
+            margin: 5px 0;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+        label {
+            display: block;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Admin API Test Page</h1>
+    
+    <div class="card">
+        <h2>Test Login API</h2>
+        <div>
+            <label for="username">Username:</label>
+            <input type="text" id="username" value="admin">
+            
+            <label for="password">Password:</label>
+            <input type="password" id="password" value="admin123">
+            
+            <button onclick="testAdminLogin()">Test Admin Login</button>
+        </div>
+        <pre id="login-result">Results will appear here...</pre>
+    </div>
+    
+    <div class="card">
+        <h2>Test Token Verification</h2>
+        <button onclick="testTokenVerification()">Verify Current Token</button>
+        <pre id="verify-result">Results will appear here...</pre>
+    </div>
+    
+    <div class="card">
+        <h2>Test Endpoint (No Auth Required)</h2>
+        <button onclick="testEndpoint()">Test Admin Test Login</button>
+        <pre id="test-result">Results will appear here...</pre>
+    </div>
+    
+    <script>
+        // Get the base URL dynamically
+        const baseUrl = window.location.origin;
+        
+        // Test regular admin login
+        async function testAdminLogin() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const resultElement = document.getElementById('login-result');
+            
+            resultElement.textContent = 'Making request...';
+            
+            try {
+                const response = await fetch(`${baseUrl}/api/admin/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                resultElement.textContent = JSON.stringify(data, null, 2);
+                
+                // Store token if available
+                if (data.success && data.data && data.data.token) {
+                    localStorage.setItem('adminToken', data.data.token);
+                    console.log('Token stored in localStorage');
+                } else if (data.success && data.token) {
+                    localStorage.setItem('adminToken', data.token);
+                    console.log('Token stored in localStorage');
+                }
+            } catch (error) {
+                resultElement.textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        // Test token verification
+        async function testTokenVerification() {
+            const resultElement = document.getElementById('verify-result');
+            const token = localStorage.getItem('adminToken');
+            
+            if (!token) {
+                resultElement.textContent = 'No token found in localStorage. Please login first.';
+                return;
+            }
+            
+            resultElement.textContent = 'Making request...';
+            
+            try {
+                const response = await fetch(`${baseUrl}/api/admin/verify-admin-token`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                const data = await response.json();
+                resultElement.textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                resultElement.textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        // Test the no-auth test endpoint
+        async function testEndpoint() {
+            const resultElement = document.getElementById('test-result');
+            
+            resultElement.textContent = 'Making request...';
+            
+            try {
+                const response = await fetch(`${baseUrl}/api/admin/test-login`);
+                const data = await response.json();
+                resultElement.textContent = JSON.stringify(data, null, 2);
+                
+                // Store token if available
+                if (data.success && data.data && data.data.token) {
+                    localStorage.setItem('adminToken', data.data.token);
+                    console.log('Test token stored in localStorage');
+                }
+            } catch (error) {
+                resultElement.textContent = `Error: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>

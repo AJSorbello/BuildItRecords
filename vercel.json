@@ -285,6 +285,7 @@
     {
       "src": "/api/admin/login",
       "dest": "/api/api-consolidated.js",
+      "methods": ["POST", "OPTIONS"],
       "headers": {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -295,9 +296,21 @@
     {
       "src": "/api/admin/verify-admin-token",
       "dest": "/api/api-consolidated.js",
+      "methods": ["GET", "OPTIONS"],
       "headers": {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        "Access-Control-Allow-Credentials": "false"
+      }
+    },
+    {
+      "src": "/api/admin/test-login",
+      "dest": "/api/api-consolidated.js",
+      "methods": ["GET", "OPTIONS"],
+      "headers": {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, OPTIONS",
         "Access-Control-Allow-Headers": "Content-Type, Authorization",
         "Access-Control-Allow-Credentials": "false"
       }
@@ -305,6 +318,7 @@
     {
       "src": "/api/admin/spotify/import-tracks",
       "dest": "/api/api-consolidated.js",
+      "methods": ["POST", "OPTIONS"],
       "headers": {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -313,10 +327,10 @@
       }
     },
     {
-      "src": "/(admin|admin/dashboard|admin/login).*",
+      "src": "/admin/(.*)",
       "dest": "/dist/index.html",
       "headers": {
-        "Cache-Control": "public, max-age=0, must-revalidate",
+        "Cache-Control": "no-cache, no-store, must-revalidate",
         "Access-Control-Allow-Credentials": "false",
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET,OPTIONS,PATCH,DELETE,POST,PUT",

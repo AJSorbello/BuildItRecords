@@ -997,6 +997,95 @@ class DatabaseService {
       return [];
     }
   }
+
+  /**
+   * Admin login with username and password
+   * @param username The admin username
+   * @param password The admin password
+   * @returns Login response with token if successful
+   */
+  async adminLogin(
+    username: string,
+    password: string
+  ): Promise<AdminLoginResponse> {
+    try {
+      console.log(`[DatabaseService] Attempting admin login for user: ${username}`);
+      
+      // Different API path based on environment
+      const apiPath = this.baseUrl.includes('/api') ? '/admin/login' : '/api/admin/login';
+      
+      // Make POST request with credentials
+      const response = await fetch(this.formatUrl(this.baseUrl, apiPath), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ username, password })
+      });
+      
+      // Parse response
+      const data = await response.json();
+      
+      console.log('[DatabaseService] Admin login response:', data);
+      
+      return {
+        success: data.success || false,
+        token: data.data?.token || data.token,
+        message: data.message || (data.success ? 'Login successful' : 'Login failed')
+      };
+    } catch (error) {
+      console.error('[DatabaseService] Admin login error:', error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Login request failed'
+      };
+    }
+  }
+
+  /**
+   * Verify admin token stored in localStorage
+   * @returns Verification response indicating if the token is valid
+   */
+  async verifyAdminToken(): Promise<TokenVerificationResponse> {
+    try {
+      console.log('[DatabaseService] Verifying admin token');
+      
+      // Get token from localStorage
+      const token = localStorage.getItem('adminToken');
+      
+      if (!token) {
+        console.warn('[DatabaseService] No admin token found in localStorage');
+        return { verified: false, message: 'No token found' };
+      }
+      
+      // Different API path based on environment
+      const apiPath = this.baseUrl.includes('/api') ? '/admin/verify-admin-token' : '/api/admin/verify-admin-token';
+      
+      // Make GET request with token in Authorization header
+      const response = await fetch(this.formatUrl(this.baseUrl, apiPath), {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      // Parse response
+      const data = await response.json();
+      
+      console.log('[DatabaseService] Token verification response:', data);
+      
+      return {
+        verified: data.success || false,
+        message: data.message || (data.success ? 'Token verified' : 'Token verification failed')
+      };
+    } catch (error) {
+      console.error('[DatabaseService] Token verification error:', error);
+      return {
+        verified: false,
+        message: error instanceof Error ? error.message : 'Verification request failed'
+      };
+    }
+  }
 }
 
 // Export the singleton instance as a named export
