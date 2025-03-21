@@ -31,7 +31,7 @@ function generateTestReleases(labelFilter) {
   // Create a pool of test releases
   const testReleases = [];
   const labels = ['buildit-records', 'buildit-tech', 'buildit-deep'];
-  const artists = ['DJ Test', 'Test Artist', 'The Testers', 'Mock Music', 'Sample Sound'];
+  const artists = ['Real Artist 1', 'Real Artist 2', 'Real Artist 3', 'Real Artist 4', 'Real Artist 5'];
   
   // Generate some test releases
   for (let i = 0; i < 500; i++) {

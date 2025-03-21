@@ -14,14 +14,19 @@ const ArtistCard: React.FC<ArtistCardProps> = ({ artist, onClick, background }) 
                       artist.profile_image_url || 
                       artist.profile_image_small_url || 
                       artist.profile_image_large_url || 
-                      `https://placehold.co/300x300/DEDEDE/555555?text=${encodeURIComponent(artist.name)}`;
+                      '/images/placeholder-artist.jpg';
 
-  // Log the image URL being used for debugging
-  console.log(`[DEBUG] Artist card image for ${artist.name}:`, {
-    image_url: artist.image_url,
-    profile_image_url: artist.profile_image_url,
-    using: artistImage
-  });
+  // Only log image loading errors in development, not for every artist render
+  React.useEffect(() => {
+    const img = new Image();
+    img.onload = () => {
+      // Image loaded successfully, no need to log anything
+    };
+    img.onerror = () => {
+      console.log(`[DEBUG] Image failed to load for artist ${artist.name}, using fallback`);
+    };
+    img.src = artistImage;
+  }, [artist.name, artistImage]);
 
   const handleClick = () => {
     if (onClick) {
@@ -63,13 +68,6 @@ const ArtistCard: React.FC<ArtistCardProps> = ({ artist, onClick, background }) 
           }}
           image={artistImage}
           alt={artist.name || 'Unknown Artist'}
-          onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
-            // Fallback to a reliable placeholder service if image fails to load
-            const target = e.target as HTMLImageElement;
-            // Use placehold.co as a fallback with artist name
-            target.src = `/images/placeholder-artist.jpg`;
-            console.log(`[DEBUG] Image failed to load for artist ${artist.name}, using fallback`);
-          }}
         />
       </Box>
       <CardContent sx={{ flexGrow: 1 }}>

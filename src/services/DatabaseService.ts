@@ -240,6 +240,9 @@ class DatabaseService {
                 processedArtist.image_url = processedArtist.profile_image_url;
               } else if (processedArtist.profile_image_large_url) {
                 processedArtist.image_url = processedArtist.profile_image_large_url;
+              } else {
+                // Use a default placeholder image if nothing else is available
+                processedArtist.image_url = '/images/placeholder-artist.jpg';
               }
             }
             
@@ -736,7 +739,7 @@ class DatabaseService {
           processedArtist.image_url = processedArtist.profile_image_large_url;
         } else {
           // Use a default placeholder image if nothing else is available
-          processedArtist.image_url = 'https://via.placeholder.com/500?text=Artist+Image';
+          processedArtist.image_url = '/images/placeholder-artist.jpg';
         }
       }
       

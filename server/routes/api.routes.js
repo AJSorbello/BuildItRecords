@@ -23,8 +23,8 @@ const FALLBACK_TEST_DATA = {
     updated_at: new Date().toISOString(),
     artist: {
       id: (i % 9) + 1,
-      name: `Test Artist ${(i % 9) + 1}`,
-      image_url: `https://via.placeholder.com/400x400.png?text=Artist+${(i % 9) + 1}`,
+      name: `Artist ${(i % 9) + 1}`,
+      image_url: `/images/placeholder-artist.jpg`,
       spotify_url: `https://open.spotify.com/artist/${Math.random().toString(36).substring(2, 10)}`,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
@@ -33,9 +33,9 @@ const FALLBACK_TEST_DATA = {
   
   artists: Array(9).fill().map((_, i) => ({
     id: i + 1,
-    name: i === 0 ? "Test Artist" : (i === 1 ? "Alicia Moore" : `Test Artist ${i}`),
+    name: i === 0 ? "Jane Doe" : (i === 1 ? "John Smith" : `Artist ${i}`),
     // Using direct URLs to valid images that are guaranteed to work
-    image_url: `https://via.placeholder.com/400x400.png?text=Artist+${i + 1}`,
+    image_url: `/images/placeholder-artist.jpg`,
     spotify_url: `https://open.spotify.com/artist/${Math.random().toString(36).substring(2, 10)}`,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
@@ -240,7 +240,7 @@ router.get('/releases', async (req, res) => {
           // Make sure there's an artist with an image_url
           artist: {
             ...release.artist,
-            image_url: release.artist?.image_url || `https://via.placeholder.com/400x400.png?text=Artist+${release.artist?.id || 'Unknown'}`
+            image_url: release.artist?.image_url || `/images/placeholder-artist.jpg`
           }
         }));
       
@@ -458,7 +458,7 @@ router.get('/artists', async (req, res) => {
         .map(artist => ({
           ...artist,
           // Ensure image URLs follow a consistent format
-          image_url: artist.image_url || `https://via.placeholder.com/400x400.png?text=Artist+${artist.id}`,
+          image_url: artist.image_url || `/images/placeholder-artist.jpg`,
           // Ensure Spotify URLs are properly formatted
           spotify_url: artist.spotify_url && !artist.spotify_url.startsWith('https://') 
             ? `https://open.spotify.com/artist/${artist.spotify_url}` 
@@ -668,7 +668,7 @@ router.get('/artist/:id', async (req, res) => {
       // Ensure artist has consistent image URL
       const artistWithReleases = {
         ...artist,
-        image_url: artist.image_url || `https://via.placeholder.com/400x400.png?text=Artist+${artist.id}`,
+        image_url: artist.image_url || `/images/placeholder-artist.jpg`,
         spotify_url: artist.spotify_url && !artist.spotify_url.startsWith('https://') 
           ? `https://open.spotify.com/artist/${artist.spotify_url}` 
           : artist.spotify_url,

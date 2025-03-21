@@ -94,7 +94,7 @@ const Home = () => {
                   height: 250,
                   objectFit: 'cover',
                 }}
-                image={track.albumArt || 'https://via.placeholder.com/300'}
+                image={track.albumArt || '/images/placeholder-release.jpg'}
                 alt={track.title}
               />
               <CardContent sx={{ flexGrow: 1 }}>
