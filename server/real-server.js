@@ -88,7 +88,7 @@ const corsOptions = {
     'http://localhost:3001',
     /\.vercel\.app$/  // Allow all vercel.app subdomains
   ],
-  credentials: true, // Allow credentials (cookies, authorization headers, etc.)
+  credentials: false, // Changed from true to false to match client's credentials: 'omit'
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 };
@@ -121,7 +121,7 @@ app.options('*', (req, res) => {
   res.header('Access-Control-Allow-Origin', allowOrigin);
   res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Content-Length, X-Requested-With');
-  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Credentials', 'false');
   res.sendStatus(200);
 });
 
