@@ -11,6 +11,7 @@ import {
   Typography,
   Divider,
   useMediaQuery,
+  SvgIcon
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -20,43 +21,55 @@ import AlbumIcon from '@mui/icons-material/Album';
 import PeopleIcon from '@mui/icons-material/People';
 import QueueMusicIcon from '@mui/icons-material/QueueMusic';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import LinkedInIcon from '@mui/icons-material/LinkedIn';
-import GitHubIcon from '@mui/icons-material/GitHub';
-import WebIcon from '@mui/icons-material/Web';
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
 import CloseIcon from '@mui/icons-material/Close';
 import FacebookIcon from '@mui/icons-material/Facebook';
 import InstagramIcon from '@mui/icons-material/Instagram';
 import YouTubeIcon from '@mui/icons-material/YouTube';
-import SoundCloudIcon from './SoundCloudIcon';
+
+// Custom SoundCloud icon
+const SoundCloudIcon = (props: any) => (
+  <SvgIcon {...props} viewBox="0 0 24 24">
+    <path d="M11.56 8.87V17h8.76c1.85 0 3.36-1.5 3.36-3.34 0-1.84-1.51-3.34-3.36-3.34-.07 0-.13 0-.2.01-.3-3.28-3.05-5.86-6.42-5.86-2.4 0-4.5 1.32-5.6 3.28-.17-.03-.34-.05-.51-.05-1.85 0-3.36 1.5-3.36 3.34 0 1.84 1.51 3.34 3.36 3.34h.87V8.87c0-.46.37-.83.83-.83.46 0 .83.37.83.83z"/>
+  </SvgIcon>
+);
 
 const drawerWidth = 240;
 
 interface RecordsSidebarProps {
-  open: boolean;
-  onClose: () => void;
+  open?: boolean;
+  onClose?: () => void;
   isMobile?: boolean;
   variant?: 'permanent' | 'persistent' | 'temporary';
   label?: 'records' | 'tech' | 'deep';
   sx?: object;
-  navigate: any;
-  location: any;
+  mobileOpen?: boolean; 
+  onMobileClose?: () => void;
 }
 
-const RecordsSidebar: React.FC<RecordsSidebarProps> = ({
-  open,
-  onClose,
-  isMobile = false,
-  variant = 'temporary' as 'temporary' | 'permanent' | 'persistent',
-  label = 'records',
-  sx,
-  navigate,
-  location,
-}) => {
-  const [socialOpen, setSocialOpen] = useState(false);
+// Simple RecordsSidebar that doesn't rely on hooks
+const RecordsSidebar: React.FC<RecordsSidebarProps> = (props) => {
+  const {
+    open = false,
+    onClose = () => {},
+    isMobile = false,
+    variant = 'temporary',
+    label = 'records',
+    sx = {},
+    mobileOpen,
+    onMobileClose,
+  } = props;
+
+  // Use the hook pattern directly in this component
+  const navigate = useNavigate();
+  const location = useLocation();
   const theme = useTheme();
+  const [socialOpen, setSocialOpen] = useState(false);
+
+  // Handle props coming from different components
+  const isOpen = open || mobileOpen || false;
+  const handleClose = onClose || onMobileClose || (() => {});
 
   const menuItems = [
     { text: 'Home', icon: <HomeIcon />, path: '/' },
@@ -69,7 +82,7 @@ const RecordsSidebar: React.FC<RecordsSidebarProps> = ({
   const handleNavigation = (path: string) => {
     navigate(path);
     if (isMobile) {
-      onClose();
+      handleClose();
     }
   };
 
@@ -77,12 +90,18 @@ const RecordsSidebar: React.FC<RecordsSidebarProps> = ({
     setSocialOpen(!socialOpen);
   };
 
+  // Safe path matching that handles undefined location
+  const isActivePath = (itemPath: string) => {
+    if (!location || typeof location.pathname !== 'string') return false;
+    return location.pathname === itemPath;
+  };
+
   const drawer = (
     <Box sx={{
       height: '100%',
       display: 'flex',
       flexDirection: 'column',
-      backgroundColor: labelColors[label],
+      backgroundColor: labelColors[label] || '#000000',
       color: '#fff',
       ...sx
     }}>
@@ -98,8 +117,9 @@ const RecordsSidebar: React.FC<RecordsSidebarProps> = ({
           <IconButton 
             edge="start" 
             color="inherit" 
-            onClick={onClose}
+            onClick={handleClose}
             sx={{ color: '#fff' }}
+            aria-label="Close menu"
           >
             <CloseIcon />
           </IconButton>
@@ -119,7 +139,7 @@ const RecordsSidebar: React.FC<RecordsSidebarProps> = ({
             key={item.text}
             onClick={() => handleNavigation(item.path)}
             sx={{
-              bgcolor: location.pathname === item.path ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+              bgcolor: isActivePath(item.path) ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
               '&:hover': {
                 bgcolor: 'rgba(255, 255, 255, 0.2)',
               }
@@ -133,47 +153,25 @@ const RecordsSidebar: React.FC<RecordsSidebarProps> = ({
         ))}
       </List>
       
-      <Box sx={{ flexGrow: 1 }} />
-      
-      <Divider sx={{ bgcolor: 'rgba(255, 255, 255, 0.2)' }} />
+      <Divider sx={{ my: 2, backgroundColor: 'rgba(255,255,255,0.2)' }} />
       
       <List>
-        <ListItem button onClick={toggleSocial}>
-          <ListItemIcon sx={{ color: '#fff' }}>
-            <WebIcon />
-          </ListItemIcon>
-          <ListItemText primary="Social & Links" />
+        <ListItem button onClick={toggleSocial} aria-expanded={socialOpen} aria-controls="social-media-list">
+          <ListItemText primary={
+            <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+              Social Media
+            </Typography>
+          } />
           {socialOpen ? <ExpandLess /> : <ExpandMore />}
         </ListItem>
         
         <Collapse in={socialOpen} timeout="auto" unmountOnExit>
-          <List component="div" disablePadding>
-            <ListItem 
-              button 
-              sx={{ pl: 4 }}
-              onClick={() => window.open('https://github.com/AJSorbello', '_blank')}
-            >
-              <ListItemIcon sx={{ color: '#fff' }}>
-                <GitHubIcon />
-              </ListItemIcon>
-              <ListItemText primary="GitHub" />
-            </ListItem>
-            
-            <ListItem 
-              button 
-              sx={{ pl: 4 }}
-              onClick={() => window.open('https://www.linkedin.com/in/aj-sorbello-833b5924a/', '_blank')}
-            >
-              <ListItemIcon sx={{ color: '#fff' }}>
-                <LinkedInIcon />
-              </ListItemIcon>
-              <ListItemText primary="LinkedIn" />
-            </ListItem>
-            
+          <List component="div" id="social-media-list" disablePadding>
             <ListItem 
               button 
               sx={{ pl: 4 }}
               onClick={() => window.open('https://www.facebook.com/BuildItRecords/', '_blank')}
+              aria-label="Visit Facebook (opens in new tab)"
             >
               <ListItemIcon sx={{ color: '#fff' }}>
                 <FacebookIcon />
@@ -185,6 +183,7 @@ const RecordsSidebar: React.FC<RecordsSidebarProps> = ({
               button 
               sx={{ pl: 4 }}
               onClick={() => window.open('https://www.instagram.com/builditrecords/', '_blank')}
+              aria-label="Visit Instagram (opens in new tab)"
             >
               <ListItemIcon sx={{ color: '#fff' }}>
                 <InstagramIcon />
@@ -196,6 +195,7 @@ const RecordsSidebar: React.FC<RecordsSidebarProps> = ({
               button 
               sx={{ pl: 4 }}
               onClick={() => window.open('https://www.youtube.com/builditrecords', '_blank')}
+              aria-label="Visit YouTube (opens in new tab)"
             >
               <ListItemIcon sx={{ color: '#fff' }}>
                 <YouTubeIcon />
@@ -207,6 +207,7 @@ const RecordsSidebar: React.FC<RecordsSidebarProps> = ({
               button 
               sx={{ pl: 4 }}
               onClick={() => window.open('https://soundcloud.com/builditrecords', '_blank')}
+              aria-label="Visit SoundCloud (opens in new tab)"
             >
               <ListItemIcon sx={{ color: '#fff' }}>
                 <SoundCloudIcon />
@@ -222,12 +223,15 @@ const RecordsSidebar: React.FC<RecordsSidebarProps> = ({
   return (
     <Drawer
       variant={variant}
-      open={open}
-      onClose={onClose}
+      open={isOpen}
+      onClose={handleClose}
       ModalProps={{
         keepMounted: true,
         disableEnforceFocus: false,
-        disableAutoFocus: false
+        disableAutoFocus: false,
+        // Improve accessibility
+        closeAfterTransition: true,
+        'aria-labelledby': 'records-sidebar-title',
       }}
       sx={{
         display: { xs: 'block', md: 'block' },
@@ -236,12 +240,19 @@ const RecordsSidebar: React.FC<RecordsSidebarProps> = ({
         '& .MuiDrawer-paper': {
           width: drawerWidth,
           boxSizing: 'border-box',
-          backgroundColor: labelColors[label],
+          backgroundColor: labelColors[label] || '#000000',
           boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
           border: 'none'
         },
       }}
     >
+      <Typography 
+        id="records-sidebar-title" 
+        variant="body2"
+        sx={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)', clipPath: 'inset(50%)' }}
+      >
+        Build It Records Navigation Menu
+      </Typography>
       {drawer}
     </Drawer>
   );

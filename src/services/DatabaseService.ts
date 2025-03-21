@@ -366,8 +366,8 @@ class DatabaseService {
     if (typeof window !== 'undefined' && 
         (window.location.hostname.includes('vercel.app') || 
          window.location.hostname.includes('builditrecords.com'))) {
-      // Always use the Render API for Vercel deployments
-      const renderApiUrl = 'https://builditrecords.onrender.com';
+      // Always use the Render API for Vercel deployments - add /api to match apiConfig.ts
+      const renderApiUrl = 'https://builditrecords.onrender.com/api';
       console.log('Vercel deployment detected - using Render API URL:', renderApiUrl);
       return renderApiUrl;
     }
