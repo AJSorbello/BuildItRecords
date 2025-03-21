@@ -63,9 +63,12 @@ const RecordsSidebar: React.FC<RecordsSidebarProps> = (props) => {
 
   // Use the hook pattern directly in this component
   const navigate = useNavigate();
-  const location = useLocation();
+  const locationHook = useLocation();
   const theme = useTheme();
   const [socialOpen, setSocialOpen] = useState(false);
+
+  // Safely extract location or provide a dummy if not available
+  const location = locationHook || { pathname: '' };
 
   // Handle props coming from different components
   const isOpen = open || mobileOpen || false;
@@ -92,8 +95,12 @@ const RecordsSidebar: React.FC<RecordsSidebarProps> = (props) => {
 
   // Safe path matching that handles undefined location
   const isActivePath = (itemPath: string) => {
-    if (!location || typeof location.pathname !== 'string') return false;
-    return location.pathname === itemPath;
+    try {
+      return location.pathname === itemPath;
+    } catch (error) {
+      console.warn('Error checking active path:', error);
+      return false;
+    }
   };
 
   const drawer = (
