@@ -376,9 +376,41 @@ class DatabaseService {
         } catch (directError) {
           console.log('[DatabaseService] Direct API request failed, trying CORS proxy', directError);
           
-          // Fall back to using a public CORS proxy
-          fetchUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
+          // Try with a different CORS proxy - more reliable than corsproxy.io
+          fetchUrl = `https://cors-anywhere.herokuapp.com/${url}`;
           console.log(`[DatabaseService] Using CORS proxy: ${fetchUrl}`);
+          
+          // If the first proxy fails, try another one
+          try {
+            const response = await fetch(fetchUrl, {
+              ...options,
+              credentials: 'omit',
+              headers: {
+                ...options.headers,
+                'X-Requested-With': 'XMLHttpRequest', // Required by CORS Anywhere
+              }
+            });
+            
+            if (response.ok) {
+              const contentType = response.headers.get('content-type');
+              if (contentType && contentType.includes('application/json')) {
+                const data = await response.json();
+                return data as ApiResponse<T>;
+              } else {
+                console.warn('[DatabaseService] Response from proxy is not JSON, converting to text');
+                const text = await response.text();
+                return { success: true, data: text as any } as ApiResponse<T>;
+              }
+            }
+            
+            // If even the proxy failed, try one final fallback
+            fetchUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+            console.log(`[DatabaseService] Using final CORS proxy: ${fetchUrl}`);
+          } catch (secondProxyError) {
+            console.error('[DatabaseService] Second proxy also failed:', secondProxyError);
+            fetchUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+            console.log(`[DatabaseService] Using final CORS proxy: ${fetchUrl}`);
+          }
         }
       }
       

@@ -263,6 +263,68 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Database statistics endpoint to count records
+app.get('/api/db-stats', async (req, res) => {
+  try {
+    console.log('Fetching database statistics...');
+    
+    // Test database connection
+    const client = await pool.connect();
+    console.log('Database connection established for stats');
+    
+    // Count records in main tables
+    const releaseCount = await client.query('SELECT COUNT(*) FROM releases');
+    const artistCount = await client.query('SELECT COUNT(*) FROM artists');
+    
+    // Count releases by label
+    const releasesByLabel = await client.query(`
+      SELECT label, COUNT(*) 
+      FROM releases 
+      GROUP BY label 
+      ORDER BY COUNT(*) DESC
+    `);
+    
+    // Count artists with releases by label
+    const artistsByLabel = await client.query(`
+      SELECT r.label, COUNT(DISTINCT a.id) as artist_count
+      FROM artists a
+      JOIN releases r ON a.id = r.artist_id
+      GROUP BY r.label
+      ORDER BY COUNT(DISTINCT a.id) DESC
+    `);
+    
+    // Count artists that have the label_id field set directly
+    const artistsWithDirectLabel = await client.query(`
+      SELECT label_id, COUNT(*) 
+      FROM artists 
+      WHERE label_id IS NOT NULL 
+      GROUP BY label_id
+    `);
+    
+    client.release();
+    
+    res.json({
+      success: true,
+      stats: {
+        releases: parseInt(releaseCount.rows[0].count, 10),
+        artists: parseInt(artistCount.rows[0].count, 10),
+        releasesByLabel: releasesByLabel.rows,
+        artistsByLabel: artistsByLabel.rows,
+        artistsWithDirectLabel: artistsWithDirectLabel.rows
+      },
+      message: 'Database statistics retrieved successfully',
+      dbHost: process.env.DB_HOST.replace(/^.*?([^.]+\.[^.]+\.[^.]+)$/, '***.$1') // Redact most of hostname for security
+    });
+  } catch (error) {
+    console.error('Error fetching database stats:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      message: 'Failed to retrieve database statistics'
+    });
+  }
+});
+
 // Catch-all for unmatched routes
 app.use('*', (req, res) => {
   res.status(404).json({ 
