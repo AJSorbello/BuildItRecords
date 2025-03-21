@@ -8,6 +8,7 @@ import DeepSidebar from './DeepSidebar';
 import RecordsSidebar from './RecordsSidebar';
 import TechSidebar from './TechSidebar';
 import LogoHeader from './LogoHeader';
+import ErrorBoundary from './ErrorBoundary';
 
 import BuildItRecordsLogo from '../assets/png/records/BuildItRecords.png';
 import BuildItTechLogo from '../assets/png/tech/BuildIt_Tech.png';
@@ -26,11 +27,28 @@ const getLogo = (label: string) => {
 
 // Wrapper component to get location and media query
 const LayoutWrapper = () => {
-  const location = useLocation();
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  
-  return <LayoutFC location={location} isMobile={isMobile} />;
+  try {
+    const location = useLocation();
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+    
+    return (
+      <ErrorBoundary>
+        <LayoutFC location={location} isMobile={isMobile} />
+      </ErrorBoundary>
+    );
+  } catch (error) {
+    console.error('Error in LayoutWrapper:', error);
+    // Fallback to a basic layout if location hooks fail
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+    
+    return (
+      <ErrorBoundary>
+        <LayoutFC location={{ pathname: '/' }} isMobile={isMobile} />
+      </ErrorBoundary>
+    );
+  }
 };
 
 interface LayoutProps {
@@ -41,50 +59,82 @@ interface LayoutProps {
 // Convert to functional component
 const LayoutFC: React.FC<LayoutProps> = ({ location, isMobile }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const navigate = (path: string) => {
+    try {
+      window.location.href = path;
+    } catch (error) {
+      console.error('Navigation error:', error);
+    }
+  };
 
   const handleDrawerToggle = () => {
     setMobileOpen(prevState => !prevState);
   };
 
   const renderSidebar = () => {
-    const path = location.pathname;
-    const pathLabel = (path.split('/')[1] || 'records').toUpperCase();
-    const isAdminRoute = path.startsWith('/admin');
+    try {
+      const path = location?.pathname || '/';
+      const pathLabel = (path.split('/')[1] || 'records').toUpperCase();
+      const isAdminRoute = path.startsWith('/admin');
 
-    if (isAdminRoute) return null;
+      if (isAdminRoute) return null;
 
-    const sidebarProps = {
-      mobileOpen,
-      onMobileClose: handleDrawerToggle,
-      label: pathLabel.toLowerCase() as 'records' | 'tech' | 'deep'
-    };
-
-    switch (pathLabel) {
-      case 'TECH':
-        return <TechSidebar {...sidebarProps} />;
-      case 'DEEP':
-        return <DeepSidebar {...sidebarProps} />;
-      default:
-        return <RecordsSidebar {...sidebarProps} />;
+      switch (pathLabel) {
+        case 'TECH':
+          return (
+            <TechSidebar
+              mobileOpen={mobileOpen}
+              onMobileClose={handleDrawerToggle}
+              isMobile={isMobile}
+            />
+          );
+        case 'DEEP':
+          return (
+            <DeepSidebar
+              mobileOpen={mobileOpen}
+              onMobileClose={handleDrawerToggle}
+              isMobile={isMobile}
+            />
+          );
+        default:
+          return (
+            <RecordsSidebar
+              mobileOpen={mobileOpen}
+              onMobileClose={handleDrawerToggle}
+              isMobile={isMobile}
+            />
+          );
+      }
+    } catch (error) {
+      console.error('Error rendering sidebar:', error);
+      return <RecordsSidebar mobileOpen={mobileOpen} onMobileClose={handleDrawerToggle} />;
     }
   };
 
-  const path = location.pathname;
-  const pathLabel = (path.split('/')[1] || 'records').toUpperCase();
-  const labelMap = {
-    'RECORDS': 'buildit-records',
-    'TECH': 'buildit-tech',
-    'DEEP': 'buildit-deep'
-  };
-  const currentLabel = pathLabel;
-  const labelId = labelMap[pathLabel as keyof typeof labelMap] || 'buildit-records';
-  const isAdminRoute = path.startsWith('/admin');
+  let path = '/';
+  let pathLabel = 'RECORDS';
+  let labelId = 'buildit-records';
+  let isAdminRoute = false;
+  
+  try {
+    path = location?.pathname || '/';
+    pathLabel = (path.split('/')[1] || 'records').toUpperCase();
+    const labelMap = {
+      'RECORDS': 'buildit-records',
+      'TECH': 'buildit-tech',
+      'DEEP': 'buildit-deep'
+    };
+    labelId = labelMap[pathLabel as keyof typeof labelMap] || 'buildit-records';
+    isAdminRoute = path.startsWith('/admin');
+  } catch (error) {
+    console.error('Error parsing path:', error);
+  }
 
   // Logging outside the render phase using setTimeout to avoid warnings
   if (process.env.NODE_ENV === 'development') {
     // Using setTimeout with 0 delay to move the console.log outside the render phase
     setTimeout(() => {
-      console.log('Layout rendered:', { path, currentLabel, labelId, isAdminRoute, isMobile });
+      console.log('Layout rendered:', { path, pathLabel, labelId, isAdminRoute, isMobile });
     }, 0);
   }
 
@@ -95,11 +145,11 @@ const LayoutFC: React.FC<LayoutProps> = ({ location, isMobile }) => {
       {!isAdminRoute && (
         <>
           <TopNavigation 
-            logo={getLogo(currentLabel)} 
+            logo={getLogo(pathLabel)} 
             isMobile={isMobile}
             onMenuClick={handleDrawerToggle}
           />
-          {!isMobile && <LogoHeader label={currentLabel} />}
+          {!isMobile && <LogoHeader label={pathLabel} />}
           {renderSidebar()}
         </>
       )}
