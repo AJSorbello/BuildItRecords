@@ -70,6 +70,7 @@ const corsOptions = {
     'http://localhost:3001',
     'https://build-it-records-hijjcdum3-ajsorbellos-projects.vercel.app',
     'https://build-it-records-fur55fkas-ajsorbellos-projects.vercel.app',
+    'https://build-it-records-b8gg0fjtb-ajsorbellos-projects.vercel.app',
     'https://build-it-records.vercel.app',
     /\.vercel\.app$/  // Allow all vercel.app subdomains
   ],

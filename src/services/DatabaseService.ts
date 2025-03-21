@@ -280,33 +280,10 @@ class DatabaseService {
    * Get the base URL for API calls based on current environment
    */
   private getBaseUrl(): string {
-    // Check if we're in a Vercel deployment
-    if (typeof window !== 'undefined' && 
-        (window.location.hostname.includes('vercel.app') || 
-         window.location.hostname.includes('builditrecords.com'))) {
-      // Always use the Render API for Vercel deployments - add /api to match apiConfig.ts
-      const renderApiUrl = 'https://builditrecords.onrender.com/api';
-      console.log('Vercel deployment detected - using Render API URL:', renderApiUrl);
-      return renderApiUrl;
-    }
-    
-    // Try to use the current window origin in the browser to adapt to any port
-    if (typeof window !== 'undefined') {
-      // For local development using localhost:3001 directly
-      if (window.location.hostname === 'localhost') {
-        const localApiUrl = `http://localhost:3001/api`;
-        console.log('[DatabaseService] Using local development API URL:', localApiUrl);
-        return localApiUrl;
-      }
-    
-      // Use window origin for other environments
-      const origin = window.location.origin;
-      console.log('[DatabaseService] Using window origin for API URL:', `${origin}/api`);
-      return `${origin}/api`;
-    }
-    
-    // Fallback to localhost for SSR
-    return 'http://localhost:3001/api';
+    // Always use the Render API URL for consistency
+    const renderApiUrl = 'https://builditrecords.onrender.com/api';
+    console.log('[DatabaseService] Using Render API URL:', renderApiUrl);
+    return renderApiUrl;
   }
 
   /**

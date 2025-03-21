@@ -10,6 +10,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableCellProps,
   TableContainer,
   TableHead,
   TableRow,
@@ -377,7 +378,7 @@ export const ReleaseModal = ({ open, onClose, release, onArtistClick }: ReleaseM
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={3} style={{ textAlign: 'center' }}>
+                      <TableCell align="center" sx={{ colSpan: 3 }}>
                         No tracks available
                       </TableCell>
                     </TableRow>
