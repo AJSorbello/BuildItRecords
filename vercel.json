@@ -349,6 +349,12 @@
       }
     }
   ],
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/$1" },
+    { "source": "/admin", "destination": "/dist/index.html" },
+    { "source": "/admin/(.*)", "destination": "/dist/index.html" },
+    { "source": "/(.*)", "destination": "/dist/$1" }
+  ],
   "env": {
     "NODE_ENV": "production",
     "DB_SSL": "true",
