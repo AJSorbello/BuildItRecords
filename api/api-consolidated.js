@@ -6,6 +6,8 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 const { createClient } = require('@supabase/supabase-js');
 const { addCorsHeaders, getPool, formatResponse, handleOptions } = require('./utils/db-utils');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 /* eslint-enable @typescript-eslint/no-var-requires */
 
 // Initialize database connection for PostgreSQL direct access
@@ -44,6 +46,25 @@ module.exports = async (req, res) => {
   if (resourceType === 'releases') resourceType = 'release';
   
   console.log(`Resource type: ${resourceType}`);
+  
+  // Special handling for admin routes
+  if (pathSegments[1] === 'admin') {
+    console.log('Admin route detected:', pathSegments);
+    
+    if (pathSegments[2] === 'login' && req.method === 'POST') {
+      return handleAdminLogin(req, res);
+    }
+    
+    if (pathSegments[2] === 'verify-admin-token' && req.method === 'GET') {
+      return handleVerifyAdminToken(req, res);
+    }
+    
+    if (pathSegments[2] === 'spotify' && pathSegments[3] === 'import-tracks' && req.method === 'POST') {
+      return handleSpotifyImport(req, res);
+    }
+    
+    return res.status(404).json(formatResponse('error', 'Admin endpoint not found'));
+  }
   
   // Check if there's a specific ID
   const resourceId = pathSegments[2];
@@ -497,53 +518,72 @@ async function handleSingleArtist(req, res, artistId) {
     });
   }
   
-  // Initialize Supabase client
-  const supabase = createClient(supabaseUrl, supabaseKey);
-  
-  // Support both UUID and Spotify ID formats
-  let query;
-  const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(artistId);
-  
-  if (isUUID) {
-    // If the ID is a UUID, use the id column
-    query = supabase
+  try {
+    // Initialize Supabase client
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    
+    // First attempt: Try to get release with artist info using nested select
+    try {
+      const { data: artist, error } = await supabase
+        .from('artists')
+        .select('*')
+        .eq('id', artistId)
+        .single();
+      
+      if (!error && artist) {
+        console.log(`Found artist: ${artist.name}`);
+        
+        return res.status(200).json({
+          success: true,
+          message: 'Artist found',
+          data: artist
+        });
+      } else {
+        console.log(`Error with nested query, falling back to simple query: ${error?.message}`);
+      }
+    } catch (nestedError) {
+      console.error('Error with nested query:', nestedError.message);
+    }
+    
+    // Fallback: Simple query without artist info
+    const { data: artist, error } = await supabase
       .from('artists')
       .select('*')
-      .eq('id', artistId);
-  } else {
-    // Otherwise assume it's a Spotify ID
-    query = supabase
-      .from('artists')
-      .select('*')
-      .eq('id', artistId);
-  }
-  
-  const { data: artist, error } = await query.single();
-  
-  if (error) {
-    console.error(`Error fetching artist ${artistId}: ${error.message}`);
+      .eq('id', artistId)
+      .single();
+    
+    if (error) {
+      console.error(`Error fetching artist ${artistId}: ${error.message}`);
+      return res.status(200).json({
+        success: false,
+        message: `Error fetching artist ${artistId}: ${error.message}`,
+        data: null
+      });
+    }
+    
+    if (!artist) {
+      return res.status(200).json({
+        success: false,
+        message: `Artist with ID ${artistId} not found`,
+        data: null
+      });
+    }
+    
+    console.log(`Found artist (basic info): ${artist.name}`);
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Artist found',
+      data: artist
+    });
+  } catch (error) {
+    console.error(`Unexpected error in handleSingleArtist: ${error.message}`);
     return res.status(200).json({
       success: false,
-      message: `Error fetching artist ${artistId}: ${error.message}`,
+      message: `Error: ${error.message}`,
       data: null
     });
   }
-  
-  if (!artist) {
-    return res.status(200).json({
-      success: false,
-      message: `Artist with ID ${artistId} not found`,
-      data: null
-    });
-  }
-  
-  console.log(`Found artist: ${artist.name}`);
-  
-  return res.status(200).json({
-    success: true,
-    message: 'Artist found',
-    data: artist
-  });
 }
 
 async function handleArtistReleases(req, res, artistId) {
@@ -956,3 +996,111 @@ async function handleDiagnostic(req, res) {
     });
   }
 }
+
+// Admin route handlers
+const handleAdminLogin = async (req, res) => {
+  try {
+    console.log('Admin login attempt');
+    
+    // Parse request body
+    let body = '';
+    for await (const chunk of req) {
+      body += chunk;
+    }
+    
+    const { username, password } = JSON.parse(body);
+    
+    // Check credentials
+    if (!username || !password) {
+      return res.status(400).json(formatResponse('error', 'Username and password are required'));
+    }
+    
+    // Verify against environment variable credentials
+    const adminUsername = process.env.ADMIN_USERNAME || 'admin';
+    const adminPasswordHash = process.env.ADMIN_PASSWORD_HASH;
+    
+    if (username !== adminUsername) {
+      return res.status(401).json(formatResponse('error', 'Invalid credentials'));
+    }
+    
+    // Check password hash
+    const isPasswordValid = await bcrypt.compare(password, adminPasswordHash);
+    if (!isPasswordValid) {
+      return res.status(401).json(formatResponse('error', 'Invalid credentials'));
+    }
+    
+    // Generate JWT token
+    const token = jwt.sign(
+      { username, isAdmin: true },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+    
+    return res.status(200).json(formatResponse('success', 'Login successful', { token }));
+  } catch (error) {
+    console.error('Admin login error:', error);
+    return res.status(500).json(formatResponse('error', 'Internal server error'));
+  }
+};
+
+const handleVerifyAdminToken = async (req, res) => {
+  try {
+    // Extract token from headers
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json(formatResponse('error', 'No authentication token provided'));
+    }
+    
+    const token = authHeader.split(' ')[1];
+    
+    // Verify token
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      if (!decoded.isAdmin) {
+        return res.status(403).json(formatResponse('error', 'Not authorized'));
+      }
+      
+      return res.status(200).json(formatResponse('success', 'Token is valid', { user: decoded }));
+    } catch (error) {
+      return res.status(401).json(formatResponse('error', 'Invalid or expired token'));
+    }
+  } catch (error) {
+    console.error('Token verification error:', error);
+    return res.status(500).json(formatResponse('error', 'Internal server error'));
+  }
+};
+
+const handleSpotifyImport = async (req, res) => {
+  // Check authentication
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json(formatResponse('error', 'No authentication token provided'));
+  }
+  
+  const token = authHeader.split(' ')[1];
+  
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (!decoded.isAdmin) {
+      return res.status(403).json(formatResponse('error', 'Not authorized'));
+    }
+    
+    // Parse request body
+    let body = '';
+    for await (const chunk of req) {
+      body += chunk;
+    }
+    
+    const importData = JSON.parse(body);
+    
+    // Here you would implement the actual Spotify import logic
+    // This is a placeholder response
+    return res.status(200).json(formatResponse('success', 'Spotify import initiated', { 
+      message: 'Import functionality is not fully implemented in this API endpoint',
+      receivedData: importData
+    }));
+  } catch (error) {
+    console.error('Spotify import error:', error);
+    return res.status(500).json(formatResponse('error', 'Internal server error', { message: error.message }));
+  }
+};
