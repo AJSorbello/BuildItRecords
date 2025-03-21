@@ -277,6 +277,75 @@ class DatabaseService {
   }
 
   /**
+   * Get the base URL for API calls based on current environment
+   */
+  private getBaseUrl(): string {
+    // Check if we're in a Vercel deployment
+    if (typeof window !== 'undefined' && 
+        (window.location.hostname.includes('vercel.app') || 
+         window.location.hostname.includes('builditrecords.com'))) {
+      // Always use the Render API for Vercel deployments - add /api to match apiConfig.ts
+      const renderApiUrl = 'https://builditrecords.onrender.com/api';
+      console.log('Vercel deployment detected - using Render API URL:', renderApiUrl);
+      return renderApiUrl;
+    }
+    
+    // Try to use the current window origin in the browser to adapt to any port
+    if (typeof window !== 'undefined') {
+      // For local development using localhost:3001 directly
+      if (window.location.hostname === 'localhost') {
+        const localApiUrl = `http://localhost:3001/api`;
+        console.log('[DatabaseService] Using local development API URL:', localApiUrl);
+        return localApiUrl;
+      }
+    
+      // Use window origin for other environments
+      const origin = window.location.origin;
+      console.log('[DatabaseService] Using window origin for API URL:', `${origin}/api`);
+      return `${origin}/api`;
+    }
+    
+    // Fallback to localhost for SSR
+    return 'http://localhost:3001/api';
+  }
+
+  /**
+   * Format any URL properly
+   */
+  private formatUrl(baseUrl: string, endpoint: string): string {
+    // Clean up the endpoint to prevent URL issues
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint.substring(1) : endpoint;
+    const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+    
+    // Add 'http://' prefix if missing
+    const hasProtocol = cleanBase.startsWith('http://') || cleanBase.startsWith('https://');
+    const baseWithProtocol = hasProtocol ? cleanBase : `http://${cleanBase}`;
+    
+    // If endpoint is a full URL, return it
+    if (cleanEndpoint.startsWith('http://') || cleanEndpoint.startsWith('https://')) {
+      return cleanEndpoint;
+    }
+    
+    // If cleanBase already includes '/api' and endpoint also starts with 'api/'
+    if (cleanBase.endsWith('/api') && cleanEndpoint.startsWith('api/')) {
+      return `${baseWithProtocol}/${cleanEndpoint.substring(4)}`;
+    }
+    
+    // If cleanBase ends with '/api' and endpoint doesn't start with 'api/'
+    if (cleanBase.endsWith('/api')) {
+      return `${baseWithProtocol}/${cleanEndpoint}`;
+    }
+    
+    // If endpoint starts with 'api/' and base doesn't end with '/api'
+    if (cleanEndpoint.startsWith('api/')) {
+      return `${baseWithProtocol}/${cleanEndpoint}`;
+    }
+    
+    // If neither base ends with '/api' nor endpoint starts with 'api/'
+    return `${baseWithProtocol}/api/${cleanEndpoint}`;
+  }
+
+  /**
    * Fetch data from the API
    * @param endpoint The API endpoint to fetch from
    * @param options Optional fetch options
@@ -287,44 +356,8 @@ class DatabaseService {
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
     try {
-      // Clean up the endpoint to prevent URL issues
-      // If endpoint is a full URL, extract just the path to avoid double URL prefixing
-      let url;
-      const cleanEndpoint = endpoint.startsWith('/') ? endpoint.substring(1) : endpoint;
-      
-      // Check if the endpoint is a full URL (starts with http)
-      if (cleanEndpoint.startsWith('http')) {
-        console.warn(`[DatabaseService] Received full URL as endpoint: ${cleanEndpoint}`);
-        try {
-          // Parse the URL and extract the path and query parameters
-          const urlObj = new URL(cleanEndpoint);
-          // Remove any /api prefix from the pathname
-          const path = urlObj.pathname.replace(/^\/api\//, '');
-          url = `${this.baseUrl}/${path}${urlObj.search}`;
-        } catch (error) {
-          console.error(`[DatabaseService] Error parsing URL: ${error}`);
-          // If URL parsing fails, just use the baseUrl with the endpoint
-          url = `${this.baseUrl}/${cleanEndpoint}`;
-        }
-      } else {
-        // Normal endpoint processing
-        // If both baseUrl and endpoint include /api, remove from one
-        if (this.baseUrl.includes('/api') && cleanEndpoint.startsWith('api/')) {
-          url = `${this.baseUrl}/${cleanEndpoint.substring(4)}`;
-        } 
-        // If baseUrl includes /api and endpoint doesn't start with api/
-        else if (this.baseUrl.includes('/api')) {
-          url = `${this.baseUrl}/${cleanEndpoint}`;
-        }
-        // If baseUrl doesn't include /api and endpoint starts with api/
-        else if (cleanEndpoint.startsWith('api/')) {
-          url = `${this.baseUrl}/${cleanEndpoint}`;
-        }
-        // If neither includes /api
-        else {
-          url = `${this.baseUrl}/api/${cleanEndpoint}`;
-        }
-      }
+      // Use the new formatUrl method to get a consistent URL
+      const url = this.formatUrl(this.baseUrl, endpoint);
       
       console.log(`[DatabaseService] Making API request to: ${url}`);
       
@@ -356,39 +389,6 @@ class DatabaseService {
         error: error instanceof Error ? error.stack : String(error)
       };
     }
-  }
-
-  /**
-   * Get the base URL for API calls based on current environment
-   */
-  private getBaseUrl(): string {
-    // Check if we're in a Vercel deployment
-    if (typeof window !== 'undefined' && 
-        (window.location.hostname.includes('vercel.app') || 
-         window.location.hostname.includes('builditrecords.com'))) {
-      // Always use the Render API for Vercel deployments - add /api to match apiConfig.ts
-      const renderApiUrl = 'https://builditrecords.onrender.com/api';
-      console.log('Vercel deployment detected - using Render API URL:', renderApiUrl);
-      return renderApiUrl;
-    }
-    
-    // Try to use the current window origin in the browser to adapt to any port
-    if (typeof window !== 'undefined') {
-      // For local development using localhost:3001 directly
-      if (window.location.hostname === 'localhost') {
-        const localApiUrl = `http://localhost:3001`;
-        console.log('[DatabaseService] Using local development API URL:', localApiUrl);
-        return localApiUrl;
-      }
-    
-      // Use window origin for other environments
-      const origin = window.location.origin;
-      console.log('[DatabaseService] Using window origin for API URL:', origin);
-      return origin;
-    }
-    
-    // Fallback to localhost for SSR
-    return 'http://localhost:3001';
   }
 
   /**
