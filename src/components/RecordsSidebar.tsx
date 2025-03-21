@@ -15,7 +15,7 @@ import {
   Button
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, NavigateFunction } from 'react-router-dom';
 import { labelColors } from '../theme/theme';
 import HomeIcon from '@mui/icons-material/Home';
 import AlbumIcon from '@mui/icons-material/Album';
@@ -49,48 +49,48 @@ interface RecordsSidebarProps {
   onMobileClose?: () => void;
 }
 
-// Define menu items outside of component to prevent re-creation on each render
-const MENU_ITEMS = [
-  { text: 'Home', icon: <HomeIcon />, path: '/' },
-  { text: 'Artists', icon: <PeopleIcon />, path: '/records/artists' },
-  { text: 'Releases', icon: <AlbumIcon />, path: '/records/releases' },
-  { text: 'Playlists', icon: <QueueMusicIcon />, path: '/records/playlists' },
-  { text: 'Submit', icon: <ArrowBackIcon />, path: '/records/submit' },
-];
-
-// Simple RecordsSidebar that doesn't rely on hooks
-const RecordsSidebar: React.FC<RecordsSidebarProps> = (props) => {
-  // Error-proof props with defensive defaults
-  const {
-    open = false,
-    onClose = () => {},
-    isMobile = false,
-    variant = 'temporary',
-    label = 'records',
-    sx = {},
-    mobileOpen,
-    onMobileClose,
-  } = props;
-
-  // Use hooks outside of any conditional rendering
+// Wrapper to get hooks like useNavigate
+const RecordsSidebarWrapper: React.FC<Omit<RecordsSidebarProps, 'navigate'>> = (props) => {
   const navigate = useNavigate();
-  // Wrap location access in try/catch at the top level
-  let pathName = '';
-  let locationAvailable = false;
+  const theme = useTheme();
+  const matches = useMediaQuery(theme.breakpoints.down('md'));
+  
+  return <RecordsSidebar 
+    {...props} 
+    navigate={navigate}
+    isMobile={matches || props.isMobile || false}
+  />;
+};
+
+interface RecordsSidebarInternalProps extends RecordsSidebarProps {
+  navigate: NavigateFunction;
+}
+
+const RecordsSidebar: React.FC<RecordsSidebarInternalProps> = ({
+  open = false,
+  onClose,
+  isMobile = false,
+  variant = 'temporary',
+  label = 'records',
+  sx = {},
+  mobileOpen = false,
+  onMobileClose,
+  navigate
+}) => {
+  // Safely access location with fallback
+  let currentPath = '/';
   try {
     const location = useLocation();
-    if (location && typeof location.pathname === 'string') {
-      pathName = location.pathname;
-      locationAvailable = true;
+    if (location && location.pathname) {
+      currentPath = location.pathname;
     }
   } catch (error) {
     console.error('Error accessing location:', error);
   }
 
-  const theme = useTheme();
   const [socialOpen, setSocialOpen] = useState(false);
 
-  // Handle props coming from different components
+  // Determine if drawer is open based on different props sources
   const isOpen = open || mobileOpen || false;
   const handleClose = onClose || onMobileClose || (() => {});
 
@@ -102,194 +102,228 @@ const RecordsSidebar: React.FC<RecordsSidebarProps> = (props) => {
       }
     } catch (error) {
       console.error('Navigation error:', error);
+      // Fallback to window.location for navigation if navigate fails
+      window.location.href = path;
     }
   };
 
-  const toggleSocial = () => {
+  const handleSocialToggle = () => {
     setSocialOpen(!socialOpen);
   };
 
-  // Safe path matching that will never throw
-  const isActivePath = (itemPath: string) => {
-    if (!locationAvailable) return false;
-    return pathName === itemPath;
-  };
+  // Get the appropriate color for the current label
+  const labelColor = labelColors[label] || labelColors.records;
 
-  // Define the drawer content separately to avoid re-renders
-  const drawerContent = (
-    <Box sx={{
-      height: '100%',
-      display: 'flex',
-      flexDirection: 'column',
-      backgroundColor: labelColors[label] || '#000000',
-      color: '#fff',
-      ...sx
-    }}>
+  // Menu items with icons for the main navigation
+  const menuItems = [
+    { text: 'Home', icon: <HomeIcon />, path: '/' },
+    { text: 'Artists', icon: <PeopleIcon />, path: '/records/artists' },
+    { text: 'Releases', icon: <AlbumIcon />, path: '/records/releases' },
+    { text: 'Playlists', icon: <QueueMusicIcon />, path: '/records/playlists' },
+    { text: 'Submit', icon: <ArrowBackIcon />, path: '/records/submit' },
+  ];
+
+  // Social media links with icons
+  const socialItems = [
+    { name: 'Facebook', icon: <FacebookIcon />, url: 'https://facebook.com/builditrecordsofficial' },
+    { name: 'Instagram', icon: <InstagramIcon />, url: 'https://instagram.com/builditrecords' },
+    { name: 'YouTube', icon: <YouTubeIcon />, url: 'https://youtube.com/@BuilditRecords' },
+    { name: 'SoundCloud', icon: <SoundCloudIcon />, url: 'https://soundcloud.com/builditrecords' },
+  ];
+
+  return (
+    <Drawer
+      variant={isMobile ? "temporary" : "permanent"}
+      open={isMobile ? isOpen : true}
+      onClose={handleClose}
+      ModalProps={{
+        keepMounted: true,
+        disableEnforceFocus: false,
+        disableAutoFocus: false,
+        closeAfterTransition: true,
+        slotProps: {
+          backdrop: {
+            timeout: 500,
+          },
+        },
+        'aria-labelledby': 'records-sidebar-title',
+      }}
+      sx={{
+        display: { xs: isMobile ? 'block' : 'none', md: 'block' },
+        '& .MuiDrawer-paper': {
+          boxSizing: 'border-box',
+          width: drawerWidth,
+          marginTop: isMobile ? '64px' : '180px',
+          height: isMobile ? 'calc(100% - 64px)' : 'calc(100% - 180px)',
+          zIndex: isMobile ? 1200 : 1100,
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)',
+          backgroundColor: '#000000', // Force black background
+          backgroundImage: 'none', // Remove any background image
+          borderRight: `3px solid ${labelColor}`
+        },
+        '& .MuiBackdrop-root': {
+          backgroundColor: 'rgba(0, 0, 0, 0.7)'
+        },
+        '& .MuiPaper-root': {
+          backgroundColor: '#000000', // Force black on the paper element
+          backgroundImage: 'none',
+        },
+        '& .MuiModal-root': {
+          backgroundColor: '#000000',
+        },
+        ...sx
+      }}
+      PaperProps={{
+        sx: {
+          width: drawerWidth,
+          backgroundColor: '#000000', // Force black background
+          backgroundImage: 'none', // Remove any background image
+          borderRight: `3px solid ${labelColor}`,
+          display: 'flex',
+          flexDirection: 'column',
+          '& .MuiListItemIcon-root': {
+            color: labelColor,
+            minWidth: '40px',
+            marginLeft: '12px'
+          },
+          '& .MuiListItemText-root': {
+            color: '#ffffff',
+            '& .MuiTypography-root': {
+              fontSize: '1rem',
+              fontWeight: 700,
+              letterSpacing: '0.01em'
+            }
+          }
+        },
+        'aria-label': 'Build It Records navigation'
+      }}
+    >
+      <Typography 
+        id="records-sidebar-title" 
+        variant="body2"
+        sx={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)', clipPath: 'inset(50%)' }}
+      >
+        Build It Records Navigation Menu
+      </Typography>
+
       {isMobile && (
-        <Box 
-          sx={{ 
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'flex-end',
-            padding: 1
-          }}
-        >
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'flex-end', 
+          p: 1,
+          position: 'fixed',
+          right: 0,
+          top: '12px',
+          zIndex: 1200
+        }}>
           <IconButton 
-            edge="start" 
-            color="inherit" 
-            onClick={handleClose}
-            sx={{ color: '#fff' }}
-            aria-label="Close menu"
+            onClick={handleClose} 
+            aria-label="Close navigation menu"
+            sx={{ 
+              color: '#ffffff',
+              backgroundColor: 'rgba(0, 0, 0, 0.95)',
+              '&:hover': {
+                backgroundColor: 'rgba(0, 0, 0, 0.85)',
+              }
+            }}
           >
             <CloseIcon />
           </IconButton>
         </Box>
       )}
-      
-      <Box sx={{ padding: 2, display: 'flex', justifyContent: 'center' }}>
-        <Typography variant="h6" component="div" sx={{ fontWeight: 'bold' }}>
-          BUILD IT RECORDS
-        </Typography>
-      </Box>
-      
-      <List>
-        {MENU_ITEMS.map((item) => (
+
+      {/* Main navigation list */}
+      <List sx={{ flexGrow: 1, pt: 0 }}>
+        {menuItems.map((item) => (
           <ListItem 
             button 
-            key={item.text}
+            key={item.text} 
             onClick={() => handleNavigation(item.path)}
-            sx={{
-              bgcolor: isActivePath(item.path) ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
-              '&:hover': {
-                bgcolor: 'rgba(255, 255, 255, 0.2)',
-              }
+            aria-label={`Navigate to ${item.text}`}
+            sx={{ 
+              mb: 1,
+              padding: '12px 16px',
+              borderRadius: '6px',
+              transition: 'all 0.2s ease-in-out',
+              bgcolor: currentPath === item.path ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+              '&:hover': { 
+                backgroundColor: `rgba(${labelColor.replace('#', '').match(/.{2}/g)?.map(hex => parseInt(hex, 16)).join(', ')}, 0.15)`,
+                transform: 'translateX(3px)',
+                '& .MuiListItemIcon-root': {
+                  color: labelColor
+                },
+                '& .MuiListItemText-primary': {
+                  color: labelColor
+                }
+              },
             }}
           >
-            <ListItemIcon sx={{ color: '#fff' }}>
-              {item.icon}
-            </ListItemIcon>
+            <ListItemIcon>{item.icon}</ListItemIcon>
             <ListItemText primary={item.text} />
           </ListItem>
         ))}
       </List>
       
-      <Divider sx={{ my: 2, backgroundColor: 'rgba(255,255,255,0.2)' }} />
-      
-      <List>
-        <ListItem button onClick={toggleSocial} aria-expanded={socialOpen} aria-controls="social-media-list">
-          <ListItemText primary={
-            <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-              Social Media
-            </Typography>
-          } />
-          {socialOpen ? <ExpandLess /> : <ExpandMore />}
+      {/* Social media links */}
+      <Box sx={{ mt: 'auto', borderTop: '1px solid rgba(255, 255, 255, 0.12)', p: 2 }}>
+        <ListItem
+          button
+          onClick={handleSocialToggle}
+          aria-expanded={socialOpen}
+          aria-controls="social-media-list"
+          sx={{ borderRadius: '4px' }}
+        >
+          <ListItemText 
+            primary={
+              <Typography color="white" variant="subtitle2">
+                Social Media
+              </Typography>
+            }
+          />
+          {socialOpen ? <ExpandLess sx={{ color: 'white' }} /> : <ExpandMore sx={{ color: 'white' }} />}
         </ListItem>
-        
         <Collapse in={socialOpen} timeout="auto" unmountOnExit>
           <List component="div" id="social-media-list" disablePadding>
-            <ListItem 
-              button 
-              sx={{ pl: 4 }}
-              onClick={() => window.open('https://www.facebook.com/BuildItRecords/', '_blank')}
-              aria-label="Visit Facebook (opens in new tab)"
-            >
-              <ListItemIcon sx={{ color: '#fff' }}>
-                <FacebookIcon />
-              </ListItemIcon>
-              <ListItemText primary="Facebook" />
-            </ListItem>
-            
-            <ListItem 
-              button 
-              sx={{ pl: 4 }}
-              onClick={() => window.open('https://www.instagram.com/builditrecords/', '_blank')}
-              aria-label="Visit Instagram (opens in new tab)"
-            >
-              <ListItemIcon sx={{ color: '#fff' }}>
-                <InstagramIcon />
-              </ListItemIcon>
-              <ListItemText primary="Instagram" />
-            </ListItem>
-            
-            <ListItem 
-              button 
-              sx={{ pl: 4 }}
-              onClick={() => window.open('https://www.youtube.com/builditrecords', '_blank')}
-              aria-label="Visit YouTube (opens in new tab)"
-            >
-              <ListItemIcon sx={{ color: '#fff' }}>
-                <YouTubeIcon />
-              </ListItemIcon>
-              <ListItemText primary="YouTube" />
-            </ListItem>
-            
-            <ListItem 
-              button 
-              sx={{ pl: 4 }}
-              onClick={() => window.open('https://soundcloud.com/builditrecords', '_blank')}
-              aria-label="Visit SoundCloud (opens in new tab)"
-            >
-              <ListItemIcon sx={{ color: '#fff' }}>
-                <SoundCloudIcon />
-              </ListItemIcon>
-              <ListItemText primary="SoundCloud" />
-            </ListItem>
+            {socialItems.map((item) => (
+              <ListItem 
+                button 
+                key={item.name} 
+                sx={{ pl: 4 }}
+                onClick={() => window.open(item.url, '_blank')}
+                aria-label={`Visit ${item.name} (opens in new tab)`}
+              >
+                <ListItemIcon sx={{ color: 'white' }}>
+                  {item.icon}
+                </ListItemIcon>
+                <ListItemText 
+                  primary={
+                    <Typography color="white" variant="body2">
+                      {item.name}
+                    </Typography>
+                  } 
+                />
+              </ListItem>
+            ))}
           </List>
         </Collapse>
-      </List>
-      
-      <Box sx={{ flexGrow: 1 }} />
-      
-      <Box sx={{ p: 2, textAlign: 'center' }}>
-        <Typography variant="caption" sx={{ opacity: 0.7 }}>
-          {new Date().getFullYear()} Build It Records
-        </Typography>
       </Box>
-    </Box>
+      
+      {/* Contact button */}
+      <Box sx={{ p: 2 }}>
+        <Button 
+          variant="contained" 
+          fullWidth 
+          onClick={() => handleNavigation('/contact')}
+          sx={{ 
+            backgroundColor: labelColor, 
+            '&:hover': { backgroundColor: `${labelColor}CC` } 
+          }}
+        >
+          Contact Us
+        </Button>
+      </Box>
+    </Drawer>
   );
-  
-  // Render with error boundary using try/catch
-  try {
-    return (
-      <Drawer
-        variant={variant}
-        anchor="left"
-        open={isOpen}
-        onClose={handleClose}
-        ModalProps={{
-          keepMounted: true,
-        }}
-        sx={{
-          width: drawerWidth,
-          flexShrink: 0,
-          '& .MuiDrawer-paper': {
-            width: drawerWidth,
-            boxSizing: 'border-box',
-            border: 'none',
-          },
-        }}
-      >
-        {drawerContent}
-      </Drawer>
-    );
-  } catch (error) {
-    console.error('Error rendering RecordsSidebar:', error);
-    // Return a minimal fallback UI that won't crash
-    return (
-      <Drawer
-        variant="temporary"
-        anchor="left"
-        open={isOpen}
-        onClose={handleClose}
-        sx={{ width: drawerWidth }}
-      >
-        <Box sx={{ p: 2 }}>
-          <Typography>Menu unavailable</Typography>
-          <Button onClick={handleClose}>Close</Button>
-        </Box>
-      </Drawer>
-    );
-  }
 };
 
-export default RecordsSidebar;
+export default RecordsSidebarWrapper;

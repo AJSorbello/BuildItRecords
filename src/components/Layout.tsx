@@ -101,7 +101,7 @@ const LayoutFC: React.FC<LayoutProps> = ({ location, isMobile }) => {
             <RecordsSidebar
               mobileOpen={mobileOpen}
               onMobileClose={handleDrawerToggle}
-              isMobile={isMobile}
+              label="records"
             />
           );
       }
