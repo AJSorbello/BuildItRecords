@@ -4,7 +4,6 @@ import TopNavigation from './TopNavigation';
 import DeepSidebar from './DeepSidebar';
 import TechSidebar from './TechSidebar';
 import RecordsSidebar from './RecordsSidebar';
-import StaticSidebar from './StaticSidebar';
 import ErrorBoundary from './ErrorBoundary';
 import { useLocation } from 'react-router-dom';
 
