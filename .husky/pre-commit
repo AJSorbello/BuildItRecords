@@ -1,4 +1,4 @@
 #!/usr/bin/env sh
 
-# Run ESLint
+# Run ESLint using pnpm
 pnpm lint

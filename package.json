@@ -2,6 +2,7 @@
   "name": "builditrecords",
   "version": "0.1.1",
   "private": true,
+  "packageManager": "pnpm@8.15.0",
   "workspaces": [
     ".",
     "server"
@@ -20,9 +21,9 @@
     "build:render": "echo 'Render API-only deployment'",
     "serve": "vite preview",
     "start": "node render-standalone.js",
-    "start:frontend": "npm run dev",
+    "start:frontend": "pnpm run dev",
     "server": "cd server && node server.js",
-    "dev:all": "concurrently \"npm run server\" \"npm run dev\"",
+    "dev:all": "concurrently \"pnpm run server\" \"pnpm run dev\"",
     "api:local": "node server/local-api-server.js",
     "dev:api": "NODE_ENV=development nodemon server/local-api-server.js",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
@@ -30,7 +31,7 @@
     "vercel-build": "vite build",
     "test:db": "node api/test-db-connection.js",
     "test:api": "node server/verify-api.js",
-    "verify:all": "npm run test:db && npm run test:api"
+    "verify:all": "pnpm run test:db && pnpm run test:api"
   },
   "dependencies": {
     "@ant-design/icons": "^5.5.2",
@@ -178,6 +179,5 @@
     "reason": "Fix Vercel deployment registry connection issues",
     "buildAuthor": "BuildIt Support"
   },
-  "vercelDeploymentId": "deploy-6250",
-  "packageManager": "npm@10.8.2"
+  "vercelDeploymentId": "deploy-6250"
 }
