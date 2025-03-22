@@ -276,11 +276,16 @@ app.get('/api/releases', async (req, res) => {
       const client = await pool.connect();
       console.log('Database connection established');
       
-      // Build query with potential filter
+      // Build query with potential filter that includes releases from both direct artist_id 
+      // and from the release_artists junction table
       let query = `
-        SELECT r.*, a.name as artist_name 
+        SELECT DISTINCT r.*, 
+          COALESCE(a.name, 'Various Artists') as artist_name,
+          EXISTS (
+            SELECT 1 FROM release_artists ra WHERE ra.release_id = r.id
+          ) as has_multiple_artists
         FROM releases r
-        JOIN artists a ON r.artist_id = a.id
+        LEFT JOIN artists a ON r.artist_id = a.id
       `;
       
       const params = [];
@@ -289,18 +294,48 @@ app.get('/api/releases', async (req, res) => {
         params.push(label);
       }
       
-      query += ` ORDER BY r.release_date DESC`;
+      query += ` ORDER BY r.release_date DESC NULLS LAST`;
+      
+      console.log('Executing releases query:', query, params);
       
       // Execute query
       const result = await client.query(query, params);
       
       // Get total count of releases (for pagination)
-      let countQuery = `SELECT COUNT(*) FROM releases r JOIN artists a ON r.artist_id = a.id`;
+      let countQuery = `SELECT COUNT(DISTINCT r.id) FROM releases r`;
       if (label) {
         countQuery += ` WHERE r.label = $1`;
       }
       const countResult = await client.query(countQuery, params);
       const totalCount = parseInt(countResult.rows[0].count, 10);
+      
+      // For releases with multiple artists, get their artists through the junction table
+      for (const release of result.rows) {
+        if (release.has_multiple_artists) {
+          const artistsQuery = `
+            SELECT a.id, a.name 
+            FROM artists a
+            JOIN release_artists ra ON a.id = ra.artist_id
+            WHERE ra.release_id = $1
+            ORDER BY ra.position ASC
+          `;
+          const artistsResult = await client.query(artistsQuery, [release.id]);
+          release.artists = artistsResult.rows;
+          
+          // If there's no primary artist but we have multiple artists, 
+          // set a "Various Artists" representation
+          if (!release.artist_name || release.artist_name === 'Various Artists') {
+            if (artistsResult.rows.length > 0) {
+              const artistNames = artistsResult.rows.map(a => a.name);
+              if (artistNames.length > 3) {
+                release.artist_name = `${artistNames.slice(0, 2).join(', ')} & ${artistNames.length - 2} more`;
+              } else {
+                release.artist_name = artistNames.join(', ');
+              }
+            }
+          }
+        }
+      }
       
       client.release();
       
