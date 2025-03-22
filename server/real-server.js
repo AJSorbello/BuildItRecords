@@ -73,6 +73,7 @@ const corsOptions = {
     'https://build-it-records-b8gg0fjtb-ajsorbellos-projects.vercel.app',
     'https://build-it-records-8dlvtugib-ajsorbellos-projects.vercel.app',
     'https://build-it-records-2co6k1ncu-ajsorbellos-projects.vercel.app',
+    'https://build-it-records-dqii5abne-ajsorbellos-projects.vercel.app', 
     'https://build-it-records.vercel.app',
     /\.vercel\.app$/  // Allow all vercel.app subdomains
   ],
@@ -131,6 +132,59 @@ app.use(express.static(path.join(__dirname, '../dist'), {
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.url} (origin: ${req.headers.origin || 'unknown'})`);
   next();
+});
+
+// Add a proxy endpoint to handle CORS issues
+app.get('/api/proxy', async (req, res) => {
+  try {
+    const targetUrl = req.query.url;
+    if (!targetUrl) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Missing url parameter' 
+      });
+    }
+
+    console.log(`Proxying request to: ${targetUrl}`);
+    
+    // Forward the request to the target URL
+    const response = await fetch(targetUrl, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    // Get the response as JSON or text
+    let data;
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      data = await response.json();
+    } else {
+      data = await response.text();
+    }
+    
+    // Set CORS headers explicitly
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+    
+    // Send the response back
+    res.status(response.status).json({
+      success: response.ok,
+      data: data,
+      status: response.status,
+      statusText: response.statusText
+    });
+  } catch (error) {
+    console.error('Proxy error:', error);
+    res.status(500).json({
+      success: false,
+      message: `Proxy error: ${error.message}`,
+      error: error.stack
+    });
+  }
 });
 
 // Database connection pool

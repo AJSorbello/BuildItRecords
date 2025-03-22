@@ -329,119 +329,47 @@ class DatabaseService {
    * @param options Optional fetch options
    * @returns Promise resolving to the API response
    */
-  public async fetchApi<T>(
-    endpoint: string,
-    options: RequestInit = {}
-  ): Promise<ApiResponse<T>> {
+  public async fetchApi(endpoint: string, options?: RequestInit): Promise<any> {
     try {
-      // Use the new formatUrl method to get a consistent URL
-      const url = this.formatUrl(this.baseUrl, endpoint);
+      const apiUrl = this.formatUrl(this.baseUrl, endpoint);
+      console.log('[DatabaseService] Making API request to:', apiUrl);
       
-      console.log(`[DatabaseService] Making API request to: ${url}`);
-      
-      // Check if we're in a CORS-sensitive environment and need to use a proxy
-      let fetchUrl = url;
-      const isProduction = typeof window !== 'undefined' && 
-        window.location.hostname.includes('vercel.app');
-      
-      // Try using CORS Anywhere proxy if in production with Vercel
-      if (isProduction) {
-        try {
-          // First attempt with direct URL
-          const response = await fetch(url, {
-            ...options,
-            credentials: 'omit', // Changed from 'include' to fix CORS issues
-            // Add mode: 'cors' explicitly
-            mode: 'cors',
-            headers: {
-              ...options.headers,
-              'Origin': window.location.origin,
-            }
-          });
-          
-          if (response.ok) {
-            // Check if the response is JSON
-            const contentType = response.headers.get('content-type');
-            if (contentType && contentType.includes('application/json')) {
-              const data = await response.json();
-              return data as ApiResponse<T>;
-            } else {
-              console.warn('[DatabaseService] Response is not JSON, converting to text');
-              const text = await response.text();
-              return { success: true, data: text as any } as ApiResponse<T>;
-            }
-          }
-          
-          // If we get here, the direct request didn't work, try with proxy
-          throw new Error('Direct request failed, trying proxy');
-        } catch (directError) {
-          console.log('[DatabaseService] Direct API request failed, trying CORS proxy', directError);
-          
-          // Try with a different CORS proxy - more reliable than corsproxy.io
-          fetchUrl = `https://cors-anywhere.herokuapp.com/${url}`;
-          console.log(`[DatabaseService] Using CORS proxy: ${fetchUrl}`);
-          
-          // If the first proxy fails, try another one
-          try {
-            const response = await fetch(fetchUrl, {
-              ...options,
-              credentials: 'omit',
-              headers: {
-                ...options.headers,
-                'X-Requested-With': 'XMLHttpRequest', // Required by CORS Anywhere
-              }
-            });
-            
-            if (response.ok) {
-              const contentType = response.headers.get('content-type');
-              if (contentType && contentType.includes('application/json')) {
-                const data = await response.json();
-                return data as ApiResponse<T>;
-              } else {
-                console.warn('[DatabaseService] Response from proxy is not JSON, converting to text');
-                const text = await response.text();
-                return { success: true, data: text as any } as ApiResponse<T>;
-              }
-            }
-            
-            // If even the proxy failed, try one final fallback
-            fetchUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-            console.log(`[DatabaseService] Using final CORS proxy: ${fetchUrl}`);
-          } catch (secondProxyError) {
-            console.error('[DatabaseService] Second proxy also failed:', secondProxyError);
-            fetchUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-            console.log(`[DatabaseService] Using final CORS proxy: ${fetchUrl}`);
-          }
-        }
-      }
-      
-      const response = await fetch(fetchUrl, {
+      // Set default headers for all requests
+      const fetchOptions: RequestInit = {
         ...options,
-        credentials: 'omit', // Changed from 'include' to fix CORS issues
-      });
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          ...(options?.headers || {})
+        },
+        // Specify CORS mode explicitly
+        mode: 'cors',
+        // Include credentials if on the same domain
+        credentials: window.location.hostname.includes('localhost') ? 'include' : 'same-origin'
+      };
       
-      // Check if the response is JSON
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
-        const data = await response.json();
-        return data as ApiResponse<T>;
-      } else {
-        // Return a basic success response for non-JSON responses
-        return {
-          success: response.ok,
-          data: null,
-          message: response.ok ? 'Success' : `Error: ${response.status} ${response.statusText}`
-        };
+      // Try direct API request first
+      try {
+        const response = await fetch(apiUrl, fetchOptions);
+        return await response.json();
+      } catch (error) {
+        console.log('[DatabaseService] Direct API request failed, trying CORS proxy', error);
+        
+        // Use the cors-anywhere proxy on Render - which we control
+        const proxyUrl = 'https://builditrecords.onrender.com/api/proxy?url=' + encodeURIComponent(apiUrl);
+        console.log('[DatabaseService] Using server-side proxy:', proxyUrl);
+        
+        const proxyResponse = await fetch(proxyUrl, {
+          ...fetchOptions,
+          // Don't include credentials when going through a proxy
+          credentials: 'omit'
+        });
+        
+        return await proxyResponse.json();
       }
     } catch (error) {
-      console.error('🔴 Network Error for', endpoint, ':', error);
-      // Return a failed response
-      return {
-        success: false,
-        data: null,
-        message: error instanceof Error ? error.message : String(error),
-        error: error instanceof Error ? error.stack : String(error)
-      };
+      console.error('[DatabaseService] All fetch attempts failed:', error);
+      throw error;
     }
   }
 
@@ -489,7 +417,7 @@ class DatabaseService {
       
       // Make the API call
       try {
-        const response = await this.fetchApi<ApiResponseExtended<ExtendedRelease>>(`${apiPath}${queryParams}`);
+        const response = await this.fetchApi(`${apiPath}${queryParams}`);
         console.log(`[DatabaseService] Releases API response status:`, response?.success);
         
         // Check if we got a valid response with data or releases property
@@ -541,7 +469,7 @@ class DatabaseService {
           console.log(`[DatabaseService] Trying alternative label ID: ${alternativeLabelId}`);
           console.log(`[DatabaseService] Fetching from endpoint: ${apiPath}${queryParams}`);
           
-          const response = await this.fetchApi<ApiResponseExtended<ExtendedRelease>>(`${apiPath}${queryParams}`);
+          const response = await this.fetchApi(`${apiPath}${queryParams}`);
           console.log(`[DatabaseService] Alternative response:`, response);
           
           if (response && (
@@ -573,7 +501,7 @@ class DatabaseService {
             console.log(`[DatabaseService] Trying direct API call: ${directApiEndpoint}${queryParams}`);
             
             // Use our fetchApi method for consistent URL handling and error handling
-            const directResponse = await this.fetchApi<ApiResponseExtended<ExtendedRelease>>(`${directApiEndpoint}${queryParams}`);
+            const directResponse = await this.fetchApi(`${directApiEndpoint}${queryParams}`);
             
             if (directResponse && ((directResponse.data && Array.isArray(directResponse.data)) || 
                                  (directResponse.releases && Array.isArray(directResponse.releases)))) {
@@ -657,7 +585,7 @@ class DatabaseService {
       console.log(`[DatabaseService] Fetching from: ${primaryApiUrl}`);
       
       // Make the API call with the label ID
-      const primaryResponse = await this.fetchApi<ApiResponseExtended<Artist>>(primaryApiUrl);
+      const primaryResponse = await this.fetchApi(primaryApiUrl);
       console.log(`[DatabaseService] Primary API response:`, primaryResponse);
       
       // Extract artists from response in various formats
@@ -682,7 +610,7 @@ class DatabaseService {
       const secondaryApiUrl = `artists?label=${secondaryLabelQuery}&limit=${limit}&offset=${offset}&sort=name`;
       console.log(`[DatabaseService] Fetching from: ${secondaryApiUrl}`);
       
-      const secondaryResponse = await this.fetchApi<ApiResponseExtended<Artist>>(secondaryApiUrl);
+      const secondaryResponse = await this.fetchApi(secondaryApiUrl);
       console.log(`[DatabaseService] Secondary API response:`, secondaryResponse);
       
       if (secondaryResponse?.success) {
@@ -703,7 +631,7 @@ class DatabaseService {
       const allArtistsUrl = `artists?limit=1000&sort=name`;
       console.log(`[DatabaseService] Fetching from: ${allArtistsUrl}`);
       
-      const allArtistsResponse = await this.fetchApi<ApiResponseExtended<Artist>>(allArtistsUrl);
+      const allArtistsResponse = await this.fetchApi(allArtistsUrl);
       console.log(`[DatabaseService] Last resort API response:`, allArtistsResponse);
       
       let allArtists: Artist[] = [];
@@ -872,7 +800,7 @@ class DatabaseService {
       
       console.log(`[DatabaseService] Fetching tracks from: ${apiPath}${queryParams}`);
       
-      const response = await this.fetchApi<ApiResponse<Track>>(`${apiPath}${queryParams}`);
+      const response = await this.fetchApi(`${apiPath}${queryParams}`);
       console.log('[DatabaseService] Tracks response:', response);
       
       // Extract tracks array and ensure it's properly typed
@@ -916,7 +844,7 @@ class DatabaseService {
       
       console.log(`[DatabaseService] Sending import request to: ${apiPath}`);
       
-      const response = await this.fetchApi<ImportResponse>(apiPath, {
+      const response = await this.fetchApi(apiPath, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
