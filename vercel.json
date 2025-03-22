@@ -53,282 +53,8 @@
   ],
   "routes": [
     {
-      "src": "/api/status",
-      "dest": "/api/api-consolidated.js",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
-        "Access-Control-Allow-Credentials": "false"
-      }
-    },
-    {
-      "src": "/api/artist",
-      "dest": "/api/api-consolidated.js",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
-        "Access-Control-Allow-Credentials": "false"
-      }
-    },
-    {
-      "src": "/api/artists",
-      "dest": "/api/api-consolidated.js",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
-        "Access-Control-Allow-Credentials": "false"
-      }
-    },
-    {
-      "src": "/api/artist/([^/]+)",
-      "dest": "/api/api-consolidated.js?id=$1",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
-        "Access-Control-Allow-Credentials": "false"
-      }
-    },
-    {
-      "src": "/api/artists/([^/]+)",
-      "dest": "/api/api-consolidated.js?id=$1",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
-        "Access-Control-Allow-Credentials": "false"
-      }
-    },
-    {
-      "src": "/api/artist/([^/]+)/releases",
-      "dest": "/api/api-consolidated.js?id=$1&sub=releases",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
-        "Access-Control-Allow-Credentials": "false"
-      }
-    },
-    {
-      "src": "/api/artists/([^/]+)/releases",
-      "dest": "/api/api-consolidated.js?id=$1&sub=releases",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
-        "Access-Control-Allow-Credentials": "false"
-      }
-    },
-    {
-      "src": "/api/artist/releases/([^/]+)",
-      "dest": "/api/api-consolidated.js?id=$1&sub=releases",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
-        "Access-Control-Allow-Credentials": "false"
-      }
-    },
-    {
-      "src": "/api/artists/releases/([^/]+)",
-      "dest": "/api/artist-releases.js?id=$1",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
-        "Access-Control-Allow-Credentials": "false"
-      }
-    },
-    {
-      "src": "/api/release",
-      "dest": "/api/api-consolidated.js",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
-        "Access-Control-Allow-Credentials": "false"
-      }
-    },
-    {
-      "src": "/api/releases",
-      "dest": "/api/api-consolidated.js",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
-        "Access-Control-Allow-Credentials": "false"
-      }
-    },
-    {
-      "src": "/api/release/([^/]+)",
-      "dest": "/api/api-consolidated.js?id=$1",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
-        "Access-Control-Allow-Credentials": "false"
-      }
-    },
-    {
-      "src": "/api/releases/([^/]+)",
-      "dest": "/api/api-consolidated.js?id=$1",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
-        "Access-Control-Allow-Credentials": "false"
-      }
-    },
-    {
-      "src": "/api/release/([^/]+)/tracks",
-      "dest": "/api/api-consolidated.js?id=$1&sub=tracks",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
-        "Access-Control-Allow-Credentials": "false"
-      }
-    },
-    {
-      "src": "/api/releases/([^/]+)/tracks",
-      "dest": "/api/api-consolidated.js?id=$1&sub=tracks",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
-        "Access-Control-Allow-Credentials": "false"
-      }
-    },
-    {
-      "src": "/api/track",
-      "dest": "/api/api-consolidated.js",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
-        "Access-Control-Allow-Credentials": "false"
-      }
-    },
-    {
-      "src": "/api/tracks",
-      "dest": "/api/api-consolidated.js",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
-        "Access-Control-Allow-Credentials": "false"
-      }
-    },
-    {
-      "src": "/api/track/([^/]+)",
-      "dest": "/api/api-consolidated.js?id=$1",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
-        "Access-Control-Allow-Credentials": "false"
-      }
-    },
-    {
-      "src": "/api/tracks/([^/]+)",
-      "dest": "/api/api-consolidated.js?id=$1",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
-        "Access-Control-Allow-Credentials": "false"
-      }
-    },
-    {
-      "src": "/api/health-check",
-      "dest": "/api/api-consolidated.js",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
-        "Access-Control-Allow-Credentials": "false"
-      }
-    },
-    {
-      "src": "/api/diagnostic",
-      "dest": "/api/api-consolidated.js",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
-        "Access-Control-Allow-Credentials": "false"
-      }
-    },
-    {
-      "src": "/api/artist-releases/([^/]+)",
-      "dest": "/api/artist-releases.js?id=$1",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
-        "Access-Control-Allow-Credentials": "false"
-      }
-    },
-    {
-      "src": "/api/inspect-schema",
-      "dest": "/api/inspect-schema.js",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
-        "Access-Control-Allow-Credentials": "false"
-      }
-    },
-    {
-      "src": "/api/admin/login",
-      "dest": "/api/api-consolidated.js",
-      "methods": ["POST", "OPTIONS"],
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization",
-        "Access-Control-Allow-Credentials": "false"
-      }
-    },
-    {
-      "src": "/api/admin/verify-admin-token",
-      "dest": "/api/api-consolidated.js",
-      "methods": ["GET", "OPTIONS"],
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization",
-        "Access-Control-Allow-Credentials": "false"
-      }
-    },
-    {
-      "src": "/api/admin/test-login",
-      "dest": "/api/api-consolidated.js",
-      "methods": ["GET", "OPTIONS"],
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization",
-        "Access-Control-Allow-Credentials": "false"
-      }
-    },
-    {
-      "src": "/api/admin/spotify/import-tracks",
-      "dest": "/api/api-consolidated.js",
-      "methods": ["POST", "OPTIONS"],
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization",
-        "Access-Control-Allow-Credentials": "false"
-      }
-    },
-    {
-      "src": "/admin/(.*)",
-      "dest": "/dist/index.html",
+      "src": "/api/(.*)",
+      "dest": "/api/$1",
       "headers": {
         "Cache-Control": "no-cache, no-store, must-revalidate",
         "Access-Control-Allow-Credentials": "false",
@@ -338,14 +64,24 @@
       }
     },
     {
-      "src": "/(.*)",
+      "src": "/(assets|images)/(.*)",
+      "dest": "/dist/$1/$2",
+      "headers": {
+        "Cache-Control": "public, max-age=31536000, immutable"
+      }
+    },
+    {
+      "src": "/(.*\\.(js|css|ico|png|jpg|jpeg|svg))",
       "dest": "/dist/$1",
       "headers": {
-        "Cache-Control": "public, max-age=86400, immutable",
-        "Access-Control-Allow-Credentials": "false",
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET,OPTIONS,PATCH,DELETE,POST,PUT",
-        "Access-Control-Allow-Headers": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-Type, Authorization"
+        "Cache-Control": "public, max-age=31536000, immutable"
+      }
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/dist/index.html",
+      "headers": {
+        "Cache-Control": "no-cache, no-store, must-revalidate"
       }
     }
   ],
@@ -358,11 +94,6 @@
   "env": {
     "NODE_ENV": "production",
     "DB_SSL": "true",
-    "DB_SSL_REJECT_UNAUTHORIZED": "false",
-    "ADMIN_USERNAME": "admin",
-    "ADMIN_PASSWORD_HASH": "$2a$10$nQ0oN9pavoYZiAjdPdstL.S.Vi/3012suNyKxHX/CI39wB424l9Ya",
-    "JWT_SECRET": "buildit_records_jwt_secret_2025",
-    "REACT_APP_API_URL": "/api",
-    "REACT_APP_ENV": "production"
+    "PORT": "3000"
   }
 }

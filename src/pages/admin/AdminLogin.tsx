@@ -20,12 +20,17 @@ const AdminLogin: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [devModeToggled, setDevModeToggled] = useState(false);
+  const [success, setSuccess] = useState(false);
   const isDev = process.env.NODE_ENV === 'development' || window.location.hostname === 'localhost';
 
   console.log('AdminLogin - Environment:', {
-    NODE_ENV: process.env.NODE_ENV,
-    hostname: window.location.hostname,
     isDev,
+    hostname: window.location.hostname,
+    apiBaseUrl: databaseService.getBaseUrl(),
+  });
+
+  // Debug state to track API base URL and other info for debugging
+  const [state, setState] = useState({
     apiBaseUrl: databaseService.getBaseUrl(),
   });
 
@@ -35,55 +40,42 @@ const AdminLogin: React.FC = () => {
     setLoading(true);
 
     try {
-      logger.info('Attempting login with:', { 
-        username,
-        hasPassword: !!password,
-        apiUrl: databaseService.getBaseUrl(),
-        env: process.env.NODE_ENV,
-        hostname: window.location.hostname
-      });
-
-      // First, try to login
+      logger.info(`Logging in with username: ${username}, API URL: ${state.apiBaseUrl}`);
+      console.log(`Logging in with username: ${username}, API URL: ${state.apiBaseUrl}`);
+      
+      // Call the login endpoint
       const response = await databaseService.adminLogin(username, password);
-      logger.info('Login response:', response);
       
-      if (!response.success || !response.token) {
-        setError(response.message || 'Login failed');
-        setLoading(false);
-        return;
+      if (response && response.token) {
+        // Store the token in localStorage
+        localStorage.setItem('adminToken', response.token);
+        logger.info('Login successful, token stored:', response.token.substring(0, 20) + '...');
+        console.log('Login successful, token stored:', response.token.substring(0, 20) + '...');
+        setSuccess(true);
+        
+        // Wait momentarily to show success message before redirecting
+        setTimeout(() => {
+          // Check if there's a redirect path stored
+          const redirectPath = sessionStorage.getItem('redirectAfterLogin');
+          if (redirectPath) {
+            logger.info(`Redirecting to stored path: ${redirectPath}`);
+            console.log(`Redirecting to stored path: ${redirectPath}`);
+            sessionStorage.removeItem('redirectAfterLogin'); // Clear stored path
+            navigate(redirectPath);
+          } else {
+            logger.info('No stored redirect path, going to dashboard');
+            console.log('No stored redirect path, going to dashboard');
+            navigate('/admin/dashboard');
+          }
+        }, 1000);
+      } else {
+        throw new Error('Invalid response from server');
       }
-
-      // Store token in localStorage
-      localStorage.setItem('adminToken', response.token);
-      localStorage.setItem('adminUsername', username);
-
-      // Then verify the token
-      const verified = await databaseService.verifyAdminToken();
-      logger.info('Token verification:', verified);
-      
-      if (!verified.verified) {
-        setError('Token verification failed');
-        setLoading(false);
-        return;
-      }
-      
-      // If we get here, both login and verification succeeded
-      logger.info('Successfully logged in and verified');
-      setLoading(false);
-      navigate('/admin/dashboard', { replace: true });
     } catch (error) {
-      logger.error('Login error details:', {
-        error: error instanceof Error ? {
-          name: error.name,
-          message: error.message,
-          stack: error.stack
-        } : error,
-        state: {
-          username,
-          hasPassword: !!password
-        }
-      });
-      setError(error instanceof Error ? error.message : 'An error occurred during login');
+      logger.error('Login failed:', error);
+      console.error('Login failed:', error);
+      setError('Invalid username or password');
+    } finally {
       setLoading(false);
     }
   };
@@ -131,6 +123,12 @@ const AdminLogin: React.FC = () => {
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {error}
+          </Alert>
+        )}
+
+        {success && (
+          <Alert severity="success" sx={{ mb: 2 }}>
+            Login successful!
           </Alert>
         )}
 

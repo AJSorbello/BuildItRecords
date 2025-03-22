@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Layout } from './Layout';
 import AdminLogin from '../pages/admin/AdminLogin';
 import AdminDashboard from '../pages/admin/AdminDashboard';
@@ -17,16 +17,36 @@ const ScrollToTop = () => {
   return null;
 };
 
+// Fallback component for handling 404 pages - will redirect to home
+const FallbackRedirect = () => {
+  const navigate = useNavigate();
+  
+  useEffect(() => {
+    console.log('404 route hit - redirecting to home');
+    navigate('/', { replace: true });
+  }, [navigate]);
+  
+  return <div>Redirecting...</div>;
+};
+
 interface ProtectedRouteProps {
   children: JSX.Element;
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const isAuthenticated = !!localStorage.getItem('adminToken');
-  console.log('ProtectedRoute - Auth state:', isAuthenticated);
+  const location = useLocation();
   
-  // Simplify the protected route to just check for authentication
-  return isAuthenticated ? <>{children}</> : <Navigate to="/admin/login" replace />;
+  console.log('ProtectedRoute - Auth state:', isAuthenticated, 'Path:', location.pathname);
+  
+  // Store the attempted URL to redirect back after login
+  useEffect(() => {
+    if (!isAuthenticated) {
+      sessionStorage.setItem('redirectAfterLogin', location.pathname);
+    }
+  }, [isAuthenticated, location.pathname]);
+  
+  return isAuthenticated ? <>{children}</> : <Navigate to="/admin/login" replace state={{ from: location }} />;
 };
 
 const AppRouter: React.FC = () => {
@@ -36,7 +56,6 @@ const AppRouter: React.FC = () => {
     console.log('Authentication state:', !!localStorage.getItem('adminToken'));
   }, []);
 
-  // Simplified routing configuration that works in both development and production
   return (
     <Router>
       <ScrollToTop />
@@ -44,10 +63,10 @@ const AppRouter: React.FC = () => {
         {/* Spotify callback route */}
         <Route path="/callback" element={<SpotifyCallback />} />
         
-        {/* Admin routes - same in development and production */}
+        {/* Admin routes */}
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route
-          path="/admin/dashboard"
+          path="/admin/dashboard/*"
           element={
             <ProtectedRoute>
               <AdminDashboard />
@@ -65,11 +84,12 @@ const AppRouter: React.FC = () => {
 
         {/* Main application routes with Layout */}
         <Route element={<Layout />}>
-          <Route path="/" element={<Home />} />
+          <Route index element={<Home />} />
           <Route path="/records/*" element={<Home />} />
           <Route path="/tech/*" element={<Home />} />
           <Route path="/deep/*" element={<Home />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
+          {/* Add a wildcard route at the end to catch all other routes */}
+          <Route path="*" element={<FallbackRedirect />} />
         </Route>
       </Routes>
     </Router>

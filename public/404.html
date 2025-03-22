@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Redirecting to Build It Records</title>
+  <script>
+    // Extract the pathname (excluding the base URL)
+    var pathname = window.location.pathname;
+    
+    // Redirect to the root with the path as a query parameter
+    // This allows the React app to handle the routing
+    window.location.href = '/' + pathname;
+  </script>
+</head>
+<body>
+  <p>Redirecting to Build It Records...</p>
+</body>
+</html>

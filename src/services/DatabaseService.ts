@@ -110,6 +110,7 @@ interface AdminLoginResponse {
 interface TokenVerificationResponse {
   verified: boolean;
   message?: string;
+  user?: any;
 }
 
 interface ProcessedRelease {
@@ -1010,12 +1011,17 @@ class DatabaseService {
   ): Promise<AdminLoginResponse> {
     try {
       console.log(`[DatabaseService] Attempting admin login for user: ${username}`);
+      const token = localStorage.getItem('adminToken');
+      if (token) {
+        console.log('[DatabaseService] adminLogin: Token already exists in localStorage');
+        return { success: true, token, message: 'Already logged in' };
+      }
       
-      // Different API path based on environment
-      const apiPath = this.baseUrl.includes('/api') ? '/admin/login' : '/api/admin/login';
+      console.log('[DatabaseService] adminLogin: No token found in localStorage, proceeding with login');
+      const apiUrl = this.formatUrl(this.getBaseUrl(), 'admin/login');
+      console.log('[DatabaseService] adminLogin API URL:', apiUrl);
       
-      // Make POST request with credentials
-      const response = await fetch(this.formatUrl(this.baseUrl, apiPath), {
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -1023,22 +1029,24 @@ class DatabaseService {
         body: JSON.stringify({ username, password })
       });
       
-      // Parse response
       const data = await response.json();
+      console.log('[DatabaseService] adminLogin response status:', response.status);
       
-      console.log('[DatabaseService] Admin login response:', data);
+      if (!response.ok) {
+        console.error('[DatabaseService] Login error:', data);
+        throw new Error(data.message || 'Login failed');
+      }
       
-      return {
-        success: data.success || false,
-        token: data.data?.token || data.token,
-        message: data.message || (data.success ? 'Login successful' : 'Login failed')
-      };
+      console.log('[DatabaseService] Login success:', {
+        success: data.success,
+        hasToken: !!data.token,
+        tokenLength: data.token ? data.token.length : 0
+      });
+      
+      return data;
     } catch (error) {
-      console.error('[DatabaseService] Admin login error:', error);
-      return {
-        success: false,
-        message: error instanceof Error ? error.message : 'Login request failed'
-      };
+      console.error('[DatabaseService] adminLogin error:', error);
+      throw error;
     }
   }
 
@@ -1048,42 +1056,34 @@ class DatabaseService {
    */
   async verifyAdminToken(): Promise<TokenVerificationResponse> {
     try {
-      console.log('[DatabaseService] Verifying admin token');
-      
-      // Get token from localStorage
       const token = localStorage.getItem('adminToken');
-      
       if (!token) {
-        console.warn('[DatabaseService] No admin token found in localStorage');
+        console.log('[DatabaseService] verifyAdminToken: No token found in localStorage');
         return { verified: false, message: 'No token found' };
       }
       
-      // Different API path based on environment
-      const apiPath = this.baseUrl.includes('/api') ? '/admin/verify-admin-token' : '/api/admin/verify-admin-token';
+      console.log('[DatabaseService] Verifying admin token');
+      const apiUrl = this.formatUrl(this.getBaseUrl(), 'admin/verify-admin-token');
+      console.log('[DatabaseService] verifyAdminToken API URL:', apiUrl);
       
-      // Make GET request with token in Authorization header
-      const response = await fetch(this.formatUrl(this.baseUrl, apiPath), {
+      const response = await fetch(apiUrl, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
       
-      // Parse response
       const data = await response.json();
-      
-      console.log('[DatabaseService] Token verification response:', data);
+      console.log('[DatabaseService] verifyAdminToken response:', data);
       
       return {
-        verified: data.success || false,
-        message: data.message || (data.success ? 'Token verified' : 'Token verification failed')
+        verified: data.success === true,
+        message: data.message,
+        user: data.data?.user
       };
     } catch (error) {
-      console.error('[DatabaseService] Token verification error:', error);
-      return {
-        verified: false,
-        message: error instanceof Error ? error.message : 'Verification request failed'
-      };
+      console.error('[DatabaseService] verifyAdminToken error:', error);
+      return { verified: false, message: error instanceof Error ? error.message : 'Verification request failed' };
     }
   }
 }
