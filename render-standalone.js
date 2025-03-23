@@ -295,7 +295,8 @@ const handleReleasesRequest = async (req, res) => {
         artist:release_artists(
           artist:artist_id(id, name, image_url, spotify_url)
         )
-      `);
+      `)
+      .order('release_date', { ascending: false }); // Sort releases by date, newest first
     
     // Add label filter if the label parameter is present
     if (label) {
@@ -335,10 +336,18 @@ const handleReleasesRequest = async (req, res) => {
         ? release.artist.map(item => item.artist).filter(artist => artist !== null)
         : [];
       
+      // Sort artists alphabetically by name
+      const sortedArtists = artists.sort((a, b) => {
+        if (a.name && b.name) {
+          return a.name.localeCompare(b.name);
+        }
+        return 0;
+      });
+      
       // Return the release with artists in the expected format
       return {
         ...release,
-        artists: artists
+        artists: sortedArtists
       };
     });
     
@@ -385,6 +394,23 @@ const handleReleaseByIdRequest = async (req, res) => {
         message: releaseResult.error || `Release with ID ${id} not found`,
         data: null
       });
+    }
+    
+    // Process single release to sort artists alphabetically
+    if (releaseResult.success && releaseResult.data && releaseResult.data.artist) {
+      const artists = releaseResult.data.artist
+        .map(item => item.artist)
+        .filter(artist => artist !== null);
+      
+      // Sort artists alphabetically
+      const sortedArtists = artists.sort((a, b) => {
+        if (a.name && b.name) {
+          return a.name.localeCompare(b.name);
+        }
+        return 0;
+      });
+      
+      releaseResult.data.artists = sortedArtists;
     }
     
     // Get tracks for this release with their artists
