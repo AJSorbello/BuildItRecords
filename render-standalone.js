@@ -284,8 +284,31 @@ const handleArtistByIdRequest = async (req, res) => {
 // Releases endpoints (both /api/releases and /api/release)
 const handleReleasesRequest = async (req, res) => {
   try {
+    // Check if label parameter is present
+    const { label } = req.query;
+    
+    // Create the base query for releases
+    let query = supabase.from('releases').select('*');
+    
+    // Add label filter if the label parameter is present
+    if (label) {
+      console.log(`Filtering releases by label: ${label}`);
+      
+      // Handle different label name formats
+      if (label === 'tech' || label === 'buildit-tech') {
+        query = query.eq('label_id', 3);
+      } else if (label === 'deep' || label === 'buildit-deep') {
+        query = query.eq('label_id', 2);
+      } else if (label === 'buildit-records' || label === 'records') {
+        query = query.eq('label_id', 1);
+      } else if (!isNaN(label)) {
+        // If label is a number, use it directly
+        query = query.eq('label_id', parseInt(label, 10));
+      }
+    }
+    
     const result = await safeDbQuery(
-      () => supabase.from('releases').select('*'),
+      () => query,
       [],
       'Error fetching releases'
     );
@@ -319,31 +342,53 @@ const handleReleaseByIdRequest = async (req, res) => {
     
     console.log(`Fetching release with ID: ${id}`);
     
-    const result = await safeDbQuery(
+    // First get the release information
+    const releaseResult = await safeDbQuery(
       () => supabase.from('releases').select('*').eq('id', id).single(),
       null,
       `Error fetching release with ID ${id}`
     );
     
-    if (!result.success) {
+    if (!releaseResult.success || !releaseResult.data) {
       return res.status(200).json({
         success: false,
-        message: result.error,
+        message: releaseResult.error || `Release with ID ${id} not found`,
         data: null
       });
     }
     
-    if (!result.data) {
-      return res.status(200).json({
-        success: false,
-        message: `Release with ID ${id} not found`,
-        data: null
-      });
-    }
+    // Get tracks for this release
+    const tracksResult = await safeDbQuery(
+      () => supabase.from('tracks').select('*').eq('release_id', id).order('track_number', { ascending: true }),
+      null,
+      `Error fetching tracks for release ${id}`
+    );
+    
+    // Get artists for this release using release_artists relation table
+    const artistsResult = await safeDbQuery(
+      () => supabase
+        .from('release_artists')
+        .select(`
+          artist_id,
+          artists:artist_id (*)
+        `)
+        .eq('release_id', id),
+      null,
+      `Error fetching artists for release ${id}`
+    );
+    
+    // Combine the data
+    const releaseData = {
+      ...releaseResult.data,
+      tracks: tracksResult.success ? tracksResult.data || [] : [],
+      artists: artistsResult.success 
+        ? artistsResult.data?.map(item => item.artists) || [] 
+        : []
+    };
     
     return res.status(200).json({
       success: true,
-      data: result.data
+      data: releaseData
     });
   } catch (error) {
     console.error(`Error in release-by-id request handler: ${error.message}`);
