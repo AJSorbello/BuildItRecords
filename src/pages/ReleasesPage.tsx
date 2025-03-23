@@ -272,58 +272,19 @@ export const ReleasesPage = ({ label: propLabel }: ReleasesPageProps) => {
       <Container maxWidth="lg" sx={{ mt: 4, mb: 8, background: getGradientBackground() }}>
         <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
           <Typography 
-            variant="h3" 
+            variant="h4" 
             component="h1" 
-            gutterBottom
             sx={{
+              color: theme.palette.primary.main,
               fontWeight: 700,
-              color: labelColor
+              fontSize: isMobile ? '1.5rem' : '2rem',
+              mb: 0
             }}
           >
             {labelConfig.displayName} Releases
           </Typography>
           
-          <Box sx={{ display: 'flex', alignItems: 'center', mt: isMobile ? 2 : 0 }}>
-            <Typography variant="body2" sx={{ mr: 1, color: 'text.secondary' }}>
-              Filter by:
-            </Typography>
-            <ToggleButtonGroup
-              value={releaseType}
-              exclusive
-              onChange={(_, newType) => {
-                if (newType !== null) {
-                  setReleaseType(newType);
-                }
-              }}
-              aria-label="release type"
-              size="small"
-              sx={{ 
-                '.MuiToggleButtonGroup-grouped': {
-                  border: 1,
-                  borderColor: alpha(labelColor, 0.3),
-                  '&.Mui-selected': {
-                    backgroundColor: alpha(labelColor, 0.2),
-                  },
-                  '&:hover': {
-                    backgroundColor: alpha(labelColor, 0.1),
-                  }
-                }
-              }}
-            >
-              <ToggleButton value="all">
-                All
-              </ToggleButton>
-              <ToggleButton value="album">
-                Albums
-              </ToggleButton>
-              <ToggleButton value="single">
-                Singles
-              </ToggleButton>
-              <ToggleButton value="compilation">
-                Compilations
-              </ToggleButton>
-            </ToggleButtonGroup>
-          </Box>
+          {/* Filter buttons are removed as requested */}
         </Box>
         
         {showLatestRelease && validReleases.length > 0 && (

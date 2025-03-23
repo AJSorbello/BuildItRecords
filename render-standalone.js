@@ -197,6 +197,35 @@ const safeDbQuery = async (queryFn, fallbackData = [], errorMessage = 'Database 
   }
 };
 
+// Define default artwork URLs for each label
+const DEFAULT_LABEL_ARTWORK = {
+  1: 'https://f4.bcbits.com/img/a2138594744_10.jpg', // BuildIt Records
+  2: 'https://f4.bcbits.com/img/a1698425572_10.jpg', // BuildIt Deep
+  3: 'https://f4.bcbits.com/img/a0780547517_10.jpg', // BuildIt Tech
+};
+
+// Helper function to ensure release has proper artwork URL
+const ensureReleaseArtwork = (release) => {
+  // If release has no artwork_url and is a compilation or "Various Artists", assign default artwork
+  if (!release.artwork_url) {
+    // Check if it's a compilation by release_type or title
+    const isCompilation = 
+      release.release_type === 'compilation' || 
+      (release.title && (
+        release.title.toLowerCase().includes('compilation') || 
+        release.title.toLowerCase().includes('various')
+      ));
+    
+    if (isCompilation) {
+      // Assign default artwork based on label_id
+      release.artwork_url = DEFAULT_LABEL_ARTWORK[release.label_id] || DEFAULT_LABEL_ARTWORK[1];
+      console.log(`Assigned default artwork for compilation: ${release.title}`);
+    }
+  }
+  
+  return release;
+};
+
 // Simplified API for common endpoints - SUPPORTING BOTH SINGULAR AND PLURAL FORMS
 
 // Artists endpoints (both /api/artists and /api/artist)
@@ -226,6 +255,9 @@ const handleArtistsRequest = async (req, res) => {
     
     // Process the result to format artists correctly
     const processedReleases = result.data.map(release => {
+      // First ensure the release has proper artwork
+      release = ensureReleaseArtwork(release);
+      
       // Extract artists from the nested structure
       const artists = release.artist 
         ? release.artist.map(item => item.artist).filter(artist => artist !== null)
@@ -360,6 +392,9 @@ const handleReleasesRequest = async (req, res) => {
     
     // Process the result to format artists correctly
     const processedReleases = result.data.map(release => {
+      // First ensure the release has proper artwork
+      release = ensureReleaseArtwork(release);
+      
       // Extract artists from the nested structure
       const artists = release.artist 
         ? release.artist.map(item => item.artist).filter(artist => artist !== null)
@@ -431,6 +466,9 @@ const handleReleaseByIdRequest = async (req, res) => {
         data: null
       });
     }
+    
+    // Ensure release artwork is set
+    releaseResult.data = ensureReleaseArtwork(releaseResult.data);
     
     // Process single release to sort artists alphabetically
     if (releaseResult.success && releaseResult.data && releaseResult.data.artist) {

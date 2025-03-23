@@ -928,6 +928,62 @@ class DatabaseService {
   }
 
   /**
+   * Get releases for a specific artist
+   * @param artistId The ID of the artist to fetch releases for
+   * @returns An object containing the releases and pagination info
+   */
+  public async getArtistReleases(
+    artistId: string,
+    page = 1,
+    limit = 50
+  ): Promise<{
+    releases: Release[];
+    totalReleases: number;
+    hasMore: boolean;
+  }> {
+    console.log(`[DatabaseService] Getting releases for artist: ${artistId}, page: ${page}, limit: ${limit}`);
+    
+    try {
+      // Construct the full API URL for artist releases
+      const apiPath = this.baseUrl.includes('/api') ? '/artists' : '/api/artists';
+      
+      // Build query parameters
+      const queryParams = `/${encodeURIComponent(artistId)}/releases?limit=${limit}&page=${page}`;
+      
+      console.log(`[DatabaseService] Fetching artist releases from endpoint: ${apiPath}${queryParams}`);
+      
+      // Make the API call
+      const response = await this.fetchApi(`${apiPath}${queryParams}`);
+      console.log(`[DatabaseService] Artist releases API response:`, response?.success);
+      
+      if (response && response.success && response.data) {
+        const releases = await this.processReleases(response);
+        console.log(`[DatabaseService] Processed ${releases.length} artist releases`);
+        
+        return {
+          releases,
+          totalReleases: releases.length,
+          hasMore: false // Since we're not implementing pagination for artist releases yet
+        };
+      }
+      
+      // Return empty result if no data
+      return {
+        releases: [],
+        totalReleases: 0,
+        hasMore: false
+      };
+    } catch (error) {
+      console.error('[DatabaseService] Error fetching artist releases:', error);
+      return {
+        releases: [],
+        totalReleases: 0,
+        hasMore: false
+      };
+    }
+  }
+
+  /**
    * Admin login with username and password
    * @param username The admin username
    * @param password The admin password
