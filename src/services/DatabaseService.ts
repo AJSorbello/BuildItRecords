@@ -454,14 +454,14 @@ class DatabaseService {
             alternativeLabelId = '1';
           } else if (labelId === '1') {
             alternativeLabelId = 'buildit-records';
-          } else if (labelId === 'buildit-deep') {
+          } else if (labelId === 'buildit-tech') {
             alternativeLabelId = '2';
           } else if (labelId === '2') {
-            alternativeLabelId = 'buildit-deep';
-          } else if (labelId === 'buildit-tech') {
+            alternativeLabelId = 'buildit-tech';
+          } else if (labelId === 'buildit-deep') {
             alternativeLabelId = '3';
           } else if (labelId === '3') {
-            alternativeLabelId = 'buildit-tech';
+            alternativeLabelId = 'buildit-deep';
           }
           
           const queryParams = `?label=${encodeURIComponent(alternativeLabelId)}&offset=${offset}&limit=${limit}`;
