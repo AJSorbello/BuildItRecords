@@ -292,8 +292,8 @@ const handleReleasesRequest = async (req, res) => {
       .from('releases')
       .select(`
         *,
-        artists:release_artists(
-          artists:artist_id(*)
+        artist:release_artists(
+          artist:artist_id(id, name, image_url, spotify_url)
         )
       `);
     
@@ -331,8 +331,8 @@ const handleReleasesRequest = async (req, res) => {
     // Process the result to format artists correctly
     const processedReleases = result.data.map(release => {
       // Extract artists from the nested structure
-      const artists = release.artists 
-        ? release.artists.map(item => item.artists).filter(artist => artist !== null)
+      const artists = release.artist 
+        ? release.artist.map(item => item.artist).filter(artist => artist !== null)
         : [];
       
       // Return the release with artists in the expected format
@@ -369,8 +369,8 @@ const handleReleaseByIdRequest = async (req, res) => {
         .from('releases')
         .select(`
           *,
-          artists:release_artists(
-            artists:artist_id(*)
+          artist:release_artists(
+            artist:artist_id(id, name, image_url, spotify_url)
           )
         `)
         .eq('id', id)
@@ -393,8 +393,8 @@ const handleReleaseByIdRequest = async (req, res) => {
         .from('tracks')
         .select(`
           *,
-          artists:track_artists(
-            artists:artist_id(*)
+          artist:track_artists(
+            artist:artist_id(id, name, image_url, spotify_url)
           )
         `)
         .eq('release_id', id)
@@ -406,8 +406,8 @@ const handleReleaseByIdRequest = async (req, res) => {
     // Process the result to format artists correctly for the release
     const processedRelease = {
       ...releaseResult.data,
-      artists: releaseResult.data.artists 
-        ? releaseResult.data.artists.map(item => item.artists).filter(artist => artist !== null)
+      artists: releaseResult.data.artist 
+        ? releaseResult.data.artist.map(item => item.artist).filter(artist => artist !== null)
         : []
     };
     
@@ -416,8 +416,8 @@ const handleReleaseByIdRequest = async (req, res) => {
       ? tracksResult.data.map(track => {
           return {
             ...track,
-            artists: track.artists 
-              ? track.artists.map(item => item.artists).filter(artist => artist !== null)
+            artists: track.artist 
+              ? track.artist.map(item => item.artist).filter(artist => artist !== null)
               : []
           };
         })
