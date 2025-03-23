@@ -365,10 +365,13 @@ const handleReleasesRequest = async (req, res) => {
       
       // Handle different label name formats
       if (label === 'tech' || label === 'buildit-tech') {
+        // BuildIt Tech = label_id 3
         query = query.eq('label_id', 3);
       } else if (label === 'deep' || label === 'buildit-deep') {
+        // BuildIt Deep = label_id 2
         query = query.eq('label_id', 2);
       } else if (label === 'buildit-records' || label === 'records') {
+        // BuildIt Records = label_id 1
         query = query.eq('label_id', 1);
       } else if (!isNaN(label)) {
         // If label is a number, use it directly
