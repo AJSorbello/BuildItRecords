@@ -22,6 +22,7 @@ const allowedOrigins = [
   'https://build-it-records-ek4rtnk9w-ajsorbellos-projects.vercel.app',
   'https://build-it-records-itmufu57f-ajsorbellos-projects.vercel.app',
   'https://build-it-records-fuxad54e4-ajsorbellos-projects.vercel.app', 
+  'https://build-it-records-qc3zqyw9p-ajsorbellos-projects.vercel.app', 
   'https://builditrecords.vercel.app',
   'http://localhost:3000',
   'http://localhost:5173',
@@ -39,7 +40,7 @@ app.use(cors({
       callback(null, true);
     } 
     // Check if it's a Vercel preview URL
-    else if (origin.includes('vercel.app')) {
+    else if (origin.includes('vercel.app') || origin.includes('ajsorbellos-projects')) {
       console.log(`Allowing Vercel preview deployment: ${origin}`);
       callback(null, true);
     } 
@@ -55,7 +56,7 @@ app.use(cors({
 }));
 
 // Enable wildcard CORS for all routes
-app.options('*', cors());
+app.options('*', cors({ credentials: false }));
 
 // Simple middleware to log requests
 app.use((req, res, next) => {
