@@ -288,7 +288,14 @@ const handleReleasesRequest = async (req, res) => {
     const { label } = req.query;
     
     // Create the base query for releases
-    let query = supabase.from('releases').select('*');
+    let query = supabase
+      .from('releases')
+      .select(`
+        *,
+        artists:release_artists(
+          artists:artist_id(*)
+        )
+      `);
     
     // Add label filter if the label parameter is present
     if (label) {
@@ -321,9 +328,23 @@ const handleReleasesRequest = async (req, res) => {
       });
     }
     
+    // Process the result to format artists correctly
+    const processedReleases = result.data.map(release => {
+      // Extract artists from the nested structure
+      const artists = release.artists 
+        ? release.artists.map(item => item.artists).filter(artist => artist !== null)
+        : [];
+      
+      // Return the release with artists in the expected format
+      return {
+        ...release,
+        artists: artists
+      };
+    });
+    
     return res.status(200).json({
       success: true,
-      data: result.data
+      data: processedReleases
     });
   } catch (error) {
     console.error(`Error in releases request handler: ${error.message}`);
@@ -342,9 +363,18 @@ const handleReleaseByIdRequest = async (req, res) => {
     
     console.log(`Fetching release with ID: ${id}`);
     
-    // First get the release information
+    // First get the release information with artists
     const releaseResult = await safeDbQuery(
-      () => supabase.from('releases').select('*').eq('id', id).single(),
+      () => supabase
+        .from('releases')
+        .select(`
+          *,
+          artists:release_artists(
+            artists:artist_id(*)
+          )
+        `)
+        .eq('id', id)
+        .single(),
       null,
       `Error fetching release with ID ${id}`
     );
@@ -357,33 +387,46 @@ const handleReleaseByIdRequest = async (req, res) => {
       });
     }
     
-    // Get tracks for this release
+    // Get tracks for this release with their artists
     const tracksResult = await safeDbQuery(
-      () => supabase.from('tracks').select('*').eq('release_id', id).order('track_number', { ascending: true }),
+      () => supabase
+        .from('tracks')
+        .select(`
+          *,
+          artists:track_artists(
+            artists:artist_id(*)
+          )
+        `)
+        .eq('release_id', id)
+        .order('track_number', { ascending: true }),
       null,
       `Error fetching tracks for release ${id}`
     );
     
-    // Get artists for this release using release_artists relation table
-    const artistsResult = await safeDbQuery(
-      () => supabase
-        .from('release_artists')
-        .select(`
-          artist_id,
-          artists:artist_id (*)
-        `)
-        .eq('release_id', id),
-      null,
-      `Error fetching artists for release ${id}`
-    );
+    // Process the result to format artists correctly for the release
+    const processedRelease = {
+      ...releaseResult.data,
+      artists: releaseResult.data.artists 
+        ? releaseResult.data.artists.map(item => item.artists).filter(artist => artist !== null)
+        : []
+    };
+    
+    // Process tracks to format their artists correctly
+    const processedTracks = tracksResult.success 
+      ? tracksResult.data.map(track => {
+          return {
+            ...track,
+            artists: track.artists 
+              ? track.artists.map(item => item.artists).filter(artist => artist !== null)
+              : []
+          };
+        })
+      : [];
     
     // Combine the data
     const releaseData = {
-      ...releaseResult.data,
-      tracks: tracksResult.success ? tracksResult.data || [] : [],
-      artists: artistsResult.success 
-        ? artistsResult.data?.map(item => item.artists) || [] 
-        : []
+      ...processedRelease,
+      tracks: processedTracks
     };
     
     return res.status(200).json({
