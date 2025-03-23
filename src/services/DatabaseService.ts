@@ -454,14 +454,14 @@ class DatabaseService {
             alternativeLabelId = '1';
           } else if (labelId === '1') {
             alternativeLabelId = 'buildit-records';
-          } else if (labelId === 'buildit-deep') {
+          } else if (labelId === 'buildit-tech') {
             alternativeLabelId = '2';
           } else if (labelId === '2') {
-            alternativeLabelId = 'buildit-deep';
-          } else if (labelId === 'buildit-tech') {
+            alternativeLabelId = 'buildit-tech';
+          } else if (labelId === 'buildit-deep') {
             alternativeLabelId = '3';
           } else if (labelId === '3') {
-            alternativeLabelId = 'buildit-tech';
+            alternativeLabelId = 'buildit-deep';
           }
           
           const queryParams = `?label=${encodeURIComponent(alternativeLabelId)}&offset=${offset}&limit=${limit}`;
@@ -585,9 +585,9 @@ class DatabaseService {
         if (numericId === 1) {
           stringLabelId = 'buildit-records';
         } else if (numericId === 2) {
-          stringLabelId = 'buildit-deep';
-        } else if (numericId === 3) {
           stringLabelId = 'buildit-tech';
+        } else if (numericId === 3) {
+          stringLabelId = 'buildit-deep';
         } else {
           stringLabelId = String(labelId);
         }
@@ -666,8 +666,8 @@ class DatabaseService {
           // Convert labelId to number if it's a string to match potential numeric IDs in the data
           const numericLabelId = typeof labelId === 'string' ? 
             (labelId === 'buildit-records' ? 1 : 
-             labelId === 'buildit-deep' ? 2 :
-             labelId === 'buildit-tech' ? 3 :
+             labelId === 'buildit-tech' ? 2 :
+             labelId === 'buildit-deep' ? 3 :
              parseInt(labelId, 10)) : 
             labelId;
           
