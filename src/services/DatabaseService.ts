@@ -646,8 +646,13 @@ class DatabaseService {
         if (allArtists.length > 0) {
           // Convert labelId to number if it's a string to match potential numeric IDs in the data
           const numericLabelId = typeof labelId === 'string' ? 
-            (labelId === 'buildit-records' ? 1 : parseInt(labelId, 10)) : 
+            (labelId === 'buildit-records' ? 1 : 
+             labelId === 'buildit-deep' ? 2 :
+             labelId === 'buildit-tech' ? 3 :
+             parseInt(labelId, 10)) : 
             labelId;
+          
+          console.log(`[DatabaseService] Filtering artists by numericLabelId: ${numericLabelId}`);
           
           const filteredArtists = allArtists.filter((artist: Artist) => {
             // Check various label properties that might exist
