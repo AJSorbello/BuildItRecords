@@ -401,12 +401,36 @@ class DatabaseService {
     console.log(`[DatabaseService] Will fetch releases from API with base URL: ${this.baseUrl}`);
     
     try {
+      // Translation layer for backend API's swapped label IDs
+      let apiLabelId = labelId;
+      
+      // For string label IDs, apply special translation for Tech/Deep
+      if (typeof labelId === 'string') {
+        if (labelId === 'buildit-tech') {
+          apiLabelId = '3'; // Backend expects Tech to be ID 3
+          console.log(`[DatabaseService] Translating frontend label 'buildit-tech' to backend ID '3'`);
+        } else if (labelId === 'buildit-deep') {
+          apiLabelId = '2'; // Backend expects Deep to be ID 2
+          console.log(`[DatabaseService] Translating frontend label 'buildit-deep' to backend ID '2'`);
+        }
+      } 
+      // For numeric label IDs, apply special translation for Tech/Deep
+      else if (typeof labelId === 'number' || !isNaN(parseInt(labelId, 10))) {
+        if (labelId === 2 || labelId === '2') {
+          apiLabelId = '3'; // Backend expects Tech to be ID 3
+          console.log(`[DatabaseService] Translating frontend label ID '2' to backend ID '3'`);
+        } else if (labelId === 3 || labelId === '3') {
+          apiLabelId = '2'; // Backend expects Deep to be ID 2
+          console.log(`[DatabaseService] Translating frontend label ID '3' to backend ID '2'`);
+        }
+      }
+      
       // Construct the full API URL for releases - ensure /api prefix only appears once
       // If the baseUrl already contains /api, don't add it again
       const apiPath = this.baseUrl.includes('/api') ? '/releases' : '/api/releases';
       
       // Build query parameters
-      let queryParams = `?label=${encodeURIComponent(labelId)}&offset=${offset}&limit=${limit}`;
+      let queryParams = `?label=${encodeURIComponent(apiLabelId)}&offset=${offset}&limit=${limit}`;
       
       // Add release type if specified
       if (releaseType) {
@@ -596,8 +620,23 @@ class DatabaseService {
         stringLabelId = String(labelId);
       }
       
+      // Translation layer for backend API's swapped label IDs
+      let apiLabelId = stringLabelId;
+      
+      if (stringLabelId === 'buildit-tech') {
+        apiLabelId = 'buildit-tech';
+        // The backend API needs the numeric ID 3 for Tech
+        apiLabelId = '3';
+        console.log(`[DatabaseService] Translating frontend label 'buildit-tech' to backend ID '3'`);
+      } else if (stringLabelId === 'buildit-deep') {
+        apiLabelId = 'buildit-deep';
+        // The backend API needs the numeric ID 2 for Deep
+        apiLabelId = '2';
+        console.log(`[DatabaseService] Translating frontend label 'buildit-deep' to backend ID '2'`);
+      }
+      
       // Create a label query that uses the string format first
-      const labelQuery = `label=${encodeURIComponent(stringLabelId)}`;
+      const labelQuery = `label=${encodeURIComponent(apiLabelId)}`;
       
       console.log(`[DatabaseService] Primary approach: Using new API endpoint`);
       const primaryApiUrl = `api/artists?${labelQuery}&limit=${limit}&offset=${offset}&sort=name`;
