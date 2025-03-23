@@ -404,25 +404,22 @@ class DatabaseService {
       // Translation layer for backend API's swapped label IDs
       let apiLabelId = labelId;
       
-      // For string label IDs, apply special translation for Tech/Deep
+      // Use direct 1:1 mapping for label IDs without any swapping
       if (typeof labelId === 'string') {
         if (labelId === 'buildit-tech') {
-          apiLabelId = '3'; // Backend expects Tech to be ID 3
-          console.log(`[DatabaseService] Translating frontend label 'buildit-tech' to backend ID '3'`);
+          apiLabelId = '2'; // BUILD IT TECH ID = 2
+          console.log(`[DatabaseService] Using label ID 2 for buildit-tech`);
         } else if (labelId === 'buildit-deep') {
-          apiLabelId = '2'; // Backend expects Deep to be ID 2
-          console.log(`[DatabaseService] Translating frontend label 'buildit-deep' to backend ID '2'`);
+          apiLabelId = '3'; // BUILD IT DEEP ID = 3
+          console.log(`[DatabaseService] Using label ID 3 for buildit-deep`);
+        } else if (labelId === 'buildit-records') {
+          apiLabelId = '1'; // BUILD IT RECORDS ID = 1
+          console.log(`[DatabaseService] Using label ID 1 for buildit-records`);
         }
-      } 
-      // For numeric label IDs, apply special translation for Tech/Deep
-      else if (typeof labelId === 'number' || !isNaN(parseInt(labelId, 10))) {
-        if (labelId === 2 || labelId === '2') {
-          apiLabelId = '3'; // Backend expects Tech to be ID 3
-          console.log(`[DatabaseService] Translating frontend label ID '2' to backend ID '3'`);
-        } else if (labelId === 3 || labelId === '3') {
-          apiLabelId = '2'; // Backend expects Deep to be ID 2
-          console.log(`[DatabaseService] Translating frontend label ID '3' to backend ID '2'`);
-        }
+      } else if (typeof labelId === 'number' || !isNaN(parseInt(labelId, 10))) {
+        // For numeric IDs, use them directly - no translation needed
+        apiLabelId = String(labelId);
+        console.log(`[DatabaseService] Using numeric label ID directly: ${apiLabelId}`);
       }
       
       // Construct the full API URL for releases - ensure /api prefix only appears once
@@ -620,19 +617,22 @@ class DatabaseService {
         stringLabelId = String(labelId);
       }
       
-      // Translation layer for backend API's swapped label IDs
+      // Direct 1:1 mapping between frontend and backend label IDs
       let apiLabelId = stringLabelId;
       
       if (stringLabelId === 'buildit-tech') {
-        apiLabelId = 'buildit-tech';
-        // The backend API needs the numeric ID 3 for Tech
-        apiLabelId = '3';
-        console.log(`[DatabaseService] Translating frontend label 'buildit-tech' to backend ID '3'`);
+        apiLabelId = '2'; // BUILD IT TECH ID = 2
+        console.log(`[DatabaseService] Using label ID 2 for buildit-tech`);
       } else if (stringLabelId === 'buildit-deep') {
-        apiLabelId = 'buildit-deep';
-        // The backend API needs the numeric ID 2 for Deep
-        apiLabelId = '2';
-        console.log(`[DatabaseService] Translating frontend label 'buildit-deep' to backend ID '2'`);
+        apiLabelId = '3'; // BUILD IT DEEP ID = 3
+        console.log(`[DatabaseService] Using label ID 3 for buildit-deep`);
+      } else if (stringLabelId === 'buildit-records') {
+        apiLabelId = '1'; // BUILD IT RECORDS ID = 1
+        console.log(`[DatabaseService] Using label ID 1 for buildit-records`);
+      } else if (!isNaN(parseInt(stringLabelId, 10))) {
+        // For numeric IDs, use them directly
+        apiLabelId = stringLabelId;
+        console.log(`[DatabaseService] Using numeric label ID directly: ${apiLabelId}`);
       }
       
       // Create a label query that uses the string format first
