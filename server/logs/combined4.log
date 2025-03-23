@@ -5819,3 +5819,539 @@
 {"ip":"127.0.0.1","level":"info","message":"Incoming request:","method":"GET","timestamp":"2025-03-16T02:23:11.968Z","url":"/api/labels","userAgent":"axios/1.8.3"}
 {"ip":"127.0.0.1","level":"info","message":"Incoming request:","method":"GET","timestamp":"2025-03-16T02:24:27.962Z","url":"/api/labels","userAgent":"curl/8.7.1"}
 {"ip":"127.0.0.1","level":"info","message":"Incoming request:","method":"GET","timestamp":"2025-03-16T02:27:31.937Z","url":"/api/labels","userAgent":"axios/1.8.3"}
+{"level":"info","message":"Attempting database connection using connection URL","timestamp":"2025-03-22T19:29:32.955Z","url":"postgres://****:****@aws-0-us-east-1.pooler.supabase.com:6543/postgres?sslmode=require&supa=base-pooler.x"}
+{"level":"info","message":"Database connection using connection URL configured successfully","timestamp":"2025-03-22T19:29:33.091Z"}
+{"level":"info","message":"Testing database connection...","timestamp":"2025-03-22T19:29:33.091Z"}
+{"level":"info","message":"Labels route initialized","modelsAvailable":{"Artist":true,"Label":true,"Release":true,"Track":true,"TrackArtist":true},"timestamp":"2025-03-22T19:29:33.244Z"}
+{"hasPass":true,"hasUser":true,"host":"smtp.gmail.com","level":"info","message":"Email service initialization:","port":"587","secure":false,"timestamp":"2025-03-22T19:29:33.508Z"}
+{"level":"info","message":"Email transport created successfully","timestamp":"2025-03-22T19:29:33.513Z"}
+{"NODE_ENV":"production","PORT":"3001","currentDir":"/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/server","hasJwtSecret":true,"hasPasswordHash":true,"hasSmtpPass":true,"hasSmtpUser":true,"hasUsername":true,"level":"info","message":"Server starting with environment:","timestamp":"2025-03-22T19:29:33.517Z"}
+{"error":"self-signed certificate in certificate chain","level":"error","message":"Database connection verification failed, but continuing startup:","stack":"SequelizeConnectionError: self-signed certificate in certificate chain\n    at Client._connectionCallback (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/sequelize/lib/dialects/postgres/connection-manager.js:145:24)\n    at Client._handleErrorWhileConnecting (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/pg/lib/client.js:336:19)\n    at Client._handleErrorEvent (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/pg/lib/client.js:346:19)\n    at Connection.emit (node:events:514:28)\n    at TLSSocket.reportStreamError (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/pg/lib/connection.js:57:12)\n    at TLSSocket.emit (node:events:514:28)\n    at emitErrorNT (node:internal/streams/destroy:151:8)\n    at emitErrorCloseNT (node:internal/streams/destroy:116:3)\n    at process.processTicksAndRejections (node:internal/process/task_queues:82:21)","timestamp":"2025-03-22T19:29:33.810Z"}
+{"error":"self-signed certificate in certificate chain","level":"error","message":"Database connection test failed - server will continue but database operations will fail","stack":"SequelizeConnectionError: self-signed certificate in certificate chain\n    at Client._connectionCallback (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/sequelize/lib/dialects/postgres/connection-manager.js:145:24)\n    at Client._handleErrorWhileConnecting (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/pg/lib/client.js:336:19)\n    at Client._handleErrorEvent (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/pg/lib/client.js:346:19)\n    at Connection.emit (node:events:514:28)\n    at TLSSocket.reportStreamError (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/pg/lib/connection.js:57:12)\n    at TLSSocket.emit (node:events:514:28)\n    at emitErrorNT (node:internal/streams/destroy:151:8)\n    at emitErrorCloseNT (node:internal/streams/destroy:116:3)\n    at process.processTicksAndRejections (node:internal/process/task_queues:82:21)","timestamp":"2025-03-22T19:29:33.811Z"}
+{"level":"warn","message":"Production database connection failed - switching to test data mode","timestamp":"2025-03-22T19:29:33.811Z"}
+{"error":"listen EADDRINUSE: address already in use 0.0.0.0:3001","level":"error","message":"Server error event:","stack":"Error: listen EADDRINUSE: address already in use 0.0.0.0:3001\n    at Server.setupListenHandle [as _listen2] (node:net:1872:16)\n    at listenInCluster (node:net:1920:12)\n    at doListen (node:net:2069:7)\n    at process.processTicksAndRejections (node:internal/process/task_queues:83:21)","timestamp":"2025-03-22T19:29:33.815Z"}
+{"level":"warn","message":"SSL certificate validation disabled for development","timestamp":"2025-03-22T19:36:50.065Z"}
+{"database":"postgres","host":"liuaozuvkmvanmchndzl.supabase.co","level":"info","message":"Attempting database connection using parameters","port":"5432","ssl":true,"timestamp":"2025-03-22T19:36:50.071Z","username":"postgres"}
+{"level":"info","message":"Database connection configured using parameters","timestamp":"2025-03-22T19:36:50.524Z"}
+{"level":"info","message":"Testing database connection...","timestamp":"2025-03-22T19:36:50.525Z"}
+{"level":"debug","message":"Loaded model: Artist","timestamp":"2025-03-22T19:36:50.551Z"}
+{"level":"debug","message":"Loaded model: DemoSubmission","timestamp":"2025-03-22T19:36:50.555Z"}
+{"level":"debug","message":"Loaded model: ImportLog","timestamp":"2025-03-22T19:36:50.558Z"}
+{"level":"debug","message":"Loaded model: import_log","timestamp":"2025-03-22T19:36:50.561Z"}
+{"level":"debug","message":"Loaded model: Label","timestamp":"2025-03-22T19:36:50.564Z"}
+{"level":"debug","message":"Loaded model: Release","timestamp":"2025-03-22T19:36:50.567Z"}
+{"level":"debug","message":"Loaded model: ReleaseArtist","timestamp":"2025-03-22T19:36:50.570Z"}
+{"level":"debug","message":"Loaded model: release_artist","timestamp":"2025-03-22T19:36:50.575Z"}
+{"level":"debug","message":"Loaded model: Track","timestamp":"2025-03-22T19:36:50.579Z"}
+{"level":"debug","message":"Loaded model: TrackArtist","timestamp":"2025-03-22T19:36:50.583Z"}
+{"level":"debug","message":"Set up associations for model: Artist","timestamp":"2025-03-22T19:36:50.753Z"}
+{"level":"debug","message":"Set up associations for model: DemoSubmission","timestamp":"2025-03-22T19:36:50.755Z"}
+{"level":"debug","message":"Set up associations for model: ImportLog","timestamp":"2025-03-22T19:36:50.757Z"}
+{"level":"debug","message":"Set up associations for model: import_log","timestamp":"2025-03-22T19:36:50.758Z"}
+{"level":"debug","message":"Set up associations for model: Label","timestamp":"2025-03-22T19:36:50.760Z"}
+{"level":"debug","message":"Set up associations for model: Release","timestamp":"2025-03-22T19:36:50.787Z"}
+{"level":"debug","message":"Set up associations for model: ReleaseArtist","timestamp":"2025-03-22T19:36:50.787Z"}
+{"level":"debug","message":"Set up associations for model: release_artist","timestamp":"2025-03-22T19:36:50.788Z"}
+{"level":"debug","message":"Set up associations for model: Track","timestamp":"2025-03-22T19:36:50.802Z"}
+{"level":"debug","message":"Set up associations for model: TrackArtist","timestamp":"2025-03-22T19:36:50.802Z"}
+{"error":"","level":"error","message":"Database connection test failed - server will continue but database operations will fail","stack":"SequelizeConnectionError\n    at Client._connectionCallback (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/sequelize/lib/dialects/postgres/connection-manager.js:145:24)\n    at Client._handleErrorWhileConnecting (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/pg/lib/client.js:336:19)\n    at Client._handleErrorEvent (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/pg/lib/client.js:346:19)\n    at Connection.emit (node:events:514:28)\n    at Socket.reportStreamError (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/pg/lib/connection.js:57:12)\n    at Socket.emit (node:events:514:28)\n    at emitErrorNT (node:internal/streams/destroy:151:8)\n    at emitErrorCloseNT (node:internal/streams/destroy:116:3)\n    at process.processTicksAndRejections (node:internal/process/task_queues:82:21)","timestamp":"2025-03-22T19:40:37.041Z"}
+{"level":"warn","message":"SSL certificate validation disabled for development","timestamp":"2025-03-22T19:41:42.329Z"}
+{"database":"postgres","host":"liuaozuvkmvanmchndzl.supabase.co","level":"info","message":"Attempting database connection using parameters","port":"5432","ssl":true,"timestamp":"2025-03-22T19:41:42.337Z","username":"postgres"}
+{"level":"info","message":"Database connection configured using parameters","timestamp":"2025-03-22T19:41:42.585Z"}
+{"level":"info","message":"Testing database connection...","timestamp":"2025-03-22T19:41:42.586Z"}
+{"level":"debug","message":"Loaded model: Artist","timestamp":"2025-03-22T19:41:42.605Z"}
+{"level":"debug","message":"Loaded model: DemoSubmission","timestamp":"2025-03-22T19:41:42.610Z"}
+{"level":"debug","message":"Loaded model: ImportLog","timestamp":"2025-03-22T19:41:42.613Z"}
+{"level":"debug","message":"Loaded model: import_log","timestamp":"2025-03-22T19:41:42.615Z"}
+{"level":"debug","message":"Loaded model: Label","timestamp":"2025-03-22T19:41:42.616Z"}
+{"level":"debug","message":"Loaded model: Release","timestamp":"2025-03-22T19:41:42.619Z"}
+{"level":"debug","message":"Loaded model: ReleaseArtist","timestamp":"2025-03-22T19:41:42.622Z"}
+{"level":"debug","message":"Loaded model: release_artist","timestamp":"2025-03-22T19:41:42.626Z"}
+{"level":"debug","message":"Loaded model: Track","timestamp":"2025-03-22T19:41:42.630Z"}
+{"level":"debug","message":"Loaded model: TrackArtist","timestamp":"2025-03-22T19:41:42.632Z"}
+{"level":"debug","message":"Set up associations for model: Artist","timestamp":"2025-03-22T19:41:42.640Z"}
+{"level":"debug","message":"Set up associations for model: DemoSubmission","timestamp":"2025-03-22T19:41:42.640Z"}
+{"level":"debug","message":"Set up associations for model: ImportLog","timestamp":"2025-03-22T19:41:42.641Z"}
+{"level":"debug","message":"Set up associations for model: import_log","timestamp":"2025-03-22T19:41:42.642Z"}
+{"level":"debug","message":"Set up associations for model: Label","timestamp":"2025-03-22T19:41:42.645Z"}
+{"level":"debug","message":"Set up associations for model: Release","timestamp":"2025-03-22T19:41:42.647Z"}
+{"level":"debug","message":"Set up associations for model: ReleaseArtist","timestamp":"2025-03-22T19:41:42.648Z"}
+{"level":"debug","message":"Set up associations for model: release_artist","timestamp":"2025-03-22T19:41:42.648Z"}
+{"level":"debug","message":"Set up associations for model: Track","timestamp":"2025-03-22T19:41:42.650Z"}
+{"level":"debug","message":"Set up associations for model: TrackArtist","timestamp":"2025-03-22T19:41:42.650Z"}
+{"error":"","level":"error","message":"Database connection test failed - server will continue but database operations will fail","stack":"SequelizeConnectionError\n    at Client._connectionCallback (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/sequelize/lib/dialects/postgres/connection-manager.js:145:24)\n    at Client._handleErrorWhileConnecting (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/pg/lib/client.js:336:19)\n    at Client._handleErrorEvent (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/pg/lib/client.js:346:19)\n    at Connection.emit (node:events:514:28)\n    at Socket.reportStreamError (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/pg/lib/connection.js:57:12)\n    at Socket.emit (node:events:514:28)\n    at emitErrorNT (node:internal/streams/destroy:151:8)\n    at emitErrorCloseNT (node:internal/streams/destroy:116:3)\n    at process.processTicksAndRejections (node:internal/process/task_queues:82:21)","timestamp":"2025-03-22T19:45:28.746Z"}
+{"level":"warn","message":"SSL certificate validation disabled for development","timestamp":"2025-03-22T19:54:49.327Z"}
+{"database":"postgres","host":"liuaozuvkmvanmchndzl.supabase.co","level":"info","message":"Attempting database connection using parameters","port":"5432","ssl":true,"timestamp":"2025-03-22T19:54:49.333Z","username":"postgres"}
+{"level":"info","message":"Database connection configured using parameters","timestamp":"2025-03-22T19:54:49.636Z"}
+{"level":"info","message":"Testing database connection...","timestamp":"2025-03-22T19:54:49.636Z"}
+{"level":"debug","message":"Loaded model: Artist","timestamp":"2025-03-22T19:54:49.655Z"}
+{"level":"debug","message":"Loaded model: DemoSubmission","timestamp":"2025-03-22T19:54:49.661Z"}
+{"level":"debug","message":"Loaded model: ImportLog","timestamp":"2025-03-22T19:54:49.663Z"}
+{"level":"debug","message":"Loaded model: import_log","timestamp":"2025-03-22T19:54:49.666Z"}
+{"level":"debug","message":"Loaded model: Label","timestamp":"2025-03-22T19:54:49.669Z"}
+{"level":"debug","message":"Loaded model: Release","timestamp":"2025-03-22T19:54:49.672Z"}
+{"level":"debug","message":"Loaded model: ReleaseArtist","timestamp":"2025-03-22T19:54:49.675Z"}
+{"level":"debug","message":"Loaded model: release_artist","timestamp":"2025-03-22T19:54:49.678Z"}
+{"level":"debug","message":"Loaded model: Track","timestamp":"2025-03-22T19:54:49.681Z"}
+{"level":"debug","message":"Loaded model: TrackArtist","timestamp":"2025-03-22T19:54:49.683Z"}
+{"level":"debug","message":"Set up associations for model: Artist","timestamp":"2025-03-22T19:54:49.691Z"}
+{"level":"debug","message":"Set up associations for model: DemoSubmission","timestamp":"2025-03-22T19:54:49.691Z"}
+{"level":"debug","message":"Set up associations for model: ImportLog","timestamp":"2025-03-22T19:54:49.692Z"}
+{"level":"debug","message":"Set up associations for model: import_log","timestamp":"2025-03-22T19:54:49.693Z"}
+{"level":"debug","message":"Set up associations for model: Label","timestamp":"2025-03-22T19:54:49.696Z"}
+{"level":"debug","message":"Set up associations for model: Release","timestamp":"2025-03-22T19:54:49.699Z"}
+{"level":"debug","message":"Set up associations for model: ReleaseArtist","timestamp":"2025-03-22T19:54:49.699Z"}
+{"level":"debug","message":"Set up associations for model: release_artist","timestamp":"2025-03-22T19:54:49.699Z"}
+{"level":"debug","message":"Set up associations for model: Track","timestamp":"2025-03-22T19:54:49.702Z"}
+{"level":"debug","message":"Set up associations for model: TrackArtist","timestamp":"2025-03-22T19:54:49.703Z"}
+{"error":"","level":"error","message":"Database connection test failed - server will continue but database operations will fail","stack":"SequelizeConnectionError\n    at Client._connectionCallback (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/sequelize/lib/dialects/postgres/connection-manager.js:145:24)\n    at Client._handleErrorWhileConnecting (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/pg/lib/client.js:336:19)\n    at Client._handleErrorEvent (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/pg/lib/client.js:346:19)\n    at Connection.emit (node:events:514:28)\n    at Socket.reportStreamError (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/pg/lib/connection.js:57:12)\n    at Socket.emit (node:events:514:28)\n    at emitErrorNT (node:internal/streams/destroy:151:8)\n    at emitErrorCloseNT (node:internal/streams/destroy:116:3)\n    at process.processTicksAndRejections (node:internal/process/task_queues:82:21)","timestamp":"2025-03-22T19:58:35.854Z"}
+{"level":"warn","message":"SSL certificate validation disabled for development","timestamp":"2025-03-23T05:28:52.363Z"}
+{"database":"postgres","host":"liuaozuvkmvanmchndzl.supabase.co","level":"info","message":"Attempting database connection using parameters","port":"5432","ssl":true,"timestamp":"2025-03-23T05:28:52.376Z","username":"postgres"}
+{"level":"info","message":"Database connection configured using parameters","timestamp":"2025-03-23T05:28:52.515Z"}
+{"level":"info","message":"Testing database connection...","timestamp":"2025-03-23T05:28:52.516Z"}
+{"level":"debug","message":"Loaded model: Artist","timestamp":"2025-03-23T05:28:52.531Z"}
+{"level":"debug","message":"Loaded model: DemoSubmission","timestamp":"2025-03-23T05:28:52.534Z"}
+{"level":"debug","message":"Loaded model: ImportLog","timestamp":"2025-03-23T05:28:52.536Z"}
+{"level":"debug","message":"Loaded model: import_log","timestamp":"2025-03-23T05:28:52.537Z"}
+{"level":"debug","message":"Loaded model: Label","timestamp":"2025-03-23T05:28:52.539Z"}
+{"level":"debug","message":"Loaded model: Release","timestamp":"2025-03-23T05:28:52.542Z"}
+{"level":"debug","message":"Loaded model: ReleaseArtist","timestamp":"2025-03-23T05:28:52.544Z"}
+{"level":"debug","message":"Loaded model: release_artist","timestamp":"2025-03-23T05:28:52.546Z"}
+{"level":"debug","message":"Loaded model: Track","timestamp":"2025-03-23T05:28:52.548Z"}
+{"level":"debug","message":"Loaded model: TrackArtist","timestamp":"2025-03-23T05:28:52.550Z"}
+{"level":"debug","message":"Set up associations for model: Artist","timestamp":"2025-03-23T05:28:52.559Z"}
+{"level":"debug","message":"Set up associations for model: DemoSubmission","timestamp":"2025-03-23T05:28:52.559Z"}
+{"level":"debug","message":"Set up associations for model: ImportLog","timestamp":"2025-03-23T05:28:52.560Z"}
+{"level":"debug","message":"Set up associations for model: import_log","timestamp":"2025-03-23T05:28:52.560Z"}
+{"level":"debug","message":"Set up associations for model: Label","timestamp":"2025-03-23T05:28:52.566Z"}
+{"level":"debug","message":"Set up associations for model: Release","timestamp":"2025-03-23T05:28:52.569Z"}
+{"level":"debug","message":"Set up associations for model: ReleaseArtist","timestamp":"2025-03-23T05:28:52.570Z"}
+{"level":"debug","message":"Set up associations for model: release_artist","timestamp":"2025-03-23T05:28:52.570Z"}
+{"level":"debug","message":"Set up associations for model: Track","timestamp":"2025-03-23T05:28:52.572Z"}
+{"level":"debug","message":"Set up associations for model: TrackArtist","timestamp":"2025-03-23T05:28:52.572Z"}
+{"error":"","level":"error","message":"Database connection test failed - server will continue but database operations will fail","stack":"SequelizeConnectionError\n    at Client._connectionCallback (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/sequelize/lib/dialects/postgres/connection-manager.js:145:24)\n    at Client._handleErrorWhileConnecting (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/pg/lib/client.js:336:19)\n    at Client._handleErrorEvent (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/pg/lib/client.js:346:19)\n    at Connection.emit (node:events:514:28)\n    at Socket.reportStreamError (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/pg/lib/connection.js:57:12)\n    at Socket.emit (node:events:514:28)\n    at emitErrorNT (node:internal/streams/destroy:151:8)\n    at emitErrorCloseNT (node:internal/streams/destroy:116:3)\n    at process.processTicksAndRejections (node:internal/process/task_queues:82:21)","timestamp":"2025-03-23T05:32:38.710Z"}
+{"level":"warn","message":"SSL certificate validation disabled for development","timestamp":"2025-03-23T05:36:24.987Z"}
+{"database":"postgres","host":"liuaozuvkmvanmchndzl.supabase.co","level":"info","message":"Attempting database connection using parameters","port":"5432","ssl":true,"timestamp":"2025-03-23T05:36:24.994Z","username":"postgres"}
+{"level":"info","message":"Database connection configured using parameters","timestamp":"2025-03-23T05:36:25.067Z"}
+{"level":"info","message":"Testing database connection...","timestamp":"2025-03-23T05:36:25.068Z"}
+{"level":"debug","message":"Loaded model: Artist","timestamp":"2025-03-23T05:36:25.086Z"}
+{"level":"debug","message":"Loaded model: DemoSubmission","timestamp":"2025-03-23T05:36:25.090Z"}
+{"level":"debug","message":"Loaded model: ImportLog","timestamp":"2025-03-23T05:36:25.093Z"}
+{"level":"debug","message":"Loaded model: import_log","timestamp":"2025-03-23T05:36:25.095Z"}
+{"level":"debug","message":"Loaded model: Label","timestamp":"2025-03-23T05:36:25.139Z"}
+{"level":"debug","message":"Loaded model: Release","timestamp":"2025-03-23T05:36:25.142Z"}
+{"level":"debug","message":"Loaded model: ReleaseArtist","timestamp":"2025-03-23T05:36:25.144Z"}
+{"level":"debug","message":"Loaded model: release_artist","timestamp":"2025-03-23T05:36:25.147Z"}
+{"level":"debug","message":"Loaded model: Track","timestamp":"2025-03-23T05:36:25.151Z"}
+{"level":"debug","message":"Loaded model: TrackArtist","timestamp":"2025-03-23T05:36:25.152Z"}
+{"level":"debug","message":"Set up associations for model: Artist","timestamp":"2025-03-23T05:36:25.161Z"}
+{"level":"debug","message":"Set up associations for model: DemoSubmission","timestamp":"2025-03-23T05:36:25.161Z"}
+{"level":"debug","message":"Set up associations for model: ImportLog","timestamp":"2025-03-23T05:36:25.162Z"}
+{"level":"debug","message":"Set up associations for model: import_log","timestamp":"2025-03-23T05:36:25.162Z"}
+{"level":"debug","message":"Set up associations for model: Label","timestamp":"2025-03-23T05:36:25.165Z"}
+{"level":"debug","message":"Set up associations for model: Release","timestamp":"2025-03-23T05:36:25.170Z"}
+{"level":"debug","message":"Set up associations for model: ReleaseArtist","timestamp":"2025-03-23T05:36:25.170Z"}
+{"level":"debug","message":"Set up associations for model: release_artist","timestamp":"2025-03-23T05:36:25.170Z"}
+{"level":"debug","message":"Set up associations for model: Track","timestamp":"2025-03-23T05:36:25.172Z"}
+{"level":"debug","message":"Set up associations for model: TrackArtist","timestamp":"2025-03-23T05:36:25.172Z"}
+{"error":"","level":"error","message":"Database connection test failed - server will continue but database operations will fail","stack":"SequelizeConnectionError\n    at Client._connectionCallback (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/sequelize/lib/dialects/postgres/connection-manager.js:145:24)\n    at Client._handleErrorWhileConnecting (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/pg/lib/client.js:336:19)\n    at Client._handleErrorEvent (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/pg/lib/client.js:346:19)\n    at Connection.emit (node:events:514:28)\n    at Socket.reportStreamError (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/pg/lib/connection.js:57:12)\n    at Socket.emit (node:events:514:28)\n    at emitErrorNT (node:internal/streams/destroy:151:8)\n    at emitErrorCloseNT (node:internal/streams/destroy:116:3)\n    at process.processTicksAndRejections (node:internal/process/task_queues:82:21)","timestamp":"2025-03-23T05:40:11.183Z"}
+{"level":"warn","message":"SSL certificate validation disabled for development","timestamp":"2025-03-23T05:43:20.802Z"}
+{"database":"postgres","host":"liuaozuvkmvanmchndzl.supabase.co","level":"info","message":"Attempting database connection using parameters","port":"5432","ssl":true,"timestamp":"2025-03-23T05:43:20.807Z","username":"postgres"}
+{"level":"info","message":"Database connection configured using parameters","timestamp":"2025-03-23T05:43:20.904Z"}
+{"level":"info","message":"Testing database connection...","timestamp":"2025-03-23T05:43:20.904Z"}
+{"level":"debug","message":"Loaded model: Artist","timestamp":"2025-03-23T05:43:20.922Z"}
+{"level":"debug","message":"Loaded model: DemoSubmission","timestamp":"2025-03-23T05:43:20.926Z"}
+{"level":"debug","message":"Loaded model: ImportLog","timestamp":"2025-03-23T05:43:20.930Z"}
+{"level":"debug","message":"Loaded model: import_log","timestamp":"2025-03-23T05:43:20.935Z"}
+{"level":"debug","message":"Loaded model: Label","timestamp":"2025-03-23T05:43:20.939Z"}
+{"level":"debug","message":"Loaded model: Release","timestamp":"2025-03-23T05:43:20.943Z"}
+{"level":"debug","message":"Loaded model: ReleaseArtist","timestamp":"2025-03-23T05:43:20.953Z"}
+{"level":"debug","message":"Loaded model: release_artist","timestamp":"2025-03-23T05:43:20.955Z"}
+{"level":"debug","message":"Loaded model: Track","timestamp":"2025-03-23T05:43:20.959Z"}
+{"level":"debug","message":"Loaded model: TrackArtist","timestamp":"2025-03-23T05:43:20.960Z"}
+{"level":"debug","message":"Set up associations for model: Artist","timestamp":"2025-03-23T05:43:20.973Z"}
+{"level":"debug","message":"Set up associations for model: DemoSubmission","timestamp":"2025-03-23T05:43:20.975Z"}
+{"level":"debug","message":"Set up associations for model: ImportLog","timestamp":"2025-03-23T05:43:20.976Z"}
+{"level":"debug","message":"Set up associations for model: import_log","timestamp":"2025-03-23T05:43:20.977Z"}
+{"level":"debug","message":"Set up associations for model: Label","timestamp":"2025-03-23T05:43:20.979Z"}
+{"level":"debug","message":"Set up associations for model: Release","timestamp":"2025-03-23T05:43:20.985Z"}
+{"level":"debug","message":"Set up associations for model: ReleaseArtist","timestamp":"2025-03-23T05:43:20.986Z"}
+{"level":"debug","message":"Set up associations for model: release_artist","timestamp":"2025-03-23T05:43:20.986Z"}
+{"level":"debug","message":"Set up associations for model: Track","timestamp":"2025-03-23T05:43:20.989Z"}
+{"level":"debug","message":"Set up associations for model: TrackArtist","timestamp":"2025-03-23T05:43:20.989Z"}
+{"error":"ConnectionManager.getConnection was called after the connection manager was closed!","level":"error","message":"Database connection test failed - server will continue but database operations will fail","stack":"Error: ConnectionManager.getConnection was called after the connection manager was closed!\n    at ConnectionManager.getConnection (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/sequelize/lib/dialects/abstract/connection-manager.js:70:13)\n    at /Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/sequelize/lib/sequelize.js:305:111\n    at /Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/retry-as-promised/dist/index.js:65:25\n    at new Promise (<anonymous>)\n    at retryAsPromised (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/retry-as-promised/dist/index.js:54:12)\n    at Timeout._onTimeout (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/retry-as-promised/dist/index.js:104:21)\n    at listOnTimeout (node:internal/timers:573:17)\n    at process.processTimers (node:internal/timers:514:7)","timestamp":"2025-03-23T05:44:36.580Z"}
+{"level":"warn","message":"SSL certificate validation disabled for development","timestamp":"2025-03-23T05:54:48.712Z"}
+{"database":"postgres","host":"liuaozuvkmvanmchndzl.supabase.co","level":"info","message":"Attempting database connection using parameters","port":"5432","ssl":true,"timestamp":"2025-03-23T05:54:48.717Z","username":"postgres"}
+{"level":"info","message":"Database connection configured using parameters","timestamp":"2025-03-23T05:54:48.798Z"}
+{"level":"info","message":"Testing database connection...","timestamp":"2025-03-23T05:54:48.798Z"}
+{"level":"debug","message":"Loaded model: Artist","timestamp":"2025-03-23T05:54:48.817Z"}
+{"level":"debug","message":"Loaded model: DemoSubmission","timestamp":"2025-03-23T05:54:48.820Z"}
+{"level":"debug","message":"Loaded model: ImportLog","timestamp":"2025-03-23T05:54:48.823Z"}
+{"level":"debug","message":"Loaded model: import_log","timestamp":"2025-03-23T05:54:48.824Z"}
+{"level":"debug","message":"Loaded model: Label","timestamp":"2025-03-23T05:54:48.827Z"}
+{"level":"debug","message":"Loaded model: Release","timestamp":"2025-03-23T05:54:48.829Z"}
+{"level":"debug","message":"Loaded model: ReleaseArtist","timestamp":"2025-03-23T05:54:48.833Z"}
+{"level":"debug","message":"Loaded model: release_artist","timestamp":"2025-03-23T05:54:48.840Z"}
+{"level":"debug","message":"Loaded model: Track","timestamp":"2025-03-23T05:54:48.845Z"}
+{"level":"debug","message":"Loaded model: TrackArtist","timestamp":"2025-03-23T05:54:48.848Z"}
+{"level":"debug","message":"Set up associations for model: Artist","timestamp":"2025-03-23T05:54:48.911Z"}
+{"level":"debug","message":"Set up associations for model: DemoSubmission","timestamp":"2025-03-23T05:54:48.912Z"}
+{"level":"debug","message":"Set up associations for model: ImportLog","timestamp":"2025-03-23T05:54:48.912Z"}
+{"level":"debug","message":"Set up associations for model: import_log","timestamp":"2025-03-23T05:54:48.913Z"}
+{"level":"debug","message":"Set up associations for model: Label","timestamp":"2025-03-23T05:54:48.916Z"}
+{"level":"debug","message":"Set up associations for model: Release","timestamp":"2025-03-23T05:54:48.919Z"}
+{"level":"debug","message":"Set up associations for model: ReleaseArtist","timestamp":"2025-03-23T05:54:48.919Z"}
+{"level":"debug","message":"Set up associations for model: release_artist","timestamp":"2025-03-23T05:54:48.920Z"}
+{"level":"debug","message":"Set up associations for model: Track","timestamp":"2025-03-23T05:54:48.923Z"}
+{"level":"debug","message":"Set up associations for model: TrackArtist","timestamp":"2025-03-23T05:54:48.923Z"}
+{"error":"ConnectionManager.getConnection was called after the connection manager was closed!","level":"error","message":"Database connection test failed - server will continue but database operations will fail","stack":"Error: ConnectionManager.getConnection was called after the connection manager was closed!\n    at ConnectionManager.getConnection (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/sequelize/lib/dialects/abstract/connection-manager.js:70:13)\n    at /Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/sequelize/lib/sequelize.js:305:111\n    at /Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/retry-as-promised/dist/index.js:65:25\n    at new Promise (<anonymous>)\n    at retryAsPromised (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/retry-as-promised/dist/index.js:54:12)\n    at Timeout._onTimeout (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/retry-as-promised/dist/index.js:104:21)\n    at listOnTimeout (node:internal/timers:573:17)\n    at process.processTimers (node:internal/timers:514:7)","timestamp":"2025-03-23T05:56:04.478Z"}
+{"level":"warn","message":"SSL certificate validation disabled for development","timestamp":"2025-03-23T06:04:49.758Z"}
+{"database":"postgres","host":"liuaozuvkmvanmchndzl.supabase.co","level":"info","message":"Attempting database connection using parameters","port":"5432","ssl":true,"timestamp":"2025-03-23T06:04:49.760Z","username":"postgres"}
+{"level":"info","message":"Database connection configured using parameters","timestamp":"2025-03-23T06:04:49.857Z"}
+{"level":"info","message":"Testing database connection...","timestamp":"2025-03-23T06:04:49.858Z"}
+{"level":"debug","message":"Loaded model: Artist","timestamp":"2025-03-23T06:04:49.878Z"}
+{"level":"debug","message":"Loaded model: DemoSubmission","timestamp":"2025-03-23T06:04:49.889Z"}
+{"level":"debug","message":"Loaded model: ImportLog","timestamp":"2025-03-23T06:04:49.893Z"}
+{"level":"debug","message":"Loaded model: import_log","timestamp":"2025-03-23T06:04:49.895Z"}
+{"level":"debug","message":"Loaded model: Label","timestamp":"2025-03-23T06:04:49.899Z"}
+{"level":"debug","message":"Loaded model: Release","timestamp":"2025-03-23T06:04:49.906Z"}
+{"level":"debug","message":"Loaded model: ReleaseArtist","timestamp":"2025-03-23T06:04:49.908Z"}
+{"level":"debug","message":"Loaded model: release_artist","timestamp":"2025-03-23T06:04:49.909Z"}
+{"level":"debug","message":"Loaded model: Track","timestamp":"2025-03-23T06:04:49.913Z"}
+{"level":"debug","message":"Loaded model: TrackArtist","timestamp":"2025-03-23T06:04:49.916Z"}
+{"level":"debug","message":"Set up associations for model: Artist","timestamp":"2025-03-23T06:04:49.929Z"}
+{"level":"debug","message":"Set up associations for model: DemoSubmission","timestamp":"2025-03-23T06:04:49.930Z"}
+{"level":"debug","message":"Set up associations for model: ImportLog","timestamp":"2025-03-23T06:04:49.930Z"}
+{"level":"debug","message":"Set up associations for model: import_log","timestamp":"2025-03-23T06:04:49.932Z"}
+{"level":"debug","message":"Set up associations for model: Label","timestamp":"2025-03-23T06:04:49.936Z"}
+{"level":"debug","message":"Set up associations for model: Release","timestamp":"2025-03-23T06:04:49.940Z"}
+{"level":"debug","message":"Set up associations for model: ReleaseArtist","timestamp":"2025-03-23T06:04:49.940Z"}
+{"level":"debug","message":"Set up associations for model: release_artist","timestamp":"2025-03-23T06:04:49.940Z"}
+{"level":"debug","message":"Set up associations for model: Track","timestamp":"2025-03-23T06:04:49.953Z"}
+{"level":"debug","message":"Set up associations for model: TrackArtist","timestamp":"2025-03-23T06:04:49.953Z"}
+{"error":"ConnectionManager.getConnection was called after the connection manager was closed!","level":"error","message":"Database connection test failed - server will continue but database operations will fail","stack":"Error: ConnectionManager.getConnection was called after the connection manager was closed!\n    at ConnectionManager.getConnection (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/sequelize/lib/dialects/abstract/connection-manager.js:70:13)\n    at /Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/sequelize/lib/sequelize.js:305:111\n    at /Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/retry-as-promised/dist/index.js:65:25\n    at new Promise (<anonymous>)\n    at retryAsPromised (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/retry-as-promised/dist/index.js:54:12)\n    at Timeout._onTimeout (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/retry-as-promised/dist/index.js:104:21)\n    at listOnTimeout (node:internal/timers:573:17)\n    at process.processTimers (node:internal/timers:514:7)","timestamp":"2025-03-23T06:07:20.794Z"}
+{"level":"warn","message":"SSL certificate validation disabled for development","timestamp":"2025-03-23T06:19:44.932Z"}
+{"database":"postgres","host":"liuaozuvkmvanmchndzl.supabase.co","level":"info","message":"Attempting database connection using parameters","port":"5432","ssl":true,"timestamp":"2025-03-23T06:19:44.933Z","username":"postgres"}
+{"level":"info","message":"Database connection configured using parameters","timestamp":"2025-03-23T06:19:45.027Z"}
+{"level":"info","message":"Testing database connection...","timestamp":"2025-03-23T06:19:45.027Z"}
+{"level":"debug","message":"Loaded model: Artist","timestamp":"2025-03-23T06:19:45.062Z"}
+{"level":"debug","message":"Loaded model: DemoSubmission","timestamp":"2025-03-23T06:19:45.067Z"}
+{"level":"debug","message":"Loaded model: ImportLog","timestamp":"2025-03-23T06:19:45.071Z"}
+{"level":"debug","message":"Loaded model: import_log","timestamp":"2025-03-23T06:19:45.074Z"}
+{"level":"debug","message":"Loaded model: Label","timestamp":"2025-03-23T06:19:45.076Z"}
+{"level":"debug","message":"Loaded model: Release","timestamp":"2025-03-23T06:19:45.079Z"}
+{"level":"debug","message":"Loaded model: ReleaseArtist","timestamp":"2025-03-23T06:19:45.087Z"}
+{"level":"debug","message":"Loaded model: release_artist","timestamp":"2025-03-23T06:19:45.093Z"}
+{"level":"debug","message":"Loaded model: Track","timestamp":"2025-03-23T06:19:45.099Z"}
+{"level":"debug","message":"Loaded model: TrackArtist","timestamp":"2025-03-23T06:19:45.102Z"}
+{"level":"debug","message":"Set up associations for model: Artist","timestamp":"2025-03-23T06:19:45.118Z"}
+{"level":"debug","message":"Set up associations for model: DemoSubmission","timestamp":"2025-03-23T06:19:45.118Z"}
+{"level":"debug","message":"Set up associations for model: ImportLog","timestamp":"2025-03-23T06:19:45.119Z"}
+{"level":"debug","message":"Set up associations for model: import_log","timestamp":"2025-03-23T06:19:45.120Z"}
+{"level":"debug","message":"Set up associations for model: Label","timestamp":"2025-03-23T06:19:45.126Z"}
+{"level":"debug","message":"Set up associations for model: Release","timestamp":"2025-03-23T06:19:45.131Z"}
+{"level":"debug","message":"Set up associations for model: ReleaseArtist","timestamp":"2025-03-23T06:19:45.131Z"}
+{"level":"debug","message":"Set up associations for model: release_artist","timestamp":"2025-03-23T06:19:45.131Z"}
+{"level":"debug","message":"Set up associations for model: Track","timestamp":"2025-03-23T06:19:45.134Z"}
+{"level":"debug","message":"Set up associations for model: TrackArtist","timestamp":"2025-03-23T06:19:45.134Z"}
+{"error":"ConnectionManager.getConnection was called after the connection manager was closed!","level":"error","message":"Database connection test failed - server will continue but database operations will fail","stack":"Error: ConnectionManager.getConnection was called after the connection manager was closed!\n    at ConnectionManager.getConnection (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/sequelize/lib/dialects/abstract/connection-manager.js:70:13)\n    at /Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/sequelize/lib/sequelize.js:305:111\n    at /Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/retry-as-promised/dist/index.js:65:25\n    at new Promise (<anonymous>)\n    at retryAsPromised (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/retry-as-promised/dist/index.js:54:12)\n    at Timeout._onTimeout (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/retry-as-promised/dist/index.js:104:21)\n    at listOnTimeout (node:internal/timers:573:17)\n    at process.processTimers (node:internal/timers:514:7)","timestamp":"2025-03-23T06:22:15.977Z"}
+{"level":"warn","message":"SSL certificate validation disabled for development","timestamp":"2025-03-23T06:38:56.032Z"}
+{"database":"postgres","host":"liuaozuvkmvanmchndzl.supabase.co","level":"info","message":"Attempting database connection using parameters","port":"5432","ssl":true,"timestamp":"2025-03-23T06:38:56.034Z","username":"postgres"}
+{"level":"info","message":"Database connection configured using parameters","timestamp":"2025-03-23T06:38:56.119Z"}
+{"level":"info","message":"Testing database connection...","timestamp":"2025-03-23T06:38:56.119Z"}
+{"level":"debug","message":"Loaded model: Artist","timestamp":"2025-03-23T06:38:56.156Z"}
+{"level":"debug","message":"Loaded model: DemoSubmission","timestamp":"2025-03-23T06:38:56.162Z"}
+{"level":"debug","message":"Loaded model: ImportLog","timestamp":"2025-03-23T06:38:56.165Z"}
+{"level":"debug","message":"Loaded model: import_log","timestamp":"2025-03-23T06:38:56.167Z"}
+{"level":"debug","message":"Loaded model: Label","timestamp":"2025-03-23T06:38:56.169Z"}
+{"level":"debug","message":"Loaded model: Release","timestamp":"2025-03-23T06:38:56.171Z"}
+{"level":"debug","message":"Loaded model: ReleaseArtist","timestamp":"2025-03-23T06:38:56.174Z"}
+{"level":"debug","message":"Loaded model: release_artist","timestamp":"2025-03-23T06:38:56.176Z"}
+{"level":"debug","message":"Loaded model: Track","timestamp":"2025-03-23T06:38:56.180Z"}
+{"level":"debug","message":"Loaded model: TrackArtist","timestamp":"2025-03-23T06:38:56.183Z"}
+{"level":"debug","message":"Set up associations for model: Artist","timestamp":"2025-03-23T06:38:56.190Z"}
+{"level":"debug","message":"Set up associations for model: DemoSubmission","timestamp":"2025-03-23T06:38:56.190Z"}
+{"level":"debug","message":"Set up associations for model: ImportLog","timestamp":"2025-03-23T06:38:56.194Z"}
+{"level":"debug","message":"Set up associations for model: import_log","timestamp":"2025-03-23T06:38:56.195Z"}
+{"level":"debug","message":"Set up associations for model: Label","timestamp":"2025-03-23T06:38:56.199Z"}
+{"level":"debug","message":"Set up associations for model: Release","timestamp":"2025-03-23T06:38:56.203Z"}
+{"level":"debug","message":"Set up associations for model: ReleaseArtist","timestamp":"2025-03-23T06:38:56.203Z"}
+{"level":"debug","message":"Set up associations for model: release_artist","timestamp":"2025-03-23T06:38:56.203Z"}
+{"level":"debug","message":"Set up associations for model: Track","timestamp":"2025-03-23T06:38:56.206Z"}
+{"level":"debug","message":"Set up associations for model: TrackArtist","timestamp":"2025-03-23T06:38:56.208Z"}
+{"error":"ConnectionManager.getConnection was called after the connection manager was closed!","level":"error","message":"Database connection test failed - server will continue but database operations will fail","stack":"Error: ConnectionManager.getConnection was called after the connection manager was closed!\n    at ConnectionManager.getConnection (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/sequelize/lib/dialects/abstract/connection-manager.js:70:13)\n    at /Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/sequelize/lib/sequelize.js:305:111\n    at /Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/retry-as-promised/dist/index.js:65:25\n    at new Promise (<anonymous>)\n    at retryAsPromised (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/retry-as-promised/dist/index.js:54:12)\n    at Timeout._onTimeout (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/retry-as-promised/dist/index.js:104:21)\n    at listOnTimeout (node:internal/timers:573:17)\n    at process.processTimers (node:internal/timers:514:7)","timestamp":"2025-03-23T06:41:27.036Z"}
+{"level":"warn","message":"SSL certificate validation disabled for development","timestamp":"2025-03-23T06:46:02.628Z"}
+{"database":"postgres","host":"liuaozuvkmvanmchndzl.supabase.co","level":"info","message":"Attempting database connection using parameters","port":"5432","ssl":true,"timestamp":"2025-03-23T06:46:02.630Z","username":"postgres"}
+{"level":"info","message":"Database connection configured using parameters","timestamp":"2025-03-23T06:46:02.711Z"}
+{"level":"info","message":"Testing database connection...","timestamp":"2025-03-23T06:46:02.711Z"}
+{"level":"debug","message":"Loaded model: Artist","timestamp":"2025-03-23T06:46:02.741Z"}
+{"level":"debug","message":"Loaded model: DemoSubmission","timestamp":"2025-03-23T06:46:02.744Z"}
+{"level":"debug","message":"Loaded model: ImportLog","timestamp":"2025-03-23T06:46:02.749Z"}
+{"level":"debug","message":"Loaded model: import_log","timestamp":"2025-03-23T06:46:02.751Z"}
+{"level":"debug","message":"Loaded model: Label","timestamp":"2025-03-23T06:46:02.753Z"}
+{"level":"debug","message":"Loaded model: Release","timestamp":"2025-03-23T06:46:02.758Z"}
+{"level":"debug","message":"Loaded model: ReleaseArtist","timestamp":"2025-03-23T06:46:02.761Z"}
+{"level":"debug","message":"Loaded model: release_artist","timestamp":"2025-03-23T06:46:02.763Z"}
+{"level":"debug","message":"Loaded model: Track","timestamp":"2025-03-23T06:46:02.767Z"}
+{"level":"debug","message":"Loaded model: TrackArtist","timestamp":"2025-03-23T06:46:02.769Z"}
+{"level":"debug","message":"Set up associations for model: Artist","timestamp":"2025-03-23T06:46:02.780Z"}
+{"level":"debug","message":"Set up associations for model: DemoSubmission","timestamp":"2025-03-23T06:46:02.780Z"}
+{"level":"debug","message":"Set up associations for model: ImportLog","timestamp":"2025-03-23T06:46:02.781Z"}
+{"level":"debug","message":"Set up associations for model: import_log","timestamp":"2025-03-23T06:46:02.782Z"}
+{"level":"debug","message":"Set up associations for model: Label","timestamp":"2025-03-23T06:46:02.784Z"}
+{"level":"debug","message":"Set up associations for model: Release","timestamp":"2025-03-23T06:46:02.787Z"}
+{"level":"debug","message":"Set up associations for model: ReleaseArtist","timestamp":"2025-03-23T06:46:02.787Z"}
+{"level":"debug","message":"Set up associations for model: release_artist","timestamp":"2025-03-23T06:46:02.788Z"}
+{"level":"debug","message":"Set up associations for model: Track","timestamp":"2025-03-23T06:46:02.791Z"}
+{"level":"debug","message":"Set up associations for model: TrackArtist","timestamp":"2025-03-23T06:46:02.791Z"}
+{"error":"ConnectionManager.getConnection was called after the connection manager was closed!","level":"error","message":"Database connection test failed - server will continue but database operations will fail","stack":"Error: ConnectionManager.getConnection was called after the connection manager was closed!\n    at ConnectionManager.getConnection (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/sequelize/lib/dialects/abstract/connection-manager.js:70:13)\n    at /Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/sequelize/lib/sequelize.js:305:111\n    at /Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/retry-as-promised/dist/index.js:65:25\n    at new Promise (<anonymous>)\n    at retryAsPromised (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/retry-as-promised/dist/index.js:54:12)\n    at Timeout._onTimeout (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/retry-as-promised/dist/index.js:104:21)\n    at listOnTimeout (node:internal/timers:573:17)\n    at process.processTimers (node:internal/timers:514:7)","timestamp":"2025-03-23T06:48:33.603Z"}
+{"level":"warn","message":"SSL certificate validation disabled for development","timestamp":"2025-03-23T06:52:32.052Z"}
+{"database":"postgres","host":"liuaozuvkmvanmchndzl.supabase.co","level":"info","message":"Attempting database connection using parameters","port":"5432","ssl":true,"timestamp":"2025-03-23T06:52:32.053Z","username":"postgres"}
+{"level":"info","message":"Database connection configured using parameters","timestamp":"2025-03-23T06:52:32.125Z"}
+{"level":"info","message":"Testing database connection...","timestamp":"2025-03-23T06:52:32.125Z"}
+{"level":"debug","message":"Loaded model: Artist","timestamp":"2025-03-23T06:52:32.147Z"}
+{"level":"debug","message":"Loaded model: DemoSubmission","timestamp":"2025-03-23T06:52:32.150Z"}
+{"level":"debug","message":"Loaded model: ImportLog","timestamp":"2025-03-23T06:52:32.153Z"}
+{"level":"debug","message":"Loaded model: import_log","timestamp":"2025-03-23T06:52:32.155Z"}
+{"level":"debug","message":"Loaded model: Label","timestamp":"2025-03-23T06:52:32.158Z"}
+{"level":"debug","message":"Loaded model: Release","timestamp":"2025-03-23T06:52:32.161Z"}
+{"level":"debug","message":"Loaded model: ReleaseArtist","timestamp":"2025-03-23T06:52:32.166Z"}
+{"level":"debug","message":"Loaded model: release_artist","timestamp":"2025-03-23T06:52:32.168Z"}
+{"level":"debug","message":"Loaded model: Track","timestamp":"2025-03-23T06:52:32.175Z"}
+{"level":"debug","message":"Loaded model: TrackArtist","timestamp":"2025-03-23T06:52:32.179Z"}
+{"level":"debug","message":"Set up associations for model: Artist","timestamp":"2025-03-23T06:52:32.189Z"}
+{"level":"debug","message":"Set up associations for model: DemoSubmission","timestamp":"2025-03-23T06:52:32.190Z"}
+{"level":"debug","message":"Set up associations for model: ImportLog","timestamp":"2025-03-23T06:52:32.191Z"}
+{"level":"debug","message":"Set up associations for model: import_log","timestamp":"2025-03-23T06:52:32.191Z"}
+{"level":"debug","message":"Set up associations for model: Label","timestamp":"2025-03-23T06:52:32.195Z"}
+{"level":"debug","message":"Set up associations for model: Release","timestamp":"2025-03-23T06:52:32.214Z"}
+{"level":"debug","message":"Set up associations for model: ReleaseArtist","timestamp":"2025-03-23T06:52:32.214Z"}
+{"level":"debug","message":"Set up associations for model: release_artist","timestamp":"2025-03-23T06:52:32.214Z"}
+{"level":"debug","message":"Set up associations for model: Track","timestamp":"2025-03-23T06:52:32.218Z"}
+{"level":"debug","message":"Set up associations for model: TrackArtist","timestamp":"2025-03-23T06:52:32.219Z"}
+{"error":"ConnectionManager.getConnection was called after the connection manager was closed!","level":"error","message":"Database connection test failed - server will continue but database operations will fail","stack":"Error: ConnectionManager.getConnection was called after the connection manager was closed!\n    at ConnectionManager.getConnection (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/sequelize/lib/dialects/abstract/connection-manager.js:70:13)\n    at /Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/sequelize/lib/sequelize.js:305:111\n    at /Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/retry-as-promised/dist/index.js:65:25\n    at new Promise (<anonymous>)\n    at retryAsPromised (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/retry-as-promised/dist/index.js:54:12)\n    at Timeout._onTimeout (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/retry-as-promised/dist/index.js:104:21)\n    at listOnTimeout (node:internal/timers:573:17)\n    at process.processTimers (node:internal/timers:514:7)","timestamp":"2025-03-23T06:55:03.084Z"}
+{"level":"warn","message":"SSL certificate validation disabled for development","timestamp":"2025-03-23T07:15:55.163Z"}
+{"database":"postgres","host":"liuaozuvkmvanmchndzl.supabase.co","level":"info","message":"Attempting database connection using parameters","port":"5432","ssl":true,"timestamp":"2025-03-23T07:15:55.164Z","username":"postgres"}
+{"level":"info","message":"Database connection configured using parameters","timestamp":"2025-03-23T07:15:55.237Z"}
+{"level":"info","message":"Testing database connection...","timestamp":"2025-03-23T07:15:55.238Z"}
+{"level":"debug","message":"Loaded model: Artist","timestamp":"2025-03-23T07:15:55.261Z"}
+{"level":"debug","message":"Loaded model: DemoSubmission","timestamp":"2025-03-23T07:15:55.265Z"}
+{"level":"debug","message":"Loaded model: ImportLog","timestamp":"2025-03-23T07:15:55.270Z"}
+{"level":"debug","message":"Loaded model: import_log","timestamp":"2025-03-23T07:15:55.272Z"}
+{"level":"debug","message":"Loaded model: Label","timestamp":"2025-03-23T07:15:55.274Z"}
+{"level":"debug","message":"Loaded model: Release","timestamp":"2025-03-23T07:15:55.278Z"}
+{"level":"debug","message":"Loaded model: ReleaseArtist","timestamp":"2025-03-23T07:15:55.280Z"}
+{"level":"debug","message":"Loaded model: release_artist","timestamp":"2025-03-23T07:15:55.282Z"}
+{"level":"debug","message":"Loaded model: Track","timestamp":"2025-03-23T07:15:55.285Z"}
+{"level":"debug","message":"Loaded model: TrackArtist","timestamp":"2025-03-23T07:15:55.290Z"}
+{"level":"debug","message":"Set up associations for model: Artist","timestamp":"2025-03-23T07:15:55.298Z"}
+{"level":"debug","message":"Set up associations for model: DemoSubmission","timestamp":"2025-03-23T07:15:55.299Z"}
+{"level":"debug","message":"Set up associations for model: ImportLog","timestamp":"2025-03-23T07:15:55.299Z"}
+{"level":"debug","message":"Set up associations for model: import_log","timestamp":"2025-03-23T07:15:55.300Z"}
+{"level":"debug","message":"Set up associations for model: Label","timestamp":"2025-03-23T07:15:55.303Z"}
+{"level":"debug","message":"Set up associations for model: Release","timestamp":"2025-03-23T07:15:55.309Z"}
+{"level":"debug","message":"Set up associations for model: ReleaseArtist","timestamp":"2025-03-23T07:15:55.309Z"}
+{"level":"debug","message":"Set up associations for model: release_artist","timestamp":"2025-03-23T07:15:55.310Z"}
+{"level":"debug","message":"Set up associations for model: Track","timestamp":"2025-03-23T07:15:55.313Z"}
+{"level":"debug","message":"Set up associations for model: TrackArtist","timestamp":"2025-03-23T07:15:55.313Z"}
+{"error":"ConnectionManager.getConnection was called after the connection manager was closed!","level":"error","message":"Database connection test failed - server will continue but database operations will fail","stack":"Error: ConnectionManager.getConnection was called after the connection manager was closed!\n    at ConnectionManager.getConnection (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/sequelize/lib/dialects/abstract/connection-manager.js:70:13)\n    at /Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/sequelize/lib/sequelize.js:305:111\n    at /Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/retry-as-promised/dist/index.js:65:25\n    at new Promise (<anonymous>)\n    at retryAsPromised (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/retry-as-promised/dist/index.js:54:12)\n    at Timeout._onTimeout (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/retry-as-promised/dist/index.js:104:21)\n    at listOnTimeout (node:internal/timers:573:17)\n    at process.processTimers (node:internal/timers:514:7)","timestamp":"2025-03-23T07:18:26.132Z"}
+{"level":"warn","message":"SSL certificate validation disabled for development","timestamp":"2025-03-23T07:29:11.171Z"}
+{"database":"postgres","host":"liuaozuvkmvanmchndzl.supabase.co","level":"info","message":"Attempting database connection using parameters","port":"5432","ssl":true,"timestamp":"2025-03-23T07:29:11.173Z","username":"postgres"}
+{"level":"info","message":"Database connection configured using parameters","timestamp":"2025-03-23T07:29:11.251Z"}
+{"level":"info","message":"Testing database connection...","timestamp":"2025-03-23T07:29:11.251Z"}
+{"level":"debug","message":"Loaded model: Artist","timestamp":"2025-03-23T07:29:11.287Z"}
+{"level":"debug","message":"Loaded model: DemoSubmission","timestamp":"2025-03-23T07:29:11.290Z"}
+{"level":"debug","message":"Loaded model: ImportLog","timestamp":"2025-03-23T07:29:11.293Z"}
+{"level":"debug","message":"Loaded model: import_log","timestamp":"2025-03-23T07:29:11.297Z"}
+{"level":"debug","message":"Loaded model: Label","timestamp":"2025-03-23T07:29:11.307Z"}
+{"level":"debug","message":"Loaded model: Release","timestamp":"2025-03-23T07:29:11.311Z"}
+{"level":"debug","message":"Loaded model: ReleaseArtist","timestamp":"2025-03-23T07:29:11.315Z"}
+{"level":"debug","message":"Loaded model: release_artist","timestamp":"2025-03-23T07:29:11.317Z"}
+{"level":"debug","message":"Loaded model: Track","timestamp":"2025-03-23T07:29:11.320Z"}
+{"level":"debug","message":"Loaded model: TrackArtist","timestamp":"2025-03-23T07:29:11.323Z"}
+{"level":"debug","message":"Set up associations for model: Artist","timestamp":"2025-03-23T07:29:11.335Z"}
+{"level":"debug","message":"Set up associations for model: DemoSubmission","timestamp":"2025-03-23T07:29:11.336Z"}
+{"level":"debug","message":"Set up associations for model: ImportLog","timestamp":"2025-03-23T07:29:11.336Z"}
+{"level":"debug","message":"Set up associations for model: import_log","timestamp":"2025-03-23T07:29:11.339Z"}
+{"level":"debug","message":"Set up associations for model: Label","timestamp":"2025-03-23T07:29:11.345Z"}
+{"level":"debug","message":"Set up associations for model: Release","timestamp":"2025-03-23T07:29:11.349Z"}
+{"level":"debug","message":"Set up associations for model: ReleaseArtist","timestamp":"2025-03-23T07:29:11.349Z"}
+{"level":"debug","message":"Set up associations for model: release_artist","timestamp":"2025-03-23T07:29:11.351Z"}
+{"level":"debug","message":"Set up associations for model: Track","timestamp":"2025-03-23T07:29:11.357Z"}
+{"level":"debug","message":"Set up associations for model: TrackArtist","timestamp":"2025-03-23T07:29:11.357Z"}
+{"level":"warn","message":"SSL certificate validation disabled for development","timestamp":"2025-03-23T07:31:42.872Z"}
+{"database":"postgres","host":"liuaozuvkmvanmchndzl.supabase.co","level":"info","message":"Attempting database connection using parameters","port":"5432","ssl":true,"timestamp":"2025-03-23T07:31:42.874Z","username":"postgres"}
+{"level":"info","message":"Database connection configured using parameters","timestamp":"2025-03-23T07:31:42.962Z"}
+{"level":"info","message":"Testing database connection...","timestamp":"2025-03-23T07:31:42.963Z"}
+{"level":"debug","message":"Loaded model: Artist","timestamp":"2025-03-23T07:31:43.001Z"}
+{"level":"debug","message":"Loaded model: DemoSubmission","timestamp":"2025-03-23T07:31:43.005Z"}
+{"level":"debug","message":"Loaded model: ImportLog","timestamp":"2025-03-23T07:31:43.009Z"}
+{"level":"debug","message":"Loaded model: import_log","timestamp":"2025-03-23T07:31:43.011Z"}
+{"level":"debug","message":"Loaded model: Label","timestamp":"2025-03-23T07:31:43.023Z"}
+{"level":"debug","message":"Loaded model: Release","timestamp":"2025-03-23T07:31:43.026Z"}
+{"level":"debug","message":"Loaded model: ReleaseArtist","timestamp":"2025-03-23T07:31:43.038Z"}
+{"level":"debug","message":"Loaded model: release_artist","timestamp":"2025-03-23T07:31:43.040Z"}
+{"level":"debug","message":"Loaded model: Track","timestamp":"2025-03-23T07:31:43.043Z"}
+{"level":"debug","message":"Loaded model: TrackArtist","timestamp":"2025-03-23T07:31:43.057Z"}
+{"level":"debug","message":"Set up associations for model: Artist","timestamp":"2025-03-23T07:31:43.073Z"}
+{"level":"debug","message":"Set up associations for model: DemoSubmission","timestamp":"2025-03-23T07:31:43.073Z"}
+{"level":"debug","message":"Set up associations for model: ImportLog","timestamp":"2025-03-23T07:31:43.074Z"}
+{"level":"debug","message":"Set up associations for model: import_log","timestamp":"2025-03-23T07:31:43.075Z"}
+{"level":"debug","message":"Set up associations for model: Label","timestamp":"2025-03-23T07:31:43.077Z"}
+{"level":"debug","message":"Set up associations for model: Release","timestamp":"2025-03-23T07:31:43.082Z"}
+{"level":"debug","message":"Set up associations for model: ReleaseArtist","timestamp":"2025-03-23T07:31:43.082Z"}
+{"level":"debug","message":"Set up associations for model: release_artist","timestamp":"2025-03-23T07:31:43.083Z"}
+{"level":"debug","message":"Set up associations for model: Track","timestamp":"2025-03-23T07:31:43.085Z"}
+{"level":"debug","message":"Set up associations for model: TrackArtist","timestamp":"2025-03-23T07:31:43.085Z"}
+{"level":"warn","message":"SSL certificate validation disabled for development","timestamp":"2025-03-23T07:32:53.565Z"}
+{"database":"postgres","host":"liuaozuvkmvanmchndzl.supabase.co","level":"info","message":"Attempting database connection using parameters","port":"5432","ssl":true,"timestamp":"2025-03-23T07:32:53.566Z","username":"postgres"}
+{"level":"info","message":"Database connection configured using parameters","timestamp":"2025-03-23T07:32:53.644Z"}
+{"level":"info","message":"Testing database connection...","timestamp":"2025-03-23T07:32:53.644Z"}
+{"level":"debug","message":"Loaded model: Artist","timestamp":"2025-03-23T07:32:53.677Z"}
+{"level":"debug","message":"Loaded model: DemoSubmission","timestamp":"2025-03-23T07:32:53.681Z"}
+{"level":"debug","message":"Loaded model: ImportLog","timestamp":"2025-03-23T07:32:53.685Z"}
+{"level":"debug","message":"Loaded model: import_log","timestamp":"2025-03-23T07:32:53.686Z"}
+{"level":"debug","message":"Loaded model: Label","timestamp":"2025-03-23T07:32:53.689Z"}
+{"level":"debug","message":"Loaded model: Release","timestamp":"2025-03-23T07:32:53.701Z"}
+{"level":"debug","message":"Loaded model: ReleaseArtist","timestamp":"2025-03-23T07:32:53.704Z"}
+{"level":"debug","message":"Loaded model: release_artist","timestamp":"2025-03-23T07:32:53.705Z"}
+{"level":"debug","message":"Loaded model: Track","timestamp":"2025-03-23T07:32:53.712Z"}
+{"level":"debug","message":"Loaded model: TrackArtist","timestamp":"2025-03-23T07:32:53.714Z"}
+{"level":"debug","message":"Set up associations for model: Artist","timestamp":"2025-03-23T07:32:53.724Z"}
+{"level":"debug","message":"Set up associations for model: DemoSubmission","timestamp":"2025-03-23T07:32:53.725Z"}
+{"level":"debug","message":"Set up associations for model: ImportLog","timestamp":"2025-03-23T07:32:53.725Z"}
+{"level":"debug","message":"Set up associations for model: import_log","timestamp":"2025-03-23T07:32:53.726Z"}
+{"level":"debug","message":"Set up associations for model: Label","timestamp":"2025-03-23T07:32:53.729Z"}
+{"level":"debug","message":"Set up associations for model: Release","timestamp":"2025-03-23T07:32:53.734Z"}
+{"level":"debug","message":"Set up associations for model: ReleaseArtist","timestamp":"2025-03-23T07:32:53.734Z"}
+{"level":"debug","message":"Set up associations for model: release_artist","timestamp":"2025-03-23T07:32:53.734Z"}
+{"level":"debug","message":"Set up associations for model: Track","timestamp":"2025-03-23T07:32:53.736Z"}
+{"level":"debug","message":"Set up associations for model: TrackArtist","timestamp":"2025-03-23T07:32:53.736Z"}
+{"level":"warn","message":"SSL certificate validation disabled for development","timestamp":"2025-03-23T07:33:35.062Z"}
+{"database":"postgres","host":"liuaozuvkmvanmchndzl.supabase.co","level":"info","message":"Attempting database connection using parameters","port":"5432","ssl":true,"timestamp":"2025-03-23T07:33:35.067Z","username":"postgres"}
+{"level":"info","message":"Database connection configured using parameters","timestamp":"2025-03-23T07:33:35.148Z"}
+{"level":"info","message":"Testing database connection...","timestamp":"2025-03-23T07:33:35.149Z"}
+{"level":"debug","message":"Loaded model: Artist","timestamp":"2025-03-23T07:33:35.200Z"}
+{"level":"debug","message":"Loaded model: DemoSubmission","timestamp":"2025-03-23T07:33:35.202Z"}
+{"level":"debug","message":"Loaded model: ImportLog","timestamp":"2025-03-23T07:33:35.204Z"}
+{"level":"debug","message":"Loaded model: import_log","timestamp":"2025-03-23T07:33:35.206Z"}
+{"level":"debug","message":"Loaded model: Label","timestamp":"2025-03-23T07:33:35.211Z"}
+{"level":"debug","message":"Loaded model: Release","timestamp":"2025-03-23T07:33:35.213Z"}
+{"level":"debug","message":"Loaded model: ReleaseArtist","timestamp":"2025-03-23T07:33:35.215Z"}
+{"level":"debug","message":"Loaded model: release_artist","timestamp":"2025-03-23T07:33:35.218Z"}
+{"level":"debug","message":"Loaded model: Track","timestamp":"2025-03-23T07:33:35.221Z"}
+{"level":"debug","message":"Loaded model: TrackArtist","timestamp":"2025-03-23T07:33:35.222Z"}
+{"level":"debug","message":"Set up associations for model: Artist","timestamp":"2025-03-23T07:33:35.252Z"}
+{"level":"debug","message":"Set up associations for model: DemoSubmission","timestamp":"2025-03-23T07:33:35.252Z"}
+{"level":"debug","message":"Set up associations for model: ImportLog","timestamp":"2025-03-23T07:33:35.253Z"}
+{"level":"debug","message":"Set up associations for model: import_log","timestamp":"2025-03-23T07:33:35.254Z"}
+{"level":"debug","message":"Set up associations for model: Label","timestamp":"2025-03-23T07:33:35.260Z"}
+{"level":"debug","message":"Set up associations for model: Release","timestamp":"2025-03-23T07:33:35.263Z"}
+{"level":"debug","message":"Set up associations for model: ReleaseArtist","timestamp":"2025-03-23T07:33:35.264Z"}
+{"level":"debug","message":"Set up associations for model: release_artist","timestamp":"2025-03-23T07:33:35.264Z"}
+{"level":"debug","message":"Set up associations for model: Track","timestamp":"2025-03-23T07:33:35.268Z"}
+{"level":"debug","message":"Set up associations for model: TrackArtist","timestamp":"2025-03-23T07:33:35.268Z"}
+{"level":"warn","message":"SSL certificate validation disabled for development","timestamp":"2025-03-23T07:34:48.683Z"}
+{"database":"postgres","host":"liuaozuvkmvanmchndzl.supabase.co","level":"info","message":"Attempting database connection using parameters","port":"5432","ssl":true,"timestamp":"2025-03-23T07:34:48.684Z","username":"postgres"}
+{"level":"info","message":"Database connection configured using parameters","timestamp":"2025-03-23T07:34:48.758Z"}
+{"level":"info","message":"Testing database connection...","timestamp":"2025-03-23T07:34:48.759Z"}
+{"level":"debug","message":"Loaded model: Artist","timestamp":"2025-03-23T07:34:48.781Z"}
+{"level":"debug","message":"Loaded model: DemoSubmission","timestamp":"2025-03-23T07:34:48.783Z"}
+{"level":"debug","message":"Loaded model: ImportLog","timestamp":"2025-03-23T07:34:48.786Z"}
+{"level":"debug","message":"Loaded model: import_log","timestamp":"2025-03-23T07:34:48.788Z"}
+{"level":"debug","message":"Loaded model: Label","timestamp":"2025-03-23T07:34:48.790Z"}
+{"level":"debug","message":"Loaded model: Release","timestamp":"2025-03-23T07:34:48.792Z"}
+{"level":"debug","message":"Loaded model: ReleaseArtist","timestamp":"2025-03-23T07:34:48.794Z"}
+{"level":"debug","message":"Loaded model: release_artist","timestamp":"2025-03-23T07:34:48.795Z"}
+{"level":"debug","message":"Loaded model: Track","timestamp":"2025-03-23T07:34:48.798Z"}
+{"level":"debug","message":"Loaded model: TrackArtist","timestamp":"2025-03-23T07:34:48.800Z"}
+{"level":"debug","message":"Set up associations for model: Artist","timestamp":"2025-03-23T07:34:48.807Z"}
+{"level":"debug","message":"Set up associations for model: DemoSubmission","timestamp":"2025-03-23T07:34:48.808Z"}
+{"level":"debug","message":"Set up associations for model: ImportLog","timestamp":"2025-03-23T07:34:48.809Z"}
+{"level":"debug","message":"Set up associations for model: import_log","timestamp":"2025-03-23T07:34:48.812Z"}
+{"level":"debug","message":"Set up associations for model: Label","timestamp":"2025-03-23T07:34:48.816Z"}
+{"level":"debug","message":"Set up associations for model: Release","timestamp":"2025-03-23T07:34:48.820Z"}
+{"level":"debug","message":"Set up associations for model: ReleaseArtist","timestamp":"2025-03-23T07:34:48.820Z"}
+{"level":"debug","message":"Set up associations for model: release_artist","timestamp":"2025-03-23T07:34:48.821Z"}
+{"level":"debug","message":"Set up associations for model: Track","timestamp":"2025-03-23T07:34:48.823Z"}
+{"level":"debug","message":"Set up associations for model: TrackArtist","timestamp":"2025-03-23T07:34:48.823Z"}
+{"level":"warn","message":"SSL certificate validation disabled for development","timestamp":"2025-03-23T07:35:23.526Z"}
+{"database":"postgres","host":"liuaozuvkmvanmchndzl.supabase.co","level":"info","message":"Attempting database connection using parameters","port":"5432","ssl":true,"timestamp":"2025-03-23T07:35:23.530Z","username":"postgres"}
+{"level":"info","message":"Database connection configured using parameters","timestamp":"2025-03-23T07:35:23.621Z"}
+{"level":"info","message":"Testing database connection...","timestamp":"2025-03-23T07:35:23.621Z"}
+{"level":"debug","message":"Loaded model: Artist","timestamp":"2025-03-23T07:35:23.649Z"}
+{"level":"debug","message":"Loaded model: DemoSubmission","timestamp":"2025-03-23T07:35:23.652Z"}
+{"level":"debug","message":"Loaded model: ImportLog","timestamp":"2025-03-23T07:35:23.656Z"}
+{"level":"debug","message":"Loaded model: import_log","timestamp":"2025-03-23T07:35:23.658Z"}
+{"level":"debug","message":"Loaded model: Label","timestamp":"2025-03-23T07:35:23.665Z"}
+{"level":"debug","message":"Loaded model: Release","timestamp":"2025-03-23T07:35:23.667Z"}
+{"level":"debug","message":"Loaded model: ReleaseArtist","timestamp":"2025-03-23T07:35:23.672Z"}
+{"level":"debug","message":"Loaded model: release_artist","timestamp":"2025-03-23T07:35:23.674Z"}
+{"level":"debug","message":"Loaded model: Track","timestamp":"2025-03-23T07:35:23.682Z"}
+{"level":"debug","message":"Loaded model: TrackArtist","timestamp":"2025-03-23T07:35:23.691Z"}
+{"level":"debug","message":"Set up associations for model: Artist","timestamp":"2025-03-23T07:35:23.702Z"}
+{"level":"debug","message":"Set up associations for model: DemoSubmission","timestamp":"2025-03-23T07:35:23.703Z"}
+{"level":"debug","message":"Set up associations for model: ImportLog","timestamp":"2025-03-23T07:35:23.707Z"}
+{"level":"debug","message":"Set up associations for model: import_log","timestamp":"2025-03-23T07:35:23.708Z"}
+{"level":"debug","message":"Set up associations for model: Label","timestamp":"2025-03-23T07:35:23.712Z"}
+{"level":"debug","message":"Set up associations for model: Release","timestamp":"2025-03-23T07:35:23.716Z"}
+{"level":"debug","message":"Set up associations for model: ReleaseArtist","timestamp":"2025-03-23T07:35:23.717Z"}
+{"level":"debug","message":"Set up associations for model: release_artist","timestamp":"2025-03-23T07:35:23.717Z"}
+{"level":"debug","message":"Set up associations for model: Track","timestamp":"2025-03-23T07:35:23.721Z"}
+{"level":"debug","message":"Set up associations for model: TrackArtist","timestamp":"2025-03-23T07:35:23.723Z"}
+{"level":"warn","message":"SSL certificate validation disabled for development","timestamp":"2025-03-23T07:36:04.700Z"}
+{"database":"builditrecords","host":"localhost","level":"info","message":"Attempting database connection using parameters","port":5432,"ssl":false,"timestamp":"2025-03-23T07:36:04.707Z","username":"postgres"}
+{"level":"info","message":"Database connection configured using parameters","timestamp":"2025-03-23T07:36:04.805Z"}
+{"level":"info","message":"Testing database connection...","timestamp":"2025-03-23T07:36:04.805Z"}
+{"level":"info","message":"Database connection test successful","timestamp":"2025-03-23T07:36:04.987Z"}
+{"level":"warn","message":"SSL certificate validation disabled for development","timestamp":"2025-03-23T07:36:44.592Z"}
+{"database":"postgres","host":"liuaozuvkmvanmchndzl.supabase.co","level":"info","message":"Attempting database connection using parameters","port":"5432","ssl":true,"timestamp":"2025-03-23T07:36:44.594Z","username":"postgres"}
+{"level":"info","message":"Database connection configured using parameters","timestamp":"2025-03-23T07:36:44.669Z"}
+{"level":"info","message":"Testing database connection...","timestamp":"2025-03-23T07:36:44.670Z"}
+{"level":"debug","message":"Loaded model: Artist","timestamp":"2025-03-23T07:36:44.690Z"}
+{"level":"debug","message":"Loaded model: DemoSubmission","timestamp":"2025-03-23T07:36:44.693Z"}
+{"level":"debug","message":"Loaded model: ImportLog","timestamp":"2025-03-23T07:36:44.695Z"}
+{"level":"debug","message":"Loaded model: import_log","timestamp":"2025-03-23T07:36:44.698Z"}
+{"level":"debug","message":"Loaded model: Label","timestamp":"2025-03-23T07:36:44.700Z"}
+{"level":"debug","message":"Loaded model: Release","timestamp":"2025-03-23T07:36:44.703Z"}
+{"level":"debug","message":"Loaded model: ReleaseArtist","timestamp":"2025-03-23T07:36:44.705Z"}
+{"level":"debug","message":"Loaded model: release_artist","timestamp":"2025-03-23T07:36:44.706Z"}
+{"level":"debug","message":"Loaded model: Track","timestamp":"2025-03-23T07:36:44.709Z"}
+{"level":"debug","message":"Loaded model: TrackArtist","timestamp":"2025-03-23T07:36:44.713Z"}
+{"level":"debug","message":"Set up associations for model: Artist","timestamp":"2025-03-23T07:36:44.722Z"}
+{"level":"debug","message":"Set up associations for model: DemoSubmission","timestamp":"2025-03-23T07:36:44.722Z"}
+{"level":"debug","message":"Set up associations for model: ImportLog","timestamp":"2025-03-23T07:36:44.722Z"}
+{"level":"debug","message":"Set up associations for model: import_log","timestamp":"2025-03-23T07:36:44.723Z"}
+{"level":"debug","message":"Set up associations for model: Label","timestamp":"2025-03-23T07:36:44.725Z"}
+{"level":"debug","message":"Set up associations for model: Release","timestamp":"2025-03-23T07:36:44.727Z"}
+{"level":"debug","message":"Set up associations for model: ReleaseArtist","timestamp":"2025-03-23T07:36:44.728Z"}
+{"level":"debug","message":"Set up associations for model: release_artist","timestamp":"2025-03-23T07:36:44.728Z"}
+{"level":"debug","message":"Set up associations for model: Track","timestamp":"2025-03-23T07:36:44.731Z"}
+{"level":"debug","message":"Set up associations for model: TrackArtist","timestamp":"2025-03-23T07:36:44.731Z"}
+{"error":"ConnectionManager.getConnection was called after the connection manager was closed!","level":"error","message":"Database connection test failed - server will continue but database operations will fail","stack":"Error: ConnectionManager.getConnection was called after the connection manager was closed!\n    at ConnectionManager.getConnection (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/sequelize/lib/dialects/abstract/connection-manager.js:70:13)\n    at /Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/sequelize/lib/sequelize.js:305:111\n    at /Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/retry-as-promised/dist/index.js:65:25\n    at new Promise (<anonymous>)\n    at retryAsPromised (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/retry-as-promised/dist/index.js:54:12)\n    at Timeout._onTimeout (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/retry-as-promised/dist/index.js:104:21)\n    at listOnTimeout (node:internal/timers:573:17)\n    at process.processTimers (node:internal/timers:514:7)","timestamp":"2025-03-23T07:37:54.480Z"}
+{"error":"ConnectionManager.getConnection was called after the connection manager was closed!","level":"error","message":"Database connection test failed - server will continue but database operations will fail","stack":"Error: ConnectionManager.getConnection was called after the connection manager was closed!\n    at ConnectionManager.getConnection (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/sequelize/lib/dialects/abstract/connection-manager.js:70:13)\n    at /Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/sequelize/lib/sequelize.js:305:111\n    at /Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/retry-as-promised/dist/index.js:65:25\n    at new Promise (<anonymous>)\n    at retryAsPromised (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/retry-as-promised/dist/index.js:54:12)\n    at Timeout._onTimeout (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/retry-as-promised/dist/index.js:104:21)\n    at listOnTimeout (node:internal/timers:573:17)\n    at process.processTimers (node:internal/timers:514:7)","timestamp":"2025-03-23T07:39:15.475Z"}
+{"level":"warn","message":"SSL certificate validation disabled for development","timestamp":"2025-03-23T07:39:38.438Z"}
+{"database":"postgres","host":"liuaozuvkmvanmchndzl.supabase.co","level":"info","message":"Attempting database connection using parameters","port":"5432","ssl":true,"timestamp":"2025-03-23T07:39:38.440Z","username":"postgres"}
+{"level":"info","message":"Database connection configured using parameters","timestamp":"2025-03-23T07:39:38.510Z"}
+{"level":"info","message":"Testing database connection...","timestamp":"2025-03-23T07:39:38.510Z"}
+{"level":"debug","message":"Loaded model: Artist","timestamp":"2025-03-23T07:39:38.529Z"}
+{"level":"debug","message":"Loaded model: DemoSubmission","timestamp":"2025-03-23T07:39:38.531Z"}
+{"level":"debug","message":"Loaded model: ImportLog","timestamp":"2025-03-23T07:39:38.534Z"}
+{"level":"debug","message":"Loaded model: import_log","timestamp":"2025-03-23T07:39:38.536Z"}
+{"level":"debug","message":"Loaded model: Label","timestamp":"2025-03-23T07:39:38.539Z"}
+{"level":"debug","message":"Loaded model: Release","timestamp":"2025-03-23T07:39:38.542Z"}
+{"level":"debug","message":"Loaded model: ReleaseArtist","timestamp":"2025-03-23T07:39:38.545Z"}
+{"level":"debug","message":"Loaded model: release_artist","timestamp":"2025-03-23T07:39:38.546Z"}
+{"level":"debug","message":"Loaded model: Track","timestamp":"2025-03-23T07:39:38.549Z"}
+{"level":"debug","message":"Loaded model: TrackArtist","timestamp":"2025-03-23T07:39:38.555Z"}
+{"level":"debug","message":"Set up associations for model: Artist","timestamp":"2025-03-23T07:39:38.562Z"}
+{"level":"debug","message":"Set up associations for model: DemoSubmission","timestamp":"2025-03-23T07:39:38.562Z"}
+{"level":"debug","message":"Set up associations for model: ImportLog","timestamp":"2025-03-23T07:39:38.563Z"}
+{"level":"debug","message":"Set up associations for model: import_log","timestamp":"2025-03-23T07:39:38.563Z"}
+{"level":"debug","message":"Set up associations for model: Label","timestamp":"2025-03-23T07:39:38.565Z"}
+{"level":"debug","message":"Set up associations for model: Release","timestamp":"2025-03-23T07:39:38.568Z"}
+{"level":"debug","message":"Set up associations for model: ReleaseArtist","timestamp":"2025-03-23T07:39:38.569Z"}
+{"level":"debug","message":"Set up associations for model: release_artist","timestamp":"2025-03-23T07:39:38.569Z"}
+{"level":"debug","message":"Set up associations for model: Track","timestamp":"2025-03-23T07:39:38.572Z"}
+{"level":"debug","message":"Set up associations for model: TrackArtist","timestamp":"2025-03-23T07:39:38.573Z"}
+{"error":"ConnectionManager.getConnection was called after the connection manager was closed!","level":"error","message":"Database connection test failed - server will continue but database operations will fail","stack":"Error: ConnectionManager.getConnection was called after the connection manager was closed!\n    at ConnectionManager.getConnection (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/sequelize/lib/dialects/abstract/connection-manager.js:70:13)\n    at /Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/sequelize/lib/sequelize.js:305:111\n    at /Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/retry-as-promised/dist/index.js:65:25\n    at new Promise (<anonymous>)\n    at retryAsPromised (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/retry-as-promised/dist/index.js:54:12)\n    at Timeout._onTimeout (/Users/ajsorbello/Documents/MyWebPortfolio/BuildItRecords/node_modules/retry-as-promised/dist/index.js:104:21)\n    at listOnTimeout (node:internal/timers:573:17)\n    at process.processTimers (node:internal/timers:514:7)","timestamp":"2025-03-23T07:42:09.325Z"}

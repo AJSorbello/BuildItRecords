@@ -1,0 +1,665 @@
+{
+   "data" : [
+      {
+         "bio" : null,
+         "created_at" : "2025-03-06T09:13:46.243+00:00",
+         "id" : "0LyfQWJT6nXafLPZqxe9Of",
+         "image_url" : "https://i.scdn.co/image/ab6761610000e5eb6b134287e3095d2c84b7932a",
+         "label_id" : "1",
+         "name" : "Various Artists",
+         "spotify_url" : "https://open.spotify.com/artist/0LyfQWJT6nXafLPZqxe9Of",
+         "updated_at" : "2025-03-06T09:13:46.117+00:00"
+      },
+      {
+         "bio" : "Test bio 1",
+         "created_at" : "2024-12-24T01:00:39.222331+00:00",
+         "id" : "test1",
+         "image_url" : "https://example.com/image1.jpg",
+         "label_id" : "1",
+         "name" : "Test Artist 1",
+         "spotify_url" : "https://spotify.com/artist1",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:23:49.887932+00:00",
+         "id" : "test123",
+         "image_url" : null,
+         "label_id" : "1",
+         "name" : "Test Artist",
+         "spotify_url" : "https://open.spotify.com/artist/test",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:35:45.070482+00:00",
+         "id" : "6Ip8FS7vWT1uKkJSweANQK",
+         "image_url" : "https://i.scdn.co/image/ab6761610000e5ebd03e9ecf77419871b96daee1",
+         "label_id" : "1",
+         "name" : "Dave",
+         "spotify_url" : "https://open.spotify.com/artist/6Ip8FS7vWT1uKkJSweANQK",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:37:58.453035+00:00",
+         "id" : "40vGNEPfFybJbwyfnId4vq",
+         "image_url" : "https://i.scdn.co/image/ab67616d0000b273022e65141e0fad2cab45092e",
+         "label_id" : "1",
+         "name" : "Hoodrat",
+         "spotify_url" : "https://open.spotify.com/artist/40vGNEPfFybJbwyfnId4vq",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:37:58.67063+00:00",
+         "id" : "6Qr4m5n3KUKo7ZYetgDHws",
+         "image_url" : "https://i.scdn.co/image/ab6761610000e5ebd381a52393d31816b787ee77",
+         "label_id" : "1",
+         "name" : "UPTWN",
+         "spotify_url" : "https://open.spotify.com/artist/6Qr4m5n3KUKo7ZYetgDHws",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:37:58.985907+00:00",
+         "id" : "64aA4P3Ub9VVkAYCNioolq",
+         "image_url" : null,
+         "label_id" : "1",
+         "name" : "Alicia Moore",
+         "spotify_url" : "https://open.spotify.com/artist/64aA4P3Ub9VVkAYCNioolq",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:37:59.256432+00:00",
+         "id" : "4YR9PfAeCaFOVgJPiG8ZMp",
+         "image_url" : "https://i.scdn.co/image/ab6761610000e5eb43579c6f1772568c4dd37ad0",
+         "label_id" : "1",
+         "name" : "Gaz Trigg",
+         "spotify_url" : "https://open.spotify.com/artist/4YR9PfAeCaFOVgJPiG8ZMp",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:00.308196+00:00",
+         "id" : "0D6I1KUKltLyc9kWUmwGVQ",
+         "image_url" : "https://i.scdn.co/image/ab6761610000e5eb0aa7fd2dbfe4866c4f159895",
+         "label_id" : "1",
+         "name" : "Dodger",
+         "spotify_url" : "https://open.spotify.com/artist/0D6I1KUKltLyc9kWUmwGVQ",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:00.598568+00:00",
+         "id" : "7kNqXtgeIwFtelmRjWv205",
+         "image_url" : "https://i.scdn.co/image/ab6761610000e5eb4c1faf676d461d6f33edd747",
+         "label_id" : "1",
+         "name" : "John Summit",
+         "spotify_url" : "https://open.spotify.com/artist/7kNqXtgeIwFtelmRjWv205",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:37:59.593993+00:00",
+         "id" : "0jI2Kfa17d4JoMdLerNpSx",
+         "image_url" : "https://i.scdn.co/image/ab6761610000e5eb93f28c21afa7520666129b97",
+         "label_id" : "1",
+         "name" : "Chris Gresswell",
+         "spotify_url" : "https://open.spotify.com/artist/0jI2Kfa17d4JoMdLerNpSx",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:00.844424+00:00",
+         "id" : "4VYCC1OsCe1aaER3vYOY5A",
+         "image_url" : "https://i.scdn.co/image/ab6761610000e5eb70c66f2a27220797514907ae",
+         "label_id" : "1",
+         "name" : "sant jord",
+         "spotify_url" : "https://open.spotify.com/artist/4VYCC1OsCe1aaER3vYOY5A",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:01.099834+00:00",
+         "id" : "7aohnUnt4vWtzvhBSZTAbF",
+         "image_url" : "https://i.scdn.co/image/ab6761610000e5ebad5d75029b553951e883b3bf",
+         "label_id" : "1",
+         "name" : "FractaLL",
+         "spotify_url" : "https://open.spotify.com/artist/7aohnUnt4vWtzvhBSZTAbF",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:01.409044+00:00",
+         "id" : "4Vtz0dLKpfOtv8m0npgkE0",
+         "image_url" : "https://i.scdn.co/image/ab6761610000e5eb9fc7a71a6d08d7044a47ea03",
+         "label_id" : "1",
+         "name" : "Sanka",
+         "spotify_url" : "https://open.spotify.com/artist/4Vtz0dLKpfOtv8m0npgkE0",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:01.719252+00:00",
+         "id" : "5kjLSnLC92rIy7B5knTIH3",
+         "image_url" : "https://i.scdn.co/image/ab6761610000e5ebeba74637f6ce38ac80fdd955",
+         "label_id" : "1",
+         "name" : "Kwal",
+         "spotify_url" : "https://open.spotify.com/artist/5kjLSnLC92rIy7B5knTIH3",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:02.351023+00:00",
+         "id" : "5hEExJgwx7NVIhwmPxsXcW",
+         "image_url" : "https://i.scdn.co/image/ab6761610000e5ebab89b926bb4a7c79aae393da",
+         "label_id" : "1",
+         "name" : "Daniels Jack",
+         "spotify_url" : "https://open.spotify.com/artist/5hEExJgwx7NVIhwmPxsXcW",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:02.93047+00:00",
+         "id" : "77wqg7m8PWTCVEWQRZGnoS",
+         "image_url" : "https://i.scdn.co/image/ab67616d0000b273c5f33436f5887a0111af176a",
+         "label_id" : "1",
+         "name" : "Mikhail Rado",
+         "spotify_url" : "https://open.spotify.com/artist/77wqg7m8PWTCVEWQRZGnoS",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:03.272337+00:00",
+         "id" : "6uuUmaH6yzvpnPgDcdl0y4",
+         "image_url" : "https://i.scdn.co/image/ab6761610000e5eb8e1c212d51555787efd9126b",
+         "label_id" : "1",
+         "name" : "Alfonso Tan",
+         "spotify_url" : "https://open.spotify.com/artist/6uuUmaH6yzvpnPgDcdl0y4",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:03.492078+00:00",
+         "id" : "3fGBAngoskMUXoLvsDkqpD",
+         "image_url" : "https://i.scdn.co/image/ab67616d0000b27345637b627e12a9b28f8ddbe1",
+         "label_id" : "1",
+         "name" : "TUSK",
+         "spotify_url" : "https://open.spotify.com/artist/3fGBAngoskMUXoLvsDkqpD",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:03.770427+00:00",
+         "id" : "3J27JLe2O8R3EvNFFjWXdJ",
+         "image_url" : "https://i.scdn.co/image/ab67616d0000b2734a7c22f904afddbb9a130ea6",
+         "label_id" : "1",
+         "name" : "Bumpy Fool",
+         "spotify_url" : "https://open.spotify.com/artist/3J27JLe2O8R3EvNFFjWXdJ",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:04.30744+00:00",
+         "id" : "4Ou7Mb398zSYNP714EP1h7",
+         "image_url" : "https://i.scdn.co/image/ab67616d0000b273fd0d6853510024667e20dd64",
+         "label_id" : "1",
+         "name" : "JedX",
+         "spotify_url" : "https://open.spotify.com/artist/4Ou7Mb398zSYNP714EP1h7",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:04.563585+00:00",
+         "id" : "17lRBwcCqKBpqgfnUkop3r",
+         "image_url" : "https://i.scdn.co/image/ab6761610000e5ebc490397d6efab44f29692820",
+         "label_id" : "1",
+         "name" : "Kendoll",
+         "spotify_url" : "https://open.spotify.com/artist/17lRBwcCqKBpqgfnUkop3r",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:05.075443+00:00",
+         "id" : "750ruOD31OKMP4ndBP7fRY",
+         "image_url" : "https://i.scdn.co/image/ab6761610000e5eb05faae3a4cd5b5b79b8140c7",
+         "label_id" : "1",
+         "name" : "MAONRO",
+         "spotify_url" : "https://open.spotify.com/artist/750ruOD31OKMP4ndBP7fRY",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:05.349873+00:00",
+         "id" : "2V2EY85GY6oQYZZ6LGJc4O",
+         "image_url" : "https://i.scdn.co/image/ab6761610000e5eba7de0a25e44e61886988b99f",
+         "label_id" : "1",
+         "name" : "Screwface",
+         "spotify_url" : "https://open.spotify.com/artist/2V2EY85GY6oQYZZ6LGJc4O",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:05.661121+00:00",
+         "id" : "1vFGvmhvZYBc0XpgpoAzUf",
+         "image_url" : "https://i.scdn.co/image/ab6761610000e5ebd43f77d99a23560bb5cb9e0b",
+         "label_id" : "1",
+         "name" : "FKLS",
+         "spotify_url" : "https://open.spotify.com/artist/1vFGvmhvZYBc0XpgpoAzUf",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:06.487341+00:00",
+         "id" : "4iSvYDaOQy8BwojPxf8P6V",
+         "image_url" : "https://i.scdn.co/image/ab6761610000e5ebb5999fc08ae8fda79a60b8c2",
+         "label_id" : "1",
+         "name" : "Absintheminded",
+         "spotify_url" : "https://open.spotify.com/artist/4iSvYDaOQy8BwojPxf8P6V",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:07.25037+00:00",
+         "id" : "6hOUe5iEVbbezCH4n6uiYR",
+         "image_url" : "https://i.scdn.co/image/ab6761610000e5eb0ce518e17b27060fc229dbbb",
+         "label_id" : "1",
+         "name" : "Domestique",
+         "spotify_url" : "https://open.spotify.com/artist/6hOUe5iEVbbezCH4n6uiYR",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:07.516293+00:00",
+         "id" : "2vp2B6RPA9twgYPKbPaffz",
+         "image_url" : "https://i.scdn.co/image/ab67616d0000b273d64fd383e009df533d7cb3f9",
+         "label_id" : "1",
+         "name" : "im kyle",
+         "spotify_url" : "https://open.spotify.com/artist/2vp2B6RPA9twgYPKbPaffz",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:07.767424+00:00",
+         "id" : "5oznV9DBpgEcgx0UgKKbLk",
+         "image_url" : "https://i.scdn.co/image/ab6761610000e5ebc5adcb4634c5450ccf7ded82",
+         "label_id" : "1",
+         "name" : "POSYDON",
+         "spotify_url" : "https://open.spotify.com/artist/5oznV9DBpgEcgx0UgKKbLk",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:08.02355+00:00",
+         "id" : "6ymXZSd6Qsf3snMm2CKxk4",
+         "image_url" : "https://i.scdn.co/image/ab67616d0000b2736c1d982efc5d03440d3bbde2",
+         "label_id" : "1",
+         "name" : "MarQ",
+         "spotify_url" : "https://open.spotify.com/artist/6ymXZSd6Qsf3snMm2CKxk4",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:08.403641+00:00",
+         "id" : "4LRSqGtcsX0OUvT49pgz0d",
+         "image_url" : "https://i.scdn.co/image/ab6761610000e5eb7fc690f0328ec46f219e4763",
+         "label_id" : "1",
+         "name" : "Frederique",
+         "spotify_url" : "https://open.spotify.com/artist/4LRSqGtcsX0OUvT49pgz0d",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:08.659798+00:00",
+         "id" : "6ZJASbg0cD5tdvQgqH5HLf",
+         "image_url" : "https://i.scdn.co/image/ab67616d0000b2732a82ddfeadef084f080d40f8",
+         "label_id" : "1",
+         "name" : "Rance & Maff",
+         "spotify_url" : "https://open.spotify.com/artist/6ZJASbg0cD5tdvQgqH5HLf",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:09.181083+00:00",
+         "id" : "7CsGIfqoq13hyMuyEcz7jR",
+         "image_url" : "https://i.scdn.co/image/ab6761610000e5eb3b44841ab2ff9faca274fe30",
+         "label_id" : "1",
+         "name" : "Hot Keys",
+         "spotify_url" : "https://open.spotify.com/artist/7CsGIfqoq13hyMuyEcz7jR",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:09.483275+00:00",
+         "id" : "7tFPiRyBXpG4rLbwhRjO0b",
+         "image_url" : "https://i.scdn.co/image/ab67616d0000b27365d2b300439cd28847c7e37d",
+         "label_id" : "1",
+         "name" : "MARQ",
+         "spotify_url" : "https://open.spotify.com/artist/7tFPiRyBXpG4rLbwhRjO0b",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:09.76849+00:00",
+         "id" : "2SyuXmouzHiUSjNLNxRNiL",
+         "image_url" : "https://i.scdn.co/image/ab67616d0000b273ed9fabeb0a9de51d79011226",
+         "label_id" : "1",
+         "name" : "Oxymoron",
+         "spotify_url" : "https://open.spotify.com/artist/2SyuXmouzHiUSjNLNxRNiL",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:02.009863+00:00",
+         "id" : "5sobBegrP0b7zmE5Edc8C6",
+         "image_url" : "https://i.scdn.co/image/ab6761610000e5ebb55187639322530b231271fa",
+         "label_id" : "1",
+         "name" : "BELLO",
+         "spotify_url" : "https://open.spotify.com/artist/5sobBegrP0b7zmE5Edc8C6",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:10.561566+00:00",
+         "id" : "04MM8XFEOwzjlytvJyYqOV",
+         "image_url" : "https://i.scdn.co/image/ab6761610000e5eb20d0a29a215520dacdd8a476",
+         "label_id" : "1",
+         "name" : "Haelix",
+         "spotify_url" : "https://open.spotify.com/artist/04MM8XFEOwzjlytvJyYqOV",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:10.88528+00:00",
+         "id" : "1VFBRTZO7ZX9VrqzjK2bcy",
+         "image_url" : "https://i.scdn.co/image/ab6761610000e5eb289839b1a71a9ee4648b7036",
+         "label_id" : "1",
+         "name" : "Mayv Bell",
+         "spotify_url" : "https://open.spotify.com/artist/1VFBRTZO7ZX9VrqzjK2bcy",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:11.351698+00:00",
+         "id" : "4XKm2kHUPp6EixvzcoqjAe",
+         "image_url" : "https://i.scdn.co/image/ab6761610000e5eb8e12d0a45cc92e38d3223766",
+         "label_id" : "1",
+         "name" : "Helder Simz",
+         "spotify_url" : "https://open.spotify.com/artist/4XKm2kHUPp6EixvzcoqjAe",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:11.657659+00:00",
+         "id" : "5hKQVA377hopQ9HWPOseXF",
+         "image_url" : "https://i.scdn.co/image/ab6761610000e5ebabb02768bf1a2ca3e58994c0",
+         "label_id" : "1",
+         "name" : "Aaron Jackson",
+         "spotify_url" : "https://open.spotify.com/artist/5hKQVA377hopQ9HWPOseXF",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:12.395861+00:00",
+         "id" : "7DREdfV4mKhlrQiiOPNiIa",
+         "image_url" : "https://i.scdn.co/image/ab6761610000e5ebd7fbdd400145fc2c7977c81f",
+         "label_id" : "1",
+         "name" : "Justin Lawson",
+         "spotify_url" : "https://open.spotify.com/artist/7DREdfV4mKhlrQiiOPNiIa",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:12.65099+00:00",
+         "id" : "7B38d0XXdEY3vC5eddO6r6",
+         "image_url" : "https://i.scdn.co/image/ab6761610000e5eb4aca1b3563ab9ec6ac8ec975",
+         "label_id" : "1",
+         "name" : "N1MA",
+         "spotify_url" : "https://open.spotify.com/artist/7B38d0XXdEY3vC5eddO6r6",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:13.2659+00:00",
+         "id" : "5iD9mn2inFzm1u3jvr9egi",
+         "image_url" : "https://i.scdn.co/image/ab6761610000e5ebe159d550bb96ec697230d1ba",
+         "label_id" : "1",
+         "name" : "Sloth",
+         "spotify_url" : "https://open.spotify.com/artist/5iD9mn2inFzm1u3jvr9egi",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:13.553866+00:00",
+         "id" : "7EroDVPELCYcB8zyB2XN9F",
+         "image_url" : "https://i.scdn.co/image/ab6761610000e5eb30a2861ca7ac827b926ae1d7",
+         "label_id" : "1",
+         "name" : "Sillaz",
+         "spotify_url" : "https://open.spotify.com/artist/7EroDVPELCYcB8zyB2XN9F",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:13.809147+00:00",
+         "id" : "0gIwYJ6XYry8I7aK73eK3d",
+         "image_url" : "https://i.scdn.co/image/ab6761610000e5eb9f6ecc553349d71b9e9276a2",
+         "label_id" : "1",
+         "name" : "Gouzy",
+         "spotify_url" : "https://open.spotify.com/artist/0gIwYJ6XYry8I7aK73eK3d",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:14.112729+00:00",
+         "id" : "1W9pJsla05m0YLC25BaPzW",
+         "image_url" : "https://i.scdn.co/image/ab6761610000e5eb9e424522d4c107a311574351",
+         "label_id" : "1",
+         "name" : "Caique Carvalho",
+         "spotify_url" : "https://open.spotify.com/artist/1W9pJsla05m0YLC25BaPzW",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:14.422354+00:00",
+         "id" : "66iu65cpuC4OTiT4fEItm6",
+         "image_url" : "https://i.scdn.co/image/ab6761610000e5eb5aba41e0b4d5dbbb3efb568a",
+         "label_id" : "1",
+         "name" : "John Okins",
+         "spotify_url" : "https://open.spotify.com/artist/66iu65cpuC4OTiT4fEItm6",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:14.689029+00:00",
+         "id" : "2Ygebw1ybw5wMSAb0ken6I",
+         "image_url" : "https://i.scdn.co/image/ab6761610000e5ebcbca2c2c822a7a337b2a77c7",
+         "label_id" : "1",
+         "name" : "THATSOUND",
+         "spotify_url" : "https://open.spotify.com/artist/2Ygebw1ybw5wMSAb0ken6I",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:15.046605+00:00",
+         "id" : "1FBSojGveT9qgrTyA948NX",
+         "image_url" : "https://i.scdn.co/image/ab6761610000e5eb7babc47f27262694de117e79",
+         "label_id" : "1",
+         "name" : "Vianna",
+         "spotify_url" : "https://open.spotify.com/artist/1FBSojGveT9qgrTyA948NX",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:15.63908+00:00",
+         "id" : "21T0dUcy5Bgr2LUrJ8BNd9",
+         "image_url" : "https://i.scdn.co/image/ab6761610000e5eb9aa49337b4e93f129df6251f",
+         "label_id" : "1",
+         "name" : "Danny Samaei",
+         "spotify_url" : "https://open.spotify.com/artist/21T0dUcy5Bgr2LUrJ8BNd9",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:15.932349+00:00",
+         "id" : "6yjsvVut7MsLmMiAfyNL5m",
+         "image_url" : "https://i.scdn.co/image/ab6761610000e5eb3fd91bd5e20766e8155fc088",
+         "label_id" : "1",
+         "name" : "Fatty",
+         "spotify_url" : "https://open.spotify.com/artist/6yjsvVut7MsLmMiAfyNL5m",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:16.252514+00:00",
+         "id" : "5NCIFb4JfQobJI1V6tndrR",
+         "image_url" : "https://i.scdn.co/image/ab6761610000e5eb0f503b915e3ee062a2da3bd6",
+         "label_id" : "1",
+         "name" : "Kelvin Richard",
+         "spotify_url" : "https://open.spotify.com/artist/5NCIFb4JfQobJI1V6tndrR",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:16.525742+00:00",
+         "id" : "7lDZhKkcXxWZ9Wc7KhNkAr",
+         "image_url" : "https://i.scdn.co/image/ab6761610000e5eb16341ebf979593d5204815a7",
+         "label_id" : "1",
+         "name" : "Resonant",
+         "spotify_url" : "https://open.spotify.com/artist/7lDZhKkcXxWZ9Wc7KhNkAr",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:17.020295+00:00",
+         "id" : "5s7VM2QEv0CSEE1RwPAaBi",
+         "image_url" : "https://i.scdn.co/image/ab6761610000e5ebd137eabad6e77f819872138e",
+         "label_id" : "1",
+         "name" : "CLAASSEN",
+         "spotify_url" : "https://open.spotify.com/artist/5s7VM2QEv0CSEE1RwPAaBi",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:17.298325+00:00",
+         "id" : "5vMnh9zUMuyulSXf3xZ9T9",
+         "image_url" : "https://i.scdn.co/image/ab6761610000e5ebbe70e93183bec497eea30648",
+         "label_id" : "1",
+         "name" : "Jay Peeki",
+         "spotify_url" : "https://open.spotify.com/artist/5vMnh9zUMuyulSXf3xZ9T9",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:17.622783+00:00",
+         "id" : "7mXyW5kPIUrSRGkV0I9Ilo",
+         "image_url" : "https://i.scdn.co/image/ab6761610000e5eb77dbde523925f73c8860f3e5",
+         "label_id" : "1",
+         "name" : "FeelGood",
+         "spotify_url" : "https://open.spotify.com/artist/7mXyW5kPIUrSRGkV0I9Ilo",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:37:58.166656+00:00",
+         "id" : "1bn0UcIaEKHWx15s0GyH55",
+         "image_url" : "https://i.scdn.co/image/ab67616d0000b27333abbdef79a89dfb89db2855",
+         "label_id" : "1",
+         "name" : "Jamie Brennan",
+         "spotify_url" : "https://open.spotify.com/artist/1bn0UcIaEKHWx15s0GyH55",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:02.630922+00:00",
+         "id" : "1iGopxKoGRFIEyBfdncWzJ",
+         "image_url" : "https://i.scdn.co/image/ab6761610000e5eb0c9e474de72a89b475e67db0",
+         "label_id" : "1",
+         "name" : "Bella Goldwin",
+         "spotify_url" : "https://open.spotify.com/artist/1iGopxKoGRFIEyBfdncWzJ",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:04.026436+00:00",
+         "id" : "4faEPF6tSntuUDfcoZ5Rud",
+         "image_url" : "https://i.scdn.co/image/ab67616d0000b273465b611679bdc01b06001a3b",
+         "label_id" : "1",
+         "name" : "REESE PARK",
+         "spotify_url" : "https://open.spotify.com/artist/4faEPF6tSntuUDfcoZ5Rud",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:04.817343+00:00",
+         "id" : "4k5XJa1mHBuKNvx4zt4Ogc",
+         "image_url" : "https://i.scdn.co/image/ab67616d0000b2733e743319e84da9b75ab019e0",
+         "label_id" : "1",
+         "name" : "Marques",
+         "spotify_url" : "https://open.spotify.com/artist/4k5XJa1mHBuKNvx4zt4Ogc",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:10.003213+00:00",
+         "id" : "6c9oLha6ToammQblPashS9",
+         "image_url" : "https://i.scdn.co/image/ab67616d0000b273ed9fabeb0a9de51d79011226",
+         "label_id" : "1",
+         "name" : "Allen Oh",
+         "spotify_url" : "https://open.spotify.com/artist/6c9oLha6ToammQblPashS9",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:11.130823+00:00",
+         "id" : "5ze5OzM2pqb5HQyBqZBXq4",
+         "image_url" : "https://i.scdn.co/image/ab6761610000e5eb4115f992e11606744734fe76",
+         "label_id" : "1",
+         "name" : "Arky",
+         "spotify_url" : "https://open.spotify.com/artist/5ze5OzM2pqb5HQyBqZBXq4",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:12.948368+00:00",
+         "id" : "2qgl5yiniO2qykrPxMkCPz",
+         "image_url" : "https://i.scdn.co/image/ab6761610000e5ebbc6fecc946f08348cc13c5a4",
+         "label_id" : "1",
+         "name" : "Lux Esto",
+         "spotify_url" : "https://open.spotify.com/artist/2qgl5yiniO2qykrPxMkCPz",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:08.917427+00:00",
+         "id" : "1e6Slp9egbeuYW1dXXZdHH",
+         "image_url" : "https://i.scdn.co/image/ab6761610000e5eb6dbb1a3a18119d6d7ef848f3",
+         "label_id" : "1",
+         "name" : "Anmol Jhanb",
+         "spotify_url" : "https://open.spotify.com/artist/1e6Slp9egbeuYW1dXXZdHH",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:17.92533+00:00",
+         "id" : "5fU2v3rxLJ7GEI41LXiu0I",
+         "image_url" : "https://i.scdn.co/image/ab6761610000e5ebe4ca854cbeea1b763cf66fcb",
+         "label_id" : "1",
+         "name" : "Law Mark",
+         "spotify_url" : "https://open.spotify.com/artist/5fU2v3rxLJ7GEI41LXiu0I",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      },
+      {
+         "bio" : null,
+         "created_at" : "2024-12-24T16:38:16.763926+00:00",
+         "id" : "0xhXLXPVNbgslNtqcjFLPp",
+         "image_url" : "https://i.scdn.co/image/ab67616d0000b273f0d492be7ab5956e0e2da652",
+         "label_id" : "1",
+         "name" : "TUKKO",
+         "spotify_url" : "https://open.spotify.com/artist/0xhXLXPVNbgslNtqcjFLPp",
+         "updated_at" : "2025-03-06T06:31:38.33477+00:00"
+      }
+   ],
+   "success" : true
+}

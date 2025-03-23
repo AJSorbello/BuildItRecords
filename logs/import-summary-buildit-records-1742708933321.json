@@ -1,0 +1,14 @@
+{
+  "labelName": "Build It Records",
+  "labelSlug": "buildit-records",
+  "labelId": "1",
+  "processedReleases": 0,
+  "newReleases": 0,
+  "existingReleases": 0,
+  "failedReleases": 174,
+  "newArtists": 0,
+  "newTracks": 0,
+  "startTime": "2025-03-23T05:43:21.231Z",
+  "endTime": "2025-03-23T05:48:53.321Z",
+  "success": true
+}
