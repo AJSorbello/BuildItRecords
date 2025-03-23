@@ -21,9 +21,11 @@ const allowedOrigins = [
   'https://build-it-records-6r3lg3s9x-ajsorbellos-projects.vercel.app',
   'https://build-it-records-ek4rtnk9w-ajsorbellos-projects.vercel.app',
   'https://build-it-records-itmufu57f-ajsorbellos-projects.vercel.app',
+  'https://build-it-records-fuxad54e4-ajsorbellos-projects.vercel.app', 
   'https://builditrecords.vercel.app',
   'http://localhost:3000',
-  'http://localhost:5173'
+  'http://localhost:5173',
+  'https://builditrecords.com'
 ];
 
 // Configure CORS with specific origins
@@ -48,8 +50,12 @@ app.use(cors({
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'Accept'],
-  credentials: false
+  credentials: false,
+  maxAge: 86400 
 }));
+
+// Enable wildcard CORS for all routes
+app.options('*', cors());
 
 // Simple middleware to log requests
 app.use((req, res, next) => {

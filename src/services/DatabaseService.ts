@@ -344,8 +344,8 @@ class DatabaseService {
         },
         // Specify CORS mode explicitly
         mode: 'cors',
-        // Include credentials if on the same domain
-        credentials: window.location.hostname.includes('localhost') ? 'include' : 'same-origin'
+        // Don't include credentials to avoid CORS issues
+        credentials: 'omit'
       };
       
       // Try direct API request first
