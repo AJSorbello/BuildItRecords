@@ -224,9 +224,38 @@ const handleArtistsRequest = async (req, res) => {
       });
     }
     
+    // Process the result to format artists correctly
+    const processedReleases = result.data.map(release => {
+      // Extract artists from the nested structure
+      const artists = release.artist 
+        ? release.artist.map(item => item.artist).filter(artist => artist !== null)
+        : [];
+      
+      // Filter out test artists (names containing 'test' or 'example')
+      const filteredArtists = artists.filter(artist => {
+        if (!artist.name) return false;
+        const name = artist.name.toLowerCase();
+        return !name.includes('test') && !name.includes('example');
+      });
+      
+      // Sort artists alphabetically by name
+      const sortedArtists = filteredArtists.sort((a, b) => {
+        if (a.name && b.name) {
+          return a.name.localeCompare(b.name);
+        }
+        return 0;
+      });
+      
+      // Return the release with artists in the expected format
+      return {
+        ...release,
+        artists: sortedArtists
+      };
+    });
+    
     return res.status(200).json({
       success: true,
-      data: result.data
+      data: processedReleases
     });
   } catch (error) {
     console.error(`Error in artists request handler: ${error.message}`);
@@ -336,8 +365,15 @@ const handleReleasesRequest = async (req, res) => {
         ? release.artist.map(item => item.artist).filter(artist => artist !== null)
         : [];
       
+      // Filter out test artists (names containing 'test' or 'example')
+      const filteredArtists = artists.filter(artist => {
+        if (!artist.name) return false;
+        const name = artist.name.toLowerCase();
+        return !name.includes('test') && !name.includes('example');
+      });
+      
       // Sort artists alphabetically by name
-      const sortedArtists = artists.sort((a, b) => {
+      const sortedArtists = filteredArtists.sort((a, b) => {
         if (a.name && b.name) {
           return a.name.localeCompare(b.name);
         }
@@ -402,8 +438,15 @@ const handleReleaseByIdRequest = async (req, res) => {
         .map(item => item.artist)
         .filter(artist => artist !== null);
       
+      // Filter out test artists
+      const filteredArtists = artists.filter(artist => {
+        if (!artist.name) return false;
+        const name = artist.name.toLowerCase();
+        return !name.includes('test') && !name.includes('example');
+      });
+      
       // Sort artists alphabetically
-      const sortedArtists = artists.sort((a, b) => {
+      const sortedArtists = filteredArtists.sort((a, b) => {
         if (a.name && b.name) {
           return a.name.localeCompare(b.name);
         }
@@ -429,35 +472,74 @@ const handleReleaseByIdRequest = async (req, res) => {
       `Error fetching tracks for release ${id}`
     );
     
+    // Track processing helper - filters out test artists and sorts alphabetically
+    const processTrackArtists = (trackData) => {
+      if (!trackData.artists) return trackData;
+      
+      // Filter out test artists
+      const filteredArtists = trackData.artists.filter(artist => {
+        if (!artist.name) return false;
+        const name = artist.name.toLowerCase();
+        return !name.includes('test') && !name.includes('example');
+      });
+      
+      // Sort alphabetically
+      const sortedArtists = filteredArtists.sort((a, b) => {
+        if (a.name && b.name) {
+          return a.name.localeCompare(b.name);
+        }
+        return 0;
+      });
+      
+      return {
+        ...trackData,
+        artists: sortedArtists
+      };
+    };
+    
+    // Process tracks to include track number and apply artist filtering/sorting
+    if (tracksResult.success && tracksResult.data) {
+      // First process each track's artist data
+      const processedTracks = tracksResult.data.map(track => {
+        return {
+          ...track,
+          artists: track.artist 
+            ? track.artist.map(item => item.artist)
+                .filter(artist => artist !== null)
+                // Filter out test artists
+                .filter(artist => {
+                  if (!artist.name) return false;
+                  const name = artist.name.toLowerCase();
+                  return !name.includes('test') && !name.includes('example');
+                })
+                // Sort alphabetically
+                .sort((a, b) => {
+                  if (a.name && b.name) {
+                    return a.name.localeCompare(b.name);
+                  }
+                  return 0;
+                })
+            : []
+        };
+      });
+      
+      // Then sort by track number
+      const sortedTracks = processedTracks.sort((a, b) => 
+        (a.track_number || 999) - (b.track_number || 999)
+      );
+      
+      releaseResult.data.tracks = sortedTracks;
+    }
+    
     // Process the result to format artists correctly for the release
     const processedRelease = {
       ...releaseResult.data,
-      artists: releaseResult.data.artist 
-        ? releaseResult.data.artist.map(item => item.artist).filter(artist => artist !== null)
-        : []
-    };
-    
-    // Process tracks to format their artists correctly
-    const processedTracks = tracksResult.success 
-      ? tracksResult.data.map(track => {
-          return {
-            ...track,
-            artists: track.artist 
-              ? track.artist.map(item => item.artist).filter(artist => artist !== null)
-              : []
-          };
-        })
-      : [];
-    
-    // Combine the data
-    const releaseData = {
-      ...processedRelease,
-      tracks: processedTracks
+      artists: releaseResult.data.artists || []
     };
     
     return res.status(200).json({
       success: true,
-      data: releaseData
+      data: processedRelease
     });
   } catch (error) {
     console.error(`Error in release-by-id request handler: ${error.message}`);
