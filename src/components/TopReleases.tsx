@@ -161,9 +161,11 @@ export const TopReleases = ({ label }: TopReleasesProps) => {
             
             <Box sx={{ flexGrow: 1 }}>
               <Typography variant="subtitle1" sx={{ fontWeight: 'medium' }}>
-                {release.artists && release.artists.length > 0
-                  ? release.artists.map(artist => artist.name).join(', ')
-                  : 'Various Artists'}
+                {release.type === 'compilation' 
+                  ? 'Various Artists'
+                  : (release.artists && release.artists.length > 0
+                      ? release.artists.map(artist => artist.name).join(', ')
+                      : (release.artist_name || 'Unknown Artist'))}
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 {release.tracks?.[0]?.title || release.title}
