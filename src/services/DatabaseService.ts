@@ -573,19 +573,38 @@ class DatabaseService {
     page = 1,
     limit = 50
   ): Promise<Artist[]> {
+    console.log(`[DatabaseService] Fetching artists for label ${labelId}, page ${page}, limit ${limit}`);
+    const offset = (page - 1) * limit;
+    
     try {
-      const labelQuery = typeof labelId === 'number' ? `label=${labelId}` : `label=${labelId}`;
-      const offset = (page - 1) * limit;
+      // Convert numeric label ID to string format if needed for consistent API calls
+      let stringLabelId: string;
+      if (typeof labelId === 'number' || !isNaN(Number(labelId))) {
+        // Convert numeric ID to string format
+        const numericId = typeof labelId === 'number' ? labelId : Number(labelId);
+        if (numericId === 1) {
+          stringLabelId = 'buildit-records';
+        } else if (numericId === 2) {
+          stringLabelId = 'buildit-deep';
+        } else if (numericId === 3) {
+          stringLabelId = 'buildit-tech';
+        } else {
+          stringLabelId = String(labelId);
+        }
+        console.log(`[DatabaseService] Converted numeric label ID ${labelId} to string format: ${stringLabelId}`);
+      } else {
+        stringLabelId = String(labelId);
+      }
       
-      console.log(`[DatabaseService] Fetching artists for label ${labelId}, page ${page}, limit ${limit}`);
+      // Create a label query that uses the string format first
+      const labelQuery = `label=${encodeURIComponent(stringLabelId)}`;
       
-      // Primary approach: Try the structure /api/artists?label=1
       console.log(`[DatabaseService] Primary approach: Using new API endpoint`);
       const primaryApiUrl = `api/artists?${labelQuery}&limit=${limit}&offset=${offset}&sort=name`;
       console.log(`[DatabaseService] Fetching from: ${primaryApiUrl}`);
       
       // Make the API call with the label ID
-      const primaryResponse = await this.fetchApi(primaryApiUrl);
+      const primaryResponse = await this.fetchApi(`${primaryApiUrl}`);
       console.log(`[DatabaseService] Primary API response:`, primaryResponse);
       
       // Extract artists from response in various formats
