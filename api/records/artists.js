@@ -67,16 +67,55 @@ module.exports = async (req, res) => {
       
       console.log('Connected to PostgreSQL database');
       
-      // Simple query to get all artists
-      const result = await client.query('SELECT * FROM artists ORDER BY name');
+      // Extract label parameter
+      const labelId = req.query.label;
+      console.log('Label parameter:', labelId);
+      
+      let query;
+      let queryParams = [];
+      
+      if (labelId) {
+        // Enhanced query that properly handles all label types
+        // This gets artists based on their release associations after track redistribution
+        // Includes artist image columns to ensure frontend displays correctly
+        query = `
+          SELECT DISTINCT a.id, a.name, a.slug, a.bio, a.label_id, 
+                          a.image_url, a.image_path, a.artwork_path, a.spotify_id, a.spotify_url, 
+                          a.created_at, a.updated_at, a.sort_name
+          FROM artists a
+          JOIN release_artists ra ON a.id = ra.artist_id
+          JOIN releases r ON ra.release_id = r.id
+          LEFT JOIN tracks t ON t.release_id = r.id
+          WHERE r.label_id = $1
+          ORDER BY a.name
+        `;
+        console.log(`ENHANCED FILTERING: Getting artists associated with label_id = ${labelId} (includes proper image data)`);
+        queryParams = [labelId];
+      } else {
+        // If no label parameter, get all artists with full image data
+        query = `
+          SELECT id, name, slug, bio, label_id, 
+                 image_url, image_path, artwork_path, spotify_id, spotify_url, 
+                 created_at, updated_at, sort_name
+          FROM artists 
+          ORDER BY name
+        `;
+        console.log('No label filter applied, getting all artists with image data');
+      }
+      
+      // Execute the query with or without parameters
+      const result = await (queryParams.length > 0 
+        ? client.query(query, queryParams) 
+        : client.query(query));
+      
       client.release();
       
-      console.log(`Found ${result.rows.length} artists via direct SQL`);
+      console.log(`Found ${result.rows.length} artists via direct SQL${labelId ? ` for label ${labelId}` : ''}`);
       
       // Return artists array directly in data property
       return res.status(200).json({
         success: true,
-        message: `Found ${result.rows.length} artists`,
+        message: `Found ${result.rows.length} artists${labelId ? ` for label ${labelId}` : ''}`,
         data: result.rows
       });
     } 
