@@ -127,51 +127,21 @@ router.get('/label-artists/:labelId', async (req, res) => {
   try {
     console.log(`Fetching artists for label_id = ${numericLabelId}`);
     
-    // IMPROVED QUERY: This query gets both:
-    // 1. Artists directly assigned to this label
-    // 2. PRIMARY Artists who have releases on this label (filtering out remixers, etc.)
+    // Get all artists associated with this label in any capacity (primary, remixer, feature, etc.)
     const artistsQuery = `
       SELECT DISTINCT a.*, COUNT(*) OVER() as total_count
       FROM artists a
       WHERE (
-        -- Only include artists directly assigned to this label
+        -- Include artists directly assigned to this label
         a.label_id = $1
         
-        -- OR artists with primary roles on releases from this label
+        -- OR any artist with a role on releases from this label
         OR a.id IN (
           SELECT ra.artist_id
           FROM release_artists ra
           JOIN releases r ON ra.release_id = r.id
           WHERE r.label_id = $1
-          AND (
-            -- Only include primary artists, not remixers or features
-            ra.role = 'primary' 
-            OR ra.role IS NULL -- Include cases where role isn't specified but artist is linked
-            
-            -- For compilation releases, be more selective
-            OR (
-              r.type = 'compilation' 
-              AND EXISTS (
-                -- Check if this artist has at least one primary track on the compilation
-                SELECT 1 FROM tracks t
-                JOIN track_artists ta ON t.id = ta.track_id
-                WHERE t.release_id = r.id 
-                AND ta.artist_id = ra.artist_id
-                AND (ta.role = 'primary' OR ta.role IS NULL)
-              )
-            )
-            
-            -- Don't include artists who are ONLY remixers
-            AND NOT (
-              ra.role = 'remixer' 
-              AND NOT EXISTS (
-                -- Check if this artist has any primary role on any other release
-                SELECT 1 FROM release_artists ra2
-                WHERE ra2.artist_id = ra.artist_id
-                AND ra2.role = 'primary'
-              )
-            )
-          )
+          -- No role filtering - include all artists regardless of role
         )
       )
       -- Additional filter to exclude test artists or artists with no releases
@@ -238,8 +208,8 @@ router.get('/label-artists/:labelId', async (req, res) => {
       count: artists.length,
       offset: parseInt(offset),
       limit: parseInt(limit),
-      query_type: 'primary_artists_only', // Updated to indicate we're filtering for primary artists
-      message: 'Retrieved artists directly assigned to label or primary artists with releases on the label'
+      query_type: 'all_artists', // Updated to indicate we're getting all artists
+      message: 'Retrieved artists directly assigned to label or with any role on releases from the label'
     });
   } catch (error) {
     console.error('Error fetching label-specific artists:', error);
