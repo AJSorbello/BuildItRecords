@@ -133,42 +133,63 @@ router.get('/label-artists/:labelId', async (req, res) => {
     const artistsQuery = `
       SELECT DISTINCT a.*, COUNT(*) OVER() as total_count
       FROM artists a
-      WHERE a.label_id = $1
-         OR a.id IN (
-            SELECT ra.artist_id
-            FROM release_artists ra
-            JOIN releases r ON ra.release_id = r.id
-            WHERE r.label_id = $1
-            AND (
-              -- Only include primary artists, not remixers or features
-              ra.role = 'primary' 
-              OR ra.role IS NULL -- Include cases where role isn't specified but artist is linked
-              
-              -- For compilation releases, be more selective
-              OR (
-                r.type = 'compilation' 
-                AND EXISTS (
-                  -- Check if this artist has at least one primary track on the compilation
-                  SELECT 1 FROM tracks t
-                  JOIN track_artists ta ON t.id = ta.track_id
-                  WHERE t.release_id = r.id 
-                  AND ta.artist_id = ra.artist_id
-                  AND (ta.role = 'primary' OR ta.role IS NULL)
-                )
-              )
-              
-              -- Don't include artists who are ONLY remixers
-              AND NOT (
-                ra.role = 'remixer' 
-                AND NOT EXISTS (
-                  -- Check if this artist has any primary role on any other release
-                  SELECT 1 FROM release_artists ra2
-                  WHERE ra2.artist_id = ra.artist_id
-                  AND ra2.role = 'primary'
-                )
+      WHERE (
+        -- Only include artists directly assigned to this label
+        a.label_id = $1
+        
+        -- OR artists with primary roles on releases from this label
+        OR a.id IN (
+          SELECT ra.artist_id
+          FROM release_artists ra
+          JOIN releases r ON ra.release_id = r.id
+          WHERE r.label_id = $1
+          AND (
+            -- Only include primary artists, not remixers or features
+            ra.role = 'primary' 
+            OR ra.role IS NULL -- Include cases where role isn't specified but artist is linked
+            
+            -- For compilation releases, be more selective
+            OR (
+              r.type = 'compilation' 
+              AND EXISTS (
+                -- Check if this artist has at least one primary track on the compilation
+                SELECT 1 FROM tracks t
+                JOIN track_artists ta ON t.id = ta.track_id
+                WHERE t.release_id = r.id 
+                AND ta.artist_id = ra.artist_id
+                AND (ta.role = 'primary' OR ta.role IS NULL)
               )
             )
-         )
+            
+            -- Don't include artists who are ONLY remixers
+            AND NOT (
+              ra.role = 'remixer' 
+              AND NOT EXISTS (
+                -- Check if this artist has any primary role on any other release
+                SELECT 1 FROM release_artists ra2
+                WHERE ra2.artist_id = ra.artist_id
+                AND ra2.role = 'primary'
+              )
+            )
+          )
+        )
+      )
+      -- Additional filter to exclude test artists or artists with no releases
+      AND (
+        -- Either the artist has a direct label assignment
+        a.label_id = $1
+        -- OR the artist has at least one release on this label
+        OR EXISTS (
+          SELECT 1 
+          FROM release_artists ra 
+          JOIN releases r ON ra.release_id = r.id 
+          WHERE ra.artist_id = a.id 
+          AND r.label_id = $1
+          AND r.status = 'published'  -- Only include published releases
+        )
+      )
+      -- Exclude specific test artists by name
+      AND a.name NOT IN ('a girl and a gun', 'alpha mid', 'alpha max')
       ORDER BY a.name ASC
       LIMIT $2 OFFSET $3
     `;
