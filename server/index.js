@@ -99,10 +99,31 @@ app.use((req, res, next) => {
   // Log all requests with their origin for debugging
   console.log(`Request from origin: ${origin || 'unknown'} to ${req.method} ${req.url}`);
   
-  // Always allow all origins in production for stability
-  res.header('Access-Control-Allow-Origin', '*');
+  // Allow specific origins including Vercel deployments
+  const allowedOrigins = [
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'https://builditrecords.vercel.app',
+    'https://build-it-records-j1yota7fw-ajsorbellos-projects.vercel.app',
+    'https://builditrecords.com'
+  ];
+  
+  // If the request has an origin header and it's in our allowed list, use that specific origin
+  // Otherwise, allow any origin with '*' for development flexibility
+  if (origin && allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  } else {
+    res.header('Access-Control-Allow-Origin', '*');
+  }
+  
+  // Allow credentials (cookies, authorization headers, etc)
+  res.header('Access-Control-Allow-Credentials', 'true');
+  
+  // Allow all common methods
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Origin, Accept');
+  
+  // Allow all common headers
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, Cache-Control');
   
   // Handle preflight requests
   if (req.method === 'OPTIONS') {
