@@ -178,7 +178,7 @@ router.get('/label-artists/:labelId', async (req, res) => {
       AND (
         -- Either the artist has a direct label assignment
         a.label_id = $1
-        -- OR the artist has at least one release on this label
+        -- OR the artist has at least one PUBLISHED release on this label
         OR EXISTS (
           SELECT 1 
           FROM release_artists ra 
@@ -186,10 +186,35 @@ router.get('/label-artists/:labelId', async (req, res) => {
           WHERE ra.artist_id = a.id 
           AND r.label_id = $1
           AND r.status = 'published'  -- Only include published releases
+          AND r.title NOT LIKE 'Test%' -- Exclude test releases
         )
       )
-      -- Exclude specific test artists by name
-      AND a.name NOT IN ('a girl and a gun', 'alpha mid', 'alpha max')
+      -- Exclude specific test artists by name pattern
+      AND a.name NOT IN (
+        'a girl and a gun', 'alpha mid', 'alpha max',
+        'beats gd 32', 'beta 89', 'big loop 21', 'big vibes 99', 
+        'big zero spin', 'break 119'
+      )
+      -- Exclude artists with names that follow test patterns
+      AND a.name NOT LIKE 'Bass %'
+      AND a.name NOT LIKE 'Beat %'
+      AND a.name NOT LIKE 'Beats %'
+      AND a.name NOT LIKE 'Beta %'
+      AND a.name NOT LIKE 'Big %'
+      AND a.name NOT LIKE 'Break %'
+      -- Ensure artist has a valid name (not just a number or test code)
+      AND LENGTH(a.name) > 3
+      -- Make sure the artist has at least one release or is directly assigned to the label
+      AND (
+        EXISTS (
+          SELECT 1 
+          FROM release_artists ra 
+          JOIN releases r ON ra.release_id = r.id 
+          WHERE ra.artist_id = a.id
+          AND r.label_id = $1
+        )
+        OR a.label_id = $1
+      )
       ORDER BY a.name ASC
       LIMIT $2 OFFSET $3
     `;
