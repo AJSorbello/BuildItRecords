@@ -658,59 +658,28 @@ class SpotifyService {
   }
 
   async importReleases(label, albums, transaction = null) {
-    const stats = {
-      totalTracksImported: 0,
-      totalArtistsImported: 0,
-      totalReleasesImported: 0
-    };
-
-    let outerTransaction = transaction;
-    
     try {
-      // Start a transaction if one wasn't provided
-      const shouldCommit = !outerTransaction;
-      if (shouldCommit) {
-        outerTransaction = await sequelize.transaction();
-      }
-      
-      for (const album of albums.items) {
-        // Skip if the ID is not a valid UUID (if our schema requires UUIDs)
-        if (!isValidUuid(album.id)) {
-          logger.warn(`Skipping album ${album.name} - ID is not a valid UUID: ${album.id}`);
-          continue;
-        }
-        
-        // Use a separate transaction for each album to prevent cascading failures
-        const albumTransaction = await sequelize.transaction();
-        
-        try {
-          logger.info(`Processing album: ${album.name}`);
-          
-          // Get full album details
-          const fullAlbum = await this.getAlbum(album.id);
-          if (!fullAlbum) {
-            await albumTransaction.commit();
-            continue;
-          }
+      logger.info(`Importing ${albums.length} releases for label: ${label.name}`);
 
-          // Filter by label - check if label name matches any variations
-          const labelConfig = require('../config/labels');
-          const labelVariations = Object.values(labelConfig)
-            .map(config => config.variations || [])
-            .flat();
-            
-          const matchesLabel = 
-            fullAlbum.label === label.name || 
-            labelVariations.includes(fullAlbum.label);
-            
-          if (!matchesLabel) {
-            logger.info(`Skipping album ${album.name} - label mismatch: ${fullAlbum.label}`);
-            await albumTransaction.commit();
+      // Initialize counters
+      let totalTracksImported = 0;
+      let totalArtistsImported = 0;
+      let totalReleasesImported = 0;
+      let skippedReleases = 0;
+
+      for (const album of albums) {
+        try {
+          logger.info(`Processing release: ${album.name} (${album.id})`);
+          
+          // Check if this is a legitimate Build It Records release
+          if (!this.isLegitimateRelease(album, label)) {
+            logger.info(`Skipping non-legitimate release: ${album.name}`);
+            skippedReleases++;
             continue;
           }
 
           // Create or update release
-          const [release, releaseCreated] = await Release.findOrCreate({
+          const [release, created] = await Release.findOrCreate({
             where: { id: album.id },
             defaults: {
               id: album.id,
@@ -724,15 +693,15 @@ class SpotifyService {
               label_id: label.id,
               status: 'published'
             },
-            transaction: albumTransaction
+            transaction
           });
 
-          if (releaseCreated) {
-            stats.totalReleasesImported++;
+          if (created) {
+            totalReleasesImported++;
           }
 
           // Process all tracks
-          for (const track of fullAlbum.tracks.items) {
+          for (const track of album.tracks.items) {
             try {
               // Skip tracks with non-UUID IDs
               if (!isValidUuid(track.id)) {
@@ -752,11 +721,11 @@ class SpotifyService {
                   release_id: release.id,
                   status: 'published'
                 },
-                transaction: albumTransaction
+                transaction
               });
 
               if (trackCreated) {
-                stats.totalTracksImported++;
+                totalTracksImported++;
               }
 
               // Process artists for this track (with error handling for each artist)
@@ -782,21 +751,21 @@ class SpotifyService {
                       image_url: artistInfo.images?.[0]?.url,
                       images: artistInfo.images
                     },
-                    transaction: albumTransaction
+                    transaction
                   });
 
                   if (artistCreated) {
-                    stats.totalArtistsImported++;
+                    totalArtistsImported++;
                   } else if (!artistRecord.image_url && artistInfo.images?.[0]?.url) {
                     // Update existing artist with images if they don't have any
                     await artistRecord.update({
                       image_url: artistInfo.images[0].url,
                       images: artistInfo.images
-                    }, { transaction: albumTransaction });
+                    }, { transaction });
                   }
 
                   // Associate artist with track
-                  await trackRecord.addArtist(artistRecord, { transaction: albumTransaction });
+                  await trackRecord.addArtist(artistRecord, { transaction });
                 } catch (artistError) {
                   logger.error(`Error processing artist ${artist.name}:`, artistError);
                   // Continue with next artist, don't fail the whole album
@@ -809,34 +778,111 @@ class SpotifyService {
           }
           
           // Commit the album transaction - each album is a separate transaction
-          await albumTransaction.commit();
+          await transaction.commit();
           logger.info(`Successfully processed album: ${album.name}`);
           
         } catch (albumError) {
           // Rollback just this album's transaction
-          await albumTransaction.rollback();
+          await transaction.rollback();
           logger.error(`Error processing album ${album.name}:`, albumError);
           // Continue with next album
         }
       }
 
-      if (shouldCommit) {
-        await outerTransaction.commit();
-      }
-
-      logger.info('Import completed with stats:', stats);
-      return stats;
+      logger.info('Import completed with stats:', {
+        totalTracksImported,
+        totalArtistsImported,
+        totalReleasesImported,
+        skippedReleases
+      });
+      return {
+        totalTracksImported,
+        totalArtistsImported,
+        totalReleasesImported,
+        skippedReleases
+      };
     } catch (error) {
-      if (outerTransaction && !transaction) {
-        try {
-          await outerTransaction.rollback();
-        } catch (rollbackError) {
-          logger.error('Error rolling back transaction:', rollbackError);
-        }
-      }
       logger.error('Error in importReleases:', error);
       throw error;
     }
+  }
+
+  /**
+   * Determines if a release is likely a legitimate Build It Records release
+   * @param {Object} album - Spotify album object
+   * @param {Object} label - Label object from database
+   * @returns {boolean} - Whether the release is likely legitimate
+   */
+  isLegitimateRelease(album, label) {
+    // Skip releases with test patterns in their titles
+    const testPatterns = [
+      /^bass\s+/i,
+      /^beat\s+/i,
+      /^beats\s+/i,
+      /^beta\s+/i,
+      /^big\s+/i,
+      /^break\s+/i,
+      /test/i,
+      /demo/i,
+      /sample/i
+    ];
+    
+    for (const pattern of testPatterns) {
+      if (pattern.test(album.name)) {
+        logger.info(`Skipping test release: ${album.name} (matched pattern: ${pattern})`);
+        return false;
+      }
+    }
+    
+    // Skip releases with suspicious artist names
+    const suspiciousArtistNames = [
+      'a girl and a gun', 'alpha mid', 'alpha max',
+      'beats gd 32', 'beta 89', 'big loop 21', 'big vibes 99', 
+      'big zero spin', 'break 119'
+    ];
+    
+    const hasTestArtist = album.artists.some(artist => 
+      suspiciousArtistNames.includes(artist.name.toLowerCase())
+    );
+    
+    if (hasTestArtist) {
+      logger.info(`Skipping release with test artist: ${album.name}`);
+      return false;
+    }
+    
+    // Check if the album name contains the label name (case insensitive)
+    const labelVariations = [
+      'Build It', 'BuildIt', 'Build-It', 'BI Records', 'BI Tech', 'BI Deep'
+    ];
+    
+    const albumNameLower = album.name.toLowerCase();
+    const albumDescriptionLower = (album.description || '').toLowerCase();
+    const artistNames = album.artists.map(a => a.name.toLowerCase());
+    
+    // Check if any label variation is in the album name, description, or copyright
+    const hasLabelReference = labelVariations.some(variation => 
+      albumNameLower.includes(variation.toLowerCase()) || 
+      albumDescriptionLower.includes(variation.toLowerCase()) ||
+      (album.copyrights && album.copyrights.some(c => 
+        c.text.toLowerCase().includes(variation.toLowerCase())
+      ))
+    );
+    
+    // If the album doesn't reference the label at all, it's suspicious
+    if (!hasLabelReference) {
+      // Additional check: if any artist has "Build It" in their name, it might be legitimate
+      const artistHasLabelName = artistNames.some(name => 
+        labelVariations.some(variation => name.includes(variation.toLowerCase()))
+      );
+      
+      if (!artistHasLabelName) {
+        logger.info(`Skipping release with no label reference: ${album.name}`);
+        return false;
+      }
+    }
+    
+    // Passed all checks
+    return true;
   }
 
   async searchArtists(query, limit = 1) {
