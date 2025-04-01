@@ -67,10 +67,23 @@ export const ReleaseCard = ({ release, ranking, onClick }: ReleaseCardProps) => 
 
   // Get the best available artist image
   const getArtistImage = (artist: any): string => {
+    // Debug the artist object to see what image properties are available
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Artist image debug:', artist.id, artist.name, {
+        profile_image_url: artist.profile_image_url,
+        image: artist.image,
+        images: artist.images,
+        profile_picture: artist.profile_picture
+      });
+    }
+    
+    // Try all possible image properties in order of preference
     return artist.profile_image_url || 
-           artist.profile_image_small_url || 
-           artist.profile_image_large_url || 
-           (artist.images && artist.images[0]?.url) || 
+           artist.image ||
+           artist.profile_picture ||
+           (artist.images && artist.images.length > 0 ? artist.images[0].url : '') ||
+           (artist.profile_image_small_url) || 
+           (artist.profile_image_large_url) || 
            '/images/placeholder-artist.jpg';
   };
 

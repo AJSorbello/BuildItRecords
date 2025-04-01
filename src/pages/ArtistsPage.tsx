@@ -127,7 +127,12 @@ function ArtistsPage(props: ArtistsPageProps) {
       const results = await databaseService.getArtistsForLabel(labelId);
       console.log('Artists fetched successfully:', results.length);
       
-      setArtists(results || []);
+      // Sort artists alphabetically by name
+      const sortedArtists = [...results].sort((a, b) => 
+        a.name.toLowerCase().localeCompare(b.name.toLowerCase())
+      );
+      
+      setArtists(sortedArtists || []);
       setSearchState({
         total: results.length
       });
