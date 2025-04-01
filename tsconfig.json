@@ -20,8 +20,15 @@
     "ignoreDeprecations": "5.0",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "paths": {
+      "@mui/material": ["./node_modules/@mui/material"],
+      "@mui/material/*": ["./node_modules/@mui/material/*"],
+      "@mui/icons-material/*": ["./node_modules/@mui/icons-material/*"],
+      "react-router-dom": ["./node_modules/react-router-dom"]
+    },
+    "types": ["node", "react", "react-dom", "react-router-dom"]
   },
   "include": ["src", "vite.config.ts"],
-  "exclude": ["**/@testing-library/jest-dom"]
+  "exclude": ["**/@testing-library/jest-dom", "node_modules"]
 }
