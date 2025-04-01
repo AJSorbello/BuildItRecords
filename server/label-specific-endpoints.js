@@ -193,7 +193,10 @@ router.get('/label-artists/:labelId', async (req, res) => {
       AND a.name NOT IN (
         'a girl and a gun', 'alpha mid', 'alpha max',
         'beats gd 32', 'beta 89', 'big loop 21', 'big vibes 99', 
-        'big zero spin', 'break 119'
+        'big zero spin', 'break 119', 'bass hd 104', 'bass odyssey',
+        'bass work 40', 'bass x 8', 'beat max 52', 'beat smith 20',
+        'beat x 116', 'beats 404 64', 'beats hd 32', 'bedroom gold',
+        'bella goldwin', 'beta 25', 'boy kid cloud', 'boom bap'
       )
       -- Exclude artists with names that follow test patterns
       AND a.name NOT LIKE 'Bass %'
@@ -202,6 +205,8 @@ router.get('/label-artists/:labelId', async (req, res) => {
       AND a.name NOT LIKE 'Beta %'
       AND a.name NOT LIKE 'Big %'
       AND a.name NOT LIKE 'Break %'
+      AND a.name NOT LIKE 'B%ss %'
+      AND a.name NOT LIKE 'B%at %'
       -- Ensure artist has a valid name (not just a number or test code)
       AND LENGTH(a.name) > 3
       -- Make sure the artist has at least one release or is directly assigned to the label
