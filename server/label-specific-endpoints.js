@@ -200,4 +200,57 @@ router.get('/label-artists/:labelId', async (req, res) => {
   }
 });
 
+// Get releases for a specific artist
+router.get('/artist-releases/:artistId', async (req, res) => {
+  const { artistId } = req.params;
+  const { limit = 5, offset = 0 } = req.query;
+  
+  try {
+    console.log(`[API] Fetching releases for artist ID: ${artistId}`);
+    
+    const releasesQuery = `
+      SELECT DISTINCT r.*, COUNT(*) OVER() as total_count
+      FROM releases r
+      JOIN release_artists ra ON r.id = ra.release_id
+      WHERE ra.artist_id = $1
+      ORDER BY r.release_date DESC
+      LIMIT $2 OFFSET $3
+    `;
+    
+    const { rows } = await pool.query(releasesQuery, [artistId, limit, offset]);
+    
+    if (rows.length === 0) {
+      return res.status(200).json({
+        success: true,
+        message: 'No releases found for this artist',
+        data: [],
+        meta: { total: 0 }
+      });
+    }
+    
+    const total = parseInt(rows[0].total_count);
+    
+    // Remove the total_count field from each row
+    const releases = rows.map(row => {
+      const { total_count, ...release } = row;
+      return release;
+    });
+    
+    return res.status(200).json({
+      success: true,
+      message: `Found ${releases.length} releases for artist`,
+      data: releases,
+      meta: { total }
+    });
+    
+  } catch (error) {
+    console.error('Error fetching artist releases:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error fetching artist releases',
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;

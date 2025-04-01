@@ -78,13 +78,20 @@ export const ReleaseCard = ({ release, ranking, onClick }: ReleaseCardProps) => 
     }
     
     // Try all possible image properties in order of preference
-    return artist.profile_image_url || 
+    const artistImage = artist.profile_image_url || 
            artist.image ||
            artist.profile_picture ||
            (artist.images && artist.images.length > 0 ? artist.images[0].url : '') ||
            (artist.profile_image_small_url) || 
-           (artist.profile_image_large_url) || 
-           '/images/placeholder-artist.jpg';
+           (artist.profile_image_large_url);
+           
+    // If artist has no image, use the release artwork as fallback
+    if (!artistImage) {
+      console.log(`No image found for artist ${artist.name}, using release artwork as fallback`);
+      return getReleaseArtwork(release);
+    }
+    
+    return artistImage || '/images/placeholder-artist.jpg';
   };
 
   // Get the best available release artwork
