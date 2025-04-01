@@ -26,11 +26,11 @@ import {
   Tooltip
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import { Release } from '../../types/release';
 import { Track } from '../../types/track';
 import { Artist, SpotifyExternalUrls } from '../../types/index';
 import { useNavigate } from 'react-router-dom';
-import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 
 interface ReleaseModalProps {
   open: boolean;
@@ -119,81 +119,29 @@ export const ReleaseModal = ({ open, onClose, release, onArtistClick }: ReleaseM
     let artists = release.artists || [];
     let artistsFound = Array.isArray(artists) && artists.length > 0;
     
-    // Check if tracks have artist information we can use
-    if (!artistsFound && release.tracks && release.tracks.length > 0) {
-      // Create a map to avoid duplicates
-      const artistMap = new Map();
-      
-      release.tracks.forEach(track => {
-        if (track.artists && Array.isArray(track.artists)) {
-          track.artists.forEach(artist => {
-            if (artist && artist.id && !artistMap.has(artist.id)) {
-              artistMap.set(artist.id, artist);
-            }
-          });
-        }
-      });
-      
-      if (artistMap.size > 0) {
-        artists = Array.from(artistMap.values());
-        artistsFound = true;
-      }
-    }
+    // Debug the release data to understand what's available
+    console.log('[ReleaseModal] Release data in modal:', {
+      id: release.id,
+      title: release.title,
+      artists: release.artists,
+      tracks: release.tracks,
+      hasArtists: artistsFound,
+      trackCount: release.tracks?.length || 0,
+      fullRelease: release // Log the full release object to inspect all properties
+    });
     
-    // Create default artist if none exists
-    if (!artistsFound) {
-      // Check if this is likely a compilation
-      const isCompilation = release.title?.toLowerCase().includes('compilation') || 
-                          release.title?.toLowerCase().includes('various') ||
-                          (release.tracks && release.tracks.length > 2 && 
-                          new Set(release.tracks.flatMap(t => t.artists?.map(a => a.id) || [])).size > 3);
+    // If tracks are missing, try to fetch them
+    if (!release.tracks || release.tracks.length === 0) {
+      // We need to ensure we have tracks data
+      console.error('[ReleaseModal] No tracks found in release data. This is likely an API issue.');
+      console.error('[ReleaseModal] Check that the API is returning tracks with the release data.');
+      console.error('[ReleaseModal] API request should include include_tracks=true parameter.');
       
-      // Try to extract artist name and image from release data
-      let artistName = isCompilation ? 'Various Artists' : 'Unknown Artist';
-      
-      // For compilations or Various Artists, use the album artwork
-      let artistImageUrl = isCompilation && release.artwork_url 
-        ? release.artwork_url 
-        : '/images/placeholder-artist.jpg';
-      
-      // Check if we have any artist information from tracks
-      if (!isCompilation && release.tracks && release.tracks.length > 0) {
-        const trackWithArtist = release.tracks.find(track => 
-          track.artists && track.artists.length > 0 && track.artists[0].name);
-        
-        if (trackWithArtist && trackWithArtist.artists && trackWithArtist.artists.length > 0) {
-          const artist = trackWithArtist.artists[0];
-          artistName = artist.name || artistName;
-          artistImageUrl = getTrackArtistImage(artist);
-        }
-      }
-      
-      // Create a minimal but valid Artist object
-      const defaultArtist: Artist = {
-        id: isCompilation ? 'various-artists' : 'unknown',
-        name: artistName,
-        uri: '',
-        type: 'artist',
-        external_urls: { spotify: '' },
-        spotify_url: '',
-        profile_image_url: artistImageUrl
-      };
-      
-      artists = [defaultArtist];
-      artistsFound = true;
-    } else {
-      // Check if this might be a Various Artists compilation
-      const isCompilation = release.title?.toLowerCase().includes('compilation') ||
-                          release.title?.toLowerCase().includes('various') ||
-                          (artists.length === 1 && artists[0].name === "Various Artists") ||
-                          (release.tracks && release.tracks.length > 2 && 
-                          new Set(release.tracks.flatMap(t => t.artists?.map(a => a.id) || [])).size > 3);
-      
-      if (isCompilation && artists.length === 1 && artists[0].name === "Various Artists") {
-        // Update the Various Artists image to use the album artwork
-        const updatedArtist = {...artists[0]};
-        updatedArtist.profile_image_url = release.artwork_url || updatedArtist.profile_image_url;
-        artists = [updatedArtist];
+      // Try to access tracks from other properties that might exist
+      if ((release as any).album && (release as any).album.tracks && (release as any).album.tracks.length > 0) {
+        console.log('[ReleaseModal] Found tracks in release.album.tracks:', (release as any).album.tracks.length);
+        // Use type assertion to handle dynamic properties
+        release.tracks = (release as any).album.tracks;
       }
     }
     
@@ -228,7 +176,7 @@ export const ReleaseModal = ({ open, onClose, release, onArtistClick }: ReleaseM
       fullWidth
       PaperProps={{
         sx: {
-          backgroundColor: '#000000',
+          backgroundColor: theme.palette.background.paper,
           borderRadius: 2,
         }
       }}
@@ -268,7 +216,7 @@ export const ReleaseModal = ({ open, onClose, release, onArtistClick }: ReleaseM
                 processedArtists.map((artist, i) => (
                   <Box 
                     component="span" 
-                    key={artist.id} 
+                    key={artist.id || `artist-${i}`} 
                     sx={{ 
                       display: 'inline-flex', 
                       alignItems: 'center',
@@ -317,7 +265,32 @@ export const ReleaseModal = ({ open, onClose, release, onArtistClick }: ReleaseM
               ) : null}
             </Box>
             <Typography variant="body2" color="text.secondary" gutterBottom sx={{ mt: 2 }}>
-              Release Date: {new Date(release.release_date).toLocaleDateString()}
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <Box>
+                  <strong>Release Date:</strong> {new Date(release.release_date).toLocaleDateString()}
+                </Box>
+                {release.catalog_number && (
+                  <Box>
+                    <strong>Catalog Number:</strong> {release.catalog_number}
+                  </Box>
+                )}
+                {release.label && (
+                  <Box>
+                    <strong>Label:</strong> {
+                      typeof release.label === 'object' && release.label && 'name' in release.label 
+                        ? (release.label as any).name 
+                        : typeof release.label === 'string' 
+                          ? release.label 
+                          : release.label_id || 'Unknown Label'
+                    }
+                  </Box>
+                )}
+                {release.type && (
+                  <Box>
+                    <strong>Type:</strong> {release.type.charAt(0).toUpperCase() + release.type.slice(1)}
+                  </Box>
+                )}
+              </Box>
             </Typography>
             {release.spotify_url && (
               <Link
@@ -333,52 +306,156 @@ export const ReleaseModal = ({ open, onClose, release, onArtistClick }: ReleaseM
 
           {/* Tracks */}
           <Grid item xs={12} md={8}>
-            <Typography variant="h6" gutterBottom>
-              Tracks
-            </Typography>
-            <TableContainer component={Paper} sx={{ mt: 2, maxHeight: 400 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h6">
+                Tracks
+              </Typography>
+              {release.spotify_url && (
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={<PlayArrowIcon />}
+                  href={release.spotify_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Listen on Spotify
+                </Button>
+              )}
+            </Box>
+            <TableContainer component={Paper} sx={{ mt: 2, maxHeight: 400, borderRadius: 2 }}>
               <Table stickyHeader aria-label="track listing table">
                 <TableHead>
                   <TableRow>
                     <TableCell sx={{ width: 50 }}>#</TableCell>
                     <TableCell>Title</TableCell>
+                    <TableCell>Artists</TableCell>
                     <TableCell align="right">Duration</TableCell>
+                    <TableCell align="right" sx={{ width: 70 }}>Play</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {release.tracks && release.tracks.length > 0 ? (
-                    release.tracks.map((track, index) => (
-                      <TableRow key={track.id || `track-${index}`}>
-                        <TableCell>{index + 1}</TableCell>
-                        <TableCell>
-                          <Typography variant="body2">{track.title}</Typography>
-                          {track.artists && track.artists.length > 0 && (
-                            <Typography variant="caption" color="text.secondary">
-                              {track.artists.map((artist, i) => (
-                                <span key={artist.id}>
-                                  <Link 
-                                    component="button" 
-                                    variant="caption" 
-                                    color="inherit" 
-                                    onClick={() => handleArtistClick(artist)}
-                                    sx={{ textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
-                                  >
-                                    {artist.name}
-                                  </Link>
-                                  {i < track.artists.length - 1 && ', '}
-                                </span>
-                              ))}
+                    release.tracks.map((track, index) => {
+                      // Check if this is a remix
+                      const isRemix = track.title?.toLowerCase().includes('remix') || false;
+                      // Get remixer info if available
+                      const remixer = (track as any).remixer || (isRemix && track.artists && track.artists.length > 1 ? track.artists[track.artists.length - 1] : null);
+                      
+                      return (
+                        <TableRow key={track.id || `track-${index}`}>
+                          <TableCell>{index + 1}</TableCell>
+                          <TableCell>
+                            <Typography variant="body2">
+                              {track.title || (track as any).name || `Track ${index + 1}`}
+                              {isRemix && !track.title?.toLowerCase().includes('remix') && ' (Remix)'}
                             </Typography>
-                          )}
-                        </TableCell>
-                        <TableCell align="right">
-                          {formatDuration(track.duration_ms)}
-                        </TableCell>
-                      </TableRow>
-                    ))
+                          </TableCell>
+                          <TableCell>
+                            {track.artists && track.artists.length > 0 ? (
+                              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                                {/* Main Artists */}
+                                <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
+                                  {track.artists.map((artist, i) => (
+                                    <Box 
+                                      key={artist.id || `artist-${i}`} 
+                                      sx={{ 
+                                        display: 'inline-flex', 
+                                        alignItems: 'center',
+                                        mr: i < track.artists.length - 1 ? 1 : 0,
+                                        mb: 0.5
+                                      }}
+                                    >
+                                      <Avatar
+                                        src={getTrackArtistImage(artist)}
+                                        alt={artist.name}
+                                        sx={{
+                                          width: 20,
+                                          height: 20,
+                                          mr: 0.5,
+                                          cursor: 'pointer'
+                                        }}
+                                        onClick={() => handleArtistClick(artist)}
+                                      />
+                                      <Link 
+                                        component="button" 
+                                        variant="caption" 
+                                        color="inherit" 
+                                        onClick={() => handleArtistClick(artist)}
+                                        sx={{ textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
+                                      >
+                                        {artist.name}
+                                      </Link>
+                                      {i < track.artists.length - 1 && ", "}
+                                    </Box>
+                                  ))}
+                                </Box>
+                                
+                                {/* Remixer if available */}
+                                {remixer && (
+                                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                    <Typography variant="caption" color="text.secondary" sx={{ mr: 0.5 }}>
+                                      Remix by:
+                                    </Typography>
+                                    <Box 
+                                      sx={{ 
+                                        display: 'inline-flex', 
+                                        alignItems: 'center'
+                                      }}
+                                    >
+                                      <Avatar
+                                        src={getTrackArtistImage(remixer)}
+                                        alt={remixer.name}
+                                        sx={{
+                                          width: 20,
+                                          height: 20,
+                                          mr: 0.5,
+                                          cursor: 'pointer'
+                                        }}
+                                        onClick={() => handleArtistClick(remixer)}
+                                      />
+                                      <Link 
+                                        component="button" 
+                                        variant="caption" 
+                                        color="inherit" 
+                                        onClick={() => handleArtistClick(remixer)}
+                                        sx={{ textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
+                                      >
+                                        {remixer.name}
+                                      </Link>
+                                    </Box>
+                                  </Box>
+                                )}
+                              </Box>
+                            ) : (
+                              <Typography variant="caption" color="text.secondary">
+                                No artist information
+                              </Typography>
+                            )}
+                          </TableCell>
+                          <TableCell align="right">
+                            {formatDuration(track.duration_ms || (track as any).duration || 0)}
+                          </TableCell>
+                          <TableCell align="right">
+                            {(track.preview_url || track.spotifyUrl || 
+                              (track.external_urls && track.external_urls.spotify)) && (
+                              <IconButton 
+                                size="small" 
+                                color="primary"
+                                href={track.preview_url || track.spotifyUrl || track.external_urls?.spotify}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <PlayArrowIcon fontSize="small" />
+                              </IconButton>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
                   ) : (
                     <TableRow>
-                      <TableCell align="center" sx={{ colSpan: 3 }}>
+                      <TableCell align="center" sx={{ colSpan: 5 }}>
                         No tracks available
                       </TableCell>
                     </TableRow>

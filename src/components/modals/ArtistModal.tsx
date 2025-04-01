@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Dialog,
   DialogContent,
@@ -40,55 +40,27 @@ import { Track } from '../../types/track';
 import { RecordLabelId } from '../../types/labels';
 
 interface ArtistModalProps {
-  artist: Artist;
   open: boolean;
   onClose: () => void;
+  artist: Artist;
   fullScreen?: boolean;
-  label?: string;
 }
 
-interface ArtistModalState {
-  tracks: Track[];
-  releases: Release[];
-  loading: boolean;
-  releasesLoading: boolean;
-  activeTab: string;
-  selectedTrackId: string | null;
-  labels: any[];
-}
-
-const ArtistModalWrapper = (props: ArtistModalProps) => {
+const ArtistModal = (props: ArtistModalProps) => {
+  const { open, onClose, artist } = props;
   const theme = useTheme();
-  const fullScreen = useMediaQuery(theme.breakpoints.down('sm'));
+  const fullScreen = useMediaQuery(theme.breakpoints.down('md'));
   
-  return <ArtistModalClass {...props} fullScreen={fullScreen} />;
-};
+  const [releases, setReleases] = useState<Release[]>([]);
+  const [tracks, setTracks] = useState<Track[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [releasesLoading, setReleasesLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState(0);
+  const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
+  const [labels, setLabels] = useState<{ id: string; name?: string }[]>([]);
 
-class ArtistModalClass extends Component<ArtistModalProps, ArtistModalState> {
-  constructor(props: ArtistModalProps) {
-    super(props);
-    this.state = {
-      tracks: [],
-      releases: [],
-      loading: false,
-      releasesLoading: false,
-      activeTab: 'releases',
-      selectedTrackId: null,
-      labels: []
-    };
-  }
-
-  componentDidMount() {
-    this.fetchReleases();
-  }
-
-  componentDidUpdate(prevProps: ArtistModalProps) {
-    if (prevProps.artist?.id !== this.props.artist?.id) {
-      this.fetchReleases();
-    }
-  }
-
-  formatTrackDuration = (ms: number): string => {
+  // Format track duration
+  const formatTrackDuration = (ms: number): string => {
     if (!ms || isNaN(ms)) {
       return '0:00';
     }
@@ -100,7 +72,8 @@ class ArtistModalClass extends Component<ArtistModalProps, ArtistModalState> {
     return `${minutes}:${seconds}`;
   };
 
-  getArtistImage = (artist: Artist) => {
+  // Get artist image with fallbacks
+  const getArtistImage = (artist: Artist): string => {
     // Check if artist is valid and has profile image properties
     if (!artist) return '/images/placeholder-artist.jpg';
     
@@ -118,17 +91,28 @@ class ArtistModalClass extends Component<ArtistModalProps, ArtistModalState> {
            '/images/placeholder-artist.jpg';
   };
 
-  formatLabelName = (labelId: string) => {
+  // Format label name
+  const formatLabelName = (labelId: string): string => {
     if (!labelId) return 'Unknown Label';
     
+    // Convert numeric IDs to proper label names
+    if (labelId === '1') {
+      return 'Build It Records';
+    } else if (labelId === '2') {
+      return 'Build It Tech';
+    } else if (labelId === '3') {
+      return 'Build It Deep';
+    }
+    
+    // Handle string label IDs
     const label = labelId.startsWith('buildit-') 
       ? labelId.replace('buildit-', 'Build It ').replace(/^\w/, c => c.toUpperCase())
       : labelId === 'unknown' ? 'Unknown Label' : labelId;
     return label;
   };
 
-  tracksByLabel = () => {
-    const { tracks } = this.state;
+  // Group tracks by label
+  const tracksByLabel = (): Record<string, Track[]> => {
     return tracks.reduce((acc: Record<string, Track[]>, track) => {
       const labelId = track.release?.label?.id || 'unknown';
       if (!acc[labelId]) {
@@ -137,10 +121,10 @@ class ArtistModalClass extends Component<ArtistModalProps, ArtistModalState> {
       acc[labelId].push(track);
       return acc;
     }, {});
-  }
+  };
 
-  releasesByLabel = () => {
-    const { releases } = this.state;
+  // Group releases by label
+  const releasesByLabel = (): Record<string, Release[]> => {
     return releases.reduce((acc: Record<string, Release[]>, release) => {
       // Safely handle both string and object label formats
       let labelId = 'unknown';
@@ -165,7 +149,8 @@ class ArtistModalClass extends Component<ArtistModalProps, ArtistModalState> {
     }, {});
   };
 
-  isCompilation = (release: Release): boolean => {
+  // Check if a release is a compilation
+  const isCompilation = (release: Release): boolean => {
     // Check common indicators of a compilation
     if (!release) return false;
     
@@ -175,7 +160,8 @@ class ArtistModalClass extends Component<ArtistModalProps, ArtistModalState> {
              new Set(release.tracks.flatMap(t => t.artists?.map(a => a.id) || [])).size > 3));
   };
 
-  isArtistInRelease = (release: Release, artistId: string): boolean => {
+  // Check if an artist is in a release
+  const isArtistInRelease = (release: Release, artistId: string): boolean => {
     if (!release || !artistId) return false;
     
     // Check all possible artist ID fields using property access with type guard
@@ -203,7 +189,7 @@ class ArtistModalClass extends Component<ArtistModalProps, ArtistModalState> {
     }
     
     // Check by artist name
-    const artistName = this.props.artist?.name?.toLowerCase();
+    const artistName = artist?.name?.toLowerCase();
     if (artistName && release.title) {
       // Look for artist name in release title (only for exact matches or featuring)
       const title = release.title.toLowerCase();
@@ -219,10 +205,11 @@ class ArtistModalClass extends Component<ArtistModalProps, ArtistModalState> {
     return false;
   };
 
-  getReleaseArtistImage = (release: Release, trackIndex = 0): string => {
+  // Get release artist image
+  const getReleaseArtistImage = (release: Release, trackIndex = 0): string => {
     if (!release) return '/images/placeholder-release.jpg';
     
-    if (this.isCompilation(release)) {
+    if (isCompilation(release)) {
       // For compilations, use the album artwork
       return release.artwork_url || '/images/placeholder-release.jpg';
     }
@@ -252,62 +239,126 @@ class ArtistModalClass extends Component<ArtistModalProps, ArtistModalState> {
     return '/images/placeholder-artist.jpg';
   };
 
-  async fetchReleases() {
-    const { artist } = this.props;
+  // Fetch artist labels
+  const fetchArtistLabels = async () => {
     if (!artist?.id) return;
     
-    this.setState({ releasesLoading: true });
+    try {
+      // First check if the artist already has label information
+      if (artist.labels && Array.isArray(artist.labels) && artist.labels.length > 0) {
+        setLabels(artist.labels);
+        return;
+      }
+      
+      // If the artist has a label_id or labelId property, use that
+      if (artist.label_id || artist.labelId) {
+        const labelId = artist.label_id || artist.labelId;
+        let labelName = '';
+        
+        // Convert numeric ID to label name
+        if (labelId === '1' || labelId === 1) {
+          labelName = 'Build It Records';
+        } else if (labelId === '2' || labelId === 2) {
+          labelName = 'Build It Tech';
+        } else if (labelId === '3' || labelId === 3) {
+          labelName = 'Build It Deep';
+        } else if (typeof labelId === 'string' && labelId.startsWith('buildit-')) {
+          labelName = labelId.replace('buildit-', 'Build It ').replace(/^\w/, c => c.toUpperCase());
+        } else {
+          labelName = String(labelId);
+        }
+        
+        setLabels([{ id: String(labelId), name: labelName }]);
+        return;
+      }
+      
+      // Try to fetch the artist details from the API to get label info
+      const response = await databaseService.fetchApi(`api/artists/${artist.id}`);
+      if (response && response.success && (response.data || response.artist)) {
+        const artistData = response.data || response.artist;
+        
+        if (artistData.labels && Array.isArray(artistData.labels)) {
+          setLabels(artistData.labels);
+        } else if (artistData.label_id || artistData.labelId) {
+          const labelId = artistData.label_id || artistData.labelId;
+          let labelName = '';
+          
+          // Convert numeric ID to label name
+          if (labelId === '1' || labelId === 1) {
+            labelName = 'Build It Records';
+          } else if (labelId === '2' || labelId === 2) {
+            labelName = 'Build It Tech';
+          } else if (labelId === '3' || labelId === 3) {
+            labelName = 'Build It Deep';
+          } else if (typeof labelId === 'string' && labelId.startsWith('buildit-')) {
+            labelName = labelId.replace('buildit-', 'Build It ').replace(/^\w/, c => c.toUpperCase());
+          } else {
+            labelName = String(labelId);
+          }
+          
+          setLabels([{ id: String(labelId), name: labelName }]);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching artist labels:', error);
+    }
+  };
+
+  // Fetch releases for the artist
+  const fetchReleases = async () => {
+    if (!artist?.id) return;
+    
+    setReleasesLoading(true);
+    console.log(`[ArtistModal] Fetching releases for artist: ${artist.id} (${artist.name})`);
     
     try {
-      console.log(`Fetching releases for artist: ${artist.name} (${artist.id})`);
-      const { releases } = await databaseService.getArtistReleases(artist.id);
-      console.log('Releases response:', releases);
+      const artistReleases = await databaseService.getArtistReleases(artist.id);
+      console.log(`[ArtistModal] Received artist releases:`, artistReleases);
       
-      // Ensure releases is always an array
-      const validReleases = Array.isArray(releases) ? releases : [];
-      
-      // Filter out unrelated compilations that were added as fallbacks
-      const filteredReleases = validReleases.filter(release => {
-        // Keep all non-compilation releases
-        if (!this.isCompilation(release)) return true;
+      if (artistReleases && Array.isArray(artistReleases.releases)) {
+        // Filter out compilations that don't include the artist
+        const filteredReleases = artistReleases.releases.filter(release => {
+          if (!isCompilation(release)) return true;
+          return isArtistInRelease(release, artist.id);
+        });
         
-        // Only keep compilations that contain the artist
-        return this.isArtistInRelease(release, artist.id);
-      });
-      
-      console.log(`Original releases: ${validReleases.length}, After filtering: ${filteredReleases.length}`);
-      
-      // If we have no releases after filtering, try to keep some but add a warning
-      const finalReleases = filteredReleases.length > 0 ? filteredReleases : 
-        (artist.name === "John Summit" ? [] : validReleases.slice(0, 2));
-      
-      // Log Spotify URLs for debugging
-      finalReleases.forEach(release => {
-        if (!release) return;
-        
-        console.log(`Release "${release.title || 'Untitled'}" Spotify URL:`, 
-          release.external_urls?.spotify || release.spotify_url || 'None');
-        if (release.tracks && Array.isArray(release.tracks) && release.tracks.length > 0) {
-          release.tracks.forEach(track => {
-            if (!track) return;
-            
-            console.log(`  Track "${track.title || 'Untitled'}" Spotify URL:`, 
-              track.external_urls?.spotify || (track as any).spotify_url || track.spotifyUrl || 'None');
-          });
-        }
-      });
-      
-      this.setState({ releases: finalReleases });
+        console.log(`[ArtistModal] Filtered releases:`, filteredReleases);
+        setReleases(filteredReleases);
+      } else {
+        console.warn(`[ArtistModal] No releases found or invalid response format`);
+        setReleases([]);
+      }
     } catch (error) {
-      console.error('Error fetching artist releases:', error);
+      console.error('[ArtistModal] Error fetching artist releases:', error);
+      setReleases([]);
     } finally {
-      this.setState({ releasesLoading: false });
+      setReleasesLoading(false);
     }
-  }
+  };
 
-  renderReleases() {
-    const { releases, releasesLoading } = this.state;
+  // Render labels
+  const renderLabels = () => {
+    if (!labels || labels.length === 0) {
+      return <Typography color="text.secondary">No labels found</Typography>;
+    }
     
+    return (
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+        {labels.map((label: { id: string; name?: string }) => (
+          <Chip 
+            key={label.id} 
+            label={formatLabelName(label.id)} 
+            color="primary" 
+            variant="outlined" 
+            size="small"
+          />
+        ))}
+      </Box>
+    );
+  };
+
+  // Render releases
+  const renderReleases = () => {
     if (releasesLoading) {
       return (
         <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
@@ -319,19 +370,37 @@ class ArtistModalClass extends Component<ArtistModalProps, ArtistModalState> {
     if (!releases || releases.length === 0) {
       return (
         <Box sx={{ p: 3, textAlign: 'center' }}>
-          <Typography color="text.secondary">No releases found for this artist</Typography>
+          <Typography color="text.secondary" gutterBottom>No releases found for this artist</Typography>
+          
+          {/* Display label information if available */}
+          {labels && labels.length > 0 && (
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="subtitle1" fontWeight="bold">Labels</Typography>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 1, mt: 1 }}>
+                {labels.map((label: { id: string; name?: string }) => (
+                  <Chip 
+                    key={label.id} 
+                    label={formatLabelName(label.id)} 
+                    color="primary" 
+                    variant="outlined" 
+                    size="small"
+                  />
+                ))}
+              </Box>
+            </Box>
+          )}
         </Box>
       );
     }
 
-    const releasesByLabelObj = this.releasesByLabel();
+    const releasesByLabelObj = releasesByLabel();
     
     return (
       <Box>
         {Object.entries(releasesByLabelObj).map(([labelId, labelReleases]) => (
           <Box key={labelId} sx={{ mb: 4 }}>
             <Typography variant="subtitle1" fontWeight="bold" color="primary" gutterBottom>
-              {this.formatLabelName(labelId)} ({labelReleases.length})
+              {formatLabelName(labelId)} ({labelReleases.length})
             </Typography>
             <TableContainer component={Paper} variant="outlined" sx={{ mb: 3, borderRadius: 2 }}>
               <Table size="small">
@@ -368,6 +437,47 @@ class ArtistModalClass extends Component<ArtistModalProps, ArtistModalState> {
                       (release.spotify_url) ||
                       ''
                     );
+
+                    // Calculate duration
+                    let duration = '--:--';
+                    if (release.tracks && release.tracks.length > 0) {
+                      // Try to get duration from the first track
+                      const firstTrack = release.tracks[0];
+                      if (firstTrack) {
+                        // Use type assertion to handle various API response formats
+                        const trackWithDuration = firstTrack as {
+                          duration_ms?: number | string;
+                          duration?: number | string;
+                        };
+                        
+                        // Check for duration_ms first (most common format)
+                        if (typeof trackWithDuration.duration_ms === 'number' && trackWithDuration.duration_ms > 0) {
+                          duration = formatTrackDuration(trackWithDuration.duration_ms);
+                        } 
+                        // Then check for duration property
+                        else if (typeof trackWithDuration.duration === 'number' && trackWithDuration.duration > 0) {
+                          // If duration is in seconds, convert to ms
+                          const durationMs = trackWithDuration.duration < 1000 ? trackWithDuration.duration * 1000 : trackWithDuration.duration;
+                          duration = formatTrackDuration(durationMs);
+                        } 
+                        // Handle string duration_ms values
+                        else if (typeof trackWithDuration.duration_ms === 'string' && trackWithDuration.duration_ms) {
+                          const durationMs = parseInt(trackWithDuration.duration_ms, 10);
+                          if (!isNaN(durationMs) && durationMs > 0) {
+                            duration = formatTrackDuration(durationMs);
+                          }
+                        }
+                        // Handle string duration values
+                        else if (typeof trackWithDuration.duration === 'string' && trackWithDuration.duration) {
+                          const durationValue = parseInt(trackWithDuration.duration, 10);
+                          if (!isNaN(durationValue) && durationValue > 0) {
+                            // If duration is in seconds, convert to ms
+                            const durationMs = durationValue < 1000 ? durationValue * 1000 : durationValue;
+                            duration = formatTrackDuration(durationMs);
+                          }
+                        }
+                      }
+                    }
                     
                     return (
                       <TableRow key={release.id} hover>
@@ -406,9 +516,9 @@ class ArtistModalClass extends Component<ArtistModalProps, ArtistModalState> {
                             }
                             
                             // Check if this is a compilation album
-                            const isCompilation = this.isCompilation(release);
+                            const isCompilationAlbum = isCompilation(release);
                             
-                            if (isCompilation) {
+                            if (isCompilationAlbum) {
                               // For compilations, show "Various Artists" with the album artwork
                               return (
                                 <Box key="various-artists" sx={{ display: 'flex', alignItems: 'center' }}>
@@ -424,8 +534,55 @@ class ArtistModalClass extends Component<ArtistModalProps, ArtistModalState> {
                               );
                             }
                             
+                            // Try to get artist from release first
+                            if (release.artists && release.artists.length > 0) {
+                              return release.artists.map((artist, index) => {
+                                // Use type assertion to access extended artist properties
+                                const extendedArtist = artist as Artist & { 
+                                  profile_image_small_url?: string;
+                                  profile_image_url?: string;
+                                  profile_image_large_url?: string;
+                                  image_url?: string;
+                                };
+                                
+                                const artistImage = extendedArtist.profile_image_small_url || 
+                                  extendedArtist.profile_image_url || 
+                                  extendedArtist.image_url || 
+                                  '/images/placeholder-artist.jpg';
+                                
+                                return (
+                                  <Box key={artist.id || `artist-${index}`} sx={{ display: 'flex', alignItems: 'center' }}>
+                                    <Avatar 
+                                      src={artistImage} 
+                                      alt={artist.name || "Artist"}
+                                      sx={{ width: 24, height: 24, mr: 0.5 }}
+                                    />
+                                    <Typography variant="body2">
+                                      {artist.name || "Unknown"}{index < release.artists.length - 1 ? ' & ' : ''}
+                                    </Typography>
+                                  </Box>
+                                );
+                              });
+                            }
+                            
                             // Safety check - if tracks don't exist or the index is out of bounds
                             if (!release.tracks || !release.tracks[trackIndex]) {
+                              // Try to use the main artist from the modal
+                              if (artist && artist.id) {
+                                return (
+                                  <Box key={artist.id} sx={{ display: 'flex', alignItems: 'center' }}>
+                                    <Avatar 
+                                      src={getArtistImage(artist)} 
+                                      alt={artist.name}
+                                      sx={{ width: 24, height: 24, mr: 0.5 }}
+                                    />
+                                    <Typography variant="body2">
+                                      {artist.name}
+                                    </Typography>
+                                  </Box>
+                                );
+                              }
+                              
                               return (
                                 <Box key="unknown-artist" sx={{ display: 'flex', alignItems: 'center' }}>
                                   <Avatar 
@@ -434,7 +591,7 @@ class ArtistModalClass extends Component<ArtistModalProps, ArtistModalState> {
                                     sx={{ width: 24, height: 24, mr: 0.5 }}
                                   />
                                   <Typography variant="body2">
-                                    {release.artist_name || "Unknown Artist"}
+                                    {release.artist_name || artist?.name || "Unknown Artist"}
                                   </Typography>
                                 </Box>
                               );
@@ -452,13 +609,15 @@ class ArtistModalClass extends Component<ArtistModalProps, ArtistModalState> {
                                 image_url?: string;
                               };
                               
+                              const artistImage = extendedArtist.profile_image_small_url || 
+                                extendedArtist.profile_image_url || 
+                                extendedArtist.image_url || 
+                                '/images/placeholder-artist.jpg';
+                              
                               return (
                                 <Box key={artist.id || `artist-${index}`} sx={{ display: 'flex', alignItems: 'center' }}>
                                   <Avatar 
-                                    src={extendedArtist.profile_image_small_url || 
-                                         extendedArtist.profile_image_url || 
-                                         extendedArtist.image_url || 
-                                         '/images/placeholder-artist.jpg'} 
+                                    src={artistImage} 
                                     alt={artist.name || "Artist"}
                                     sx={{ width: 24, height: 24, mr: 0.5 }}
                                   />
@@ -470,37 +629,38 @@ class ArtistModalClass extends Component<ArtistModalProps, ArtistModalState> {
                             }) : (
                               <Box key="fallback-artist" sx={{ display: 'flex', alignItems: 'center' }}>
                                 <Avatar 
-                                  src={'/images/placeholder-artist.jpg'} 
-                                  alt="Artist"
+                                  src={getArtistImage(artist)} 
+                                  alt={artist?.name || "Artist"}
                                   sx={{ width: 24, height: 24, mr: 0.5 }}
                                 />
                                 <Typography variant="body2">
-                                  {release.artist_name || "Unknown Artist"}
+                                  {artist?.name || release.artist_name || "Unknown Artist"}
                                 </Typography>
                               </Box>
                             );
                           })()}
                         </TableCell>
                         <TableCell>
-                          {release.tracks && Array.isArray(release.tracks) && release.tracks.length > 0 && release.tracks[0]?.duration_ms !== undefined
-                            ? this.formatTrackDuration(release.tracks[0].duration_ms)
-                            : '--:--'}
+                          {duration}
                         </TableCell>
                         <TableCell>
                           {release.release_date ? formatDate(release.release_date) : 'Unknown'}
                         </TableCell>
                         <TableCell align="center">
                           {spotifyUrl ? (
-                            <IconButton
+                            <IconButton 
+                              href={spotifyUrl} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
                               size="small"
                               color="primary"
-                              onClick={() => window.open(spotifyUrl, '_blank')}
-                              title="Play on Spotify"
                             >
-                              <PlayArrowIcon fontSize="small" />
+                              <PlayArrowIcon />
                             </IconButton>
                           ) : (
-                            <Typography variant="caption" color="text.secondary">N/A</Typography>
+                            <IconButton size="small" disabled>
+                              <PlayArrowIcon />
+                            </IconButton>
                           )}
                         </TableCell>
                       </TableRow>
@@ -513,121 +673,142 @@ class ArtistModalClass extends Component<ArtistModalProps, ArtistModalState> {
         ))}
       </Box>
     );
-  }
+  };
 
-  renderLabels() {
-    const labelIdsSet = new Set<string>();
-    this.state.releases.forEach(release => {
-      // Handle all possible label formats from both API response types
-      // First check for object with id property
-      if (release.label && typeof release.label === 'object') {
-        // Need to use any to safely access potential id property
-        const labelWithId = release.label as any;
-        if (labelWithId.id) {
-          labelIdsSet.add(labelWithId.id);
-        }
-      } 
-      // Then check for direct label_id string (used in some API responses)
-      else if (typeof release.label_id === 'string') {
-        labelIdsSet.add(release.label_id);
-      } 
-      // Finally check for labelId alternative naming
-      else if (typeof release.labelId === 'string') {
-        labelIdsSet.add(release.labelId);
-      }
-    });
-    
-    const labelIds = Array.from(labelIdsSet);
-    
-    if (labelIds.length === 0) {
-      return (
-        <Typography variant="body2" color="text.secondary">
-          No labels found
-        </Typography>
-      );
+  // Fetch data when artist changes or modal opens
+  useEffect(() => {
+    if (open && artist?.id) {
+      console.log(`[ArtistModal] Modal opened for artist: ${artist.id} (${artist.name})`);
+      fetchReleases();
+      fetchArtistLabels();
     }
-    
-    return (
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-        {labelIds.map(labelId => (
-          <Chip 
-            key={labelId} 
-            label={this.formatLabelName(labelId)} 
-            color="primary" 
-            variant="outlined" 
-            size="small"
-          />
-        ))}
-      </Box>
-    );
-  }
+  }, [open, artist?.id]);
 
-  render() {
-    const { open, onClose, artist } = this.props;
-    if (!artist) return null;
-
-    return (
-      <Dialog
-        open={open}
-        onClose={onClose}
-        fullWidth
-        maxWidth="lg"
-        PaperProps={{
-          sx: {
-            backgroundColor: '#000000',
-            borderRadius: 2,
-          }
-        }}
-      >
-        <DialogTitle>
-          <Box display="flex" alignItems="center" justifyContent="space-between">
-            <Typography variant="h5">{artist.name}</Typography>
-            <IconButton onClick={onClose} size="large">
-              <CloseIcon />
-            </IconButton>
-          </Box>
-        </DialogTitle>
-        <DialogContent>
-          <Box display="flex" mb={4}>
-            <Box mr={3}>
-              <img 
-                src={this.getArtistImage(artist)} 
-                alt={artist.name}
-                style={{ 
-                  width: 260, 
-                  height: 'auto', 
-                  borderRadius: 8,
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
-                }}
-              />
-              <Box mt={2}>
-                <Typography variant="h6">About the Artist</Typography>
-                {artist.uri && (
-                  <Link 
-                    href={`https://open.spotify.com/artist/${artist.uri.split(':')[2]}`} 
+  if (!artist) return null;
+  
+  // Get the artist image with proper fallback
+  const artistImage = getArtistImage(artist);
+  
+  // Format label names for display
+  const labelChips = labels && labels.length > 0 
+    ? labels.map(label => (
+        <Chip 
+          key={label.id} 
+          label={formatLabelName(label.id)} 
+          color="primary" 
+          variant="outlined" 
+          size="small"
+          sx={{ mr: 0.5, mb: 0.5 }}
+        />
+      ))
+    : null;
+  
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      fullScreen={fullScreen}
+      maxWidth="md"
+      fullWidth
+      aria-labelledby="artist-modal-title"
+    >
+      <DialogTitle id="artist-modal-title" sx={{ pb: 1 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="h5" component="h2">{artist.name}</Typography>
+          <IconButton edge="end" color="inherit" onClick={onClose} aria-label="close">
+            <CloseIcon />
+          </IconButton>
+        </Box>
+      </DialogTitle>
+      
+      <DialogContent dividers sx={{ p: 0 }}>
+        <Grid container>
+          {/* Artist Info Section */}
+          <Grid item xs={12} md={4}>
+            <Box sx={{ p: 3, borderRight: { md: '1px solid rgba(0, 0, 0, 0.12)' } }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 3 }}>
+                <Avatar
+                  src={artistImage}
+                  alt={artist.name}
+                  sx={{ 
+                    width: 200, 
+                    height: 200, 
+                    mb: 2,
+                    boxShadow: 3,
+                    border: '4px solid white'
+                  }}
+                />
+                
+                <Typography variant="h6" align="center" gutterBottom>
+                  {artist.name}
+                </Typography>
+                
+                {/* Display label chips */}
+                {labelChips && (
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', mt: 1 }}>
+                    {labelChips}
+                  </Box>
+                )}
+                
+                {/* Spotify Link */}
+                {artist.spotify_url && (
+                  <Button 
+                    variant="outlined" 
+                    color="primary" 
+                    href={artist.spotify_url} 
                     target="_blank"
                     rel="noopener noreferrer"
-                    color="primary"
-                    underline="hover"
-                    sx={{ display: 'inline-block', mt: 1 }}
+                    sx={{ mt: 2 }}
+                    startIcon={<InfoIcon />}
                   >
                     Listen on Spotify
-                  </Link>
+                  </Button>
                 )}
               </Box>
-              <Box mt={2}>
-                <Typography variant="h6">Labels</Typography>
-                {this.renderLabels()}
-              </Box>
+              
+              {/* Artist Bio */}
+              {artist.bio && (
+                <Box sx={{ mt: 3 }}>
+                  <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                    About
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {artist.bio}
+                  </Typography>
+                </Box>
+              )}
+              
+              {/* Artist Genres */}
+              {artist.genres && artist.genres.length > 0 && (
+                <Box sx={{ mt: 3 }}>
+                  <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                    Genres
+                  </Typography>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                    {artist.genres.map(genre => (
+                      <Chip 
+                        key={genre} 
+                        label={genre} 
+                        size="small" 
+                        variant="outlined" 
+                      />
+                    ))}
+                  </Box>
+                </Box>
+              )}
             </Box>
-            <Box sx={{ flexGrow: 1 }}>
-              {this.renderReleases()}
+          </Grid>
+          
+          {/* Releases Section */}
+          <Grid item xs={12} md={8}>
+            <Box sx={{ p: 0 }}>
+              {renderReleases()}
             </Box>
-          </Box>
-        </DialogContent>
-      </Dialog>
-    );
-  }
-}
+          </Grid>
+        </Grid>
+      </DialogContent>
+    </Dialog>
+  );
+};
 
-export default ArtistModalWrapper;
+export default ArtistModal;

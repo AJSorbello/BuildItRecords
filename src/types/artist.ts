@@ -29,6 +29,11 @@ export interface Artist extends ArtistBase {
   genres?: string[];
   followers?: Followers;
   type: 'artist';
+  // Additional properties used in the application
+  bio?: string;
+  labels?: Array<{ id: string; name?: string }>;
+  label_id?: string | number;
+  labelId?: string | number;
 }
 
 // Simplified interface for tests and other scenarios
