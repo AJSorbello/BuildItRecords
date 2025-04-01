@@ -5,14 +5,11 @@
  * Build It Records, Build It Tech, or Build It Deep labels.
  */
 
-const { Pool } = require('pg');
+const axios = require('axios');
 require('dotenv').config();
 
-// Database connection
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-});
+// Production API URL
+const API_URL = 'https://builditrecords.onrender.com/api';
 
 // Valid Build It Records label IDs
 const VALID_LABEL_IDS = ['buildit-records', 'buildit-tech', 'buildit-deep'];
@@ -38,135 +35,75 @@ const TEST_ARTIST_NAMES = [
 ];
 
 async function cleanupReleases() {
-  const client = await pool.connect();
-  
   try {
     console.log('Starting cleanup of non-Build It Records releases...');
     
-    // Start a transaction
-    await client.query('BEGIN');
+    // 1. Get all artists from the API
+    console.log('Fetching all artists...');
+    const artistsResponse = await axios.get(`${API_URL}/label-artists/buildit-records?limit=500`);
+    const artists = artistsResponse.data.data || [];
     
-    // 1. Find releases with invalid label IDs
-    const { rows: invalidLabelReleases } = await client.query(`
-      SELECT id, title, label_id 
-      FROM releases 
-      WHERE label_id NOT IN ($1, $2, $3)
-    `, VALID_LABEL_IDS);
+    console.log(`Found ${artists.length} artists in total`);
     
-    console.log(`Found ${invalidLabelReleases.length} releases with invalid label IDs`);
-    
-    // 2. Find releases with test patterns in their titles
-    let testPatternReleases = [];
-    for (const pattern of TEST_PATTERNS) {
-      const { rows } = await client.query(`
-        SELECT id, title, label_id 
-        FROM releases 
-        WHERE title ~ $1
-      `, [pattern.source]);
+    // 2. Filter out test artists
+    const testArtists = artists.filter(artist => {
+      // Check for test patterns in artist names
+      for (const pattern of TEST_PATTERNS) {
+        if (pattern.test(artist.name)) {
+          return true;
+        }
+      }
       
-      testPatternReleases = [...testPatternReleases, ...rows];
-    }
-    
-    // Remove duplicates
-    testPatternReleases = testPatternReleases.filter((release, index, self) =>
-      index === self.findIndex((r) => r.id === release.id)
-    );
-    
-    console.log(`Found ${testPatternReleases.length} releases with test patterns in titles`);
-    
-    // 3. Find releases associated with test artists
-    const { rows: testArtistReleases } = await client.query(`
-      SELECT DISTINCT r.id, r.title, r.label_id 
-      FROM releases r
-      JOIN release_artists ra ON r.id = ra.release_id
-      JOIN artists a ON ra.artist_id = a.id
-      WHERE a.name = ANY($1)
-    `, [TEST_ARTIST_NAMES]);
-    
-    console.log(`Found ${testArtistReleases.length} releases associated with test artists`);
-    
-    // Combine all release IDs to remove
-    const releasesToRemove = [
-      ...invalidLabelReleases,
-      ...testPatternReleases,
-      ...testArtistReleases
-    ].filter((release, index, self) =>
-      index === self.findIndex((r) => r.id === release.id)
-    );
-    
-    console.log(`Total releases to remove: ${releasesToRemove.length}`);
-    
-    // Print the list of releases to be removed
-    console.log('Releases to be removed:');
-    releasesToRemove.forEach(release => {
-      console.log(`- ${release.title} (ID: ${release.id}, Label: ${release.label_id})`);
+      // Check for specific test artist names
+      return TEST_ARTIST_NAMES.includes(artist.name.toLowerCase());
     });
     
-    // Confirm before proceeding
-    const readline = require('readline').createInterface({
-      input: process.stdin,
-      output: process.stdout
+    console.log(`Found ${testArtists.length} test artists to filter out`);
+    
+    // Print the list of test artists
+    console.log('Test artists to be filtered out:');
+    testArtists.forEach(artist => {
+      console.log(`- ${artist.name} (ID: ${artist.id})`);
     });
     
-    const answer = await new Promise(resolve => {
-      readline.question('Do you want to proceed with removal? (yes/no): ', resolve);
-    });
+    // 3. Create a report of what would be removed
+    console.log('\nTo remove these test artists from your database, please:');
+    console.log('1. Log in to your database management tool');
+    console.log('2. Run the following SQL queries:');
     
-    readline.close();
+    console.log('\n-- Delete associated track_artists');
+    console.log(`DELETE FROM track_artists
+WHERE artist_id IN (
+  SELECT id FROM artists 
+  WHERE name ~* '^(bass|beat|beats|beta|big|break)\\s+'
+  OR name IN ('${TEST_ARTIST_NAMES.join("', '")}')
+);`);
     
-    if (answer.toLowerCase() !== 'yes') {
-      console.log('Cleanup cancelled by user');
-      await client.query('ROLLBACK');
-      return;
-    }
+    console.log('\n-- Delete associated release_artists');
+    console.log(`DELETE FROM release_artists
+WHERE artist_id IN (
+  SELECT id FROM artists 
+  WHERE name ~* '^(bass|beat|beats|beta|big|break)\\s+'
+  OR name IN ('${TEST_ARTIST_NAMES.join("', '")}')
+);`);
     
-    // Remove the releases
-    const releaseIds = releasesToRemove.map(r => r.id);
+    console.log('\n-- Delete the test artists');
+    console.log(`DELETE FROM artists
+WHERE name ~* '^(bass|beat|beats|beta|big|break)\\s+'
+OR name IN ('${TEST_ARTIST_NAMES.join("', '")}');`);
     
-    // Delete associated track_artists
-    const { rowCount: trackArtistsDeleted } = await client.query(`
-      DELETE FROM track_artists
-      WHERE track_id IN (
-        SELECT id FROM tracks WHERE release_id = ANY($1)
-      )
-    `, [releaseIds]);
+    console.log('\n-- Delete releases with test patterns in their titles');
+    console.log(`DELETE FROM releases
+WHERE title ~* '^(bass|beat|beats|beta|big|break)\\s+'
+OR title ~* 'test|demo|sample';`);
     
-    console.log(`Deleted ${trackArtistsDeleted} track_artists records`);
-    
-    // Delete associated tracks
-    const { rowCount: tracksDeleted } = await client.query(`
-      DELETE FROM tracks
-      WHERE release_id = ANY($1)
-    `, [releaseIds]);
-    
-    console.log(`Deleted ${tracksDeleted} tracks`);
-    
-    // Delete associated release_artists
-    const { rowCount: releaseArtistsDeleted } = await client.query(`
-      DELETE FROM release_artists
-      WHERE release_id = ANY($1)
-    `, [releaseIds]);
-    
-    console.log(`Deleted ${releaseArtistsDeleted} release_artists records`);
-    
-    // Finally, delete the releases
-    const { rowCount: releasesDeleted } = await client.query(`
-      DELETE FROM releases
-      WHERE id = ANY($1)
-    `, [releaseIds]);
-    
-    console.log(`Deleted ${releasesDeleted} releases`);
-    
-    // Commit the transaction
-    await client.query('COMMIT');
-    
-    console.log('Cleanup completed successfully');
+    console.log('\nAlternatively, you can use the enhanced filtering in the API endpoint that we already implemented to hide these test artists from the frontend.');
     
   } catch (error) {
-    await client.query('ROLLBACK');
-    console.error('Error during cleanup:', error);
-  } finally {
-    client.release();
+    console.error('Error during cleanup:', error.message);
+    if (error.response) {
+      console.error('API response error:', error.response.data);
+    }
   }
 }
 

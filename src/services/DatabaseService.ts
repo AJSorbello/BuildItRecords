@@ -756,7 +756,26 @@ class DatabaseService {
    * @returns Processed artists with all required properties
    */
   private processArtists(artists: any[]): Artist[] {
-    return artists.map(artist => {
+    // Filter out entries that don't appear to be valid artists
+    const validArtists = artists.filter(artist => {
+      // Check if this is a valid artist entry
+      // Artists should have a name that doesn't look like a track or sample pack
+      if (!artist.name) return false;
+      
+      // Filter out entries that look like tracks or sample packs
+      // These typically have patterns like "Name + Number" (e.g., "Bass X 8", "Beat Max 52")
+      const samplePackPattern = /^(Bass|Beat|Beats|Beta|Big)\s+[A-Za-z]*\s*\d+$/;
+      if (samplePackPattern.test(artist.name)) {
+        console.log(`[DatabaseService] Filtering out non-artist entry: ${artist.name}`);
+        return false;
+      }
+      
+      return true;
+    });
+    
+    console.log(`[DatabaseService] Filtered ${artists.length - validArtists.length} non-artist entries out of ${artists.length} total`);
+    
+    return validArtists.map(artist => {
       // Make a copy of the artist object to avoid modifying the original
       const processedArtist = { ...artist } as any;
 
