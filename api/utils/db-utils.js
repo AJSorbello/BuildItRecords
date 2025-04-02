@@ -169,7 +169,9 @@ function addCorsHeaders(res) {
     'http://localhost:5173',
     'http://localhost:3000',
     'http://localhost:3001',
-    'https://build-it-records.vercel.app'
+    'https://build-it-records.vercel.app',
+    'https://builditrecords.com',
+    'https://www.builditrecords.com'
   ];
   
   // Get the origin from the request
@@ -180,7 +182,7 @@ function addCorsHeaders(res) {
     res.setHeader('Access-Control-Allow-Origin', origin);
   } else {
     // For non-matching origins or when origin is not present
-    res.setHeader('Access-Control-Allow-Origin', 'https://build-it-records.vercel.app');
+    res.setHeader('Access-Control-Allow-Origin', 'https://builditrecords.com');
   }
   
   // Allow credentials (cookies, authorization headers)
