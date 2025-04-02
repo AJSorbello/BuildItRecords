@@ -56,37 +56,13 @@
       "source": "/api/(.*)", 
       "destination": "/api/$1" 
     },
-    { 
-      "source": "/admin", 
-      "destination": "/dist/index.html" 
+    {
+      "source": "/(.*\\.(js|css|ico|png|jpg|jpeg|svg|gif|webp))",
+      "destination": "/$1"
     },
-    { 
-      "source": "/admin/dashboard", 
-      "destination": "/dist/index.html" 
-    },
-    { 
-      "source": "/admin/login", 
-      "destination": "/dist/index.html" 
-    },
-    { 
-      "source": "/admin/dashboard/(.*)", 
-      "destination": "/dist/index.html" 
-    },
-    { 
-      "source": "/admin/(.*)", 
-      "destination": "/dist/index.html" 
-    },
-    { 
-      "source": "/(assets|images)/(.*)", 
-      "destination": "/dist/$1/$2" 
-    },
-    { 
-      "source": "/(.+)\\.(js|css|ico|png|jpg|jpeg|svg)", 
-      "destination": "/dist/$1.$2" 
-    },
-    { 
-      "source": "/(.*)", 
-      "destination": "/dist/index.html" 
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ],
   "headers": [
