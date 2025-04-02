@@ -113,14 +113,14 @@ export const ReleasesPage = ({ label: propLabel }: ReleasesPageProps) => {
       
       // Add the release type parameter to the API call if it's not 'all'
       const typeParam = releaseType !== 'all' ? releaseType : undefined;
-      const data = await databaseService.getReleasesByLabel(labelConfig.id, page, 50, typeParam);
+      const releases = await databaseService.getReleasesByLabel(labelConfig.id, page, 50, typeParam);
 
-      if (!data) {
+      if (!releases || !Array.isArray(releases)) {
         throw new Error('No data received from server');
       }
 
       // Filter and validate releases
-      const validReleases = data.releases
+      const validReleases = releases
         .filter(release => {
           const isValid = isValidRelease(release);
           if (!isValid) {
@@ -155,8 +155,8 @@ export const ReleasesPage = ({ label: propLabel }: ReleasesPageProps) => {
         setReleases(prevReleases => [...prevReleases, ...validReleases]);
       }
       
-      setTotalReleases(data.totalReleases || 0);
-      setHasMore(data.hasMore || false);
+      setTotalReleases(releases.length);
+      setHasMore(false);
       setCurrentPage(page);
       setLoading(false);
     } catch (err) {

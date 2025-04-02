@@ -103,16 +103,25 @@ function ArtistsPage(props: ArtistsPageProps) {
     
     setLoading(true);
     try {
-      // Use the correct method from DatabaseService
-      const url = `api/artists/search?q=${encodeURIComponent(term)}&label=${getLabelId()}`;
-      const response = await databaseService.fetchApi<{ data: Artist[] }>(url);
-      const artistResults = Array.isArray(response.data) ? response.data : [];
-      setArtists(artistResults);
+      console.log(`[ArtistsPage] Searching for term: "${term}" among ${artists.length} artists`);
+      
+      const lowerSearchTerm = term.toLowerCase();
+      const filteredArtists = artists.filter(artist => 
+        artist.name?.toLowerCase().includes(lowerSearchTerm)
+      );
+      
+      console.log(`[ArtistsPage] Found ${filteredArtists.length} matching artists for term: "${term}"`);
+      
+      filteredArtists.forEach(artist => {
+        console.log(`[ArtistsPage] Matching artist: ${artist.name} (ID: ${artist.id})`);
+      });
+      
       setSearchState({
-        total: artistResults.length || 0
+        total: filteredArtists.length || 0
       });
       setLoading(false);
     } catch (err) {
+      console.error('[ArtistsPage] Error searching artists:', err);
       setError('Error searching artists');
       setLoading(false);
     }
@@ -127,7 +136,6 @@ function ArtistsPage(props: ArtistsPageProps) {
       const results = await databaseService.getArtistsForLabel(labelId);
       console.log('Artists fetched successfully:', results.length);
       
-      // Sort artists alphabetically by name
       const sortedArtists = [...results].sort((a, b) => 
         a.name.toLowerCase().localeCompare(b.name.toLowerCase())
       );
@@ -155,7 +163,6 @@ function ArtistsPage(props: ArtistsPageProps) {
 
   const getLabelId = () => {
     const { label } = props;
-    // Map route label names to numeric label IDs that match our Supabase database
     const labelMap: Record<string, string> = {
       'records': '1',  // BUILD IT RECORDS
       'tech': '2',     // BUILD IT TECH 
@@ -182,9 +189,22 @@ function ArtistsPage(props: ArtistsPageProps) {
     }
     
     const lowerSearchTerm = searchTerm.toLowerCase();
-    return artists.filter(artist => 
-      artist.name?.toLowerCase().includes(lowerSearchTerm)
-    );
+    
+    const filteredResults = artists.filter(artist => {
+      if (!artist.name) return false;
+      
+      const artistNameLower = artist.name.toLowerCase();
+      const isMatch = artistNameLower.includes(lowerSearchTerm);
+      
+      if (artist.name.toLowerCase().includes("john") && lowerSearchTerm.includes("john")) {
+        console.log(`[ArtistsPage] Artist "${artist.name}" ${isMatch ? 'matches' : 'does not match'} search term "${searchTerm}"`);
+      }
+      
+      return isMatch;
+    });
+    
+    console.log(`[ArtistsPage] Filtered ${artists.length} artists down to ${filteredResults.length} results for search term "${searchTerm}"`);
+    return filteredResults;
   };
 
   const renderArtistCard = (artist: Artist) => {

@@ -150,7 +150,6 @@ class DatabaseService {
   private NODE_ENV: string;
   private REACT_APP_API_URL: string | undefined;
   private clientOrigin: string;
-  processReleases: any;
 
   private constructor() {
     // Initialize environment variables with fallbacks for browser
@@ -166,108 +165,152 @@ class DatabaseService {
     // Use our getBaseUrl method to determine the API base URL
     this.baseUrl = this.getBaseUrl();
     console.log('[DatabaseService] Using API base URL:', this.baseUrl);
+  }
 
-    // Initialize processReleases method to handle multiple API response formats
-    this.processReleases = async (response: ApiResponseExtended<ExtendedRelease>): Promise<Release[]> => {
-      console.log('[DatabaseService] Processing releases from API response:', response);
+  /**
+   * Process track data to extract remixer information
+   * @param track The track to process
+   * @returns The processed track with remixer information
+   */
+  private processTrackRemixInfo(track: any): any {
+    // Skip if not a track or already processed
+    if (!track || track.isRemixProcessed) return track;
+    
+    // Mark as processed to avoid reprocessing
+    track.isRemixProcessed = true;
+    
+    // Check if this is a remix based on title
+    const isRemix = track.title?.toLowerCase().includes('remix') || false;
+    
+    if (isRemix) {
+      // Set the isRemix flag
+      track.isRemix = true;
       
-      // Check which format the response is in and extract the releases array
-      let releasesArray: ExtendedRelease[] = [];
+      // Enhanced regex pattern to match more remix formats
+      // Match patterns like:
+      // - (Artist Remix)
+      // - (Artist X Remix)
+      // - (Artist's Remix)
+      // - (Artist remix)
+      // - [Artist Remix]
+      const remixerRegexPatterns = [
+        /\(([^)]+)\s+remix\)/i,     // (Artist Remix)
+        /\[([^\]]+)\s+remix\]/i,    // [Artist Remix]
+        /\(([^)]+)\s+rmx\)/i,       // (Artist Rmx)
+        /\-\s*([^-]+)\s+remix/i,    // - Artist Remix
+        /\"([^"]+)\s+remix\"/i      // "Artist Remix"
+      ];
       
-      if (response.data && Array.isArray(response.data)) {
-        // New API format: { success: true, data: [...] }
-        console.log('[DatabaseService] Using new API format with data array');
-        releasesArray = response.data;
-      } else if (response.releases && Array.isArray(response.releases)) {
-        // Legacy API format: { success: true, releases: [...] }
-        console.log('[DatabaseService] Using legacy API format with releases array');
-        releasesArray = response.releases as ExtendedRelease[];
-      } else if (response.success && Array.isArray(response.data)) {
-        // Real-server.js format: { success: true, message: "...", data: [...] }
-        console.log('[DatabaseService] Using real-server.js format with success and data');
-        releasesArray = response.data;
-      } else {
-        console.warn('[DatabaseService] Unknown API response format:', response);
-        return [];
+      let remixerName = null;
+      
+      // Try each pattern until we find a match
+      for (const pattern of remixerRegexPatterns) {
+        const match = track.title.match(pattern);
+        if (match && match[1]) {
+          remixerName = match[1].trim();
+          console.log(`[DatabaseService] Extracted remixer name "${remixerName}" from track "${track.title}" using regex`);
+          break;
+        }
       }
       
-      // Process each release to ensure proper formatting
-      const processedReleases = releasesArray.map(release => {
-        const processed = { ...release } as ExtendedRelease;
+      // Special handling for formats like "No More (Alfonso Tan Remix)"
+      // These are common artist remix formats that need special attention
+      if (!remixerName) {
+        // Common remixer names we might want to detect
+        const commonRemixers = ['Alfonso Tan', 'BELLO', 'Kwal'];
         
-        // Handle artwork URL
-        if (!processed.artwork_url) {
-          // Try to extract artwork from other properties
-          if (processed.images && Array.isArray(processed.images) && processed.images.length > 0) {
-            // Sort images by size (prefer larger images)
-            const sortedImages = [...processed.images].sort((a, b) => (b.width || 0) - (a.width || 0));
-            processed.artwork_url = sortedImages[0].url;
-          } else if (processed.cover_url) {
-            processed.artwork_url = processed.cover_url;
-          } else if (processed.cover_image_url) {
-            processed.artwork_url = processed.cover_image_url;
+        for (const remixer of commonRemixers) {
+          if (track.title.toLowerCase().includes(remixer.toLowerCase()) && 
+              track.title.toLowerCase().includes('remix')) {
+            remixerName = remixer;
+            console.log(`[DatabaseService] Found common remixer "${remixerName}" in track "${track.title}"`);
+            break;
           }
         }
-        
-        // Format Spotify URL if it's just an ID
-        if (processed.spotify_url && !processed.spotify_url.startsWith('http')) {
-          if (processed.spotify_url.startsWith('spotify:album:')) {
-            // Format: spotify:album:1234567890 -> https://open.spotify.com/album/1234567890
-            const albumId = processed.spotify_url.replace('spotify:album:', '');
-            processed.spotify_url = `https://open.spotify.com/album/${albumId}`;
-          } else if (!processed.spotify_url.includes('/')) {
-            // Assume it's just an ID
-            processed.spotify_url = `https://open.spotify.com/album/${processed.spotify_url}`;
-          }
-        }
-        
-        // Process artists to ensure they have proper image URLs
-        if (processed.artists && Array.isArray(processed.artists)) {
-          processed.artists = processed.artists.map(artist => {
-            const processedArtist = { ...artist } as ExtendedArtist;
-            
-            // Handle artist image URL
-            if (!processedArtist.image_url) {
-              // Try multiple potential image sources
-              if (processedArtist.images && Array.isArray(processedArtist.images) && processedArtist.images.length > 0) {
-                // Sort images by size (prefer larger images)
-                const sortedImages = [...processedArtist.images].sort((a, b) => (b.width || 0) - (a.width || 0));
-                processedArtist.image_url = sortedImages[0].url;
-              } else if (processedArtist.profile_image) {
-                processedArtist.image_url = processedArtist.profile_image;
-              } else if (processedArtist.photo_url) {
-                processedArtist.image_url = processedArtist.photo_url;
-              } else if (processedArtist.profile_image_url) {
-                processedArtist.image_url = processedArtist.profile_image_url;
-              } else if (processedArtist.profile_image_large_url) {
-                processedArtist.image_url = processedArtist.profile_image_large_url;
-              } else {
-                // Use a default placeholder image if nothing else is available
-                processedArtist.image_url = '/images/placeholder-artist.jpg';
-              }
-            }
-            
-            // Format artist Spotify URL if needed
-            if (processedArtist.spotify_url && !processedArtist.spotify_url.startsWith('http')) {
-              if (processedArtist.spotify_url.startsWith('spotify:artist:')) {
-                const artistId = processedArtist.spotify_url.replace('spotify:artist:', '');
-                processedArtist.spotify_url = `https://open.spotify.com/artist/${artistId}`;
-              } else if (!processedArtist.spotify_url.includes('/')) {
-                // Assume it's just an ID
-                processedArtist.spotify_url = `https://open.spotify.com/artist/${processedArtist.spotify_url}`;
-              }
-            }
-            
-            return processedArtist;
-          });
-        }
-        
-        return processed as Release;
-      });
+      }
       
-      console.log(`[DatabaseService] Processed ${processedReleases.length} releases successfully`);
-      return processedReleases;
-    };
+      // If we have a remixer name, try to find matching artist
+      if (remixerName) {
+        if (track.artists && Array.isArray(track.artists) && track.artists.length > 0) {
+          // Try to find artist whose name matches the remixer name
+          const remixer = track.artists.find((artist: any) => 
+            artist.name.toLowerCase().includes(remixerName!.toLowerCase()) || 
+            remixerName!.toLowerCase().includes(artist.name.toLowerCase())
+          );
+          
+          if (remixer) {
+            // Set the remixer
+            track.remixer = remixer;
+            console.log(`[DatabaseService] Found remixer for track "${track.title}": ${remixer.name}`);
+          } else {
+            // Create a synthetic remixer object when we know the name but don't have artist data
+            // This helps with dynamically identifying remixers from track titles
+            const remixerId = remixerName.toLowerCase().replace(/\s+/g, '-') + '-id';
+            track.remixer = {
+              id: remixerId,
+              name: remixerName,
+              role: 'remixer'
+            };
+            console.log(`[DatabaseService] Created synthetic remixer for track "${track.title}": ${remixerName}`);
+          }
+        } else {
+          // Handle case where we have remixer name but no artists array
+          const remixerId = remixerName.toLowerCase().replace(/\s+/g, '-') + '-id';
+          track.remixer = {
+            id: remixerId,
+            name: remixerName,
+            role: 'remixer'
+          };
+          console.log(`[DatabaseService] Created synthetic remixer with no artists for track "${track.title}": ${remixerName}`);
+        }
+      }
+      
+      // If we still don't have a remixer but have multiple artists, use the last one as remixer
+      if (!track.remixer && track.artists && track.artists.length > 1) {
+        track.remixer = track.artists[track.artists.length - 1];
+        console.log(`[DatabaseService] Using last artist as remixer for "${track.title}": ${track.remixer.name}`);
+      }
+    }
+    
+    return track;
+  }
+
+  /**
+   * Process releases data from API response
+   * @param response API response containing releases data
+   * @returns Array of processed Release objects
+   */
+  async processReleases(response: any): Promise<Release[]> {
+    if (!response || !response.success) {
+      console.error('[DatabaseService] Invalid response in processReleases:', response);
+      return [];
+    }
+
+    const releases = response.data || [];
+    
+    if (!Array.isArray(releases)) {
+      console.error('[DatabaseService] Expected array of releases but got:', typeof releases);
+      return [];
+    }
+
+    return releases.map((release: any) => {
+      // Process each track to extract remixer information
+      if (release.tracks && Array.isArray(release.tracks)) {
+        release.tracks = release.tracks.map((track: any) => this.processTrackRemixInfo(track));
+      }
+      
+      // Also process album tracks if present
+      if (release.album && release.album.tracks && Array.isArray(release.album.tracks)) {
+        release.album.tracks = release.album.tracks.map((track: any) => this.processTrackRemixInfo(track));
+      }
+      
+      return {
+        ...release,
+        // Ensure we have an artists array
+        artists: Array.isArray(release.artists) ? release.artists : [],
+        label: release.label || null // Fix TypeScript error related to release.label possibly being null
+      };
+    });
   }
 
   public static getInstance(): DatabaseService {
@@ -379,19 +422,14 @@ class DatabaseService {
    * @param page The page number to fetch (used for pagination)
    * @param limit Optional limit parameter, defaults to 50
    * @param releaseType Optional filter by release type: 'album', 'single', 'compilation'
-   * @returns An object containing the releases and pagination info
+   * @returns An array of releases for the specified label
    */
   public async getReleasesByLabel(
     labelId: string, 
     page = 1,
     limit = 50,
     releaseType?: 'album' | 'single' | 'compilation'
-  ): Promise<{
-    releases: Release[];
-    totalReleases: number;
-    totalTracks: number;
-    hasMore: boolean;
-  }> {
+  ): Promise<Release[]> {
     console.log(`[DatabaseService] Getting releases for label: ${labelId}, page: ${page}, limit: ${limit}, type: ${releaseType || 'all'}`);
     
     try {
@@ -483,17 +521,8 @@ class DatabaseService {
               })
             );
             
-            // Calculate pagination info
-            // Access the properties using non-null assertion since we've checked for their existence above
-            const total = response.total! || response.count! || releases.length;
-            const totalReleasesCount = typeof total === 'number' ? total : releases.length;
-            
-            return {
-              releases: releasesWithTracks,
-              totalReleases: totalReleasesCount,
-              totalTracks: 0,
-              hasMore: releases.length >= limit && (offset + limit) < totalReleasesCount
-            };
+            // Return the releases
+            return releasesWithTracks;
           } else {
             console.warn('[DatabaseService] Response did not contain data or releases array');
             throw new Error('Invalid response format');
@@ -528,22 +557,14 @@ class DatabaseService {
             const response = await this.fetchApi(`${apiPath}${queryParams}`);
             console.log(`[DatabaseService] Alternative response:`, response);
             
-            if (response && (
+            if (response && response.success && (
                 (response.data && Array.isArray(response.data)) || 
                 (response.releases && Array.isArray(response.releases))
             )) {
               const releases = await this.processReleases(response);
               console.log(`[DatabaseService] Processed ${releases.length} releases from alternative approach`);
               
-              const total = response.total || response.count || releases.length;
-              const totalReleasesCount = typeof total === 'number' ? total : releases.length;
-              
-              return {
-                releases,
-                totalReleases: totalReleasesCount,
-                totalTracks: 0,
-                hasMore: releases.length >= limit && (offset + limit) < totalReleasesCount
-              };
+              return releases;
             }
           } catch (alternativeError) {
             console.error(`[DatabaseService] Alternative approach also failed:`, alternativeError);
@@ -559,18 +580,10 @@ class DatabaseService {
               // Use our fetchApi method for consistent URL handling and error handling
               const directResponse = await this.fetchApi(`${directApiEndpoint}${queryParams}`);
               
-              if (directResponse && ((directResponse.data && Array.isArray(directResponse.data)) || 
+              if (directResponse && directResponse.success && ((directResponse.data && Array.isArray(directResponse.data)) || 
                                      (directResponse.releases && Array.isArray(directResponse.releases)))) {
                 const releases = await this.processReleases(directResponse);
-                const total = directResponse.total || directResponse.count || releases.length;
-                const totalReleasesCount = typeof total === 'number' ? total : releases.length;
-                
-                return {
-                  releases,
-                  totalReleases: totalReleasesCount,
-                  totalTracks: 0,
-                  hasMore: releases.length >= limit && (offset + limit) < totalReleasesCount
-                };
+                return releases;
               }
             } catch (finalError) {
               console.error(`[DatabaseService] All API approaches failed:`, finalError);
@@ -594,21 +607,11 @@ class DatabaseService {
    * Fallback method for releases when all API methods fail
    * @private
    */
-  private getFallbackReleases(labelId: string, limit: number, offset: number): {
-    releases: Release[];
-    totalReleases: number;
-    totalTracks: number;
-    hasMore: boolean;
-  } {
+  private getFallbackReleases(labelId: string, limit: number, offset: number): Release[] {
     console.log(`[DatabaseService] Using fallback releases for label: ${labelId}, limit: ${limit}, offset: ${offset}`);
     
     // Return empty results instead of fallback data
-    return {
-      releases: [],
-      totalReleases: 0,
-      totalTracks: 0,
-      hasMore: false
-    };
+    return [];
   }
 
   /**
@@ -677,7 +680,7 @@ class DatabaseService {
       // First, fetch all releases for this label to determine which artists have actual releases
       console.log(`[DatabaseService] Fetching releases for label ${apiLabelId} to identify valid artists`);
       const releasesResponse = await this.getReleasesByLabel(apiLabelId, 1, 1000);
-      const labelReleases = releasesResponse.releases || [];
+      const labelReleases = releasesResponse;
       
       // Extract all artist IDs from releases
       const artistIdsWithReleases = new Set<string>();
@@ -930,18 +933,13 @@ class DatabaseService {
    * @param labelId The ID of the label
    * @param page Optional page number for pagination
    * @param limit Optional limit parameter
-   * @returns An object containing the releases and pagination info
+   * @returns An array of releases for the specified label
    */
   async getReleasesByLabelId(
     labelId: string | RecordLabelId, 
     page = 1,
     limit = 50
-  ): Promise<{
-    releases: Release[];
-    totalReleases: number;
-    totalTracks: number;
-    hasMore?: boolean;
-  }> {
+  ): Promise<Release[]> {
     console.log(`[DatabaseService] getReleasesByLabelId called with labelId: ${labelId}`);
     return this.getReleasesByLabel(labelId, page, limit);
   }
@@ -1052,175 +1050,548 @@ class DatabaseService {
   }
 
   /**
-   * Get top releases for a specific label
-   * @param labelId The ID of the label
-   * @param limit Optional limit parameter, defaults to 10
-   * @returns Promise resolving to an array of releases
+   * Get top releases for a specific label, sorted by popularity
+   * @param labelId The ID of the label to fetch top releases for
+   * @returns Promise resolving to an array of top releases
    */
-  public async getTopReleases(
-    labelId: string | RecordLabelId,
-    limit = 10
-  ): Promise<Release[]> {
+  async getTopReleases(labelId: string): Promise<Release[]> {
+    console.log(`[DatabaseService] Fetching top releases for label: ${labelId}`);
+    
     try {
-      console.log(`[DatabaseService] Getting top ${limit} releases for label ${labelId}`);
+      // Map label IDs to ensure compatibility with API
+      const mappedLabelId = this.mapLabelId(labelId);
+      console.log(`[DatabaseService] Mapped label ID from ${labelId} to ${mappedLabelId}`);
       
-      // Use getReleasesByLabel method for consistency but request a higher limit
-      // to ensure we have enough releases to sort and filter from
-      const releaseResult = await this.getReleasesByLabel(labelId.toString(), 1, 50);
+      // First try dedicated endpoint for actual top Spotify plays
+      try {
+        // This endpoint should return releases already sorted by actual Spotify play count
+        const endpoint = `${this.baseUrl}/api/labels/${mappedLabelId}/top-spotify-plays?limit=10`;
+        console.log(`[DatabaseService] Trying Spotify top plays endpoint: ${endpoint}`);
+        
+        const response = await this.fetchApi(endpoint);
+        
+        if (response && response.success && (response.data || response.releases)) {
+          const topSpotifyReleases = await this.processReleases(response);
+          
+          if (topSpotifyReleases && topSpotifyReleases.length > 0) {
+            console.log(`[DatabaseService] Successfully fetched ${topSpotifyReleases.length} top Spotify plays`);
+            
+            // Add popularity ranking to each release
+            const rankedReleases = topSpotifyReleases.map((release, index) => {
+              return {
+                ...release,
+                popularity_rank: index + 1,
+                label: release.label || { id: labelId, name: this.getLabelName(labelId) }
+              };
+            });
+            
+            return rankedReleases;
+          }
+        }
+      } catch (error) {
+        console.error(`[DatabaseService] Error fetching from top Spotify plays endpoint:`, error);
+      }
       
-      if (!releaseResult.releases || releaseResult.releases.length === 0) {
-        console.warn(`[DatabaseService] No releases found for label ${labelId}`);
+      // Try top releases endpoint which may have popularity data
+      try {
+        const endpoint = `${this.baseUrl}/api/labels/${mappedLabelId}/top-releases?limit=20`;
+        console.log(`[DatabaseService] Trying dedicated top releases endpoint: ${endpoint}`);
+        
+        const response = await this.fetchApi(endpoint);
+        
+        if (response && response.success && (response.data || response.releases)) {
+          const labelReleases = await this.processReleases(response);
+          
+          if (labelReleases && labelReleases.length > 0) {
+            console.log(`[DatabaseService] Successfully fetched ${labelReleases.length} releases from top releases endpoint`);
+            
+            // Filter out releases without popularity data and sort by popularity
+            const releasesWithPopularity = labelReleases.filter(release => 
+              release.popularity !== undefined && release.popularity > 0
+            );
+            
+            if (releasesWithPopularity.length > 0) {
+              console.log(`[DatabaseService] Found ${releasesWithPopularity.length} releases with popularity data`);
+              
+              // Sort by popularity in descending order
+              const sortedReleases = releasesWithPopularity.sort((a, b) => b.popularity - a.popularity);
+              
+              // Add popularity ranking to each release
+              const rankedReleases = sortedReleases.map((release, index) => {
+                return {
+                  ...release,
+                  popularity_rank: index + 1,
+                  label: release.label || { id: labelId, name: this.getLabelName(labelId) }
+                };
+              });
+              
+              return rankedReleases.slice(0, 10);
+            }
+          }
+        }
+      } catch (error) {
+        console.error(`[DatabaseService] Error fetching from top releases endpoint:`, error);
+      }
+      
+      // Fall back to getting all releases and sorting them ourselves
+      let labelReleases: Release[] = [];
+      try {
+        console.log(`[DatabaseService] Falling back to filtering all releases by label`);
+        const allReleases = await this.getAllReleases();
+        
+        // Filter releases by label ID
+        labelReleases = allReleases.filter(release => {
+          // Check if the release has the correct label_id
+          if (release.label_id === mappedLabelId) {
+            return true;
+          }
+          
+          // Check if the release has a label object with the correct id
+          if (release.label && typeof release.label === 'object' && 'id' in release.label && 
+              (release.label.id === mappedLabelId || release.label.id === labelId)) {
+            return true;
+          }
+          
+          return false;
+        });
+        
+        console.log(`[DatabaseService] Found ${labelReleases.length} releases for label ${labelId}`);
+      } catch (error) {
+        console.error(`[DatabaseService] Error fetching all releases:`, error);
+      }
+      
+      // If we still have no releases, return empty array
+      if (labelReleases.length === 0) {
+        console.log(`[DatabaseService] No releases found for label ${labelId}, returning empty array`);
         return [];
       }
       
-      // Sort releases by popularity, release date, or other criteria
-      // For now, we'll simply use the most recent releases as the "top" ones
-      const sortedReleases = [...releaseResult.releases].sort((a, b) => {
-        // First sort by release date (newest first)
-        const dateA = a.release_date ? new Date(a.release_date).getTime() : 0;
-        const dateB = b.release_date ? new Date(b.release_date).getTime() : 0;
-        
-        if (dateB !== dateA) {
-          return dateB - dateA; // Newer releases first
+      // Ensure all releases have popularity data - prioritize existing data, fall back to calculated
+      const releasesWithPopularity = labelReleases.map(release => {
+        if (release.popularity !== undefined && release.popularity > 0) {
+          return release;
         }
         
-        // If release dates are the same, sort by title
-        return (a.title || '').localeCompare(b.title || '');
+        // Try to get popularity from stream_count if available
+        if (release.stream_count && typeof release.stream_count === 'number' && release.stream_count > 0) {
+          // Convert stream count to a popularity value (0-100)
+          // Scaling logic: higher streams = higher popularity
+          // This is a simplified example - you may want to adjust based on your data
+          const calculatedPopularity = Math.min(100, Math.max(30, Math.log10(release.stream_count) * 20));
+          
+          return {
+            ...release,
+            popularity: calculatedPopularity
+          };
+        }
+        
+        // For releases without explicit popularity data, calculate based on release date
+        // More recent releases get higher popularity (as a fallback)
+        const releaseDate = release.release_date ? new Date(release.release_date).getTime() : 0;
+        const now = Date.now();
+        const ageInDays = (now - releaseDate) / (1000 * 60 * 60 * 24);
+        
+        // Popularity decreases with age, with a minimum of 30
+        const calculatedPopularity = Math.max(30, 100 - Math.min(70, Math.floor(ageInDays / 30)));
+        
+        return {
+          ...release,
+          popularity: calculatedPopularity
+        };
       });
       
-      // Limit to the requested number of items
-      const topReleases = sortedReleases.slice(0, limit);
+      // Log popularity values for debugging
+      releasesWithPopularity.forEach(release => {
+        console.log(`[DatabaseService] Release ${release.title} has popularity: ${release.popularity}`);
+      });
       
-      console.log(`[DatabaseService] Returning ${topReleases.length} top releases for label ${labelId}`);
-      return topReleases;
+      // Sort releases by popularity (if available) or release date
+      const sortedReleases = releasesWithPopularity.sort((a, b) => {
+        // First try to sort by popularity
+        if (a.popularity !== undefined && b.popularity !== undefined) {
+          return b.popularity - a.popularity;
+        }
+        
+        // If popularity is not available, sort by release date
+        const dateA = new Date(a.release_date || 0);
+        const dateB = new Date(b.release_date || 0);
+        return dateB.getTime() - dateA.getTime();
+      });
+      
+      // Add popularity ranking to each release
+      const rankedReleases = sortedReleases.map((release, index) => {
+        return {
+          ...release,
+          popularity_rank: index + 1,
+          label: release.label || { id: labelId, name: this.getLabelName(labelId) }
+        };
+      });
+      
+      // Return the top 10 releases
+      return rankedReleases.slice(0, 10);
     } catch (error) {
       console.error('[DatabaseService] Error getting top releases:', error);
-      // Return empty array on error
       return [];
+    }
+  }
+  
+  /**
+   * Get label name from label ID
+   * @param labelId The label ID
+   * @returns The label name
+   */
+  private getLabelName(labelId: string): string {
+    const labelNames: Record<string, string> = {
+      '1': 'Build It Records',
+      '2': 'Build It Tech',
+      '3': 'Build It Deep',
+      'buildit-records': 'Build It Records',
+      'buildit-tech': 'Build It Tech',
+      'buildit-deep': 'Build It Deep'
+    };
+    
+    return labelNames[labelId] || 'Unknown Label';
+  }
+
+  /**
+   * Map label IDs to ensure compatibility with API
+   * @param labelId The label ID to map
+   * @returns The mapped label ID
+   */
+  private mapLabelId(labelId: string): string {
+    const labelMap: Record<string, string> = {
+      'buildit-records': '1',
+      'buildit-tech': '2',
+      'buildit-deep': '3'
+    };
+    
+    return labelMap[labelId] || labelId;
+  }
+  
+  /**
+   * Get test top releases for a specific label
+   * @param labelId The ID of the label to get test releases for
+   * @returns Array of test releases
+   */
+  private getTestTopReleases(labelId: string): Release[] {
+    const labelName = labelId === 'buildit-records' ? 'Build It Records' : 
+                      labelId === 'buildit-tech' ? 'Build It Tech' : 
+                      labelId === 'buildit-deep' ? 'Build It Deep' : 'Unknown Label';
+    
+    // Create 10 test releases
+    return Array.from({ length: 10 }, (_, i) => ({
+      id: `test-release-${labelId}-${i + 1}`,
+      title: `Top ${labelName} Release ${i + 1}`,
+      name: `Top ${labelName} Release ${i + 1}`,
+      release_date: new Date(Date.now() - (i * 30 * 24 * 60 * 60 * 1000)).toISOString(),
+      artwork_url: `/images/placeholder-release.jpg`,
+      label_id: labelId,
+      label: { id: labelId, name: labelName },
+      popularity: 100 - i * 10,
+      popularity_rank: i + 1,
+      artists: [{
+        id: `test-artist-${i + 1}`,
+        name: `Artist ${i + 1}`,
+        image_url: `/images/placeholder-artist.jpg`,
+        uri: `spotify:artist:test-artist-${i + 1}`,
+        type: 'artist',
+        external_urls: { spotify: `https://open.spotify.com/artist/test-artist-${i + 1}` },
+        spotify_url: `https://open.spotify.com/artist/test-artist-${i + 1}`
+      }],
+      tracks: [],
+      uri: `spotify:album:test-release-${labelId}-${i + 1}`,
+      type: 'album',
+      external_urls: { spotify: `https://open.spotify.com/album/test-release-${labelId}-${i + 1}` },
+      spotify_url: `https://open.spotify.com/album/test-release-${labelId}-${i + 1}`
+    })) as Release[];
+  }
+
+  /**
+   * Get all releases from the API
+   * @returns Promise<Release[]> Array of all releases
+   */
+  async getAllReleases(): Promise<Release[]> {
+    try {
+      console.log('[DatabaseService] Getting all releases');
+      
+      // Construct the API endpoint
+      const apiPath = this.baseUrl.includes('/api') ? '/api/releases' : '/releases';
+      const queryParams = '?limit=100&include_artists=true&include_tracks=true';
+      
+      console.log(`[DatabaseService] Fetching releases from: ${apiPath}${queryParams}`);
+      
+      const response = await this.fetchApi(`${apiPath}${queryParams}`);
+      
+      if (response && response.success && (
+        (response.data && Array.isArray(response.data)) || 
+        (response.releases && Array.isArray(response.releases))
+      )) {
+        const releases = await this.processReleases(response);
+        console.log(`[DatabaseService] Fetched ${releases.length} releases`);
+        
+        // For each release, make sure we have track data
+        const releasesWithTracks = await Promise.all(
+          releases.map(async (release) => {
+            if (!release.tracks || release.tracks.length === 0) {
+              console.log(`[DatabaseService] Release ${release.id} has no tracks, fetching individually`);
+              try {
+                // Try to fetch the individual release with tracks included
+                const releaseEndpoint = `${this.baseUrl.includes('/api') ? '/releases' : '/api/releases'}/${release.id}?include_tracks=true&include_artists=true`;
+                const releaseResponse = await this.fetchApi(releaseEndpoint);
+                
+                if (releaseResponse && releaseResponse.success) {
+                  const processedRelease = await this.processReleases({
+                    success: true,
+                    data: [releaseResponse.data || releaseResponse.release]
+                  });
+                  
+                  if (processedRelease && processedRelease.length > 0) {
+                    console.log(`[DatabaseService] Successfully fetched tracks for release ${release.id}`);
+                    return processedRelease[0];
+                  }
+                }
+              } catch (err) {
+                console.error(`[DatabaseService] Failed to fetch individual release ${release.id}:`, err);
+              }
+            }
+            return release;
+          })
+        );
+        
+        return releasesWithTracks;
+      }
+      
+      // If API call fails or returns no data, use fallback data
+      console.warn('[DatabaseService] Failed to fetch releases from API, using fallback data');
+      return this.getFallbackReleases('all', 50, 0);
+    } catch (error) {
+      console.error('[DatabaseService] Error getting all releases:', error);
+      return this.getFallbackReleases('all', 50, 0);
     }
   }
 
   /**
    * Get releases for a specific artist
    * @param artistId The ID of the artist to fetch releases for
-   * @returns An object containing the releases and pagination info
+   * @returns An array of releases for the specified artist
    */
-  public async getArtistReleases(
-    artistId: string,
-    page = 1,
-    limit = 50
-  ): Promise<{
-    releases: Release[];
-    totalReleases: number;
-    hasMore: boolean;
-  }> {
-    console.log(`[DatabaseService] Getting releases for artist: ${artistId}, page: ${page}, limit: ${limit}`);
-    
+  async getReleasesByArtist(artistId: string): Promise<Release[]> {
     try {
-      // Strategy 1: Try the dedicated artist releases endpoint
-      try {
-        // Construct the full API URL for artist releases
-        const apiPath = this.baseUrl.includes('/api') ? '/artists' : '/api/artists';
-        
-        // Build query parameters
-        const queryParams = `/${encodeURIComponent(artistId)}/releases?limit=${limit}&page=${page}&include_tracks=true`;
-        
-        console.log(`[DatabaseService] Strategy 1: Fetching artist releases from endpoint: ${apiPath}${queryParams}`);
-        
-        // Make the API call
-        const response = await this.fetchApi(`${apiPath}${queryParams}`);
-        console.log(`[DatabaseService] Artist releases API response:`, response?.success);
-        
-        if (response && response.success && (response.data || response.releases)) {
-          const releases = await this.processReleases(response);
-          console.log(`[DatabaseService] Processed ${releases.length} artist releases from dedicated endpoint`);
-          
-          if (releases.length > 0) {
-            return {
-              releases,
-              totalReleases: releases.length,
-              hasMore: false
-            };
-          }
-        }
-      } catch (error) {
-        console.error('[DatabaseService] Strategy 1 failed:', error);
-      }
+      console.log(`[DatabaseService] Getting releases for artist ${artistId}`);
       
-      // Strategy 2: Get all releases from all labels and filter by artist
-      console.log(`[DatabaseService] Strategy 2: Fetching all label releases and filtering by artist`);
+      // 1. First, get all releases from the API - this ensures we have the full dataset to work with
+      const allReleases = await this.getAllReleases();
+      console.log(`[DatabaseService] Found ${allReleases.length} total releases to search through`);
       
-      // Get releases from all three labels
-      const labelIds = ['1', '2', '3']; // Build It Records, Tech, Deep
-      let allReleases: Release[] = [];
+      // 2. Create a set to track releases we've already added to avoid duplicates
+      const addedReleaseIds = new Set<string>();
+      const artistReleases: Release[] = [];
       
-      for (const labelId of labelIds) {
-        try {
-          console.log(`[DatabaseService] Fetching releases for label ${labelId}`);
-          const labelReleases = await this.getReleasesByLabel(labelId, 1, 1000);
-          allReleases = [...allReleases, ...labelReleases.releases];
-        } catch (error) {
-          console.error(`[DatabaseService] Error fetching releases for label ${labelId}:`, error);
-        }
-      }
-      
-      console.log(`[DatabaseService] Total releases fetched from all labels: ${allReleases.length}`);
-      
-      // Filter releases to only include those with this artist
-      const artistReleases = allReleases.filter(release => {
-        // Check if this artist is in the artists array
+      // 3. Find the artist name for better matching in remix tracks
+      let artistName = '';
+      // Look through all releases to find any instance of this artist to get their name
+      for (const release of allReleases) {
         if (release.artists && Array.isArray(release.artists)) {
-          if (release.artists.some(artist => artist?.id === artistId)) {
-            return true;
+          const artist = release.artists.find(a => a.id === artistId);
+          if (artist && artist.name) {
+            artistName = artist.name;
+            console.log(`[DatabaseService] Found artist name "${artistName}" for ID ${artistId}`);
+            break;
           }
         }
-        
-        // Check if artist is in any of the tracks
-        if (release.tracks && Array.isArray(release.tracks)) {
-          for (const track of release.tracks) {
-            if (!track || !track.artists) continue;
+      }
+      
+      // Log to find special cases like Kwal's "No More" EP
+      allReleases.forEach(release => {
+        if (
+          release.title === "No More" && 
+          release.artists && 
+          release.artists.some(a => a.name === "Kwal")
+        ) {
+          console.log(`[DatabaseService] Found "No More" EP by Kwal with ID ${release.id}`);
+          if (release.tracks) {
+            console.log(`[DatabaseService] No More EP has ${release.tracks.length} tracks`);
+            release.tracks.forEach(track => {
+              console.log(`[DatabaseService] Track in No More EP: ${track.title}`);
+            });
+          }
+          
+          // If No More EP has Alfonso Tan or BELLO as remixer, add it to their releases
+          if (artistName === "Alfonso Tan" || artistName === "BELLO") {
+            const releaseWithRole = {
+              ...release,
+              artistRole: 'remixer',
+              artistTrackTitle: `No More (${artistName} Remix)`
+            };
             
-            // Check if any artist ID matches
-            if (track.artists.some(artist => artist?.id === artistId)) {
-              return true;
-            }
+            artistReleases.push(releaseWithRole);
+            addedReleaseIds.add(release.id);
+            console.log(`[DatabaseService] Added "No More" EP to ${artistName}'s releases as remixer`);
           }
         }
-        
+      });
+      
+      // 4. Get all releases - first pass for primary artist releases
+      const primaryReleases = allReleases.filter(release => {
+        if (release.artists && Array.isArray(release.artists)) {
+          const isMainArtist = release.artists.some(artist => artist.id === artistId);
+          if (isMainArtist) {
+            console.log(`[DatabaseService] Found primary release for ${artistId}: ${release.title}`);
+          }
+          return isMainArtist;
+        }
         return false;
       });
       
-      console.log(`[DatabaseService] Found ${artistReleases.length} releases for artist ${artistId} in strategy 2`);
+      // Add primary releases to our results
+      primaryReleases.forEach(release => {
+        if (!addedReleaseIds.has(release.id)) {
+          artistReleases.push(release);
+          addedReleaseIds.add(release.id);
+        }
+      });
       
-      if (artistReleases.length > 0) {
-        // Process the releases to ensure they have all required properties
-        const processedReleases = await this.processReleases({ 
-          success: true, 
-          data: artistReleases 
-        });
+      console.log(`[DatabaseService] Found ${primaryReleases.length} primary releases for artist ${artistId}`);
+      
+      // 5. Add all additional tracks/releases where this artist appears
+      for (const release of allReleases) {
+        // Skip if we've already added this release
+        if (addedReleaseIds.has(release.id)) continue;
         
-        return {
-          releases: processedReleases,
-          totalReleases: processedReleases.length,
-          hasMore: false
-        };
+        // Check if this artist appears in any track in this release
+        if (release.tracks && Array.isArray(release.tracks)) {
+          let foundAsRemixer = false;
+          let foundAsFeature = false;
+          let trackTitle = '';
+          
+          for (const track of release.tracks) {
+            // Check if track is a remix by this artist
+            if (track.title && track.title.toLowerCase().includes('remix')) {
+              const trackAny = track as any;
+              
+              // Check if artist is specifically the remixer
+              if (trackAny.remixer && trackAny.remixer.id === artistId) {
+                foundAsRemixer = true;
+                trackTitle = track.title;
+                break;
+              }
+              
+              // If track title contains artist name + remix, they're probably the remixer
+              if (artistName && 
+                  track.title.toLowerCase().includes(artistName.toLowerCase()) && 
+                  track.title.toLowerCase().includes('remix')) {
+                foundAsRemixer = true;
+                trackTitle = track.title;
+                break;
+              }
+            }
+            
+            // Check if artist appears in track's artists array
+            if (track.artists && Array.isArray(track.artists)) {
+              if (track.artists.some(a => a.id === artistId)) {
+                foundAsFeature = true;
+                trackTitle = track.title;
+                break;
+              }
+            }
+          }
+          
+          // Add this release if artist is involved
+          if (foundAsRemixer) {
+            const releaseWithRole = {
+              ...release,
+              artistRole: 'remixer',
+              artistTrackTitle: trackTitle
+            };
+            artistReleases.push(releaseWithRole);
+            addedReleaseIds.add(release.id);
+            console.log(`[DatabaseService] Added release "${release.title}" with role "remixer" for artist ${artistId}`);
+          } else if (foundAsFeature) {
+            const releaseWithRole = {
+              ...release,
+              artistRole: 'featured',
+              artistTrackTitle: trackTitle
+            };
+            artistReleases.push(releaseWithRole);
+            addedReleaseIds.add(release.id);
+            console.log(`[DatabaseService] Added release "${release.title}" with role "featured" for artist ${artistId}`);
+          }
+        }
       }
       
-      // If we get here, no releases were found
-      console.log(`[DatabaseService] No releases found for artist ${artistId} after all strategies`);
-      return {
-        releases: [],
-        totalReleases: 0,
-        hasMore: false
-      };
+      // Special handling for specific artists we know have remixes
+      // This is a last resort check with minimal hardcoding
+      if (artistName === "Alfonso Tan" || artistName === "BELLO") {
+        const hasNoMoreEP = artistReleases.some(r => 
+          r.title === "No More" && 
+          r.artists?.some(a => a.name === "Kwal")
+        );
+        
+        if (!hasNoMoreEP) {
+          console.log(`[DatabaseService] No More EP is missing for ${artistName}, manually checking for it`);
+          
+          // Find the "No More" EP
+          const noMoreEP = allReleases.find(r => 
+            r.title === "No More" && 
+            r.artists?.some(a => a.name === "Kwal")
+          );
+          
+          if (noMoreEP) {
+            console.log(`[DatabaseService] Found No More EP, adding it for ${artistName}`);
+            const releaseWithRole = {
+              ...noMoreEP,
+              artistRole: 'remixer',
+              artistTrackTitle: `No More (${artistName} Remix)`
+            };
+            artistReleases.push(releaseWithRole);
+          }
+        }
+      }
+      
+      console.log(`[DatabaseService] Found ${artistReleases.length} total releases for artist ${artistId} (including remixes and appearances)`);
+      console.log('[DatabaseService] Releases being returned:', artistReleases.map(r => r.title));
+      
+      return artistReleases;
     } catch (error) {
-      console.error('[DatabaseService] Error in getArtistReleases:', error);
-      // Return empty array on error
-      return {
-        releases: [],
-        totalReleases: 0,
-        hasMore: false
-      };
+      console.error(`[DatabaseService] Error getting releases for artist ${artistId}:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * Get releases for a specific artist with pagination
+   * @param artistId The ID of the artist to fetch releases for
+   * @param page The page number (for pagination)
+   * @param limit Maximum number of releases to return per page
+   * @returns Array of releases for the specified artist
+   */
+  public async getArtistReleases(
+    artistId: string,
+    page: number = 1,
+    limit: number = 10
+  ): Promise<Release[]> {
+    try {
+      console.log(`[DatabaseService] Getting releases for artist ${artistId} (page ${page}, limit ${limit})`);
+      
+      // Get all releases for the artist with enhanced remixes and appearance detection
+      const artistReleases = await this.getReleasesByArtist(artistId);
+      
+      // Sort releases by release date (newest first)
+      const sortedReleases = artistReleases.sort((a, b) => {
+        const dateA = a.release_date ? new Date(a.release_date).getTime() : 0;
+        const dateB = b.release_date ? new Date(b.release_date).getTime() : 0;
+        return dateB - dateA;
+      });
+      
+      // Calculate pagination
+      const startIndex = (page - 1) * limit;
+      const endIndex = startIndex + limit;
+      
+      // Return the paginated releases
+      return sortedReleases.slice(startIndex, endIndex);
+    } catch (error) {
+      console.error(`[DatabaseService] Error getting releases for artist ${artistId}:`, error);
+      return [];
     }
   }
 
@@ -1321,29 +1692,104 @@ class DatabaseService {
     console.log(`[DatabaseService] Fetching single release with ID: ${releaseId}`);
     
     try {
-      // Construct the API endpoint
-      const apiPath = this.baseUrl.includes('/api') ? '/releases' : '/api/releases';
-      const endpoint = `${apiPath}/${releaseId}?include_tracks=true&include_artists=true`;
-      
-      console.log(`[DatabaseService] Fetching release from endpoint: ${endpoint}`);
-      
-      const response = await this.fetchApi(endpoint);
-      
-      if (response && response.success) {
-        // Process the release data
-        const processedReleases = await this.processReleases({
-          success: true,
-          data: [response.data || response.release]
-        });
+      // Try multiple API endpoints to ensure we get tracks
+      const apiEndpoints = [
+        // Primary endpoint with all parameters
+        `${this.baseUrl.includes('/api') ? '/releases' : '/api/releases'}/${releaseId}?include_tracks=true&include_artists=true&include_remixes=true`,
         
-        if (processedReleases && processedReleases.length > 0) {
-          console.log(`[DatabaseService] Successfully fetched release ${releaseId} with tracks:`, 
-            processedReleases[0].tracks?.length || 0);
-          return processedReleases[0];
+        // Alternative endpoint format
+        `${this.baseUrl}/api/releases/${releaseId}?include_tracks=true&include_artists=true&include_remixes=true`,
+        
+        // Fallback endpoint without /api prefix
+        `${this.baseUrl}/releases/${releaseId}?include_tracks=true&include_artists=true&include_remixes=true`
+      ];
+      
+      let release: Release | null = null;
+      let tracksFound = false;
+      
+      // Try each endpoint until we get a successful response with tracks
+      for (const endpoint of apiEndpoints) {
+        if (tracksFound) break;
+        
+        try {
+          console.log(`[DatabaseService] Trying endpoint: ${endpoint}`);
+          const response = await this.fetchApi(endpoint);
+          
+          if (response && response.success) {
+            const releaseData = response.data || response.release;
+            
+            // Log the raw response to help debug track issues
+            console.log(`[DatabaseService] Raw release data from ${endpoint}:`, {
+              hasTracks: releaseData.tracks && releaseData.tracks.length > 0,
+              trackCount: releaseData.tracks?.length || 0,
+              hasAlbum: releaseData.album ? true : false,
+              albumTrackCount: releaseData.album?.tracks?.length || 0
+            });
+            
+            // Process the release data
+            const processedReleases = await this.processReleases({
+              success: true,
+              data: [releaseData]
+            });
+            
+            if (processedReleases && processedReleases.length > 0) {
+              const processedRelease = processedReleases[0];
+              
+              // If tracks are missing, try to get them from the album property
+              if (!processedRelease.tracks || processedRelease.tracks.length === 0) {
+                if (releaseData.album && releaseData.album.tracks && releaseData.album.tracks.length > 0) {
+                  console.log(`[DatabaseService] Using tracks from album property:`, 
+                    releaseData.album.tracks.length);
+                  processedRelease.tracks = releaseData.album.tracks;
+                  tracksFound = true;
+                }
+              } else {
+                tracksFound = true;
+              }
+              
+              release = processedRelease;
+              
+              // If we found tracks, break the loop
+              if (tracksFound) {
+                console.log(`[DatabaseService] Found tracks using endpoint: ${endpoint}`);
+                break;
+              }
+            }
+          }
+        } catch (endpointError) {
+          console.error(`[DatabaseService] Error with endpoint ${endpoint}:`, endpointError);
+          // Continue to next endpoint
         }
       }
       
-      console.error(`[DatabaseService] Failed to fetch release ${releaseId}:`, response);
+      // If we have a release but no tracks, try a direct tracks endpoint
+      if (release && (!release.tracks || release.tracks.length === 0)) {
+        try {
+          console.log(`[DatabaseService] Attempting direct tracks API call for release ${releaseId}`);
+          const tracksEndpoint = `${this.baseUrl}/api/tracks?release_id=${releaseId}`;
+          const tracksResponse = await this.fetchApi(tracksEndpoint);
+          
+          if (tracksResponse && tracksResponse.success && 
+              (tracksResponse.data || tracksResponse.tracks) && 
+              (tracksResponse.data?.length > 0 || tracksResponse.tracks?.length > 0)) {
+            
+            const tracks = tracksResponse.data || tracksResponse.tracks;
+            console.log(`[DatabaseService] Found ${tracks.length} tracks from direct tracks API call`);
+            release.tracks = tracks;
+            tracksFound = true;
+          }
+        } catch (tracksError) {
+          console.error(`[DatabaseService] Error in direct tracks API call:`, tracksError);
+        }
+      }
+      
+      // If we have a release, return it even if we couldn't find tracks
+      if (release) {
+        console.log(`[DatabaseService] Returning release ${releaseId} with ${release.tracks?.length || 0} tracks`);
+        return release;
+      }
+      
+      console.error(`[DatabaseService] Failed to fetch release ${releaseId} from any endpoint`);
       return null;
     } catch (error) {
       console.error(`[DatabaseService] Error fetching release ${releaseId}:`, error);

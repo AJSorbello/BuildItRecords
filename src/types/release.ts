@@ -2,50 +2,53 @@ import type { Artist, Track, SpotifyImage, SpotifyExternalUrls, RecordLabelId } 
 
 export interface Release {
   label_id?: string;
-  label_name?: any;
   id: string;
-  title?: string;
-  type: 'album' | 'single' | 'compilation';
-  artists: Artist[];
-  tracks?: Track[];
-  images: SpotifyImage[];
+  title: string;
+  type?: string;
+  release_date?: string;
   artwork_url?: string;
-  release_date: string;
-  release_date_precision?: string;
-  external_urls: SpotifyExternalUrls;
-  uri: string;
-  label?: string | RecordLabelId;
-  labelId?: RecordLabelId;
-  total_tracks: number;
-  spotifyUrl?: string;
+  artists?: Artist[];
+  tracks?: Track[];
+  images?: SpotifyImage[];
+  external_urls?: SpotifyExternalUrls;
   spotify_url?: string;
-  spotify_uri?: string;
-  status?: 'active' | 'draft' | 'archived';
-  name?: string; // For backward compatibility
-  catalog_number?: string; // Added for catalog numbers
-  artist_name?: string; // Added for fallback artist name
-  album_type?: string;  // Added for Spotify API compatibility
+  uri?: string;
+  album_type?: string;
+  total_tracks?: number;
+  available_markets?: string[];
+  href?: string;
+  name?: string;
+  release_date_precision?: string;
+  restrictions?: any;
+  artist_name?: string; 
+  catalog_number?: string; 
+  cover_url?: string;
+  popularity?: number;
+  popularity_rank?: number;
+  purchase_url?: string;
+  label?: any; // Can be a string, object with name/id, or null
+  [key: string]: any;
 }
 
 export interface ReleaseDetails extends Release {
-  popularity: number;
-  genres: string[];
-  copyrights: Array<{
+  description?: string;
+  genres?: string[];
+  popularity?: number;
+  tracks_count?: number;
+  tracks?: Track[];
+  copyrights?: Array<{
     text: string;
     type: string;
   }>;
-  available_markets: string[];
+  available_markets?: string[];
 }
 
-export interface LocalRelease extends Release {
-  localId: string;
-  createdAt: Date;
-  updatedAt: Date;
-  isActive: boolean;
-  isApproved: boolean;
-  submittedBy?: string;
-  approvedBy?: string;
-  notes?: string;
+export interface ReleasesResponse {
+  releases: Release[];
+  total?: number;
+  limit?: number;
+  offset?: number;
+  hasMore?: boolean;
 }
 
 export interface ReleaseUpdate {
@@ -101,6 +104,17 @@ export interface ReleaseFormData {
   releaseDate: string;
   label: string;
   featured: boolean;
+}
+
+export interface LocalRelease extends Release {
+  localId: string;
+  createdAt: Date;
+  updatedAt: Date;
+  isActive: boolean;
+  isApproved: boolean;
+  submittedBy?: string;
+  approvedBy?: string;
+  notes?: string;
 }
 
 export const getArtistName = (artist: string | { id: string; name: string; uri: string }): string => {

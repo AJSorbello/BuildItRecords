@@ -24,13 +24,13 @@ export type Album = {
 
 export type Track = {
   id: string;
-  title: string;
-  name: string;
-  duration: number;
-  track_number: number;
-  disc_number: number;
-  preview_url?: string | null;
+  title?: string;
+  name?: string;
   duration_ms?: number;
+  duration?: number;
+  track_number?: number;
+  disc_number?: number;
+  preview_url?: string | null;
   spotifyUrl?: string;
   spotify_url?: string;
   external_urls?: SpotifyExternalUrls;
@@ -38,9 +38,18 @@ export type Track = {
   release?: Album;
   album?: Album;
   artists: Artist[];
-  remixer?: Artist;
+  explicit?: boolean;
   isrc: string;
   type: 'track';
+  isRemix?: boolean;
+  remixer?: {
+    id: string;
+    name: string;
+    role: string;
+    image_url?: string;
+  };
+  // Additional fields that might be present in the API response
+  [key: string]: any;
 };
 
 export type RecordLabelId = string;

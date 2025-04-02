@@ -26,7 +26,8 @@ import {
   CardContent,
   CardActions,
   Button,
-  Modal
+  Modal,
+  Tooltip
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import MusicNoteIcon from '@mui/icons-material/MusicNote';
@@ -54,7 +55,8 @@ const ArtistModal = (props: ArtistModalProps) => {
   const [releases, setReleases] = useState<Release[]>([]);
   const [tracks, setTracks] = useState<Track[]>([]);
   const [loading, setLoading] = useState(false);
-  const [releasesLoading, setReleasesLoading] = useState(false);
+  const [loadingReleases, setLoadingReleases] = useState(false);
+  const [hasReleases, setHasReleases] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
   const [labels, setLabels] = useState<{ id: string; name?: string }[]>([]);
@@ -304,35 +306,38 @@ const ArtistModal = (props: ArtistModalProps) => {
     }
   };
 
-  // Fetch releases for the artist
-  const fetchReleases = async () => {
-    if (!artist?.id) return;
-    
-    setReleasesLoading(true);
-    console.log(`[ArtistModal] Fetching releases for artist: ${artist.id} (${artist.name})`);
+  // Load artist releases
+  const loadArtistReleases = async () => {
+    if (!artist || !artist.id) return;
     
     try {
-      const artistReleases = await databaseService.getArtistReleases(artist.id);
-      console.log(`[ArtistModal] Received artist releases:`, artistReleases);
+      setLoadingReleases(true);
+      console.log(`[ArtistModal] Loading releases for artist ${artist.id}`);
       
-      if (artistReleases && Array.isArray(artistReleases.releases)) {
-        // Filter out compilations that don't include the artist
-        const filteredReleases = artistReleases.releases.filter(release => {
-          if (!isCompilation(release)) return true;
-          return isArtistInRelease(release, artist.id);
-        });
-        
-        console.log(`[ArtistModal] Filtered releases:`, filteredReleases);
-        setReleases(filteredReleases);
-      } else {
-        console.warn(`[ArtistModal] No releases found or invalid response format`);
-        setReleases([]);
-      }
+      // Get artist releases from the database service
+      const artistReleases = await databaseService.getArtistReleases(artist.id);
+      
+      console.log(`[ArtistModal] Loaded ${artistReleases.length} releases for artist ${artist.id}`);
+      
+      // Debug log for inspection
+      console.log('[ArtistModal] All releases details:', artistReleases.map(r => ({
+        id: r.id,
+        title: r.title,
+        artistRole: (r as any).artistRole || 'Artist',
+        trackTitle: (r as any).artistTrackTitle || '',
+        trackCount: r.tracks?.length,
+        trackTitles: r.tracks?.map(t => t.title)
+      })));
+      
+      // Set state with releases (will trigger re-render)
+      setReleases(artistReleases);
+      setHasReleases(artistReleases.length > 0);
     } catch (error) {
-      console.error('[ArtistModal] Error fetching artist releases:', error);
+      console.error('[ArtistModal] Error loading artist releases:', error);
       setReleases([]);
+      setHasReleases(false);
     } finally {
-      setReleasesLoading(false);
+      setLoadingReleases(false);
     }
   };
 
@@ -359,7 +364,7 @@ const ArtistModal = (props: ArtistModalProps) => {
 
   // Render releases
   const renderReleases = () => {
-    if (releasesLoading) {
+    if (loadingReleases) {
       return (
         <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
           <CircularProgress />
@@ -367,7 +372,7 @@ const ArtistModal = (props: ArtistModalProps) => {
       );
     }
     
-    if (!releases || releases.length === 0) {
+    if (!hasReleases) {
       return (
         <Box sx={{ p: 3, textAlign: 'center' }}>
           <Typography color="text.secondary" gutterBottom>No releases found for this artist</Typography>
@@ -408,6 +413,7 @@ const ArtistModal = (props: ArtistModalProps) => {
                   <TableRow>
                     <TableCell>Title</TableCell>
                     <TableCell>Artists</TableCell>
+                    <TableCell>Role</TableCell>
                     <TableCell>Duration</TableCell>
                     <TableCell>Released</TableCell>
                     <TableCell align="center">Play</TableCell>
@@ -437,6 +443,90 @@ const ArtistModal = (props: ArtistModalProps) => {
                       (release.spotify_url) ||
                       ''
                     );
+
+                    // Determine artist role on this release
+                    let artistRole = 'Artist';
+                    let remixTrackName = '';
+                    
+                    // Check if we have a role from the database service
+                    const releaseAny = release as any;
+                    if (releaseAny.artistRole) {
+                      if (releaseAny.artistRole === 'remixer') {
+                        artistRole = 'Remixer';
+                      } else if (releaseAny.artistRole === 'featured') {
+                        artistRole = 'Featured';
+                      }
+                    } else {
+                      // Use the logic we previously had as fallback
+                      
+                      // Check if artist is a primary artist on the release
+                      const isPrimaryArtist = release.artists && 
+                        Array.isArray(release.artists) && 
+                        release.artists.some(a => a.id === artist?.id);
+                      
+                      // Check if artist is a remixer on any of the tracks
+                      if (release.tracks && Array.isArray(release.tracks)) {
+                        for (const track of release.tracks) {
+                          // Check for remix in track title
+                          if (track.title && track.title.toLowerCase().includes('remix')) {
+                            const trackAny = track as any;
+                            
+                            // Check if this artist is the remixer
+                            if (trackAny.remixer && trackAny.remixer.id === artist?.id) {
+                              artistRole = 'Remixer';
+                              remixTrackName = track.title || '';
+                              break;
+                            }
+                            
+                            // If track name contains artist name + remix, assume they're the remixer
+                            if (artist?.name && 
+                                track.title.toLowerCase().includes(artist.name.toLowerCase()) && 
+                                track.title.toLowerCase().includes('remix')) {
+                              artistRole = 'Remixer';
+                              remixTrackName = track.title || '';
+                              break;
+                            }
+                          }
+                          
+                          // Check if artist is featured on this track but not a primary artist
+                          if (!isPrimaryArtist && 
+                              track.artists && 
+                              Array.isArray(track.artists) && 
+                              track.artists.some(a => a.id === artist?.id)) {
+                            artistRole = 'Featured';
+                            break;
+                          }
+                        }
+                      }
+                      
+                      // Check if this is a compilation album
+                      if (artistRole === 'Artist' && 
+                          (isCompilation(release) || 
+                          (release.title && release.title.toLowerCase().includes('compilation')))) {
+                        artistRole = 'Compilation';
+                      }
+                    }
+                    
+                    // Get all tracks for this artist on this release
+                    const artistTracks: any[] = [];
+                    if (release.tracks && Array.isArray(release.tracks)) {
+                      for (const track of release.tracks) {
+                        // For remixes where this artist is the remixer
+                        const trackAny = track as any;
+                        if (trackAny.remixer && trackAny.remixer.id === artist?.id) {
+                          artistTracks.push(track);
+                          if (!remixTrackName) {
+                            remixTrackName = track.title || '';
+                          }
+                        }
+                        
+                        // For tracks where artist is one of the artists
+                        else if (track.artists && Array.isArray(track.artists) && 
+                                track.artists.some(a => a.id === artist?.id)) {
+                          artistTracks.push(track);
+                        }
+                      }
+                    }
 
                     // Calculate duration
                     let duration = '--:--';
@@ -641,8 +731,35 @@ const ArtistModal = (props: ArtistModalProps) => {
                           })()}
                         </TableCell>
                         <TableCell>
-                          {duration}
+                          <Typography variant="body2" color={
+                            artistRole === 'Remixer' ? 'secondary.main' :
+                            artistRole === 'Featured' ? 'info.main' :
+                            artistRole === 'Compilation' ? 'text.secondary' :
+                            'text.primary'
+                          }>
+                            {artistRole}
+                            {remixTrackName && artistRole === 'Remixer' && (
+                              <Tooltip title={remixTrackName}>
+                                <Typography variant="caption" display="block" color="text.secondary" 
+                                  sx={{ 
+                                    maxWidth: '150px', 
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap'
+                                  }}
+                                >
+                                  {remixTrackName}
+                                </Typography>
+                              </Tooltip>
+                            )}
+                            {artistTracks && artistTracks.length > 0 && artistRole !== 'Artist' && (
+                              <Typography variant="caption" display="block" color="text.secondary">
+                                {artistTracks.length} track{artistTracks.length !== 1 ? 's' : ''}
+                              </Typography>
+                            )}
+                          </Typography>
                         </TableCell>
+                        <TableCell>{duration}</TableCell>
                         <TableCell>
                           {release.release_date ? formatDate(release.release_date) : 'Unknown'}
                         </TableCell>
@@ -679,7 +796,7 @@ const ArtistModal = (props: ArtistModalProps) => {
   useEffect(() => {
     if (open && artist?.id) {
       console.log(`[ArtistModal] Modal opened for artist: ${artist.id} (${artist.name})`);
-      fetchReleases();
+      loadArtistReleases();
       fetchArtistLabels();
     }
   }, [open, artist?.id]);

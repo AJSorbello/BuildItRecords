@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Card,
   CardActionArea,
@@ -21,26 +21,16 @@ import { ReleaseModal } from './modals/ReleaseModal';
 import ArtistModal from './modals/ArtistModal';
 import { formatDate } from '../utils/dateUtils';
 import { Artist } from '../types/artist';
-import { databaseService } from '../services/DatabaseService'; // Assuming databaseService is imported from here
-
-// Styled component for album artwork
-const AlbumArtwork = styled(Box)<{ artworkUrl?: string }>(({ theme, artworkUrl }) => ({
-  position: 'relative',
-  width: '100%',
-  paddingTop: '100%', // 1:1 aspect ratio
-  backgroundSize: 'cover',
-  backgroundPosition: 'center',
-  borderRadius: '4px 4px 0 0',
-  backgroundImage: artworkUrl ? `url("${artworkUrl}")` : 'none',
-}));
+import { databaseService } from '../services/DatabaseService';
 
 interface ReleaseCardProps {
   release: Release;
   ranking?: number;
   onClick?: () => void;
+  onReleaseClick?: (release: Release) => void;
 }
 
-export const ReleaseCard = ({ release, ranking, onClick }: ReleaseCardProps) => {
+export const ReleaseCard = ({ release, ranking, onClick, onReleaseClick }: ReleaseCardProps) => {
   const [modalOpen, setModalOpen] = React.useState(false);
   const [artistModalOpen, setArtistModalOpen] = React.useState(false);
   const [selectedArtist, setSelectedArtist] = React.useState<Artist | null>(null);
@@ -49,45 +39,50 @@ export const ReleaseCard = ({ release, ranking, onClick }: ReleaseCardProps) => 
   const theme = useMuiTheme();
 
   const handleClick = async () => {
-    if (onClick) {
-      onClick();
-    }
-    
-    console.log('[ReleaseCard] Opening modal for release:', {
-      id: release.id,
-      title: release.title,
-      hasArtists: release.artists?.length > 0,
-      hasTracks: release.tracks?.length > 0,
-      trackCount: release.tracks?.length || 0
-    });
-    
-    // Check if we need to fetch complete release data
-    if (!release.tracks || release.tracks.length === 0) {
-      setLoading(true);
-      try {
-        console.log('[ReleaseCard] Fetching complete release data for:', release.id);
-        const completeReleaseData = await databaseService.getRelease(release.id);
+    try {
+      console.log(`[ReleaseCard] Clicked on release: ${release.id} - ${release.title}`);
+      
+      // Check if we need to fetch more complete release data
+      if (!release.tracks || release.tracks.length === 0) {
+        console.log(`[ReleaseCard] Release ${release.id} has no tracks, fetching complete data`);
         
-        if (completeReleaseData) {
-          console.log('[ReleaseCard] Successfully fetched complete release data with tracks:', 
-            completeReleaseData.tracks?.length || 0);
-          setCompleteRelease(completeReleaseData);
+        setLoading(true);
+        
+        // Fetch the complete release with tracks
+        const fetchedRelease = await databaseService.getRelease(release.id);
+        
+        setLoading(false);
+        
+        if (fetchedRelease) {
+          console.log(`[ReleaseCard] Successfully fetched complete release data for ${release.id}`, {
+            hasTracks: fetchedRelease.tracks && fetchedRelease.tracks.length > 0,
+            trackCount: fetchedRelease.tracks?.length || 0
+          });
+          
+          // Open the modal with the complete release data
+          setCompleteRelease(fetchedRelease);
         } else {
-          console.error('[ReleaseCard] Failed to fetch complete release data');
+          console.warn(`[ReleaseCard] Failed to fetch complete release data for ${release.id}, using original data`);
           setCompleteRelease(release);
         }
-      } catch (error) {
-        console.error('[ReleaseCard] Error fetching complete release data:', error);
+      } else {
+        // We already have tracks, use the existing release data
+        console.log(`[ReleaseCard] Release ${release.id} already has ${release.tracks.length} tracks`);
         setCompleteRelease(release);
-      } finally {
-        setLoading(false);
       }
-    } else {
+    } catch (error) {
+      console.error(`[ReleaseCard] Error handling click for release ${release.id}:`, error);
+      // Fall back to using the original release data
       setCompleteRelease(release);
     }
-    
-    setModalOpen(true);
   };
+
+  useEffect(() => {
+    if (completeRelease) {
+      if (onReleaseClick) onReleaseClick(completeRelease);
+      setModalOpen(true);
+    }
+  }, [completeRelease, onReleaseClick]);
 
   const handleCloseModal = () => {
     setModalOpen(false);
@@ -222,10 +217,14 @@ export const ReleaseCard = ({ release, ranking, onClick }: ReleaseCardProps) => 
         )}
 
         <CardActionArea onClick={handleClick} sx={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
-          <AlbumArtwork 
-            artworkUrl={artworkUrl} // Pass artworkUrl as a prop
+          <CardMedia
+            component="img"
+            image={artworkUrl}
+            alt={release.title}
             sx={{ 
-              marginBottom: 0,
+              aspectRatio: '1/1',
+              objectFit: 'cover',
+              borderRadius: '4px 4px 0 0',
             }}
           />
           <Box 

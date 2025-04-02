@@ -1,7 +1,6 @@
 import React from 'react';
-import { Box, Typography, List, ListItem, ListItemText, Paper, Alert, IconButton, Avatar, Grid, Tooltip } from '@mui/material';
+import { Box, Typography, List, ListItem, ListItemText, Paper, Alert, IconButton, Avatar, Grid, Tooltip, useTheme } from '@mui/material';
 import { PlayArrow, QueueMusic, Add, MusicNote } from '@mui/icons-material';
-import { styled } from '@mui/material/styles';
 import { Release } from '../types/release';
 import { RecordLabel } from '../constants/labels';
 import { databaseService } from '../services/DatabaseService';
@@ -13,38 +12,7 @@ interface TopReleasesProps {
 
 const TOP_RELEASES_LIMIT = 10;
 
-const StyledListItem = styled(ListItem)(({ theme }) => ({
-  '&:hover': {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-  },
-  borderRadius: theme.spacing(1),
-  marginBottom: theme.spacing(0.5),
-  padding: theme.spacing(1),
-}));
-
-const AlbumArt = styled(Avatar)(({ theme }) => ({
-  width: 48,
-  height: 48,
-  marginRight: theme.spacing(2),
-  borderRadius: theme.spacing(1),
-  aspectRatio: '1/1',
-}));
-
-const PlayIconButton = styled(IconButton)(({ theme }) => ({
-  width: 28,
-  height: 28,
-  borderRadius: '50%',
-  backgroundColor: 'rgba(255, 255, 255, 0.1)',
-  color: theme.palette.primary.main,
-  marginLeft: theme.spacing(1),
-  '&:hover': {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  '& svg': {
-    fontSize: 16,
-  }
-}));
-
+// Remove styled components and use sx prop directly
 const getTopReleasesTitle = (labelId: string) => {
   switch (labelId) {
     case 'buildit-records':
@@ -62,6 +30,7 @@ export const TopReleases = ({ label }: TopReleasesProps) => {
   const [topReleases, setTopReleases] = React.useState<Release[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const theme = useTheme();
 
   const title = getTopReleasesTitle(label.id);
 
@@ -110,22 +79,22 @@ export const TopReleases = ({ label }: TopReleasesProps) => {
         <Typography variant="h6" gutterBottom>
           Top Releases
         </Typography>
-        <Alert severity="error" sx={{ mt: 2 }}>
-          {error}
-        </Alert>
+        <Box sx={{ py: 2, flexGrow: 1 }}>
+          <Alert severity="error">{error}</Alert>
+        </Box>
       </Box>
     );
   }
 
-  if (!topReleases.length) {
+  if (topReleases.length === 0) {
     return (
       <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
         <Typography variant="h6" gutterBottom>
           Top Releases
         </Typography>
-        <Alert severity="info" sx={{ mt: 2 }}>
-          No releases found
-        </Alert>
+        <Box sx={{ py: 2, flexGrow: 1 }}>
+          <Alert severity="info">No top releases found</Alert>
+        </Box>
       </Box>
     );
   }
@@ -133,55 +102,110 @@ export const TopReleases = ({ label }: TopReleasesProps) => {
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Typography variant="h6" gutterBottom>
-        Various Artists
+        Top Releases
       </Typography>
       
       <Box sx={{ overflow: 'auto', flexGrow: 1 }}>
-        {topReleases.map((release, index) => (
-          <Box 
-            key={release.id} 
-            sx={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              mb: 2,
-              '&:hover': {
-                backgroundColor: 'rgba(255, 255, 255, 0.05)',
-              },
-              borderRadius: 1,
-              padding: 1
-            }}
-          >
-            <Box sx={{ mr: 2 }}>
-              <AlbumArt
-                src={release.artwork_url || release.images?.[0]?.url}
-                variant="square"
-                alt={release.title}
-              />
-            </Box>
+        <List sx={{ width: '100%', p: 0 }}>
+          {topReleases.map((release, index) => {
+            const artistNames = release.artists && release.artists.length > 0
+              ? release.artists.map(a => a.name).join(', ')
+              : 'Various Artists';
             
-            <Box sx={{ flexGrow: 1 }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 'medium' }}>
-                {release.type === 'compilation' 
-                  ? 'Various Artists'
-                  : (release.artists && release.artists.length > 0
-                      ? release.artists.map(artist => artist.name).join(', ')
-                      : (release.artist_name || 'Unknown Artist'))}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {release.tracks?.[0]?.title || release.title}
-              </Typography>
-            </Box>
+            // Get popularity rank from release or use index+1 as fallback
+            const popularityRank = (release as any).popularityRank || index + 1;
             
-            <Tooltip title="Play on Spotify">
-              <PlayIconButton
-                onClick={() => openSpotifyUrl(release.spotify_url || release.external_urls?.spotify || '')}
-                aria-label="play on spotify"
+            return (
+              <ListItem
+                key={release.id}
+                disablePadding
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                  '&:hover': {
+                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                  },
+                  '&:hover .play-button': {
+                    opacity: 1,
+                  },
+                  borderRadius: theme.spacing(1),
+                  marginBottom: theme.spacing(0.5),
+                  padding: theme.spacing(1),
+                }}
+                onClick={() => openSpotifyUrl(release.spotify_url || '')}
               >
-                <PlayArrow fontSize="small" />
-              </PlayIconButton>
-            </Tooltip>
-          </Box>
-        ))}
+                {/* Popularity Rank */}
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    minWidth: 30, 
+                    fontWeight: 'bold',
+                    color: theme.palette.text.secondary,
+                    fontSize: '0.875rem',
+                    textAlign: 'center'
+                  }}
+                >
+                  {popularityRank}
+                </Typography>
+                
+                <Avatar
+                  src={release.artwork_url || release.images?.[0]?.url || '/images/placeholder-release.jpg'}
+                  alt={release.title}
+                  variant="rounded"
+                  sx={{
+                    width: 48,
+                    height: 48,
+                    marginRight: theme.spacing(2),
+                    borderRadius: theme.spacing(1),
+                    aspectRatio: '1/1',
+                  }}
+                />
+                <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
+                  <Typography
+                    variant="body2"
+                    noWrap
+                    sx={{ fontWeight: 'bold' }}
+                  >
+                    {release.title}
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    noWrap
+                    sx={{ color: 'text.secondary', display: 'block' }}
+                  >
+                    {artistNames}
+                  </Typography>
+                </Box>
+                <IconButton
+                  className="play-button"
+                  size="small"
+                  sx={{ 
+                    opacity: 0.7,
+                    width: 28,
+                    height: 28,
+                    borderRadius: '50%',
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    color: theme.palette.primary.main,
+                    marginLeft: theme.spacing(1),
+                    '&:hover': {
+                      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                    },
+                    '& svg': {
+                      fontSize: 16,
+                    }
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openSpotifyUrl(release.spotify_url || '');
+                  }}
+                >
+                  <PlayArrow />
+                </IconButton>
+              </ListItem>
+            );
+          })}
+        </List>
       </Box>
     </Box>
   );

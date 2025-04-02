@@ -34,6 +34,13 @@ export interface Artist extends ArtistBase {
   labels?: Array<{ id: string; name?: string }>;
   label_id?: string | number;
   labelId?: string | number;
+  images?: Array<{
+    url: string;
+    width?: number;
+    height?: number;
+  }>;
+  // Additional fields that might be present in the API response
+  [key: string]: any;
 }
 
 // Simplified interface for tests and other scenarios
