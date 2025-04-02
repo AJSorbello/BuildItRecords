@@ -67,7 +67,8 @@ const TechSidebar: React.FC<TechSidebarProps> = ({
     { text: 'Home', icon: <HomeIcon />, path: '/tech' },
     { text: 'Artists', icon: <PeopleIcon />, path: '/tech/artists' },
     { text: 'Releases', icon: <AlbumIcon />, path: '/tech/releases' },
-    { text: 'Playlists', icon: <QueueMusicIcon />, path: '/tech/playlists' },
+    // Temporarily hiding Playlists until it's set up
+    // { text: 'Playlists', icon: <QueueMusicIcon />, path: '/tech/playlists' },
     { text: 'Submit', icon: <SendIcon />, path: '/tech/submit' },
   ];
 

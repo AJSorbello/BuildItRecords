@@ -120,7 +120,8 @@ const Sidebar: React.FC<SidebarProps> = ({ label, mobileOpen = false, onMobileCl
     { text: 'Home', icon: <HomeIcon />, path: `/${label === 'records' ? '' : label}` },
     { text: 'Artists', icon: <PersonIcon />, path: `/${label}/artists` },
     { text: 'Releases', icon: <AlbumIcon />, path: `/${label}/releases` },
-    { text: 'Playlists', icon: <PlaylistIcon />, path: `/${label}/playlists` },
+    // Temporarily hiding Playlists until it's set up
+    // { text: 'Playlists', icon: <PlaylistIcon />, path: `/${label}/playlists` },
     { text: 'Submit Demo', icon: <SendIcon />, path: `/${label}/submit` },
   ];
 

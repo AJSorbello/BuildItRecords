@@ -16,6 +16,7 @@ import {
   TableRow,
   Paper,
   Avatar,
+  AvatarGroup,
   Link,
   Divider,
   CircularProgress,
@@ -574,19 +575,35 @@ export const ReleaseModal = ({ open, onClose, release, onArtistClick }: ReleaseM
                     <TableBody>
                       {tracks.map((track, index) => {
                         // For remix tracks, display the remixer instead of the original artist
-                        const displayArtist = track.isRemix && track.remixer
-                          ? { 
-                              id: track.remixer.id,
-                              name: track.remixer.name, 
-                              image_url: track.remixer.image_url || '/images/placeholder-artist.jpg'
-                            }
-                          : (track.artists && track.artists.length > 0 ? track.artists[0] : null);
+                        let displayArtist;
+                        let combinedArtistName = '';
+                        
+                        if (track.isRemix && track.remixer) {
+                          // For remixes, show the remixer
+                          displayArtist = { 
+                            id: track.remixer.id,
+                            name: track.remixer.name, 
+                            image_url: track.remixer.image_url || '/images/placeholder-artist.jpg'
+                          };
+                        } else if (track.artists && track.artists.length > 0) {
+                          // For regular tracks with collaborating artists
+                          // Use the first artist for the avatar image
+                          displayArtist = track.artists[0];
+                          
+                          // Create a combined name for all artists (e.g. "Anmol Jhanb & Bob Bentley")
+                          combinedArtistName = track.artists.map(a => a.name).join(' & ');
+                          
+                          console.log(`[ReleaseModal] Combined artist name: ${combinedArtistName}`);
+                        } else {
+                          displayArtist = null;
+                        }
                         
                         // Debug logging to check artist image
                         console.log(`[ReleaseModal] Track ${index + 1}: ${track.title}`, {
                           isRemix: track.isRemix,
                           remixer: track.remixer,
-                          displayArtist
+                          displayArtist,
+                          artistCount: track.artists?.length || 0
                         });
                         
                         return (
@@ -596,14 +613,82 @@ export const ReleaseModal = ({ open, onClose, release, onArtistClick }: ReleaseM
                             <TableCell>
                               {displayArtist && (
                                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                  <Avatar 
-                                    src={getTrackArtistImage(displayArtist)} 
-                                    alt={displayArtist.name}
-                                    sx={{ width: 24, height: 24, mr: 1 }}
-                                  />
-                                  <Typography variant="body2">
-                                    {displayArtist.name}
-                                  </Typography>
+                                  {combinedArtistName ? (
+                                    // For multiple artists, show an avatar group
+                                    <AvatarGroup 
+                                      max={2} 
+                                      sx={{ 
+                                        '& .MuiAvatar-root': { 
+                                          width: 24, 
+                                          height: 24 
+                                        }, 
+                                        mr: 1 
+                                      }}
+                                    >
+                                      {track.artists.map((artist, artistIndex) => (
+                                        <Avatar 
+                                          key={artist.id || `artist-${artistIndex}`}
+                                          src={getTrackArtistImage(artist)} 
+                                          alt={artist.name}
+                                        />
+                                      ))}
+                                    </AvatarGroup>
+                                  ) : (
+                                    // For a single artist, show single avatar
+                                    <Avatar 
+                                      src={getTrackArtistImage(displayArtist)} 
+                                      alt={displayArtist.name}
+                                      sx={{ width: 24, height: 24, mr: 1 }}
+                                    />
+                                  )}
+                                  
+                                  {combinedArtistName ? (
+                                    // If there are multiple artists, split and make each one clickable
+                                    <Box>
+                                      {track.artists.map((artist, artistIndex) => (
+                                        <Box component="span" key={artist.id || `artist-${artistIndex}`}>
+                                          <Typography
+                                            component="span"
+                                            variant="body2"
+                                            sx={{
+                                              cursor: 'pointer',
+                                              '&:hover': {
+                                                textDecoration: 'underline',
+                                                color: 'primary.main',
+                                              },
+                                            }}
+                                            onClick={() => {
+                                              console.log(`[ReleaseModal] Artist clicked: ${artist.name}`);
+                                              onArtistClick && onArtistClick(artist);
+                                            }}
+                                          >
+                                            {artist.name}
+                                          </Typography>
+                                          {artistIndex < track.artists.length - 1 && (
+                                            <Typography component="span" variant="body2"> & </Typography>
+                                          )}
+                                        </Box>
+                                      ))}
+                                    </Box>
+                                  ) : (
+                                    // If there's a single artist, make it clickable
+                                    <Typography
+                                      variant="body2"
+                                      sx={{
+                                        cursor: 'pointer',
+                                        '&:hover': {
+                                          textDecoration: 'underline',
+                                          color: 'primary.main',
+                                        },
+                                      }}
+                                      onClick={() => {
+                                        console.log(`[ReleaseModal] Artist clicked: ${displayArtist.name}`);
+                                        onArtistClick && onArtistClick(displayArtist);
+                                      }}
+                                    >
+                                      {displayArtist.name}
+                                    </Typography>
+                                  )}
                                 </Box>
                               )}
                             </TableCell>

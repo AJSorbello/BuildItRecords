@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { useState } from 'react';
 import { 
   Drawer, 
   List, 
@@ -41,12 +41,8 @@ interface DeepSidebarProps {
   onMobileClose?: () => void;
   label: 'records' | 'tech' | 'deep';
   sx?: object;
-  navigate: NavigateFunction;
-  isMobile: boolean;
-}
-
-interface DeepSidebarState {
-  socialOpen: boolean;
+  navigate?: NavigateFunction;
+  isMobile?: boolean;
 }
 
 // Wrapper to get hooks
@@ -62,203 +58,197 @@ const DeepSidebarWrapper: React.FC<Omit<DeepSidebarProps, 'navigate' | 'isMobile
   />;
 };
 
-class DeepSidebar extends Component<DeepSidebarProps, DeepSidebarState> {
-  constructor(props: DeepSidebarProps) {
-    super(props);
-    this.state = {
-      socialOpen: false
-    };
-    this.handleNavigation = this.handleNavigation.bind(this);
-    this.toggleSocial = this.toggleSocial.bind(this);
-  }
+const DeepSidebar: React.FC<DeepSidebarProps> = ({
+  mobileOpen = false,
+  onMobileClose,
+  sx,
+  isMobile = false,
+  navigate,
+  label = 'deep'
+}) => {
+  const [socialOpen, setSocialOpen] = useState(false);
+  const color = labelColors.deep;
 
-  menuItems = [
+  const menuItems = [
     { text: 'Home', icon: <HomeIcon />, path: '/deep' },
     { text: 'Artists', icon: <PeopleIcon />, path: '/deep/artists' },
     { text: 'Releases', icon: <AlbumIcon />, path: '/deep/releases' },
-    { text: 'Playlists', icon: <QueueMusicIcon />, path: '/deep/playlists' },
+    // Temporarily hiding Playlists until it's set up
+    // { text: 'Playlists', icon: <QueueMusicIcon />, path: '/deep/playlists' },
     { text: 'Submit', icon: <SendIcon />, path: '/deep/submit' },
   ];
 
-  socialLinks = [
+  const socialLinks = [
     { icon: <FacebookIcon />, url: 'https://www.facebook.com/BuildItDeep/', label: 'Facebook' },
     { icon: <InstagramIcon />, url: 'https://www.instagram.com/builditdeep/', label: 'Instagram' },
     { icon: <YouTubeIcon />, url: 'https://www.youtube.com/builditdeep', label: 'YouTube' },
     { icon: <SoundCloudIcon />, url: 'https://soundcloud.com/builditdeep', label: 'SoundCloud' },
   ];
 
-  handleNavigation(path: string) {
-    const { navigate, isMobile, onMobileClose } = this.props;
-    navigate(path);
-    if (isMobile && onMobileClose) {
-      onMobileClose();
+  const handleNavigation = (path: string) => {
+    if (navigate) {
+      navigate(path);
+      if (isMobile && onMobileClose) {
+        onMobileClose();
+      }
     }
-  }
+  };
 
-  toggleSocial() {
-    this.setState(prevState => ({
-      socialOpen: !prevState.socialOpen
-    }));
-  }
+  const toggleSocial = () => {
+    setSocialOpen(!socialOpen);
+  };
 
-  render() {
-    const { mobileOpen = false, onMobileClose, sx, isMobile } = this.props;
-    const { socialOpen } = this.state;
-    const color = labelColors.deep;
-
-    return (
-      <Drawer
-        variant={isMobile ? "temporary" : "permanent"}
-        open={isMobile ? mobileOpen : true}
-        onClose={onMobileClose}
-        ModalProps={{
-          keepMounted: true,
-          disableEnforceFocus: false,
-          disableAutoFocus: false
-        }}
-        sx={{
-          display: { xs: isMobile ? 'block' : 'none', md: 'block' },
-          '& .MuiDrawer-paper': {
-            boxSizing: 'border-box',
-            width: drawerWidth,
-            marginTop: isMobile ? '64px' : '180px',
-            height: isMobile ? 'calc(100% - 64px)' : 'calc(100% - 180px)',
-            zIndex: isMobile ? 1200 : 1100,
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)',
-            backgroundColor: '#000000', // Force black background
-            backgroundImage: 'none', // Remove any background image
+  return (
+    <Drawer
+      variant={isMobile ? "temporary" : "permanent"}
+      open={isMobile ? mobileOpen : true}
+      onClose={onMobileClose}
+      ModalProps={{
+        keepMounted: true,
+        disableEnforceFocus: false,
+        disableAutoFocus: false
+      }}
+      sx={{
+        display: { xs: isMobile ? 'block' : 'none', md: 'block' },
+        '& .MuiDrawer-paper': {
+          boxSizing: 'border-box',
+          width: drawerWidth,
+          marginTop: isMobile ? '64px' : '180px',
+          height: isMobile ? 'calc(100% - 64px)' : 'calc(100% - 180px)',
+          zIndex: isMobile ? 1200 : 1100,
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)',
+          backgroundColor: '#000000', // Force black background
+          backgroundImage: 'none', // Remove any background image
+        },
+        '& .MuiBackdrop-root': {
+          backgroundColor: 'rgba(0, 0, 0, 0.7)'
+        },
+        '& .MuiPaper-root': {
+          backgroundColor: '#000000', // Force black on the paper element
+          backgroundImage: 'none',
+        },
+        '& .MuiModal-root': {
+          backgroundColor: '#000000',
+        }
+      }}
+      PaperProps={{
+        sx: {
+          width: drawerWidth,
+          backgroundColor: '#000000', // Force black background
+          backgroundImage: 'none', // Remove any background image
+          borderRight: '1px solid rgba(255, 255, 255, 0.12)',
+          display: 'flex',
+          flexDirection: 'column',
+          '& .MuiListItemIcon-root': {
+            color: color,
+            minWidth: '40px',
+            marginLeft: '12px'
           },
-          '& .MuiBackdrop-root': {
-            backgroundColor: 'rgba(0, 0, 0, 0.7)'
-          },
-          '& .MuiPaper-root': {
-            backgroundColor: '#000000', // Force black on the paper element
-            backgroundImage: 'none',
-          },
-          '& .MuiModal-root': {
-            backgroundColor: '#000000',
+          '& .MuiListItemText-root': {
+            color: '#ffffff',
+            '& .MuiTypography-root': {
+              fontSize: '1rem',
+              fontWeight: 700,
+              letterSpacing: '0.01em'
+            }
           }
-        }}
-        PaperProps={{
-          sx: {
-            width: drawerWidth,
-            backgroundColor: '#000000', // Force black background
-            backgroundImage: 'none', // Remove any background image
-            borderRight: '1px solid rgba(255, 255, 255, 0.12)',
-            display: 'flex',
-            flexDirection: 'column',
-            '& .MuiListItemIcon-root': {
-              color: color,
-              minWidth: '40px',
-              marginLeft: '12px'
-            },
-            '& .MuiListItemText-root': {
+        }
+      }}
+    >
+      {isMobile && (
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'flex-end', 
+          p: 1,
+          position: 'fixed',
+          right: 0,
+          top: '12px',
+          zIndex: 1200
+        }}>
+          <IconButton 
+            onClick={onMobileClose} 
+            sx={{ 
               color: '#ffffff',
-              '& .MuiTypography-root': {
-                fontSize: '1rem',
-                fontWeight: 700,
-                letterSpacing: '0.01em'
+              backgroundColor: 'rgba(0, 0, 0, 0.95)',
+              '&:hover': {
+                backgroundColor: 'rgba(0, 0, 0, 0.85)',
               }
-            },
-            ...sx
-          }
-        }}
-      >
-        {isMobile && (
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'flex-end', 
-            p: 1,
-            position: 'fixed',
-            right: 0,
-            top: '12px',
-            zIndex: 1200
-          }}>
-            <IconButton 
-              onClick={onMobileClose} 
-              sx={{ 
-                color: '#ffffff',
-                backgroundColor: 'rgba(0, 0, 0, 0.95)',
-                '&:hover': {
-                  backgroundColor: 'rgba(0, 0, 0, 0.85)',
-                }
-              }}
-            >
-              <CloseIcon />
-            </IconButton>
-          </Box>
-        )}
-        <List sx={{ flexGrow: 1, pt: 0 }}>
-          {this.menuItems.map((item) => (
-            <ListItem
-              button
-              key={item.text}
-              onClick={() => this.handleNavigation(item.path)}
-              sx={{
-                mb: 1,
-                padding: '12px 16px',
-                borderRadius: '6px',
-                transition: 'all 0.2s ease-in-out',
-                '&:hover': {
-                  backgroundColor: 'rgba(0, 150, 255, 0.15)',
-                  transform: 'translateX(3px)',
-                  '& .MuiListItemIcon-root': {
-                    color: '#0096FF'
-                  },
-                  '& .MuiListItemText-primary': {
-                    color: '#0096FF'
-                  }
-                }
-              }}
-            >
-              <ListItemIcon>{item.icon}</ListItemIcon>
-              <ListItemText primary={item.text} />
-            </ListItem>
-          ))}
-        </List>
-        
-        <Box sx={{ mt: 'auto', borderTop: '1px solid rgba(255, 255, 255, 0.12)', p: 2 }}>
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </Box>
+      )}
+      <List sx={{ flexGrow: 1, pt: 0 }}>
+        {menuItems.map((item) => (
           <ListItem
             button
-            onClick={this.toggleSocial}
-            sx={{ borderRadius: '4px' }}
+            key={item.text}
+            onClick={() => handleNavigation(item.path)}
+            sx={{
+              mb: 1,
+              padding: '12px 16px',
+              borderRadius: '6px',
+              transition: 'all 0.2s ease-in-out',
+              '&:hover': {
+                backgroundColor: 'rgba(0, 150, 255, 0.15)',
+                transform: 'translateX(3px)',
+                '& .MuiListItemIcon-root': {
+                  color: '#0096FF'
+                },
+                '& .MuiListItemText-root': {
+                  color: '#0096FF'
+                }
+              }
+            }}
           >
-            <ListItemText 
-              primary={
-                <Typography color="white" variant="subtitle2">
-                  Social Media
-                </Typography>
-              } 
-            />
-            {socialOpen ? <ExpandLess sx={{ color: 'white' }} /> : <ExpandMore sx={{ color: 'white' }} />}
+            <ListItemIcon>{item.icon}</ListItemIcon>
+            <ListItemText primary={item.text} />
           </ListItem>
-          <Collapse in={socialOpen} timeout="auto" unmountOnExit>
-            <List component="div" disablePadding>
-              {this.socialLinks.map((link) => (
-                <ListItem
-                  button
-                  key={link.url}
-                  onClick={() => window.open(link.url, '_blank')}
-                  sx={{ pl: 4 }}
-                >
-                  <ListItemIcon sx={{ color: 'white' }}>
-                    {link.icon}
-                  </ListItemIcon>
-                  <ListItemText 
-                    primary={
-                      <Typography color="white" variant="body2">
-                        {link.label}
-                      </Typography>
-                    }
-                  />
-                </ListItem>
-              ))}
-            </List>
-          </Collapse>
-        </Box>
-      </Drawer>
-    );
-  }
-}
+        ))}
+      </List>
+      
+      <Box sx={{ mt: 'auto', borderTop: '1px solid rgba(255, 255, 255, 0.12)', p: 2 }}>
+        <ListItem
+          button
+          onClick={toggleSocial}
+          sx={{ borderRadius: '4px' }}
+        >
+          <ListItemText 
+            primary={
+              <Typography color="white" variant="subtitle2">
+                Social Media
+              </Typography>
+            } 
+          />
+          {socialOpen ? <ExpandLess sx={{ color: 'white' }} /> : <ExpandMore sx={{ color: 'white' }} />}
+        </ListItem>
+        <Collapse in={socialOpen} timeout="auto" unmountOnExit>
+          <List component="div" disablePadding>
+            {socialLinks.map((link) => (
+              <ListItem
+                button
+                key={link.url}
+                onClick={() => window.open(link.url, '_blank')}
+                sx={{ pl: 4 }}
+              >
+                <ListItemIcon sx={{ color: 'white' }}>
+                  {link.icon}
+                </ListItemIcon>
+                <ListItemText 
+                  primary={
+                    <Typography color="white" variant="body2">
+                      {link.label}
+                    </Typography>
+                  }
+                />
+              </ListItem>
+            ))}
+          </List>
+        </Collapse>
+      </Box>
+    </Drawer>
+  );
+};
 
 export default DeepSidebarWrapper;

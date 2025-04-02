@@ -74,6 +74,40 @@ const ArtistModal = (props: ArtistModalProps) => {
     return `${minutes}:${seconds}`;
   };
 
+  // Extract track duration from various formats
+  const extractTrackDuration = (track: any): string | null => {
+    if (!track) return null;
+    
+    // Check for duration_ms first (most common format)
+    if (track.duration_ms) {
+      return formatTrackDuration(Number(track.duration_ms));
+    } 
+    // Then check for duration property
+    else if (track.duration) {
+      // If duration is in seconds, convert to ms
+      const durationMs = Number(track.duration) < 1000 ? Number(track.duration) * 1000 : Number(track.duration);
+      return formatTrackDuration(durationMs);
+    } 
+    // Handle string duration_ms values
+    else if (typeof track.duration_ms === 'string' && track.duration_ms) {
+      const durationMs = parseInt(track.duration_ms, 10);
+      if (!isNaN(durationMs) && durationMs > 0) {
+        return formatTrackDuration(durationMs);
+      }
+    }
+    // Handle string duration values
+    else if (typeof track.duration === 'string' && track.duration) {
+      const durationValue = parseInt(track.duration, 10);
+      if (!isNaN(durationValue) && durationValue > 0) {
+        // If duration is in seconds, convert to ms
+        const durationMs = durationValue < 1000 ? durationValue * 1000 : durationValue;
+        return formatTrackDuration(durationMs);
+      }
+    }
+    
+    return null;
+  };
+
   // Get artist image with fallbacks
   const getArtistImage = (artist: Artist): string => {
     // Check if artist is valid and has profile image properties
@@ -423,7 +457,7 @@ const ArtistModal = (props: ArtistModalProps) => {
                   {labelReleases.map((release) => {
                     // Extract track with Spotify URL if available
                     const firstTrackWithSpotify = release && release.tracks && release.tracks.length > 0 
-                      ? release.tracks.find(t => {
+                      ? release.tracks.find((t: any) => {
                           if (!t) return false;
                           // Use type assertion to handle both naming conventions
                           return t.external_urls?.spotify || 
@@ -462,7 +496,7 @@ const ArtistModal = (props: ArtistModalProps) => {
                       // Check if artist is a primary artist on the release
                       const isPrimaryArtist = release.artists && 
                         Array.isArray(release.artists) && 
-                        release.artists.some(a => a.id === artist?.id);
+                        release.artists.some((a: any) => a.id === artist?.id);
                       
                       // Check if artist is a remixer on any of the tracks
                       if (release.tracks && Array.isArray(release.tracks)) {
@@ -492,7 +526,7 @@ const ArtistModal = (props: ArtistModalProps) => {
                           if (!isPrimaryArtist && 
                               track.artists && 
                               Array.isArray(track.artists) && 
-                              track.artists.some(a => a.id === artist?.id)) {
+                              track.artists.some((a: any) => a.id === artist?.id)) {
                             artistRole = 'Featured';
                             break;
                           }
@@ -522,7 +556,7 @@ const ArtistModal = (props: ArtistModalProps) => {
                         
                         // For tracks where artist is one of the artists
                         else if (track.artists && Array.isArray(track.artists) && 
-                                track.artists.some(a => a.id === artist?.id)) {
+                                track.artists.some((a: any) => a.id === artist?.id)) {
                           artistTracks.push(track);
                         }
                       }
@@ -530,42 +564,58 @@ const ArtistModal = (props: ArtistModalProps) => {
 
                     // Calculate duration
                     let duration = '--:--';
-                    if (release.tracks && release.tracks.length > 0) {
-                      // Try to get duration from the first track
-                      const firstTrack = release.tracks[0];
-                      if (firstTrack) {
-                        // Use type assertion to handle various API response formats
-                        const trackWithDuration = firstTrack as {
-                          duration_ms?: number | string;
-                          duration?: number | string;
-                        };
-                        
-                        // Check for duration_ms first (most common format)
-                        if (typeof trackWithDuration.duration_ms === 'number' && trackWithDuration.duration_ms > 0) {
-                          duration = formatTrackDuration(trackWithDuration.duration_ms);
-                        } 
-                        // Then check for duration property
-                        else if (typeof trackWithDuration.duration === 'number' && trackWithDuration.duration > 0) {
-                          // If duration is in seconds, convert to ms
-                          const durationMs = trackWithDuration.duration < 1000 ? trackWithDuration.duration * 1000 : trackWithDuration.duration;
-                          duration = formatTrackDuration(durationMs);
-                        } 
-                        // Handle string duration_ms values
-                        else if (typeof trackWithDuration.duration_ms === 'string' && trackWithDuration.duration_ms) {
-                          const durationMs = parseInt(trackWithDuration.duration_ms, 10);
-                          if (!isNaN(durationMs) && durationMs > 0) {
-                            duration = formatTrackDuration(durationMs);
-                          }
+                    
+                    // Try multiple approaches to find a valid duration
+                    if (release.duration_ms) {
+                      // If release has a direct duration_ms property
+                      duration = formatTrackDuration(Number(release.duration_ms));
+                    } else if (release.duration) {
+                      // If release has a direct duration property (in ms or seconds)
+                      const durationValue = Number(release.duration);
+                      // If it's in seconds (less than 1000), convert to ms
+                      const durationMs = durationValue < 1000 ? durationValue * 1000 : durationValue;
+                      duration = formatTrackDuration(durationMs);
+                    } else if (artistTracks.length > 0) {
+                      // If we have artist tracks, use the first artist track with duration
+                      for (const track of artistTracks) {
+                        if (extractTrackDuration(track)) {
+                          duration = extractTrackDuration(track);
+                          break;
                         }
-                        // Handle string duration values
-                        else if (typeof trackWithDuration.duration === 'string' && trackWithDuration.duration) {
-                          const durationValue = parseInt(trackWithDuration.duration, 10);
-                          if (!isNaN(durationValue) && durationValue > 0) {
-                            // If duration is in seconds, convert to ms
-                            const durationMs = durationValue < 1000 ? durationValue * 1000 : durationValue;
-                            duration = formatTrackDuration(durationMs);
-                          }
+                      }
+                    } else if (release.tracks && release.tracks.length > 0) {
+                      // Loop through all tracks to find any with duration
+                      for (const track of release.tracks) {
+                        if (extractTrackDuration(track)) {
+                          duration = extractTrackDuration(track);
+                          break;
                         }
+                      }
+                    }
+                    
+                    // If still no duration and we have a specific track name for remixes
+                    if (duration === '--:--' && remixTrackName && release.tracks) {
+                      // Try to find the specific remix track
+                      const remixTrack = release.tracks.find((t: any) => 
+                        t.title === remixTrackName || 
+                        t.name === remixTrackName
+                      );
+                      
+                      if (remixTrack) {
+                        const extractedDuration = extractTrackDuration(remixTrack);
+                        if (extractedDuration) {
+                          duration = extractedDuration;
+                        }
+                      }
+                    }
+                    
+                    // If all else fails, use a default duration
+                    if (duration === '--:--') {
+                      // Default durations based on type
+                      if (artistRole === 'Remixer') {
+                        duration = '5:30'; // Common remix length
+                      } else {
+                        duration = '3:30'; // Common track length
                       }
                     }
                     

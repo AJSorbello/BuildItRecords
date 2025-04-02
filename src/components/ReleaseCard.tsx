@@ -105,26 +105,29 @@ export const ReleaseCard = ({ release, ranking, onClick, onReleaseClick }: Relea
       console.log('Artist image debug:', artist.id, artist.name, {
         profile_image_url: artist.profile_image_url,
         image: artist.image,
+        image_url: artist.image_url,
         images: artist.images,
         profile_picture: artist.profile_picture
       });
     }
     
     // Try all possible image properties in order of preference
-    const artistImage = artist.profile_image_url || 
+    const artistImage = artist.image_url || 
+           artist.profile_image_url || 
            artist.image ||
            artist.profile_picture ||
            (artist.images && artist.images.length > 0 ? artist.images[0].url : '') ||
-           (artist.profile_image_small_url) || 
-           (artist.profile_image_large_url);
+           artist.profile_image_small_url || 
+           artist.profile_image_large_url;
            
-    // If artist has no image, use the release artwork as fallback
-    if (!artistImage) {
-      console.log(`No image found for artist ${artist.name}, using release artwork as fallback`);
-      return getReleaseArtwork(release);
+    // If artist has no image, use a dedicated artist placeholder
+    // instead of falling back to the release artwork
+    if (!artistImage || artistImage === '') {
+      console.log(`[ReleaseCard] No image found for artist ${artist.name}, using artist placeholder`);
+      return '/images/placeholder-artist.jpg';
     }
     
-    return artistImage || '/images/placeholder-artist.jpg';
+    return artistImage;
   };
 
   // Get the best available release artwork

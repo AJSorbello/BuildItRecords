@@ -119,7 +119,8 @@ const RecordsSidebar: React.FC<RecordsSidebarInternalProps> = ({
     { text: 'Home', icon: <HomeIcon />, path: '/' },
     { text: 'Artists', icon: <PeopleIcon />, path: '/records/artists' },
     { text: 'Releases', icon: <AlbumIcon />, path: '/records/releases' },
-    { text: 'Playlists', icon: <QueueMusicIcon />, path: '/records/playlists' },
+    // Temporarily hiding Playlists until it's set up
+    // { text: 'Playlists', icon: <QueueMusicIcon />, path: '/records/playlists' },
     { text: 'Submit', icon: <ArrowBackIcon />, path: '/records/submit' },
   ];
 
@@ -306,21 +307,6 @@ const RecordsSidebar: React.FC<RecordsSidebarInternalProps> = ({
             ))}
           </List>
         </Collapse>
-      </Box>
-      
-      {/* Contact button */}
-      <Box sx={{ p: 2 }}>
-        <Button 
-          variant="contained" 
-          fullWidth 
-          onClick={() => handleNavigation('/contact')}
-          sx={{ 
-            backgroundColor: labelColor, 
-            '&:hover': { backgroundColor: `${labelColor}CC` } 
-          }}
-        >
-          Contact Us
-        </Button>
       </Box>
     </Drawer>
   );
