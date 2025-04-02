@@ -53,12 +53,8 @@
   ],
   "rewrites": [
     { 
-      "source": "/api/(.*)", 
-      "destination": "/api/$1" 
-    },
-    {
-      "source": "/(.*\\.(js|css|ico|png|jpg|jpeg|svg|gif|webp))",
-      "destination": "/$1"
+      "source": "/api/:path*", 
+      "destination": "/api/:path*" 
     },
     {
       "source": "/(.*)",
