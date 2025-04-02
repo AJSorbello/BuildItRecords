@@ -1171,54 +1171,30 @@ class DatabaseService {
         // Start with any existing popularity data
         let calculatedPopularity = release.popularity || 0;
         
-        // Use stream count if available
+        // Use stream count if available - this is the primary metric
         if (release.stream_count && typeof release.stream_count === 'number' && release.stream_count > 0) {
           // Convert stream count to a popularity value (0-100)
           const streamPopularity = Math.min(100, Math.max(40, Math.log10(release.stream_count) * 20));
           calculatedPopularity = Math.max(calculatedPopularity, streamPopularity);
         }
         
-        // Factor in release date, but with less weight than before
+        // Factor in release date as a secondary factor
         const releaseDate = release.release_date ? new Date(release.release_date).getTime() : 0;
         const now = Date.now();
         const ageInDays = (now - releaseDate) / (1000 * 60 * 60 * 24);
         
-        // Popularity boost for newer releases (but not the primary sorting factor)
-        const datePopularity = Math.max(10, 50 - Math.min(40, Math.floor(ageInDays / 60)));
+        // Smaller boost for newer releases
+        const datePopularity = Math.max(5, 20 - Math.min(15, Math.floor(ageInDays / 90)));
         
-        // Artist popularity factor
-        let artistPopularity = 0;
-        if (release.artists && release.artists.length) {
-          // Give higher scores to releases from popular artists
-          const popularArtists = ["Hot Keys", "MAONRO", "Roman Anthony", "Kwal", "Takes Two"];
-          const artistNames = release.artists.map(a => a.name);
-          
-          popularArtists.forEach((artist, index) => {
-            if (artistNames.some(name => name === artist)) {
-              // Earlier in the array = more popular
-              artistPopularity = Math.max(artistPopularity, 90 - (index * 5));
-            }
-          });
-        }
-        
-        // Track count factor - more tracks = potentially more popular (compilations, albums)
+        // Track count factor - for EPs and albums
         let trackCountPopularity = 0;
         if (release.total_tracks && release.total_tracks > 1) {
-          trackCountPopularity = Math.min(15, release.total_tracks * 2); 
+          trackCountPopularity = Math.min(10, release.total_tracks); 
         }
         
-        // Title popularity factor for releases with specific keywords
-        let titlePopularity = 0;
-        const popularTitles = ["No More", "Go All Out", "Lose Minds", "Play The Game", "Rollen", "My House"];
-        if (release.title && popularTitles.some(title => release.title.includes(title))) {
-          titlePopularity = 25;
-        }
-        
-        // Combine all factors, weighing explicit popularity data most heavily
-        const combinedPopularity = calculatedPopularity * 0.4 + 
-                                   artistPopularity * 0.3 + 
-                                   titlePopularity * 0.2 + 
-                                   datePopularity * 0.05 + 
+        // Final popularity score heavily weighted toward actual play metrics
+        const combinedPopularity = calculatedPopularity * 0.85 + 
+                                   datePopularity * 0.1 + 
                                    trackCountPopularity * 0.05;
         
         return {
