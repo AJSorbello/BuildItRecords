@@ -13,15 +13,13 @@ const TechHome: React.FC = () => {
     const fetchReleases = async () => {
       try {
         setLoading(true);
-        const response = await databaseService.getReleasesByLabelId('tech');
-        if (response.data) {
-          setReleases(response.data.map((release: any) => ({
-            ...release,
-            images: release.images || [],
-            release_date: release.release_date || new Date().toISOString(),
-            total_tracks: release.total_tracks || 1
-          })));
-        }
+        const fetchedReleases = await databaseService.getReleasesByLabelId('tech');
+        setReleases(fetchedReleases.map((release: any) => ({
+          ...release,
+          images: release.images || [],
+          release_date: release.release_date || new Date().toISOString(),
+          total_tracks: release.total_tracks || 1
+        })));
       } catch (err) {
         setError('Failed to fetch releases');
         console.error(err);
