@@ -50,48 +50,30 @@ const TechHome: React.FC = () => {
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Box sx={{ mb: 6 }}>
-        <Typography variant="h3" component="h1" gutterBottom align="center" sx={{ fontWeight: 'bold' }}>
+        <Typography 
+          variant="h3" 
+          component="h1" 
+          gutterBottom 
+          align="center" 
+          sx={{ fontWeight: 'bold', color: '#00bfff' }}
+        >
           Build It Tech
         </Typography>
-        <Typography variant="h5" component="h2" gutterBottom align="center" sx={{ fontStyle: 'italic', mb: 4 }}>
-          Pushing Boundaries in Tech House
+        <Typography 
+          variant="h5" 
+          component="p" 
+          gutterBottom 
+          align="center" 
+          sx={{ 
+            mb: 4,
+            maxWidth: '800px',
+            mx: 'auto',
+            lineHeight: 1.8,
+            color: '#e0e0e0'
+          }}
+        >
+          Build It Tech delivers electrifying tech house, minimal deep tech, and driving club sounds engineered for peak energy moments. Our releases fuse infectious grooves with innovative sound design, creating dynamic productions that command attention at festivals, clubs, and beyond. With relentless rhythms and genre-defying creativity, Build It Tech represents the cutting edge of electronic music made to move dancefloors worldwide.
         </Typography>
-
-        <Paper elevation={3} sx={{ p: 4, mb: 4, backgroundColor: 'rgba(0,0,0,0.6)' }}>
-          <Typography variant="h6" component="h3" gutterBottom sx={{ color: '#00bfff', fontWeight: 'bold' }}>
-            Our Mission
-          </Typography>
-          <Typography variant="body1" paragraph>
-            Build It Tech is all about redefining the sound of modern tech house. As the forward-thinking sibling of Build It Deep, we're committed to delivering music that drives the dance floor—from festivals to underground clubs. Our goal: push the genre forward with bold, high-quality releases.
-          </Typography>
-          
-          <Divider sx={{ my: 3, backgroundColor: 'rgba(255,255,255,0.1)' }} />
-          
-          <Typography variant="h6" component="h3" gutterBottom sx={{ color: '#00bfff', fontWeight: 'bold' }}>
-            The Sound
-          </Typography>
-          <Typography variant="body1" paragraph>
-            Our tracks blend groovy percussion, clean hooks, and cutting-edge production. Expect a mix of peak-time energy, minimal deep tech, and touches of techno and progressive vibes—crafted for DJs who want to stand out.
-          </Typography>
-          
-          <Divider sx={{ my: 3, backgroundColor: 'rgba(255,255,255,0.1)' }} />
-          
-          <Typography variant="h6" component="h3" gutterBottom sx={{ color: '#00bfff', fontWeight: 'bold' }}>
-            Driven by Innovation
-          </Typography>
-          <Typography variant="body1" paragraph>
-            We champion new sounds and technology. Whether it's analog gear or next-gen plugins, our artists explore what's next in electronic music. Build It Tech is more than a label—it's a space for experimentation and evolution.
-          </Typography>
-          
-          <Divider sx={{ my: 3, backgroundColor: 'rgba(255,255,255,0.1)' }} />
-          
-          <Typography variant="h6" component="h3" gutterBottom sx={{ color: '#00bfff', fontWeight: 'bold' }}>
-            Global Reach
-          </Typography>
-          <Typography variant="body1" paragraph>
-            From club residencies to international stages, our releases make waves. Played by top DJs and embraced by tastemakers, Build It Tech is shaping the sound of tomorrow's tech house scene.
-          </Typography>
-        </Paper>
       </Box>
 
       <Box sx={{ mb: 4 }}>

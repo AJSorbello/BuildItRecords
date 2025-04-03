@@ -62,7 +62,7 @@
 
 /* Default state: show MENU text */
 #menu-bar:before {
-  content: "MENU";
+  content: "";
   position: absolute;
   top: -14px;
   right: 0;

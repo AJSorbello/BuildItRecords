@@ -13,9 +13,15 @@ import {
   Paper,
   ToggleButtonGroup,
   ToggleButton,
-  ButtonGroup
+  ButtonGroup,
+  TextField,
+  InputAdornment,
+  IconButton
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
+import SearchIcon from '@mui/icons-material/Search';
+import ClearIcon from '@mui/icons-material/Clear';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import { ReleaseCard } from '../components/ReleaseCard';
 import { useParams } from 'react-router-dom';
 import { Release } from '../types/release';
@@ -88,12 +94,14 @@ export const ReleasesPage = ({ label: propLabel }: ReleasesPageProps) => {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { labelId } = useParams<{ labelId: string }>();
   const [releases, setReleases] = React.useState<Release[]>([]);
+  const [filteredReleases, setFilteredReleases] = React.useState<Release[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [totalReleases, setTotalReleases] = React.useState(0);
   const [currentPage, setCurrentPage] = React.useState(1);
   const [hasMore, setHasMore] = React.useState(false);
   const [releaseType, setReleaseType] = React.useState<'all' | 'album' | 'single' | 'compilation'>('all');
+  const [searchQuery, setSearchQuery] = React.useState('');
 
   const fetchReleases = async (page = 1) => {
     const mappedLabelId = getLabelId(labelId || propLabel);
@@ -182,6 +190,27 @@ export const ReleasesPage = ({ label: propLabel }: ReleasesPageProps) => {
   }, [labelId, propLabel, releaseType]);
   /* eslint-enable react-hooks/exhaustive-deps */
 
+  // Add filtering function for search
+  React.useEffect(() => {
+    if (!searchQuery.trim()) {
+      setFilteredReleases(releases);
+      return;
+    }
+
+    const query = searchQuery.toLowerCase().trim();
+    const filtered = releases.filter(release => {
+      const title = (release.title || release.name || '').toLowerCase();
+      const artistName = release.artists?.map(a => a.name || '').join(' ').toLowerCase() || '';
+      const releaseDate = release.release_date || '';
+      
+      return title.includes(query) || 
+             artistName.includes(query) || 
+             releaseDate.includes(query);
+    });
+
+    setFilteredReleases(filtered);
+  }, [searchQuery, releases]);
+
   const labelIdString = (labelId || propLabel || 'records');
   const mappedLabelId = getLabelId(labelIdString);
   const labelConfig = RECORD_LABELS[mappedLabelId];
@@ -237,8 +266,14 @@ export const ReleasesPage = ({ label: propLabel }: ReleasesPageProps) => {
     );
   }
 
-  // Validate releases
-  const validReleases = releases.filter(isValidRelease);
+  // Process releases from API response
+  const validReleases = filteredReleases
+    .filter(isValidRelease)
+    .map(release => ({
+      ...release,
+      title: release.title || release.name || 'Untitled Release',
+      artwork_url: release.artwork_url || release.images?.[0]?.url || '/placeholder.jpg',
+    }));
 
   if (validReleases.length === 0) {
     return (
@@ -267,25 +302,95 @@ export const ReleasesPage = ({ label: propLabel }: ReleasesPageProps) => {
   // Only show the latest release section if filter is 'all' or if there are releases matching the filter
   const showLatestRelease = releaseType === 'all' || validReleases.length > 0;
 
+  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(event.target.value);
+  };
+
+  const handleRefresh = () => {
+    setSearchQuery('');
+    refetch();
+  };
+
   return (
     <ErrorBoundary>
       <Container maxWidth="lg" sx={{ mt: 4, mb: 8, background: getGradientBackground() }}>
-        <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
+        <Box sx={{ mb: 4 }}>
           <Typography 
-            variant="h4" 
+            variant="h3" 
             component="h1" 
+            gutterBottom
             sx={{
               color: theme.palette.primary.main,
               fontWeight: 700,
-              fontSize: isMobile ? '1.5rem' : '2rem',
-              mb: 0
+              mb: 2
             }}
           >
             {labelConfig.displayName} Releases
           </Typography>
           
-          {/* Filter buttons are removed as requested */}
+          {/* Search Input - Styled to match the Artists page */}
+          <TextField
+            fullWidth
+            variant="outlined"
+            placeholder="Search releases..."
+            value={searchQuery}
+            onChange={handleSearchChange}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon sx={{ color: 'rgba(255, 255, 255, 0.7)' }} />
+                </InputAdornment>
+              ),
+            }}
+            sx={{ 
+              mb: 3,
+              '& .MuiOutlinedInput-root': {
+                borderRadius: '8px',
+                bgcolor: 'background.paper',
+                '& fieldset': {
+                  borderColor: 'rgba(255, 255, 255, 0.23)'
+                },
+                '&:hover fieldset': {
+                  borderColor: `${alpha(theme.palette.primary.main, 0.5)}`
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: theme.palette.primary.main
+                }
+              },
+              '& .MuiInputLabel-root.Mui-focused': {
+                color: theme.palette.primary.main
+              },
+              '& .MuiInputBase-input': {
+                color: '#ffffff'
+              }
+            }}
+          />
+          
+          {/* Refresh Button */}
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mb: 2 }}>
+            <Button 
+              size="small" 
+              startIcon={<RefreshIcon />} 
+              onClick={handleRefresh}
+            >
+              Refresh
+            </Button>
+          </Box>
         </Box>
+
+        {/* Display "No matches found" when search has no results */}
+        {!loading && validReleases.length === 0 && searchQuery && (
+          <Box sx={{ py: 4, textAlign: 'center' }}>
+            <Typography variant="h6">No matches found for "{searchQuery}"</Typography>
+            <Button 
+              variant="outlined" 
+              onClick={() => setSearchQuery('')}
+              sx={{ mt: 2 }}
+            >
+              Clear Search
+            </Button>
+          </Box>
+        )}
         
         {showLatestRelease && validReleases.length > 0 && (
           <Grid container spacing={3} sx={{ mb: 6 }}>

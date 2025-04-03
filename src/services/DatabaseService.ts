@@ -1792,6 +1792,38 @@ class DatabaseService {
       return null;
     }
   }
+
+  /**
+   * Submit a demo for review
+   * @param demoData The demo submission data
+   * @returns Promise resolving to the API response
+   */
+  async submitDemo(demoData: any): Promise<any> {
+    try {
+      console.log('[DatabaseService] Submitting demo:', demoData);
+      
+      const response = await fetch(`${this.getBaseUrl()}/submit-demo`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(demoData),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('[DatabaseService] Error submitting demo:', errorData);
+        throw new Error(errorData.message || 'Failed to submit demo');
+      }
+      
+      const data = await response.json();
+      console.log('[DatabaseService] Demo submitted successfully:', data);
+      return data;
+    } catch (error) {
+      console.error('[DatabaseService] Error in submitDemo:', error);
+      throw error;
+    }
+  }
 }
 
 // Export the singleton instance as a named export

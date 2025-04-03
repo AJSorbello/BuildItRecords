@@ -3,18 +3,7 @@ import { Typography, Box, Grid, Alert, Button } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import PageLayout from '../../components/PageLayout';
 import { useReleases } from '../../hooks/useReleases';
-import { Album } from '../../types/release';
-
-interface Release extends Album {
-  title: string;
-  releaseDate: string;
-  artist: {
-    name: string;
-    imageUrl?: string;
-    spotifyUrl?: string;
-  };
-  artworkUrl?: string;
-}
+import { Release } from '../../types/release';
 
 interface RecordsHomeProps {
   labelId?: string;
@@ -23,7 +12,7 @@ interface RecordsHomeProps {
 const RecordsHome: React.FC<RecordsHomeProps> = ({ labelId: propLabelId }) => {
   const [mainTrack, setMainTrack] = useState<Release | null>(null);
   const [otherVersions, setOtherVersions] = useState<Release[]>([]);
-  const { releases, loading, error, retryFetch, canRetry } = useReleases({ label: 'records' });
+  const { releases, loading, error, refetch } = useReleases('records');
 
   useEffect(() => {
     const fetchFeaturedTracks = async () => {
@@ -31,19 +20,19 @@ const RecordsHome: React.FC<RecordsHomeProps> = ({ labelId: propLabelId }) => {
       
       // Sort releases by date (newest first)
       const sortedReleases = [...releases].sort((a, b) => 
-        new Date(b.release_date).getTime() - new Date(a.release_date).getTime()
+        new Date(b.release_date || '').getTime() - new Date(a.release_date || '').getTime()
       );
 
-      // Convert Album to Release type
-      const convertToRelease = (album: Album): Release => ({
-        ...album,
-        title: album.name,
-        releaseDate: album.release_date,
-        artworkUrl: album.images[0]?.url,
+      // Convert to simpler format
+      const convertToRelease = (release: Release): Release => ({
+        ...release,
+        title: release.name || release.title,
+        releaseDate: release.release_date,
+        artworkUrl: release.images?.[0]?.url,
         artist: {
-          name: album.artists[0]?.name || 'Unknown Artist',
-          imageUrl: album.images[0]?.url,
-          spotifyUrl: album.external_urls?.spotify
+          name: release.artists?.[0]?.name || 'Unknown Artist',
+          imageUrl: release.images?.[0]?.url,
+          spotifyUrl: release.external_urls?.spotify
         }
       });
 
@@ -74,20 +63,18 @@ const RecordsHome: React.FC<RecordsHomeProps> = ({ labelId: propLabelId }) => {
           </Grid>
           <Grid item xs={12} sm={6} md={8}>
             <Typography variant="body2" color="text.secondary">
-              {canRetry && (
-                <Box>
-                  <Typography variant="body2" color="text.secondary">
-                    Try again
-                  </Typography>
-                  <Button
-                    color="inherit"
-                    size="small"
-                    onClick={retryFetch}
-                  >
-                    Retry
-                  </Button>
-                </Box>
-              )}
+              <Box>
+                <Typography variant="body2" color="text.secondary">
+                  Try again
+                </Typography>
+                <Button
+                  color="inherit"
+                  size="small"
+                  onClick={refetch}
+                >
+                  Retry
+                </Button>
+              </Box>
             </Typography>
           </Grid>
         </Grid>
@@ -97,13 +84,48 @@ const RecordsHome: React.FC<RecordsHomeProps> = ({ labelId: propLabelId }) => {
 
   return (
     <PageLayout label="records">
-      <Box sx={{ py: 4, px: { xs: 2, sm: 3 } }}>
-        <Typography variant="h4" component="h1" gutterBottom>
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          width: '100%',
+          maxWidth: '900px',
+          mx: 'auto',
+          mt: 2,
+          px: 2
+        }}
+      >
+        <Typography 
+          variant="h1" 
+          component="h1" 
+          gutterBottom 
+          sx={{ 
+            color: '#4CAF50',
+            mb: 2,
+            fontWeight: 'bold',
+            textAlign: 'center',
+            fontSize: '4rem'
+          }}
+        >
           Build It Records
         </Typography>
 
+        <Typography 
+          variant="h5" 
+          component="h2" 
+          gutterBottom 
+          sx={{ 
+            color: '#FFFFFF',
+            mb: 6,
+            textAlign: 'center'
+          }}
+        >
+          House Music for The Underground
+        </Typography>
+
         {mainTrack && (
-          <Box sx={{ mb: 4 }}>
+          <Box sx={{ width: '100%', mb: 4 }}>
             <Typography variant="h5" gutterBottom>
               Latest Release
             </Typography>
@@ -123,10 +145,10 @@ const RecordsHome: React.FC<RecordsHomeProps> = ({ labelId: propLabelId }) => {
               <Grid item xs={12} sm={6} md={8}>
                 <Typography variant="h6">{mainTrack.title}</Typography>
                 <Typography variant="subtitle1" color="text.secondary">
-                  {mainTrack.artist.name}
+                  {mainTrack.artist?.name}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Released: {new Date(mainTrack.releaseDate).toLocaleDateString()}
+                  Released: {mainTrack.releaseDate && new Date(mainTrack.releaseDate).toLocaleDateString()}
                 </Typography>
               </Grid>
             </Grid>
@@ -136,11 +158,11 @@ const RecordsHome: React.FC<RecordsHomeProps> = ({ labelId: propLabelId }) => {
         {otherVersions.length > 0 && (
           <Box>
             <Typography variant="h5" gutterBottom>
-              Other Versions
+              Other Releases
             </Typography>
             <Grid container spacing={3}>
-              {otherVersions.map((release) => (
-                <Grid item xs={12} sm={6} md={4} key={release.id}>
+              {otherVersions.map((release, index) => (
+                <Grid item xs={12} sm={6} md={4} key={release.id || index}>
                   <Box
                     component="img"
                     src={release.artworkUrl || '/placeholder.jpg'}
@@ -153,7 +175,7 @@ const RecordsHome: React.FC<RecordsHomeProps> = ({ labelId: propLabelId }) => {
                   />
                   <Typography variant="subtitle1">{release.title}</Typography>
                   <Typography variant="body2" color="text.secondary">
-                    {release.artist.name}
+                    {release.artist?.name}
                   </Typography>
                 </Grid>
               ))}

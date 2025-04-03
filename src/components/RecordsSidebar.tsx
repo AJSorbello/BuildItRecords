@@ -212,10 +212,10 @@ const RecordsSidebar: React.FC<RecordsSidebarInternalProps> = ({
           display: 'flex', 
           justifyContent: 'flex-end', 
           p: 1,
-          position: 'fixed',
-          right: 0,
-          top: '12px',
-          zIndex: 1200
+          position: 'absolute', 
+          right: 10,
+          top: 10,
+          zIndex: 1300
         }}>
           <IconButton 
             onClick={handleClose} 

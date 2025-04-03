@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Typography } from '@mui/material';
-import { getTracksForLabel } from '../../utils/trackUtils';
+import { getTracksByLabel } from '../../utils/trackUtils';
 import { Track } from '../../types/track';
 import TrackList from '../../components/TrackList';
 import PageLayout from '../../components/PageLayout';
@@ -14,7 +14,7 @@ const DeepHome = () => {
     const fetchTracks = async () => {
       try {
         setLoading(true);
-        const tracks = await getTracksForLabel('buildit-deep');
+        const tracks = await getTracksByLabel('buildit-deep');
         if (tracks && tracks.length > 0) {
           const sortedTracks = tracks.sort((a, b) => {
             const dateA = a.releaseDate ? new Date(a.releaseDate).getTime() : 0;
@@ -57,7 +57,7 @@ const DeepHome = () => {
           component="h1" 
           gutterBottom 
           sx={{ 
-            color: '#FFFFFF',
+            color: '#8E44AD', // Purple color to match Deep's theme
             mb: 4,
             fontWeight: 'bold',
             textAlign: 'center'
@@ -68,15 +68,17 @@ const DeepHome = () => {
 
         <Typography 
           variant="h6" 
-          component="h2" 
+          component="p" 
           gutterBottom 
           sx={{ 
             color: '#B3B3B3',
             mb: 4,
-            textAlign: 'center'
+            textAlign: 'center',
+            maxWidth: '800px',
+            lineHeight: 1.8
           }}
         >
-          Deep and melodic electronic music from emerging and established artists
+          Build It Deep embodies the soulful essence of electronic music, curating a meticulously crafted collection of Afro house, deep house, melodic house, and melodic progressive sounds. Our releases transport listeners through hypnotic rhythms, ethereal atmospheres, and emotive melodies that resonate long after the music stops—creating transformative sonic journeys designed for both introspective listening and transcendent dancefloor moments.
         </Typography>
 
         <Box sx={{ width: '100%', mt: 4 }}>

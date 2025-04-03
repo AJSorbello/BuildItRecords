@@ -11,8 +11,13 @@ import {
   Typography,
   IconButton,
   Paper,
+  Checkbox,
+  FormControlLabel,
+  Alert,
+  Snackbar,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
+import { databaseService } from '../services/DatabaseService';
 
 interface Artist {
   fullName: string;
@@ -53,6 +58,11 @@ const DemoSubmissionForm = () => {
     },
   });
 
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+
   const handleAddArtist = () => {
     setFormData({
       ...formData,
@@ -77,10 +87,44 @@ const DemoSubmissionForm = () => {
     setFormData({ ...formData, trackTitles: newTracks });
   };
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = async (event: any) => {
     event.preventDefault();
-    // TODO: Handle form submission
-    console.log(formData);
+
+    if (!termsAccepted) {
+      setError('You must accept the terms and conditions to submit');
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      setError(null);
+      
+      // Use the DatabaseService to submit the demo
+      await databaseService.submitDemo(formData);
+      
+      setSuccess(true);
+      // Reset form after successful submission
+      setFormData({
+        label: '',
+        artists: [{ fullName: '', country: '', province: '' }],
+        artistName: '',
+        trackTitles: [''],
+        soundcloudLink: '',
+        socialLinks: {
+          facebook: '',
+          twitter: '',
+          soundcloud: '',
+          spotify: '',
+          appleMusic: '',
+        },
+      });
+      setTermsAccepted(false);
+    } catch (err) {
+      console.error('Error submitting demo:', err);
+      setError(err instanceof Error ? err.message : 'An error occurred during submission');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -88,6 +132,24 @@ const DemoSubmissionForm = () => {
       <Typography variant="h5" gutterBottom>
         Demo Submission
       </Typography>
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
+
+      <Snackbar
+        open={success}
+        autoHideDuration={6000}
+        onClose={() => setSuccess(false)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert severity="success">
+          Your demo has been submitted successfully! We'll review it soon.
+        </Alert>
+      </Snackbar>
+
       <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
         <Grid container spacing={3}>
           <Grid item xs={12}>
@@ -288,9 +350,48 @@ const DemoSubmissionForm = () => {
             />
           </Grid>
 
+          {/* Terms and Conditions */}
+          <Grid item xs={12} sx={{ my: 2 }}>
+            <Typography variant="h6" gutterBottom>
+              Submission Guidelines & Terms
+            </Typography>
+            <Box sx={{ pl: 2, mb: 2 }}>
+              <Typography variant="body2" component="li">Please allow up to 7 days for us to review your submission</Typography>
+              <Typography variant="body2" component="li">All submissions must be 100% royalty-free or will be rejected immediately</Typography>
+              <Typography variant="body2" component="li">Royalties are split 50/50 between artists and label</Typography>
+              <Typography variant="body2" component="li">Only submit unreleased, original material</Typography>
+              <Typography variant="body2" component="li">We accept demos in WAV format only - premasters no limiters on master/stereo bus</Typography>
+              <Typography variant="body2" component="li">By submitting, you confirm that this is original work and you own all rights</Typography>
+            </Box>
+
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={termsAccepted}
+                  onChange={(e) => setTermsAccepted(e.target.checked)}
+                />
+              }
+              label="I accept the Terms of Service and Privacy Policy"
+            />
+          </Grid>
+
           <Grid item xs={12}>
-            <Button variant="contained" color="primary" type="submit">
-              Submit Demo
+            <Button
+              variant="contained"
+              color="primary"
+              type="submit"
+              disabled={submitting || !termsAccepted}
+              sx={{
+                background: '#00E676',
+                '&:hover': {
+                  background: '#00C853',
+                },
+                mt: 2,
+                width: '100%',
+                py: 1.5
+              }}
+            >
+              {submitting ? 'Submitting...' : 'SUBMIT DEMO'}
             </Button>
           </Grid>
         </Grid>

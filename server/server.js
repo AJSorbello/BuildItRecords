@@ -220,6 +220,65 @@ app.get('/api/releases', (req, res) => {
   });
 });
 
+// Demo submission endpoint
+app.post('/api/submit-demo', express.json(), (req, res) => {
+  try {
+    console.log('Demo submission received:', JSON.stringify(req.body, null, 2));
+    
+    // Here you would normally save the submission to a database
+    // For now, we'll just acknowledge receipt
+
+    // Validate required fields
+    const { label, artists, artistName, trackTitles, soundcloudLink } = req.body;
+    
+    if (!label) {
+      return res.status(400).json({
+        success: false,
+        message: 'Label selection is required'
+      });
+    }
+    
+    if (!artistName) {
+      return res.status(400).json({
+        success: false,
+        message: 'Artist/Project name is required'
+      });
+    }
+    
+    if (!trackTitles || trackTitles.length === 0 || !trackTitles[0]) {
+      return res.status(400).json({
+        success: false,
+        message: 'At least one track title is required'
+      });
+    }
+    
+    if (!soundcloudLink) {
+      return res.status(400).json({
+        success: false,
+        message: 'SoundCloud link is required'
+      });
+    }
+    
+    // Send success response
+    res.status(200).json({
+      success: true,
+      message: 'Demo submission received successfully',
+      data: {
+        submissionId: `DEMO-${Date.now()}`,
+        receivedAt: new Date().toISOString(),
+        estimatedReviewTime: '7 days'
+      }
+    });
+  } catch (error) {
+    console.error('Error processing demo submission:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error processing demo submission',
+      error: error.message
+    });
+  }
+});
+
 // Handle 404
 app.use('*', (req, res) => {
   res.status(404).json({ 
