@@ -88,14 +88,16 @@ const ArtistCard: React.FC<ArtistCardProps> = ({ artist, onClick, background }) 
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        background: background || 'rgba(30, 30, 30, 0.85)',
-        boxShadow: '0 4px 8px rgba(0, 0, 0, 0.5)',
+        background: background || 'rgba(20, 20, 22, 0.92)',
+        boxShadow: '0 6px 12px rgba(0, 0, 0, 0.6)',
         borderRadius: '8px',
         backdropFilter: 'blur(10px)',
+        border: '1px solid rgba(255, 255, 255, 0.08)',
         '&:hover': onClick ? {
           transform: 'scale(1.02)',
           transition: 'transform 0.2s ease-in-out',
-          boxShadow: '0 6px 12px rgba(0, 0, 0, 0.7)'
+          boxShadow: '0 8px 16px rgba(0, 0, 0, 0.8)',
+          borderColor: 'rgba(255, 255, 255, 0.15)'
         } : {}
       }}
       onClick={handleClick}
@@ -112,7 +114,7 @@ const ArtistCard: React.FC<ArtistCardProps> = ({ artist, onClick, background }) 
               display: 'flex', 
               alignItems: 'center', 
               justifyContent: 'center',
-              bgcolor: 'rgba(0,0,0,0.1)'
+              bgcolor: 'rgba(0,0,0,0.2)'
             }}
           >
             <CircularProgress size={40} />
@@ -135,18 +137,20 @@ const ArtistCard: React.FC<ArtistCardProps> = ({ artist, onClick, background }) 
       </Box>
       <CardContent sx={{ 
         flexGrow: 1,
-        borderTop: '1px solid rgba(255, 255, 255, 0.1)'
+        borderTop: '1px solid rgba(255, 255, 255, 0.12)',
+        backgroundColor: 'rgba(10, 10, 12, 0.8)',
+        paddingBottom: '16px !important'
       }}>
-        <Typography gutterBottom variant="h6" component="div">
+        <Typography gutterBottom variant="h6" component="div" sx={{ color: 'rgba(255, 255, 255, 0.95)' }}>
           {artist.name}
         </Typography>
         {artist.genres && artist.genres.length > 0 && (
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="rgba(255, 255, 255, 0.7)">
             {artist.genres.join(', ')}
           </Typography>
         )}
         {artist.followers && artist.followers.total && (
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="rgba(255, 255, 255, 0.6)">
             {artist.followers.total.toLocaleString()} followers
           </Typography>
         )}

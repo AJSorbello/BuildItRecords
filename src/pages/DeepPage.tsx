@@ -19,18 +19,39 @@ const DeepPage: React.FC = () => {
         sx={{
           textAlign: 'center',
           mb: 8,
-          p: 4,
+          p: 6,
           borderRadius: 2,
-          background: `linear-gradient(45deg, ${alpha(deepColor, 0.1)}, ${alpha(
-            theme.palette.background.default,
-            0.2
-          )})`,
+          background: `linear-gradient(45deg, ${alpha('#00BFFF', 0.2)}, ${alpha('#00BFFF', 0.05)})`,
+          border: '1px solid rgba(0, 191, 255, 0.25)',
+          boxShadow: '0 0 30px rgba(0, 191, 255, 0.15)',
+          position: 'relative',
+          overflow: 'hidden',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            background: 'radial-gradient(circle at center, rgba(0, 191, 255, 0.15) 0%, rgba(0, 0, 0, 0) 70%)',
+            pointerEvents: 'none',
+          }
         }}
       >
-        <Typography variant="h2" component="h1" gutterBottom sx={{ color: deepColor, fontWeight: 700 }}>
+        <Typography variant="h2" component="h1" gutterBottom sx={{ 
+          color: '#00BFFF', 
+          fontWeight: 800,
+          fontSize: '4.5rem',
+          textShadow: '0 0 10px rgba(0, 191, 255, 0.25)',
+          letterSpacing: '-0.02em'
+        }}>
           Build It Deep
         </Typography>
-        <Typography variant="h5" color="text.secondary" sx={{ mb: 4 }}>
+        <Typography variant="h5" sx={{ 
+          mb: 4,
+          color: '#FFFFFF',
+          textShadow: '0 0 10px rgba(0, 0, 0, 0.7)'
+        }}>
           The Soul of Underground House Music
         </Typography>
       </Box>

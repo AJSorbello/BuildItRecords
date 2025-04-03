@@ -24,14 +24,12 @@ import {
   useTheme,
   useMediaQuery
 } from '@mui/material';
-import { Close as CloseIcon, PlayArrow as PlayArrowIcon, Login as LoginIcon } from '@mui/icons-material';
+import { Close as CloseIcon, PlayArrow as PlayArrowIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { Release } from '../../types/release';
 import { Artist } from '../../types/artist';
 import { Track } from '../../types/track';
 import { databaseService } from '../../services/DatabaseService';
-import { useSpotifyAuth } from '../../services/SpotifyAuthService';
-import SpotifyPlayer from '../../components/SpotifyPlayer';
 
 interface ReleaseModalProps {
   open: boolean;
@@ -121,11 +119,7 @@ export const ReleaseModal = ({ open, onClose, release, onArtistClick }: ReleaseM
   const [loading, setLoading] = useState(false);
   const [allArtistsCache, setAllArtistsCache] = useState<Artist[]>([]);
   const [currentTrack, setCurrentTrack] = useState<CustomTrack | null>(null);
-  const [playerError, setPlayerError] = useState<string | null>(null);
   
-  // Spotify authentication
-  const { token, isPremium, login, logout } = useSpotifyAuth();
-
   // Format track duration
   const formatDuration = (ms: number): string => {
     if (!ms) return '0:00';
@@ -441,7 +435,7 @@ export const ReleaseModal = ({ open, onClose, release, onArtistClick }: ReleaseM
     // Then try partial matches
     const partialMatch = allArtistsCache.find(artist => 
       artist.name?.toLowerCase().includes(normalizedName) || 
-      normalizedName.includes(artist.name?.toLowerCase() || ''));
+      normalizedName.includes(artist.name.toLowerCase() || ''));
     if (partialMatch) return partialMatch;
     
     return null;
@@ -593,50 +587,38 @@ export const ReleaseModal = ({ open, onClose, release, onArtistClick }: ReleaseM
   // Handle playing a track preview
   const handlePlayTrack = (track: CustomTrack) => {
     try {
-      // Set the current track for the player
+      // Set the current track for the UI state (for highlighting in the UI)
       setCurrentTrack(track);
       
-      // Get the preview URL from the track
-      const previewUrl = track.preview_url || 
-                      (track.external_urls && track.external_urls.spotify) ||
-                      track.spotify_url;
-      
-      console.log(`[ReleaseModal] Attempting to play track: ${track.title}`, {
-        previewUrl,
-        track,
-        hasSpotifyAuth: !!token
+      // Log the track details for debugging
+      console.log(`[ReleaseModal] Play button clicked for track:`, {
+        title: track.title,
+        id: track.id,
+        spotify_url: track.spotify_url,
+        external_urls: track.external_urls
       });
       
-      if (!previewUrl) {
-        console.error('[ReleaseModal] No preview URL available for track:', track);
-        setPlayerError('No preview available for this track');
-        return;
+      // Get the Spotify URL with fallbacks
+      let spotifyUrl = null;
+      
+      // Check external_urls.spotify first (most common location)
+      if (track.external_urls && track.external_urls.spotify) {
+        spotifyUrl = track.external_urls.spotify;
+      } 
+      // Then check spotify_url (our custom field)
+      else if (track.spotify_url) {
+        spotifyUrl = track.spotify_url;
       }
       
-      // If we don't have Spotify authentication, use the old method
-      if (!token) {
-        // Create an audio element
-        const audio = new Audio(previewUrl);
-        
-        // Play the audio
-        audio.play()
-          .then(() => {
-            console.log(`[ReleaseModal] Playing track: ${track.title}`);
-          })
-          .catch((error) => {
-            console.error('[ReleaseModal] Error playing track:', error);
-            
-            // If the preview URL is a Spotify URL, open it in a new tab
-            if (previewUrl.includes('spotify.com')) {
-              console.log(`[ReleaseModal] Opening Spotify URL: ${previewUrl}`);
-              window.open(previewUrl, '_blank');
-            }
-          });
+      if (spotifyUrl) {
+        console.log(`[ReleaseModal] Opening Spotify URL: ${spotifyUrl}`);
+        // Force open in a new tab
+        window.open(spotifyUrl, '_blank', 'noopener,noreferrer');
+      } else {
+        console.error('[ReleaseModal] No Spotify URL available for this track');
       }
-      // If we have Spotify auth, the SpotifyPlayer component will handle playback
     } catch (error) {
-      console.error('[ReleaseModal] Error playing track:', error);
-      setPlayerError('Error playing track. Please try again.');
+      console.error('[ReleaseModal] Error handling track play:', error);
     }
   };
 
@@ -665,43 +647,22 @@ export const ReleaseModal = ({ open, onClose, release, onArtistClick }: ReleaseM
     <Dialog
       open={open}
       onClose={onClose}
-      fullWidth
       maxWidth="md"
+      fullWidth
       fullScreen={fullScreen}
-      PaperProps={{
-        sx: {
-          bgcolor: 'background.paper',
-          borderRadius: { xs: 0, sm: 1 },
-          backgroundImage: 'none'
+      sx={{
+        '& .MuiDialog-paper': {
+          background: 'rgba(25, 25, 30, 0.95)',
+          backgroundImage: 'linear-gradient(to bottom, rgba(30, 30, 35, 0.95), rgba(15, 15, 20, 0.98))',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.8)',
+          borderRadius: '12px',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
         }
       }}
     >
       <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
         <Typography variant="h6">{release?.title}</Typography>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          {/* Spotify Login/Logout Button */}
-          {token ? (
-            <Button 
-              variant="outlined" 
-              size="small" 
-              onClick={logout} 
-              startIcon={<LoginIcon />}
-              sx={{ mr: 1, height: 36 }}
-            >
-              Logout
-            </Button>
-          ) : (
-            <Button 
-              variant="outlined" 
-              color="primary" 
-              size="small" 
-              onClick={login} 
-              startIcon={<LoginIcon />}
-              sx={{ mr: 1, height: 36 }}
-            >
-              Connect Spotify
-            </Button>
-          )}
           <IconButton aria-label="close" onClick={onClose} size="large">
             <CloseIcon />
           </IconButton>
@@ -717,7 +678,7 @@ export const ReleaseModal = ({ open, onClose, release, onArtistClick }: ReleaseM
             <Grid item xs={12} md={4}>
               <Box
                 component="img"
-                src={release?.image_url || '/images/placeholder-release.jpg'}
+                src={releaseImage}
                 alt={release?.title}
                 sx={{
                   width: '100%',
@@ -750,57 +711,18 @@ export const ReleaseModal = ({ open, onClose, release, onArtistClick }: ReleaseM
                   ))}
                 </Box>
               )}
-              
-              {/* Spotify Player */}
-              {currentTrack && (
-                <Box sx={{ mt: 3 }}>
-                  <Typography variant="subtitle2" gutterBottom>
-                    Now Playing
-                  </Typography>
-                  {playerError && (
-                    <Typography variant="body2" color="error" sx={{ mb: 1 }}>
-                      {playerError}
-                    </Typography>
-                  )}
-                  
-                  {token ? (
-                    <SpotifyPlayer 
-                      token={token}
-                      trackUrl={currentTrack.external_urls?.spotify || currentTrack.spotify_url}
-                      isPremium={isPremium || false}
-                      onError={(msg) => setPlayerError(msg)}
-                    />
-                  ) : (
-                    <Paper sx={{ p: 2, bgcolor: 'background.paper', borderRadius: 1 }}>
-                      <Typography variant="body2" align="center" gutterBottom>
-                        {currentTrack.title}
-                      </Typography>
-                      <Button 
-                        variant="contained" 
-                        color="primary" 
-                        fullWidth 
-                        startIcon={<LoginIcon />}
-                        onClick={login}
-                        sx={{ mt: 1 }}
-                      >
-                        Connect to Spotify
-                      </Button>
-                    </Paper>
-                  )}
-                </Box>
-              )}
             </Grid>
             <Grid item xs={12} md={8}>
               {tracks && tracks.length > 0 ? (
-                <TableContainer component={Paper} sx={{ boxShadow: 0, bgcolor: 'transparent' }}>
-                  <Table sx={{ minWidth: 650 }} aria-label="track listing">
+                <TableContainer component={Paper} sx={{ boxShadow: 0, bgcolor: 'transparent', overflowX: 'hidden' }}>
+                  <Table sx={{ minWidth: 'auto', tableLayout: 'fixed' }} size="small" aria-label="track listing">
                     <TableHead>
                       <TableRow>
-                        <TableCell>#</TableCell>
-                        <TableCell>Title</TableCell>
-                        <TableCell>Artist</TableCell>
-                        <TableCell align="right">Duration</TableCell>
-                        <TableCell align="right">Play</TableCell>
+                        <TableCell sx={{ width: "8%", padding: '8px 4px' }}>#</TableCell>
+                        <TableCell sx={{ width: "40%" }}>Title</TableCell>
+                        <TableCell sx={{ width: "25%" }}>Artist</TableCell>
+                        <TableCell sx={{ width: "12%", padding: '8px 4px' }} align="right">Time</TableCell>
+                        <TableCell sx={{ width: "15%", padding: '8px 0px' }} align="center">Play</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -840,11 +762,23 @@ export const ReleaseModal = ({ open, onClose, release, onArtistClick }: ReleaseM
                         return (
                           <TableRow key={track.id || `track-${index}`}>
                             <TableCell>{track.track_number || index + 1}</TableCell>
-                            <TableCell>{track.title || track.name}</TableCell>
+                            <TableCell sx={{ 
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              maxWidth: 0 // Forces ellipsis to work with flexbox
+                            }}>
+                              {track.title || track.name}
+                            </TableCell>
                             <TableCell>
                               {track.isRemix || track.title?.toLowerCase().includes('remix') ? (
                                 // For remix tracks, show the remixer avatar and info
-                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                <Box sx={{ 
+                                  display: 'flex', 
+                                  alignItems: 'center',
+                                  whiteSpace: 'nowrap',
+                                  overflow: 'hidden'
+                                }}>
                                   {(() => {
                                     // Find remixer information
                                     const remixerArtist = getTrackDisplayArtist(track);
@@ -990,28 +924,37 @@ export const ReleaseModal = ({ open, onClose, release, onArtistClick }: ReleaseM
                                 ) : null
                               )}
                             </TableCell>
-                            <TableCell align="right">
+                            <TableCell align="right" sx={{ padding: '8px 4px' }}>
                               {formatDuration(track.duration_ms || track.duration || 0)}
                             </TableCell>
-                            <TableCell align="right">
-                              <IconButton 
-                                size="small" 
+                            <TableCell align="center">
+                              <Button
+                                variant="contained"
                                 color="primary"
-                                onClick={() => handlePlayTrack(track)}
-                                disabled={!track.preview_url && !track.external_urls?.spotify && !track.spotify_url}
+                                size="small"
+                                startIcon={<PlayArrowIcon />}
+                                href={(track.external_urls && track.external_urls.spotify) || track.spotify_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                disabled={!track.external_urls?.spotify && !track.spotify_url}
                                 sx={{ 
-                                  backgroundColor: currentTrack?.id === track.id ? 'rgba(29, 185, 84, 0.1)' : 'rgba(0, 0, 0, 0.05)', 
+                                  fontSize: '0.7rem',
+                                  padding: '2px 8px',
+                                  minWidth: 'unset',
+                                  width: '100%',
+                                  maxWidth: '60px',
+                                  backgroundColor: '#1DB954',
                                   '&:hover': { 
-                                    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                                    backgroundColor: '#1ED760',
                                   },
                                   '&.Mui-disabled': {
-                                    color: 'rgba(0, 0, 0, 0.26)',
-                                    backgroundColor: 'rgba(0, 0, 0, 0.02)'
+                                    color: 'rgba(255, 255, 255, 0.6)',
+                                    backgroundColor: 'rgba(29, 185, 84, 0.5)'
                                   }
                                 }}
                               >
-                                <PlayArrowIcon />
-                              </IconButton>
+                                Play
+                              </Button>
                             </TableCell>
                           </TableRow>
                         );

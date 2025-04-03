@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Container, Typography, Grid, Box, CircularProgress, Alert, Paper, Divider } from '@mui/material';
+import { Container, Typography, Grid, Box, CircularProgress, Alert, Divider } from '@mui/material';
 import { ReleaseCard } from '../../components/ReleaseCard';
 import { databaseService } from '../../services/DatabaseService';
 import { Release } from '../../types/release';

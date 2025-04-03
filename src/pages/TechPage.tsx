@@ -19,18 +19,39 @@ const TechPage: React.FC = () => {
         sx={{
           textAlign: 'center',
           mb: 8,
-          p: 4,
+          p: 6,
           borderRadius: 2,
-          background: `linear-gradient(45deg, ${alpha(techColor, 0.1)}, ${alpha(
-            theme.palette.background.default,
-            0.2
-          )})`,
+          background: `linear-gradient(45deg, ${alpha('#FF0000', 0.2)}, ${alpha('#FF0000', 0.05)})`,
+          border: '1px solid rgba(255, 0, 0, 0.25)',
+          boxShadow: '0 0 30px rgba(255, 0, 0, 0.15)',
+          position: 'relative',
+          overflow: 'hidden',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            background: 'radial-gradient(circle at center, rgba(255, 0, 0, 0.15) 0%, rgba(0, 0, 0, 0) 70%)',
+            pointerEvents: 'none',
+          }
         }}
       >
-        <Typography variant="h2" component="h1" gutterBottom sx={{ color: techColor, fontWeight: 700 }}>
+        <Typography variant="h2" component="h1" gutterBottom sx={{ 
+          color: '#FF0000', 
+          fontWeight: 800,
+          fontSize: '4.5rem',
+          textShadow: '0 0 10px rgba(255, 0, 0, 0.25)',
+          letterSpacing: '-0.02em'
+        }}>
           Build It Tech
         </Typography>
-        <Typography variant="h5" color="text.secondary" sx={{ mb: 4 }}>
+        <Typography variant="h5" sx={{ 
+          mb: 4,
+          color: '#FFFFFF',
+          textShadow: '0 0 10px rgba(0, 0, 0, 0.7)'
+        }}>
           Pushing Boundaries in Tech House
         </Typography>
       </Box>

@@ -20,7 +20,6 @@ import {
   Chip,
   Grid,
   Divider,
-  Avatar,
   Card,
   CardMedia,
   CardContent,
@@ -624,11 +623,17 @@ const ArtistModal = (props: ArtistModalProps) => {
                         <TableCell>
                           <Box sx={{ display: 'flex', alignItems: 'center' }}>
                             {release.artwork_url && (
-                              <Avatar
-                                src={release.artwork_url}
-                                alt={release.title}
-                                variant="rounded"
-                                sx={{ width: 40, height: 40, mr: 1 }}
+                              <Box
+                                sx={{ 
+                                  width: 40, 
+                                  height: 40, 
+                                  mr: 1,
+                                  borderRadius: '4px',
+                                  backgroundImage: `url(${release.artwork_url})`,
+                                  backgroundSize: 'cover',
+                                  backgroundPosition: 'center',
+                                  boxShadow: 1
+                                }}
                               />
                             )}
                             <Box>
@@ -662,10 +667,17 @@ const ArtistModal = (props: ArtistModalProps) => {
                               // For compilations, show "Various Artists" with the album artwork
                               return (
                                 <Box key="various-artists" sx={{ display: 'flex', alignItems: 'center' }}>
-                                  <Avatar 
-                                    src={release.artwork_url || '/images/placeholder-release.jpg'} 
-                                    alt="Various Artists"
-                                    sx={{ width: 24, height: 24, mr: 0.5 }}
+                                  <Box
+                                    sx={{ 
+                                      width: 24, 
+                                      height: 24, 
+                                      mr: 0.5,
+                                      borderRadius: '4px',
+                                      backgroundImage: `url(${release.artwork_url || '/images/placeholder-release.jpg'})`,
+                                      backgroundSize: 'cover',
+                                      backgroundPosition: 'center',
+                                      boxShadow: 1
+                                    }}
                                   />
                                   <Typography variant="body2">
                                     Various Artists
@@ -692,10 +704,17 @@ const ArtistModal = (props: ArtistModalProps) => {
                                 
                                 return (
                                   <Box key={artist.id || `artist-${index}`} sx={{ display: 'flex', alignItems: 'center' }}>
-                                    <Avatar 
-                                      src={artistImage} 
-                                      alt={artist.name || "Artist"}
-                                      sx={{ width: 24, height: 24, mr: 0.5 }}
+                                    <Box
+                                      sx={{ 
+                                        width: 24, 
+                                        height: 24, 
+                                        mr: 0.5,
+                                        borderRadius: '4px',
+                                        backgroundImage: `url(${artistImage})`,
+                                        backgroundSize: 'cover',
+                                        backgroundPosition: 'center',
+                                        boxShadow: 1
+                                      }}
                                     />
                                     <Typography variant="body2">
                                       {artist.name || "Unknown"}{index < release.artists.length - 1 ? ' & ' : ''}
@@ -711,10 +730,17 @@ const ArtistModal = (props: ArtistModalProps) => {
                               if (artist && artist.id) {
                                 return (
                                   <Box key={artist.id} sx={{ display: 'flex', alignItems: 'center' }}>
-                                    <Avatar 
-                                      src={getArtistImage(artist)} 
-                                      alt={artist.name}
-                                      sx={{ width: 24, height: 24, mr: 0.5 }}
+                                    <Box
+                                      sx={{ 
+                                        width: 24, 
+                                        height: 24, 
+                                        mr: 0.5,
+                                        borderRadius: '4px',
+                                        backgroundImage: `url(${getArtistImage(artist)})`,
+                                        backgroundSize: 'cover',
+                                        backgroundPosition: 'center',
+                                        boxShadow: 1
+                                      }}
                                     />
                                     <Typography variant="body2">
                                       {artist.name}
@@ -725,10 +751,17 @@ const ArtistModal = (props: ArtistModalProps) => {
                               
                               return (
                                 <Box key="unknown-artist" sx={{ display: 'flex', alignItems: 'center' }}>
-                                  <Avatar 
-                                    src={'/images/placeholder-artist.jpg'} 
-                                    alt="Unknown Artist"
-                                    sx={{ width: 24, height: 24, mr: 0.5 }}
+                                  <Box
+                                    sx={{ 
+                                      width: 24, 
+                                      height: 24, 
+                                      mr: 0.5,
+                                      borderRadius: '4px',
+                                      backgroundImage: `url('/images/placeholder-artist.jpg')`,
+                                      backgroundSize: 'cover',
+                                      backgroundPosition: 'center',
+                                      boxShadow: 1
+                                    }}
                                   />
                                   <Typography variant="body2">
                                     {release.artist_name || artist?.name || "Unknown Artist"}
@@ -756,10 +789,17 @@ const ArtistModal = (props: ArtistModalProps) => {
                               
                               return (
                                 <Box key={artist.id || `artist-${index}`} sx={{ display: 'flex', alignItems: 'center' }}>
-                                  <Avatar 
-                                    src={artistImage} 
-                                    alt={artist.name || "Artist"}
-                                    sx={{ width: 24, height: 24, mr: 0.5 }}
+                                  <Box
+                                    sx={{ 
+                                      width: 24, 
+                                      height: 24, 
+                                      mr: 0.5,
+                                      borderRadius: '4px',
+                                      backgroundImage: `url(${artistImage})`,
+                                      backgroundSize: 'cover',
+                                      backgroundPosition: 'center',
+                                      boxShadow: 1
+                                    }}
                                   />
                                   <Typography variant="body2">
                                     {artist.name || "Unknown"}{index < artists.length - 1 ? ' & ' : ''}
@@ -768,10 +808,17 @@ const ArtistModal = (props: ArtistModalProps) => {
                               );
                             }) : (
                               <Box key="fallback-artist" sx={{ display: 'flex', alignItems: 'center' }}>
-                                <Avatar 
-                                  src={getArtistImage(artist)} 
-                                  alt={artist?.name || "Artist"}
-                                  sx={{ width: 24, height: 24, mr: 0.5 }}
+                                <Box
+                                  sx={{ 
+                                    width: 24, 
+                                    height: 24, 
+                                    mr: 0.5,
+                                    borderRadius: '4px',
+                                    backgroundImage: `url(${getArtistImage(artist)})`,
+                                    backgroundSize: 'cover',
+                                    backgroundPosition: 'center',
+                                    boxShadow: 1
+                                  }}
                                 />
                                 <Typography variant="body2">
                                   {artist?.name || release.artist_name || "Unknown Artist"}
@@ -878,6 +925,15 @@ const ArtistModal = (props: ArtistModalProps) => {
       maxWidth="md"
       fullWidth
       aria-labelledby="artist-modal-title"
+      sx={{
+        '& .MuiDialog-paper': {
+          background: 'rgba(25, 25, 30, 0.95)',
+          backgroundImage: 'linear-gradient(to bottom, rgba(30, 30, 35, 0.95), rgba(15, 15, 20, 0.98))',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.8)',
+          borderRadius: '12px',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
+        }
+      }}
     >
       <DialogTitle id="artist-modal-title" sx={{ pb: 1 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -894,15 +950,18 @@ const ArtistModal = (props: ArtistModalProps) => {
           <Grid item xs={12} md={4}>
             <Box sx={{ p: 3, borderRight: { md: '1px solid rgba(0, 0, 0, 0.12)' } }}>
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 3 }}>
-                <Avatar
-                  src={artistImage}
-                  alt={artist.name}
+                <Box
                   sx={{ 
                     width: 200, 
                     height: 200, 
                     mb: 2,
                     boxShadow: 3,
-                    border: '4px solid white'
+                    backgroundImage: `url(${artistImage})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    backgroundRepeat: 'no-repeat',
+                    borderRadius: '4px',
+                    border: '1px solid rgba(0, 0, 0, 0.1)'
                   }}
                 />
                 

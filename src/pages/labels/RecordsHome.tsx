@@ -132,24 +132,57 @@ const RecordsHome: React.FC<RecordsHomeProps> = ({ labelId: propLabelId }) => {
             <Grid container spacing={3}>
               <Grid item xs={12} sm={6} md={4}>
                 <Box
-                  component="img"
-                  src={mainTrack.artworkUrl || '/placeholder.jpg'}
-                  alt={mainTrack.title}
                   sx={{
-                    width: '100%',
-                    height: 'auto',
-                    borderRadius: 1,
+                    position: 'relative',
+                    borderRadius: '8px',
+                    overflow: 'hidden',
+                    boxShadow: '0 6px 12px rgba(0, 0, 0, 0.6)',
+                    background: 'rgba(20, 20, 22, 0.92)',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    backdropFilter: 'blur(10px)',
+                    transition: 'transform 0.2s, box-shadow 0.2s',
+                    '&:hover': {
+                      transform: 'translateY(-5px)',
+                      boxShadow: '0 12px 20px rgba(0, 0, 0, 0.25)',
+                      borderColor: 'rgba(255, 255, 255, 0.15)'
+                    },
                   }}
-                />
+                >
+                  <Box
+                    component="img"
+                    src={mainTrack.artworkUrl || '/placeholder.jpg'}
+                    alt={mainTrack.title}
+                    sx={{
+                      width: '100%',
+                      height: 'auto',
+                      borderRadius: '8px 8px 0 0',
+                      borderBottom: '1px solid rgba(255, 255, 255, 0.12)'
+                    }}
+                  />
+                </Box>
               </Grid>
               <Grid item xs={12} sm={6} md={8}>
-                <Typography variant="h6">{mainTrack.title}</Typography>
-                <Typography variant="subtitle1" color="text.secondary">
-                  {mainTrack.artist?.name}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Released: {mainTrack.releaseDate && new Date(mainTrack.releaseDate).toLocaleDateString()}
-                </Typography>
+                <Box
+                  sx={{
+                    background: 'rgba(20, 20, 22, 0.92)',
+                    borderRadius: '8px',
+                    padding: 3,
+                    height: '100%',
+                    boxShadow: '0 6px 12px rgba(0, 0, 0, 0.6)',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    backdropFilter: 'blur(10px)'
+                  }}
+                >
+                  <Typography variant="h6" sx={{ color: 'rgba(255, 255, 255, 0.95)' }}>
+                    {mainTrack.title}
+                  </Typography>
+                  <Typography variant="subtitle1" color="rgba(255, 255, 255, 0.7)">
+                    {mainTrack.artist?.name}
+                  </Typography>
+                  <Typography variant="body2" color="rgba(255, 255, 255, 0.6)">
+                    Released: {mainTrack.releaseDate && new Date(mainTrack.releaseDate).toLocaleDateString()}
+                  </Typography>
+                </Box>
               </Grid>
             </Grid>
           </Box>
@@ -164,19 +197,43 @@ const RecordsHome: React.FC<RecordsHomeProps> = ({ labelId: propLabelId }) => {
               {otherVersions.map((release, index) => (
                 <Grid item xs={12} sm={6} md={4} key={release.id || index}>
                   <Box
-                    component="img"
-                    src={release.artworkUrl || '/placeholder.jpg'}
-                    alt={release.title}
                     sx={{
-                      width: '100%',
-                      height: 'auto',
-                      borderRadius: 1,
+                      position: 'relative',
+                      borderRadius: '8px',
+                      overflow: 'hidden',
+                      boxShadow: '0 6px 12px rgba(0, 0, 0, 0.6)',
+                      background: 'rgba(20, 20, 22, 0.92)',
+                      border: '1px solid rgba(255, 255, 255, 0.08)',
+                      backdropFilter: 'blur(10px)',
+                      transition: 'transform 0.2s, box-shadow 0.2s',
+                      pb: 2,
+                      '&:hover': {
+                        transform: 'translateY(-5px)',
+                        boxShadow: '0 12px 20px rgba(0, 0, 0, 0.25)',
+                        borderColor: 'rgba(255, 255, 255, 0.15)'
+                      },
                     }}
-                  />
-                  <Typography variant="subtitle1">{release.title}</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {release.artist?.name}
-                  </Typography>
+                  >
+                    <Box
+                      component="img"
+                      src={release.artworkUrl || '/placeholder.jpg'}
+                      alt={release.title}
+                      sx={{
+                        width: '100%',
+                        height: 'auto',
+                        borderRadius: '8px 8px 0 0',
+                        borderBottom: '1px solid rgba(255, 255, 255, 0.12)'
+                      }}
+                    />
+                    <Box sx={{ p: 2, backgroundColor: 'rgba(10, 10, 12, 0.8)' }}>
+                      <Typography variant="subtitle1" sx={{ color: 'rgba(255, 255, 255, 0.95)' }}>
+                        {release.title}
+                      </Typography>
+                      <Typography variant="body2" color="rgba(255, 255, 255, 0.7)">
+                        {release.artist?.name}
+                      </Typography>
+                    </Box>
+                  </Box>
                 </Grid>
               ))}
             </Grid>

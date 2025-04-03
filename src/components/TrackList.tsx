@@ -14,7 +14,7 @@ import {
 } from '@mui/material';
 import { PlayArrow as PlayIcon } from '@mui/icons-material';
 import { Track } from '../types/track';
-import { formatDuration } from '../utils/trackUtils';
+import { formatDuration } from '../utils/formatters';
 
 interface TrackListProps {
   tracks: Track[];
@@ -54,38 +54,75 @@ const TrackList: React.FC<TrackListProps> = ({
   }
 
   return (
-    <Paper elevation={1}>
-      <List sx={{ width: '100%', bgcolor: 'background.paper' }}>
+    <Paper 
+      elevation={3} 
+      sx={{ 
+        width: '100%', 
+        bgcolor: 'rgba(20, 20, 22, 0.92)',
+        borderRadius: '8px',
+        overflow: 'hidden',
+        boxShadow: '0 6px 12px rgba(0, 0, 0, 0.6)',
+        border: '1px solid rgba(255, 255, 255, 0.08)',
+        backdropFilter: 'blur(10px)',
+      }}
+    >
+      <List sx={{ width: '100%' }}>
         {tracks.map((track, index) => (
           <ListItem
             key={track.id}
             button
             onClick={() => onTrackClick?.(track)}
             divider={index !== tracks.length - 1}
+            sx={{
+              borderBottom: index !== tracks.length - 1 ? '1px solid rgba(255, 255, 255, 0.12)' : 'none',
+              '&:hover': {
+                backgroundColor: 'rgba(255, 255, 255, 0.05)',
+              },
+            }}
           >
             <ListItemAvatar>
               <Avatar
                 variant="square"
                 src={track.album?.images?.[0]?.url}
                 alt={track.title}
+                sx={{ 
+                  width: 56, 
+                  height: 56, 
+                  borderRadius: '4px',
+                  boxShadow: '0 2px 4px rgba(0, 0, 0, 0.4)',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                }}
               />
             </ListItemAvatar>
             <ListItemText
-              primary={track.title}
+              primary={
+                <Typography 
+                  variant="body1" 
+                  sx={{ color: 'rgba(255, 255, 255, 0.95)', fontWeight: 'medium' }}
+                >
+                  {track.title}
+                </Typography>
+              }
               secondary={
-                <React.Fragment>
+                <>
                   <Typography
                     component="span"
                     variant="body2"
-                    color="text.primary"
+                    sx={{ color: 'rgba(255, 255, 255, 0.7)' }}
                   >
                     {track.artists.map(artist => artist.name).join(', ')}
                   </Typography>
                   {' — '}
-                  {track.album?.name}
-                  {' • '}
-                  {formatDuration(track.duration_ms || 0)}
-                </React.Fragment>
+                  <Typography
+                    component="span"
+                    variant="body2"
+                    sx={{ color: 'rgba(255, 255, 255, 0.6)' }}
+                  >
+                    {track.album?.name}
+                    {' • '}
+                    {formatDuration(track.duration_ms || 0)}
+                  </Typography>
+                </>
               }
             />
             <ListItemSecondaryAction>
@@ -97,6 +134,15 @@ const TrackList: React.FC<TrackListProps> = ({
                   if (track.external_urls?.spotify) {
                     window.open(track.external_urls.spotify, '_blank');
                   }
+                }}
+                sx={{ 
+                  backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  '&:hover': {
+                    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                    borderColor: 'rgba(255, 255, 255, 0.2)',
+                  },
+                  color: 'rgba(255, 255, 255, 0.9)',
                 }}
               >
                 <PlayIcon />

@@ -302,7 +302,7 @@ export const ReleasesPage = ({ label: propLabel }: ReleasesPageProps) => {
   // Only show the latest release section if filter is 'all' or if there are releases matching the filter
   const showLatestRelease = releaseType === 'all' || validReleases.length > 0;
 
-  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSearchChange = (event: any) => {
     setSearchQuery(event.target.value);
   };
 
@@ -314,18 +314,19 @@ export const ReleasesPage = ({ label: propLabel }: ReleasesPageProps) => {
   return (
     <ErrorBoundary>
       <Container maxWidth="lg" sx={{ mt: 4, mb: 8, background: getGradientBackground() }}>
-        <Box sx={{ mb: 4 }}>
+        <Box sx={{ mb: 4, display: 'flex', flexDirection: 'column', alignItems: isMobile ? 'center' : 'flex-start' }}>
           <Typography 
             variant="h3" 
             component="h1" 
             gutterBottom
-            sx={{
-              color: theme.palette.primary.main,
+            sx={{ 
               fontWeight: 700,
-              mb: 2
+              color: labelConfig.id === 'buildit-records' ? '#02FF95' : 
+                     labelConfig.id === 'buildit-tech' ? '#FF0000' : 
+                     labelConfig.id === 'buildit-deep' ? '#00BFFF' : '#02FF95'
             }}
           >
-            {labelConfig.displayName} Releases
+            {labelConfig ? `${labelConfig.name} Releases` : 'All Releases'}
           </Typography>
           
           {/* Search Input - Styled to match the Artists page */}
@@ -338,27 +339,37 @@ export const ReleasesPage = ({ label: propLabel }: ReleasesPageProps) => {
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <SearchIcon sx={{ color: 'rgba(255, 255, 255, 0.7)' }} />
+                  <SearchIcon sx={{ color: 'rgba(255, 255, 255, 0.5)' }} />
                 </InputAdornment>
               ),
+              endAdornment: searchQuery ? (
+                <InputAdornment position="end">
+                  <IconButton 
+                    onClick={() => setSearchQuery('')}
+                    size="small"
+                    sx={{ color: 'rgba(255, 255, 255, 0.5)' }}
+                  >
+                    <ClearIcon />
+                  </IconButton>
+                </InputAdornment>
+              ) : null
             }}
             sx={{ 
               mb: 3,
               '& .MuiOutlinedInput-root': {
                 borderRadius: '8px',
-                bgcolor: 'background.paper',
+                bgcolor: 'rgba(0, 0, 0, 0.3)',
                 '& fieldset': {
                   borderColor: 'rgba(255, 255, 255, 0.23)'
                 },
                 '&:hover fieldset': {
-                  borderColor: `${alpha(theme.palette.primary.main, 0.5)}`
+                  borderColor: `rgba(2, 255, 149, 0.5)`
                 },
                 '&.Mui-focused fieldset': {
-                  borderColor: theme.palette.primary.main
+                  borderColor: labelConfig.id === 'buildit-records' ? '#02FF95' : 
+                               labelConfig.id === 'buildit-tech' ? '#FF0000' : 
+                               labelConfig.id === 'buildit-deep' ? '#00BFFF' : '#02FF95'
                 }
-              },
-              '& .MuiInputLabel-root.Mui-focused': {
-                color: theme.palette.primary.main
               },
               '& .MuiInputBase-input': {
                 color: '#ffffff'

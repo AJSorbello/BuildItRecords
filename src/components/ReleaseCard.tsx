@@ -187,14 +187,18 @@ export const ReleaseCard = ({ release, ranking, onClick, onReleaseClick }: Relea
           transition: 'transform 0.2s, box-shadow 0.2s',
           '&:hover': {
             transform: 'translateY(-5px)',
-            boxShadow: '0 8px 16px rgba(0, 0, 0, 0.2)',
+            boxShadow: '0 12px 20px rgba(0, 0, 0, 0.25)',
             '& .play-icon': {
               opacity: 1,
             },
+            borderColor: 'rgba(255, 255, 255, 0.15)'
           },
-          boxShadow: theme.shadows[3],
+          boxShadow: '0 6px 12px rgba(0, 0, 0, 0.6)',
           borderRadius: '8px',
           overflow: 'hidden',
+          background: 'rgba(20, 20, 22, 0.92)',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
+          backdropFilter: 'blur(10px)'
         }}
       >
         {ranking && (
@@ -203,7 +207,7 @@ export const ReleaseCard = ({ release, ranking, onClick, onReleaseClick }: Relea
               position: 'absolute',
               top: 10,
               left: 10,
-              backgroundColor: 'rgba(0, 0, 0, 0.7)',
+              backgroundColor: 'rgba(0, 0, 0, 0.8)',
               borderRadius: '50%',
               width: 32,
               height: 32,
@@ -211,6 +215,8 @@ export const ReleaseCard = ({ release, ranking, onClick, onReleaseClick }: Relea
               alignItems: 'center',
               justifyContent: 'center',
               zIndex: 1,
+              boxShadow: '0 2px 4px rgba(0, 0, 0, 0.3)',
+              border: '1px solid rgba(255, 255, 255, 0.1)'
             }}
           >
             <Typography variant="body2" sx={{ color: 'white', fontWeight: 'bold' }}>
@@ -228,6 +234,7 @@ export const ReleaseCard = ({ release, ranking, onClick, onReleaseClick }: Relea
               aspectRatio: '1/1',
               objectFit: 'cover',
               borderRadius: '4px 4px 0 0',
+              borderBottom: '1px solid rgba(255, 255, 255, 0.12)'
             }}
           />
           <Box 
@@ -239,26 +246,52 @@ export const ReleaseCard = ({ release, ranking, onClick, onReleaseClick }: Relea
               transform: 'translate(-50%, -50%)',
               opacity: 0,
               transition: 'opacity 0.2s',
-              backgroundColor: 'rgba(0, 0, 0, 0.6)',
+              backgroundColor: 'rgba(0, 0, 0, 0.7)',
               borderRadius: '50%',
               width: 60,
               height: 60,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              boxShadow: '0 0 20px rgba(0, 0, 0, 0.5)',
+              border: '2px solid rgba(255, 255, 255, 0.2)'
             }}
           >
             <PlayArrowIcon sx={{ fontSize: 40, color: 'white' }} />
           </Box>
 
-          <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-            <Typography variant="subtitle1" component="h2" gutterBottom sx={{ fontWeight: 'medium' }}>
+          <CardContent sx={{ 
+            flexGrow: 1, 
+            display: 'flex', 
+            flexDirection: 'column',
+            backgroundColor: 'rgba(10, 10, 12, 0.8)',
+            paddingBottom: '16px !important'
+          }}>
+            <Typography 
+              variant="subtitle1" 
+              component="h2" 
+              gutterBottom 
+              sx={{ 
+                fontWeight: 'medium',
+                color: 'rgba(255, 255, 255, 0.95)'
+              }}
+            >
               {release.title}
             </Typography>
 
             <Box sx={{ flexGrow: 1 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                <AvatarGroup max={3} sx={{ mr: 1 }}>
+                <AvatarGroup 
+                  max={3} 
+                  sx={{ 
+                    mr: 1,
+                    '& .MuiAvatar-root': {
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      width: 24,
+                      height: 24
+                    }
+                  }}
+                >
                   {artists.map(artist => (
                     <Avatar 
                       key={artist.id} 
@@ -271,14 +304,14 @@ export const ReleaseCard = ({ release, ranking, onClick, onReleaseClick }: Relea
                     />
                   ))}
                 </AvatarGroup>
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant="body2" color="rgba(255, 255, 255, 0.7)">
                   {artists.map(artist => artist.name).join(', ')}
                 </Typography>
               </Box>
             </Box>
 
             {release.release_date && (
-              <Typography variant="caption" color="text.secondary">
+              <Typography variant="caption" color="rgba(255, 255, 255, 0.6)">
                 Released: {formatDate(release.release_date)}
               </Typography>
             )}
