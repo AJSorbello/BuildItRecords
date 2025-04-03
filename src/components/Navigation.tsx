@@ -15,13 +15,16 @@ import {
   Typography,
   Divider,
   Button,
+  Chip,
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import FacebookIcon from '@mui/icons-material/Facebook';
 import InstagramIcon from '@mui/icons-material/Instagram';
 import YouTubeIcon from '@mui/icons-material/YouTube';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import StarIcon from '@mui/icons-material/Star';
 import { SvgIcon } from '@mui/material';
+import { labelColors } from '../theme/theme';
 
 // Custom SoundCloud icon
 const SoundCloudIcon = (props: any) => (
@@ -82,6 +85,42 @@ const SocialButton = styled(Button)(({ theme }) => ({
   marginLeft: 'auto',
   '&:hover': {
     color: theme.palette.primary.main,
+  },
+}));
+
+const VIPButton = styled(Button)(({ theme }) => ({
+  fontWeight: 700,
+  textTransform: 'none',
+  borderRadius: '20px',
+  padding: '6px 16px',
+  marginLeft: '12px',
+  background: `linear-gradient(45deg, ${labelColors.records}, ${labelColors.deep})`,
+  color: '#000',
+  '&:hover': {
+    background: `linear-gradient(45deg, ${labelColors.deep}, ${labelColors.records})`,
+    transform: 'translateY(-2px)',
+    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.5)',
+  },
+  transition: 'all 0.3s ease',
+  [theme.breakpoints.down('md')]: {
+    display: 'none',
+  },
+}));
+
+const VIPMenuItem = styled(MenuItem)(({ theme }) => ({
+  background: `linear-gradient(90deg, rgba(2, 255, 149, 0.2), transparent)`,
+  position: 'relative',
+  '&:hover': {
+    background: `linear-gradient(90deg, rgba(2, 255, 149, 0.3), transparent)`,
+  },
+  '&::before': {
+    content: '""',
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: '3px',
+    background: labelColors.records,
   },
 }));
 
@@ -157,34 +196,34 @@ const Navigation = () => {
   ];
 
   return (
-    <AppBar position="fixed" color="transparent" elevation={0} sx={{ backdropFilter: 'blur(8px)' }}>
-      <Toolbar>
-        <Box display="flex" alignItems="center" width="100%" position="relative">
+    <AppBar position="static" color="transparent" elevation={0}>
+      <Toolbar sx={{ display: 'flex', justifyContent: 'space-between' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
           {isMobile ? (
             <>
-              <Box display="flex" alignItems="center" maxWidth="calc(100% - 48px)">
-                <LogoImage 
-                  src={menuItems[getTabValue()].logo} 
-                  alt={menuItems[getTabValue()].label}
-                />
-                <Typography 
-                  variant="h6" 
-                  component="div" 
-                  sx={{ 
-                    fontSize: { xs: '1rem', sm: '1.25rem' },
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis'
-                  }}
-                >
-                  {menuItems[getTabValue()].label}
-                </Typography>
+              <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: 'center' }}>
+                <Box display="flex" alignItems="center" maxWidth="calc(100% - 48px)">
+                  <LogoImage 
+                    src={menuItems[getTabValue()].logo} 
+                    alt={menuItems[getTabValue()].label}
+                  />
+                  <Typography 
+                    variant="h6" 
+                    component="div" 
+                    sx={{ 
+                      fontSize: { xs: '1rem', sm: '1.25rem' },
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis'
+                    }}
+                  >
+                    {menuItems[getTabValue()].label}
+                  </Typography>
+                </Box>
               </Box>
               <MobileMenuButton
-                size="large"
-                edge="end"
-                color="inherit"
                 aria-label="menu"
+                edge="start"
                 onClick={handleMobileMenuOpen}
               >
                 <MenuIcon />
@@ -226,6 +265,25 @@ const Navigation = () => {
                     </Box>
                   </MenuItem>
                 ))}
+                
+                <VIPMenuItem onClick={() => handleMobileMenuClick('/vip')}>
+                  <Box display="flex" alignItems="center" gap={2}>
+                    <StarIcon sx={{ color: labelColors.records }} />
+                    <Typography fontWeight="bold">VIP Subscription</Typography>
+                    <Chip 
+                      label="NEW" 
+                      size="small" 
+                      sx={{ 
+                        ml: 1, 
+                        background: labelColors.deep,
+                        color: '#000',
+                        fontWeight: 'bold',
+                        fontSize: '0.6rem'
+                      }} 
+                    />
+                  </Box>
+                </VIPMenuItem>
+                
                 <Divider sx={{ my: 1 }} />
                 {socialLinks.map((link) => (
                   <MenuItem 
@@ -263,6 +321,14 @@ const Navigation = () => {
                 >
                   Social Media
                 </SocialButton>
+                
+                <VIPButton 
+                  startIcon={<StarIcon />}
+                  onClick={() => navigate('/vip')}
+                >
+                  VIP Access
+                </VIPButton>
+                
                 <Menu
                   anchorEl={socialMenuAnchor}
                   open={Boolean(socialMenuAnchor)}

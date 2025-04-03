@@ -279,6 +279,61 @@ app.post('/api/submit-demo', express.json(), (req, res) => {
   }
 });
 
+// VIP subscription endpoint
+app.post('/api/subscribe-vip', express.json(), (req, res) => {
+  try {
+    console.log('VIP subscription received:', JSON.stringify(req.body, null, 2));
+    
+    // Here you would normally save the subscription to a database
+    // For now, we'll just acknowledge receipt
+
+    // Validate required fields
+    const { name, email, plan } = req.body;
+    
+    if (!name) {
+      return res.status(400).json({
+        success: false,
+        message: 'Name is required'
+      });
+    }
+    
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required'
+      });
+    }
+    
+    if (!plan) {
+      return res.status(400).json({
+        success: false,
+        message: 'Subscription plan selection is required'
+      });
+    }
+    
+    // Send success response
+    res.status(200).json({
+      success: true,
+      message: 'VIP subscription processed successfully',
+      data: {
+        subscriptionId: `VIP-${Date.now()}`,
+        name,
+        email,
+        plan,
+        activatedAt: new Date().toISOString(),
+        expiresAt: new Date(Date.now() + (plan === 'monthly' ? 30 : 365) * 24 * 60 * 60 * 1000).toISOString()
+      }
+    });
+  } catch (error) {
+    console.error('Error processing VIP subscription:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error processing VIP subscription',
+      error: error.message
+    });
+  }
+});
+
 // Handle 404
 app.use('*', (req, res) => {
   res.status(404).json({ 

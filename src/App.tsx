@@ -29,6 +29,7 @@ import SubmitPage from './pages/SubmitPage';
 import TechPage from './pages/TechPage';
 import DeepPage from './pages/DeepPage';
 import LegalPage from './pages/LegalPage';
+import VIPPage from './pages/VIPPage';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 import NotFoundPage from './pages/NotFoundPage';
 import TrackManager from './components/admin/TrackManager';
@@ -87,6 +88,7 @@ const router = createBrowserRouter(
           <Route index element={<DeepPage />} />
         </Route>
 
+        <Route path="vip" element={<VIPPage />} />
         <Route path="legal" element={<LegalPage />} />
         <Route path="*" element={<NotFoundPage />} />
         <Route index element={<Navigate to="/records" replace />} />

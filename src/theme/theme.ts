@@ -31,31 +31,49 @@ export const darkTheme = createTheme({
       fontSize: '2.5rem',
       fontWeight: 800,      
       letterSpacing: '-0.01em',
+      [`@media (max-width:768px)`]: {
+        fontSize: '2rem',
+      },
     },
     h2: {
       fontSize: '2rem',
       fontWeight: 700,      
       letterSpacing: '-0.01em',
+      [`@media (max-width:768px)`]: {
+        fontSize: '1.75rem',
+      },
     },
     h3: {
       fontSize: '1.75rem',
       fontWeight: 700,      
       letterSpacing: '-0.01em',
+      [`@media (max-width:768px)`]: {
+        fontSize: '1.5rem',
+      },
     },
     h4: {
       fontSize: '1.5rem',
       fontWeight: 700,
       letterSpacing: '-0.01em',
+      [`@media (max-width:768px)`]: {
+        fontSize: '1.25rem',
+      },
     },
     h5: {
       fontSize: '1.25rem',
       fontWeight: 700,
       letterSpacing: '-0.01em',
+      [`@media (max-width:768px)`]: {
+        fontSize: '1.1rem',
+      },
     },
     h6: {
       fontSize: '1.1rem',
       fontWeight: 700,
       letterSpacing: '-0.01em',
+      [`@media (max-width:768px)`]: {
+        fontSize: '1rem',
+      },
     },
     subtitle1: {
       fontSize: '1.1rem',
@@ -92,7 +110,16 @@ export const darkTheme = createTheme({
           padding: 0,
           minHeight: '100vh',
           WebkitFontSmoothing: 'antialiased', 
-          MozOsxFontSmoothing: 'grayscale',   
+          MozOsxFontSmoothing: 'grayscale',
+          overflowX: 'hidden', // Prevent horizontal scrolling on mobile
+        },
+        ':root': {
+          '--app-height': '100%',
+        },
+        '@media (max-width: 768px)': {
+          '.container': {
+            padding: '0 16px',
+          },
         },
       },
     },
@@ -118,6 +145,11 @@ export const darkTheme = createTheme({
         root: {
           textTransform: 'none',
           fontWeight: 600,
+          padding: '8px 16px',
+          '@media (max-width: 768px)': {
+            padding: '10px 14px', // Slightly larger touch targets on mobile
+            minWidth: '44px', // Better touch targets
+          },
         },
       },
     },
@@ -126,6 +158,9 @@ export const darkTheme = createTheme({
         root: {
           backgroundColor: 'rgba(255, 255, 255, 0.05)',
           backdropFilter: 'blur(10px)',
+          '@media (max-width: 768px)': {
+            margin: '0 4px', // Add some breathing room on mobile
+          },
         },
       },
     },
@@ -133,6 +168,14 @@ export const darkTheme = createTheme({
       styleOverrides: {
         root: {
           minHeight: '64px',
+          '@media (max-width: 768px)': {
+            minHeight: '56px',
+          },
+        },
+        scrollButtons: {
+          '&.Mui-disabled': {
+            opacity: 0.3,
+          },
         },
       },
     },
@@ -142,6 +185,11 @@ export const darkTheme = createTheme({
           minHeight: '64px',
           padding: '12px 16px',
           fontWeight: 600,
+          '@media (max-width: 768px)': {
+            minHeight: '56px',
+            padding: '10px 12px',
+            minWidth: '90px', // Better sizing for mobile tabs
+          },
         },
       },
     },
@@ -149,13 +197,65 @@ export const darkTheme = createTheme({
       styleOverrides: {
         root: {
           fontWeight: 500,
+          '@media (max-width: 768px)': {
+            padding: '12px 8px', // Less padding on mobile tables
+          },
         },
         head: {
           fontWeight: 700,
         },
       },
     },
+    MuiContainer: {
+      styleOverrides: {
+        root: {
+          '@media (max-width: 768px)': {
+            padding: '0 16px',
+          },
+        },
+      },
+    },
+    MuiDialog: {
+      styleOverrides: {
+        paper: {
+          '@media (max-width: 768px)': {
+            margin: '16px',
+            width: 'calc(100% - 32px)',
+            maxHeight: 'calc(100% - 32px)',
+          },
+        },
+      },
+    },
+  },
+  // Add breakpoints for better responsive design
+  breakpoints: {
+    values: {
+      xs: 0,
+      sm: 600,
+      md: 900,
+      lg: 1200,
+      xl: 1536,
+    },
   },
 });
+
+// Initialize script to fix mobile viewport height issue
+if (typeof document !== 'undefined') {
+  // Fix for mobile height (100vh issue on mobile browsers)
+  const fixMobileHeight = () => {
+    const appHeight = () => {
+      const doc = document.documentElement;
+      doc.style.setProperty('--app-height', `${window.innerHeight}px`);
+    };
+    window.addEventListener('resize', appHeight);
+    appHeight();
+  };
+  
+  if (document.readyState === 'complete') {
+    fixMobileHeight();
+  } else {
+    window.addEventListener('load', fixMobileHeight);
+  }
+}
 
 export default darkTheme;

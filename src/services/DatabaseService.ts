@@ -1824,6 +1824,78 @@ class DatabaseService {
       throw error;
     }
   }
+
+  /**
+   * Submit a VIP subscription request
+   * @param subscriptionData The subscription data (name, email, plan)
+   * @returns Promise resolving to the API response
+   */
+  async subscribeToVIP(subscriptionData: {
+    name: string;
+    email: string;
+    plan: string;
+  }): Promise<any> {
+    try {
+      console.log('[DatabaseService] Processing VIP subscription:', subscriptionData);
+      
+      // Create endpoint URL
+      const apiPath = this.baseUrl.includes('/api') ? '/api/subscribe-vip' : '/subscribe-vip';
+      console.log(`[DatabaseService] Sending subscription to: ${apiPath}`);
+      
+      const response = await fetch(`${this.baseUrl}${apiPath}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(subscriptionData),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('[DatabaseService] Error processing VIP subscription:', errorData);
+        throw new Error(errorData.message || 'Failed to process subscription');
+      }
+      
+      const data = await response.json();
+      console.log('[DatabaseService] VIP subscription processed successfully:', data);
+      
+      // Store subscription status in localStorage for client-side verification
+      localStorage.setItem('vipSubscriptionStatus', JSON.stringify({
+        subscribed: true,
+        plan: subscriptionData.plan,
+        email: subscriptionData.email,
+        timestamp: new Date().toISOString()
+      }));
+      
+      return data;
+    } catch (error) {
+      console.error('[DatabaseService] Error in subscribeToVIP:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Check if the user has an active VIP subscription
+   * @returns Object containing subscription status
+   */
+  getVIPSubscriptionStatus(): { subscribed: boolean; plan?: string; email?: string } {
+    try {
+      const subscriptionData = localStorage.getItem('vipSubscriptionStatus');
+      if (!subscriptionData) {
+        return { subscribed: false };
+      }
+      
+      const subscription = JSON.parse(subscriptionData);
+      return {
+        subscribed: subscription.subscribed || false,
+        plan: subscription.plan,
+        email: subscription.email
+      };
+    } catch (error) {
+      console.error('[DatabaseService] Error checking VIP subscription status:', error);
+      return { subscribed: false };
+    }
+  }
 }
 
 // Export the singleton instance as a named export
