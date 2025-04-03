@@ -13,7 +13,8 @@ import {
   Chip,
   Link,
   useMediaQuery,
-  styled
+  styled,
+  CircularProgress
 } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import { Release } from '../types/release';
@@ -36,7 +37,9 @@ export const ReleaseCard = ({ release, ranking, onClick, onReleaseClick }: Relea
   const [selectedArtist, setSelectedArtist] = React.useState<Artist | null>(null);
   const [completeRelease, setCompleteRelease] = React.useState<Release | null>(null);
   const [loading, setLoading] = React.useState(false);
+  const [imageLoaded, setImageLoaded] = React.useState(false);
   const theme = useMuiTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const handleClick = async () => {
     try {
@@ -59,6 +62,14 @@ export const ReleaseCard = ({ release, ranking, onClick, onReleaseClick }: Relea
             trackCount: fetchedRelease.tracks?.length || 0
           });
           
+          // Process tracks to ensure they have proper Spotify URLs
+          if (fetchedRelease.tracks && fetchedRelease.tracks.length > 0) {
+            fetchedRelease.tracks = fetchedRelease.tracks.map((track: any) => {
+              // Use the DatabaseService utility method for consistent processing
+              return databaseService.processTrackForPlayback(track);
+            });
+          }
+          
           // Open the modal with the complete release data
           setCompleteRelease(fetchedRelease);
         } else {
@@ -66,9 +77,19 @@ export const ReleaseCard = ({ release, ranking, onClick, onReleaseClick }: Relea
           setCompleteRelease(release);
         }
       } else {
-        // We already have tracks, use the existing release data
+        // We already have tracks, use the existing release data but ensure they have proper URLs
         console.log(`[ReleaseCard] Release ${release.id} already has ${release.tracks.length} tracks`);
-        setCompleteRelease(release);
+        
+        // Create a deep copy to avoid mutating the original release
+        const enhancedRelease = {
+          ...release,
+          tracks: release.tracks.map((track: any) => {
+            // Use the DatabaseService utility method for consistent processing
+            return databaseService.processTrackForPlayback(track);
+          })
+        };
+        
+        setCompleteRelease(enhancedRelease);
       }
     } catch (error) {
       console.error(`[ReleaseCard] Error handling click for release ${release.id}:`, error);
@@ -226,17 +247,54 @@ export const ReleaseCard = ({ release, ranking, onClick, onReleaseClick }: Relea
         )}
 
         <CardActionArea onClick={handleClick} sx={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
-          <CardMedia
-            component="img"
-            image={artworkUrl}
-            alt={release.title}
+          <Box 
+            position="relative" 
+            borderRadius={1}
+            overflow="hidden"
             sx={{ 
               aspectRatio: '1/1',
-              objectFit: 'cover',
-              borderRadius: '4px 4px 0 0',
-              borderBottom: '1px solid rgba(255, 255, 255, 0.12)'
+              width: '100%', 
+              height: 'auto',
+              backgroundColor: 'rgba(20, 20, 25, 0.5)',
+              transition: 'all 0.3s ease-in-out'
             }}
-          />
+          >
+            {!imageLoaded && (
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: 'rgba(20, 20, 25, 0.5)',
+                }}
+              >
+                <CircularProgress size={40} thickness={4} />
+              </Box>
+            )}
+            <CardMedia
+              component="img"
+              src={artworkUrl}
+              alt={release.title}
+              loading="lazy"
+              onLoad={() => setImageLoaded(true)}
+              sx={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                transition: 'transform 0.3s ease-in-out',
+                opacity: imageLoaded ? 1 : 0,
+                '&:hover': {
+                  transform: 'scale(1.05)',
+                },
+              }}
+            />
+          </Box>
+
           <Box 
             className="play-icon"
             sx={{

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardMedia, Typography, Box, CircularProgress } from '@mui/material';
 import { Artist } from '../types/artist';
 import { API_URL } from '../config';
@@ -13,6 +13,8 @@ interface ArtistCardProps {
 const ArtistCard: React.FC<ArtistCardProps> = ({ artist, onClick, background }) => {
   const [artistImage, setArtistImage] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   // Try to fetch artist's releases if no profile image is available
   const fetchArtistReleases = async (artistId: string) => {
@@ -103,37 +105,61 @@ const ArtistCard: React.FC<ArtistCardProps> = ({ artist, onClick, background }) 
       onClick={handleClick}
     >
       <Box sx={{ position: 'relative', paddingTop: '100%' }}>
-        {isLoading ? (
-          <Box 
-            sx={{ 
-              position: 'absolute', 
-              top: 0, 
-              left: 0, 
-              width: '100%', 
-              height: '100%', 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center',
-              bgcolor: 'rgba(0,0,0,0.2)'
-            }}
-          >
-            <CircularProgress size={40} />
-          </Box>
-        ) : (
-          <CardMedia
+        <Box
+          sx={{
+            borderRadius: '8px 8px 0 0',
+            overflow: 'hidden',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(30, 30, 35, 0.5)',
+            boxShadow: '0 4px 15px rgba(0, 0, 0, 0.2)',
+            '&:hover': {
+              transform: 'translateY(-4px)',
+              transition: 'transform 0.3s ease'
+            },
+          }}
+        >
+          {!imageLoaded && !imageError && (
+            <Box
+              sx={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: 'rgba(30, 30, 35, 0.7)',
+                zIndex: 1
+              }}
+            >
+              <CircularProgress size={30} thickness={4} />
+            </Box>
+          )}
+          <Box
             component="img"
-            image={artistImage || '/images/placeholder-artist.jpg'}
+            loading="lazy"
+            src={artistImage || '/images/placeholder-artist.jpg'}
             alt={artist.name}
-            sx={{ 
-              position: 'absolute',
-              top: 0,
-              left: 0,
+            onLoad={() => setImageLoaded(true)}
+            onError={() => {
+              setImageError(true);
+              setImageLoaded(true);
+            }}
+            sx={{
               width: '100%',
               height: '100%',
-              objectFit: 'cover'
+              objectFit: 'cover',
+              objectPosition: 'center',
+              opacity: imageLoaded ? 1 : 0,
+              transition: 'opacity 0.3s ease',
             }}
           />
-        )}
+        </Box>
       </Box>
       <CardContent sx={{ 
         flexGrow: 1,

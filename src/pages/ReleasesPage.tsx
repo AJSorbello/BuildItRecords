@@ -16,7 +16,8 @@ import {
   ButtonGroup,
   TextField,
   InputAdornment,
-  IconButton
+  IconButton,
+  Skeleton
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import SearchIcon from '@mui/icons-material/Search';
@@ -31,6 +32,7 @@ import { formatDate } from '../utils/dateUtils';
 import ErrorBoundary from '../components/ErrorBoundary.jsx';
 import { TopReleases } from '../components/TopReleases';
 import { labelColors } from '../theme/theme';
+import { useInView } from 'react-intersection-observer';
 
 // Map route labels to RECORD_LABELS keys
 const getLabelId = (label: string | RecordLabel | undefined): string => {
@@ -99,11 +101,46 @@ export const ReleasesPage = ({ label: propLabel }: ReleasesPageProps) => {
   const [error, setError] = React.useState<string | null>(null);
   const [totalReleases, setTotalReleases] = React.useState(0);
   const [currentPage, setCurrentPage] = React.useState(1);
-  const [hasMore, setHasMore] = React.useState(false);
+  const [hasMore, setHasMore] = React.useState(true);
   const [releaseType, setReleaseType] = React.useState<'all' | 'album' | 'single' | 'compilation'>('all');
   const [searchQuery, setSearchQuery] = React.useState('');
+  
+  // Use intersection observer to load more releases when user scrolls to bottom
+  const { ref: loadMoreRef, inView } = useInView({
+    threshold: 0.1,
+    triggerOnce: false
+  });
+  
+  // Track if initial data has loaded
+  const [initialDataLoaded, setInitialDataLoaded] = React.useState(false);
+  
+  // Track visible releases (for virtualization)
+  const [visibleReleases, setVisibleReleases] = React.useState<number>(10);
+
+  // Small batch size to ensure smooth loading
+  const ITEMS_PER_PAGE = 10;
+
+  // Optimize with useMemo for filtering releases
+  const validReleases = React.useMemo(() => {
+    if (!initialDataLoaded) return [];
+    
+    if (searchQuery.trim() !== '') {
+      // Filter by search query
+      const lowerQuery = searchQuery.toLowerCase();
+      return releases.filter(release => 
+        (release.title?.toLowerCase().includes(lowerQuery) || 
+         release.name?.toLowerCase().includes(lowerQuery) ||
+         release.artists?.some(artist => artist.name?.toLowerCase().includes(lowerQuery))) &&
+        isValidRelease(release)
+      );
+    }
+    return releases.filter(isValidRelease);
+  }, [releases, searchQuery, initialDataLoaded]);
 
   const fetchReleases = async (page = 1) => {
+    if (loading && page > 1) return; // Prevent multiple concurrent loads
+    
+    setLoading(true);
     const mappedLabelId = getLabelId(labelId || propLabel);
     const labelConfig = RECORD_LABELS[mappedLabelId];
 
@@ -114,102 +151,106 @@ export const ReleasesPage = ({ label: propLabel }: ReleasesPageProps) => {
     }
 
     try {
-      setLoading(true);
-      setError(null);
-
-      console.log('Fetching releases for label:', labelConfig.id, 'page:', page, 'type:', releaseType);
+      console.log(`Fetching releases for page ${page} with limit ${ITEMS_PER_PAGE}`);
       
-      // Add the release type parameter to the API call if it's not 'all'
+      // Use the modified DatabaseService method that now takes a smaller page size
       const typeParam = releaseType !== 'all' ? releaseType : undefined;
-      const releases = await databaseService.getReleasesByLabel(labelConfig.id, page, 50, typeParam);
+      const fetchedReleases = await databaseService.getReleasesByLabel(
+        labelConfig.id,
+        page,
+        ITEMS_PER_PAGE,
+        typeParam
+      );
 
-      if (!releases || !Array.isArray(releases)) {
-        throw new Error('No data received from server');
+      if (!Array.isArray(fetchedReleases)) {
+        throw new Error('Invalid response from API');
       }
 
-      // Filter and validate releases
-      const validReleases = releases
-        .filter(release => {
-          const isValid = isValidRelease(release);
-          if (!isValid) {
-            console.warn('Invalid release:', release);
-          }
-          return isValid;
-        })
-        .map(release => {
-          // Make sure artwork_url is populated
-          let artworkUrl = release.artwork_url;
-          if (!artworkUrl && release.images && release.images.length > 0) {
-            artworkUrl = release.images[0].url;
-          }
-          
-          // Make sure title is populated (preferring title over name)
-          let title = release.title;
-          if (!title && release.name) {
-            title = release.name;
-          }
-          
-          return {
-            ...release,
-            title,
-            artwork_url: artworkUrl || '/images/placeholder-release.jpg'
-          };
-        });
+      // Filter out invalid releases
+      const validFetchedReleases = fetchedReleases.filter(isValidRelease);
+      console.log(`Fetched ${validFetchedReleases.length} valid releases for page ${page}`);
 
-      // If this is page 1, replace releases, otherwise append to existing releases
-      if (page === 1) {
-        setReleases(validReleases);
-      } else {
-        setReleases(prevReleases => [...prevReleases, ...validReleases]);
+      // Check if we received an empty array or fewer items than requested
+      // If so, we've reached the end of all releases
+      if (validFetchedReleases.length === 0) {
+        setHasMore(false);
+        setLoading(false);
+        return;
       }
       
-      setTotalReleases(releases.length);
-      setHasMore(false);
+      // Append new releases or replace if page 1
+      if (page === 1) {
+        setReleases(validFetchedReleases);
+      } else {
+        // Check if we've already loaded these releases (prevent duplicates)
+        const existingReleaseIds = new Set(releases.map(r => r.id));
+        const newReleases = validFetchedReleases.filter(r => !existingReleaseIds.has(r.id));
+        
+        // If we didn't get any new releases that we don't already have, we've reached the end
+        if (newReleases.length === 0) {
+          setHasMore(false);
+          setLoading(false);
+          return;
+        }
+        
+        setReleases(prev => [...prev, ...newReleases]);
+      }
+
+      // Set loading state and pagination
+      setLoading(false);
+      setInitialDataLoaded(true);
       setCurrentPage(page);
+      
+      // Determine if there might be more pages
+      // If we got fewer items than requested per page, we've reached the end
+      setHasMore(validFetchedReleases.length >= ITEMS_PER_PAGE);
+      
+      // Reset visible count on first page load
+      if (page === 1) {
+        setVisibleReleases(Math.min(10, validFetchedReleases.length));
+      }
+    } catch (error) {
+      console.error('Error fetching releases:', error);
+      setError('Failed to load releases. Please try again.');
       setLoading(false);
-    } catch (err) {
-      console.error('Error fetching releases:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch releases');
-      setLoading(false);
+      // Also set hasMore to false on error after a few attempts
+      if (page > 3) {
+        setHasMore(false);
+      }
     }
   };
-
-  const loadMore = async () => {
-    if (!loading && hasMore) {
-      await fetchReleases(currentPage + 1);
-    }
+  
+  const loadMore = () => {
+    if (loading || !hasMore) return;
+    
+    const nextPage = currentPage + 1;
+    fetchReleases(nextPage);
   };
 
-  const refetch = async () => {
-    await fetchReleases(1);
-  };
-
-  /* eslint-disable react-hooks/exhaustive-deps */
+  // Reset page when label or type changes
   React.useEffect(() => {
+    setReleases([]);
+    setFilteredReleases([]);
+    setCurrentPage(1);
+    setHasMore(true);
+    setLoading(true);
+    setInitialDataLoaded(false);
+    setVisibleReleases(10);
     fetchReleases(1);
   }, [labelId, propLabel, releaseType]);
-  /* eslint-enable react-hooks/exhaustive-deps */
 
-  // Add filtering function for search
+  // Monitor for infinite scrolling
   React.useEffect(() => {
-    if (!searchQuery.trim()) {
-      setFilteredReleases(releases);
-      return;
+    if (inView && initialDataLoaded && !loading) {
+      if (visibleReleases < validReleases.length) {
+        // First show more of already loaded releases
+        setVisibleReleases(prev => Math.min(prev + 10, validReleases.length));
+      } else if (hasMore) {
+        // Load more releases when we've shown all currently loaded ones
+        loadMore();
+      }
     }
-
-    const query = searchQuery.toLowerCase().trim();
-    const filtered = releases.filter(release => {
-      const title = (release.title || release.name || '').toLowerCase();
-      const artistName = release.artists?.map(a => a.name || '').join(' ').toLowerCase() || '';
-      const releaseDate = release.release_date || '';
-      
-      return title.includes(query) || 
-             artistName.includes(query) || 
-             releaseDate.includes(query);
-    });
-
-    setFilteredReleases(filtered);
-  }, [searchQuery, releases]);
+  }, [inView, initialDataLoaded, loading, validReleases.length, visibleReleases, hasMore]);
 
   const labelIdString = (labelId || propLabel || 'records');
   const mappedLabelId = getLabelId(labelIdString);
@@ -257,7 +298,7 @@ export const ReleasesPage = ({ label: propLabel }: ReleasesPageProps) => {
         </Typography>
         <Button
           startIcon={<CircularProgress />}
-          onClick={refetch}
+          onClick={fetchReleases}
           sx={{ mt: 2 }}
         >
           Try Again
@@ -267,36 +308,6 @@ export const ReleasesPage = ({ label: propLabel }: ReleasesPageProps) => {
   }
 
   // Process releases from API response
-  const validReleases = filteredReleases
-    .filter(isValidRelease)
-    .map(release => ({
-      ...release,
-      title: release.title || release.name || 'Untitled Release',
-      artwork_url: release.artwork_url || release.images?.[0]?.url || '/placeholder.jpg',
-    }));
-
-  if (validReleases.length === 0) {
-    return (
-      <Box sx={{ py: 6, textAlign: 'center' }}>
-        <Typography variant="h6" color="text.secondary" gutterBottom>
-          No {
-            releaseType === 'album' ? 'albums' : 
-            releaseType === 'single' ? 'singles' : 
-            releaseType === 'compilation' ? 'compilations' : 'releases'
-          } found for {labelConfig.displayName}
-        </Typography>
-        <Button
-          onClick={refetch}
-          sx={{ mt: 2 }}
-          variant="outlined"
-          color="primary"
-        >
-          Try Again
-        </Button>
-      </Box>
-    );
-  }
-
   const latestRelease = validReleases[0];
   
   // Only show the latest release section if filter is 'all' or if there are releases matching the filter
@@ -308,7 +319,7 @@ export const ReleasesPage = ({ label: propLabel }: ReleasesPageProps) => {
 
   const handleRefresh = () => {
     setSearchQuery('');
-    refetch();
+    fetchReleases(1);
   };
 
   return (
@@ -409,25 +420,29 @@ export const ReleasesPage = ({ label: propLabel }: ReleasesPageProps) => {
               <Typography variant="h5" component="h2" gutterBottom>
                 Latest Release
               </Typography>
-              <Paper 
-                elevation={3} 
-                sx={{ 
-                  p: isMobile ? 2 : 3, 
-                  borderRadius: 2,
-                  height: '100%',
-                  transition: 'transform 0.3s ease-in-out',
-                  background: getGradientBackground(),
-                  '&:hover': {
-                    transform: 'translateY(-4px)'
-                  }
-                }}
-              >
-                <ReleaseSection 
-                  release={latestRelease}
-                  ranking={1} 
-                  onClick={() => { /* No operation needed */ }} 
-                />
-              </Paper>
+              {loading && !initialDataLoaded ? (
+                <Skeleton variant="rectangular" width="100%" height={300} sx={{ borderRadius: 2 }} />
+              ) : (
+                <Paper 
+                  elevation={3} 
+                  sx={{ 
+                    p: isMobile ? 2 : 3, 
+                    borderRadius: 2,
+                    height: '100%',
+                    transition: 'transform 0.3s ease-in-out',
+                    background: getGradientBackground(),
+                    '&:hover': {
+                      transform: 'translateY(-4px)'
+                    }
+                  }}
+                >
+                  <ReleaseSection 
+                    release={latestRelease}
+                    ranking={1} 
+                    onClick={() => { /* No operation needed */ }} 
+                  />
+                </Paper>
+              )}
             </Grid>
             
             <Grid item xs={12} md={6}>
@@ -436,17 +451,21 @@ export const ReleasesPage = ({ label: propLabel }: ReleasesPageProps) => {
                  releaseType === 'album' ? 'Top Albums' : 
                  releaseType === 'single' ? 'Top Singles' : 'Top Compilations'}
               </Typography>
-              <Paper 
-                elevation={3} 
-                sx={{ 
-                  p: isMobile ? 2 : 3, 
-                  borderRadius: 2,
-                  height: '100%',
-                  background: getGradientBackground()
-                }}
-              >
-                <TopReleases label={labelConfig} />
-              </Paper>
+              {loading && !initialDataLoaded ? (
+                <Skeleton variant="rectangular" width="100%" height={300} sx={{ borderRadius: 2 }} />
+              ) : (
+                <Paper 
+                  elevation={3} 
+                  sx={{ 
+                    p: isMobile ? 2 : 3, 
+                    borderRadius: 2,
+                    height: '100%',
+                    background: getGradientBackground()
+                  }}
+                >
+                  <TopReleases label={labelConfig} />
+                </Paper>
+              )}
             </Grid>
           </Grid>
         )}
@@ -459,38 +478,69 @@ export const ReleasesPage = ({ label: propLabel }: ReleasesPageProps) => {
                releaseType === 'single' ? 'All Singles' : 'All Compilations'}
             </Typography>
             <Grid container spacing={3}>
-              {validReleases.map((release, index) => (
-                <Grid item xs={12} sm={6} md={4} key={release.id}>
-                  <Paper 
-                    elevation={3} 
-                    sx={{ 
-                      p: 2, 
-                      borderRadius: 2,
-                      background: getGradientBackground(),
-                      height: '100%',
-                      transition: 'transform 0.3s ease-in-out',
-                      '&:hover': {
-                        transform: 'translateY(-4px)'
-                      }
-                    }}
-                  >
-                    <ReleaseSection release={release} ranking={index + 1} />
-                  </Paper>
-                </Grid>
-              ))}
+              {loading && !initialDataLoaded ? (
+                // Show skeletons while loading initial data
+                Array.from(new Array(6)).map((_, index) => (
+                  <Grid item xs={12} sm={6} md={4} key={`skeleton-${index}`}>
+                    <Skeleton 
+                      variant="rectangular" 
+                      width="100%" 
+                      height={280} 
+                      sx={{ borderRadius: 2, mb: 1 }} 
+                    />
+                    <Skeleton variant="text" height={24} width="70%" />
+                    <Skeleton variant="text" height={20} width="40%" />
+                  </Grid>
+                ))
+              ) : (
+                // Show only a subset of releases for better performance
+                validReleases.slice(0, visibleReleases).map((release, index) => (
+                  <Grid item xs={12} sm={6} md={4} key={release.id}>
+                    <Paper 
+                      elevation={3} 
+                      sx={{ 
+                        p: 2, 
+                        borderRadius: 2,
+                        background: getGradientBackground(),
+                        height: '100%',
+                        transition: 'transform 0.3s ease-in-out',
+                        '&:hover': {
+                          transform: 'translateY(-4px)'
+                        }
+                      }}
+                    >
+                      <ReleaseSection release={release} ranking={index + 1} />
+                    </Paper>
+                  </Grid>
+                ))
+              )}
             </Grid>
             
-            {hasMore && (
-              <Box sx={{ mt: 4, textAlign: 'center' }}>
+            {/* IntersectionObserver ref for infinite scrolling */}
+            <Box ref={loadMoreRef} sx={{ mt: 4, textAlign: 'center', p: 2 }}>
+              {loading ? (
+                <CircularProgress size={32} thickness={4} />
+              ) : hasMore ? (
                 <Button 
-                  variant="outlined" 
-                  onClick={loadMore}
-                  disabled={loading}
+                  variant="text" 
+                  onClick={() => {
+                    if (visibleReleases < validReleases.length) {
+                      // First show more of already loaded releases
+                      setVisibleReleases(prev => Math.min(prev + 10, validReleases.length));
+                    } else {
+                      // Then load more releases if needed
+                      loadMore();
+                    }
+                  }}
                 >
-                  {loading ? 'Loading...' : 'Load More'}
+                  Show More
                 </Button>
-              </Box>
-            )}
+              ) : (
+                <Typography variant="body2" color="textSecondary">
+                  No more releases to load
+                </Typography>
+              )}
+            </Box>
           </Box>
         )}
       </Container>

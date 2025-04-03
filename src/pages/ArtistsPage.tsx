@@ -23,6 +23,7 @@ import { Artist } from '../types/artist';
 import { Refresh as RefreshIcon } from '@mui/icons-material';
 import { RECORD_LABELS } from '../constants/labels';
 import { labelColors } from '../theme/theme';
+import { useInView } from 'react-intersection-observer';
 
 // Removed ITEMS_PER_PAGE constant as we're showing all artists
 
@@ -37,12 +38,17 @@ interface ArtistsPageProps {
 
 interface ArtistsPageState {
   artists: Artist[];
+  displayedArtists: Artist[];
   loading: boolean;
   error: string | null;
   searchTerm: string;
   selectedArtist: Artist | null;
   searchState: SearchState;
   modalOpen: boolean;
+  initialLoadComplete: boolean;
+  visibleArtists: number;
+  currentPage: number;
+  hasMore: boolean;
 }
 
 function ArtistsPage(props: ArtistsPageProps) {
@@ -51,18 +57,29 @@ function ArtistsPage(props: ArtistsPageProps) {
   
   // State hooks
   const [artists, setArtists] = useState<Artist[]>([]);
+  const [displayedArtists, setDisplayedArtists] = useState<Artist[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedArtist, setSelectedArtist] = useState<Artist | null>(null);
   const [searchState, setSearchState] = useState({ total: 0 });
   const [modalOpen, setModalOpen] = useState(false);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
+  const [visibleArtists, setVisibleArtists] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  
+  // Use intersection observer for infinite scrolling
+  const { ref: loadMoreRef, inView } = useInView({
+    threshold: 0.1,
+    triggerOnce: false
+  });
   
   // Create debounced search function
   const debouncedSearch = useCallback(
     debounce((term: string) => {
       handleSearch(term);
-    }, 500),
+    }, 300),
     []
   );
   
@@ -70,23 +87,52 @@ function ArtistsPage(props: ArtistsPageProps) {
   useEffect(() => {
     fetchArtists();
   }, [props.label]);
+  
+  // Load more artists when scrolling to the bottom
+  useEffect(() => {
+    if (inView && !loading && initialLoadComplete) {
+      if (visibleArtists < displayedArtists.length) {
+        // First show more from already loaded artists
+        setVisibleArtists(prev => Math.min(prev + 10, displayedArtists.length));
+      } else if (hasMore) {
+        // Then load next page if needed
+        loadMoreArtists();
+      }
+    }
+  }, [inView, loading, initialLoadComplete, displayedArtists.length, visibleArtists, hasMore]);
+
+  // Filter artists when search term changes
+  useEffect(() => {
+    if (initialLoadComplete) {
+      filterArtists();
+    }
+  }, [searchTerm, artists, initialLoadComplete]);
+
+  // Filter artists based on search term
+  const filterArtists = () => {
+    if (!searchTerm.trim()) {
+      setDisplayedArtists(artists);
+      return;
+    }
+    
+    const lowerTerm = searchTerm.toLowerCase();
+    const filtered = artists.filter(artist => 
+      artist.name.toLowerCase().includes(lowerTerm)
+    );
+    
+    setDisplayedArtists(filtered);
+    setVisibleArtists(Math.min(10, filtered.length));
+  };
 
   // Handler functions
   const handleInputChange = (e: any) => {
     const target = e.target as HTMLInputElement;
     const term = target.value;
     setSearchTerm(term);
-    
-    if (term) {
-      debouncedSearch(term);
-    } else {
-      fetchArtists();
-    }
   };
 
   const handleClearSearch = () => {
     setSearchTerm('');
-    fetchArtists();
   };
 
   const handleArtistClick = (artist: Artist) => {
@@ -99,32 +145,22 @@ function ArtistsPage(props: ArtistsPageProps) {
   };
 
   const handleSearch = async (term: string) => {
-    if (!term) return;
-    
-    setLoading(true);
-    try {
-      console.log(`[ArtistsPage] Searching for term: "${term}" among ${artists.length} artists`);
-      
-      const lowerSearchTerm = term.toLowerCase();
-      const filteredArtists = artists.filter(artist => 
-        artist.name?.toLowerCase().includes(lowerSearchTerm)
-      );
-      
-      console.log(`[ArtistsPage] Found ${filteredArtists.length} matching artists for term: "${term}"`);
-      
-      filteredArtists.forEach(artist => {
-        console.log(`[ArtistsPage] Matching artist: ${artist.name} (ID: ${artist.id})`);
-      });
-      
-      setSearchState({
-        total: filteredArtists.length || 0
-      });
-      setLoading(false);
-    } catch (err) {
-      console.error('[ArtistsPage] Error searching artists:', err);
-      setError('Error searching artists');
-      setLoading(false);
+    if (!term) {
+      setDisplayedArtists(artists);
+      return;
     }
+    
+    const lowerSearchTerm = term.toLowerCase();
+    const filteredArtists = artists.filter(artist => 
+      artist.name?.toLowerCase().includes(lowerSearchTerm)
+    );
+    
+    setDisplayedArtists(filteredArtists);
+    setVisibleArtists(Math.min(10, filteredArtists.length));
+    
+    setSearchState({
+      total: filteredArtists.length || 0
+    });
   };
 
   const fetchArtists = async () => {
@@ -141,23 +177,35 @@ function ArtistsPage(props: ArtistsPageProps) {
       );
       
       setArtists(sortedArtists || []);
+      setDisplayedArtists(sortedArtists || []);
       setSearchState({
         total: results.length
       });
-      setLoading(false);
-    } catch (err) {
-      console.error('Error fetching artists:', err);
       
-      let errorMessage = 'Failed to fetch artists. Please try again.';
-      if (err instanceof Error) {
-        errorMessage = err.message;
+      setLoading(false);
+      setInitialLoadComplete(true);
+      setVisibleArtists(Math.min(10, sortedArtists.length));
+      setHasMore(false); // Since we load all artists at once
+    } catch (error) {
+      if (error instanceof DatabaseError) {
+        setError(error.message);
+      } else {
+        setError('Failed to load artists. Please try again later.');
       }
-      
-      console.error('Detailed error:', errorMessage);
-      
+      console.error('[ArtistsPage] Error loading artists:', error);
       setLoading(false);
-      setError(errorMessage);
-      setArtists([]); // Ensure artists is set to an empty array on error
+    }
+  };
+
+  const loadMoreArtists = () => {
+    if (loading || !hasMore) return;
+    
+    setVisibleArtists(prev => Math.min(prev + 10, displayedArtists.length));
+    
+    // No need to fetch more since we load all at once
+    // But set hasMore to false if we've shown all artists
+    if (visibleArtists >= displayedArtists.length) {
+      setHasMore(false);
     }
   };
 
@@ -181,30 +229,6 @@ function ArtistsPage(props: ArtistsPageProps) {
     };
     
     return titleMap[label] || 'Build It Tech Artists';
-  };
-
-  const getFilteredArtists = () => {
-    if (!searchTerm.trim()) {
-      return artists;
-    }
-    
-    const lowerSearchTerm = searchTerm.toLowerCase();
-    
-    const filteredResults = artists.filter(artist => {
-      if (!artist.name) return false;
-      
-      const artistNameLower = artist.name.toLowerCase();
-      const isMatch = artistNameLower.includes(lowerSearchTerm);
-      
-      if (artist.name.toLowerCase().includes("john") && lowerSearchTerm.includes("john")) {
-        console.log(`[ArtistsPage] Artist "${artist.name}" ${isMatch ? 'matches' : 'does not match'} search term "${searchTerm}"`);
-      }
-      
-      return isMatch;
-    });
-    
-    console.log(`[ArtistsPage] Filtered ${artists.length} artists down to ${filteredResults.length} results for search term "${searchTerm}"`);
-    return filteredResults;
   };
 
   const renderArtistCard = (artist: Artist) => {
@@ -313,9 +337,31 @@ function ArtistsPage(props: ArtistsPageProps) {
         </Grid>
       ) : (
         <Grid container spacing={3}>
-          {getFilteredArtists().map(renderArtistCard)}
+          {displayedArtists.slice(0, visibleArtists).map(renderArtistCard)}
         </Grid>
       )}
+      
+      {/* Add load more indicator/trigger */}
+      <Box ref={loadMoreRef} sx={{ textAlign: 'center', p: 3, mt: 2 }}>
+        {loading && initialLoadComplete ? (
+          <CircularProgress size={30} thickness={3} />
+        ) : displayedArtists.length > visibleArtists ? (
+          <Button 
+            variant="outlined" 
+            onClick={() => setVisibleArtists(prev => Math.min(prev + 10, displayedArtists.length))}
+          >
+            Load More Artists
+          </Button>
+        ) : displayedArtists.length > 0 ? (
+          <Typography variant="body2" color="textSecondary">
+            All artists loaded
+          </Typography>
+        ) : searchTerm ? (
+          <Typography variant="body2" color="textSecondary">
+            No artists match your search
+          </Typography>
+        ) : null}
+      </Box>
       
       {selectedArtist && (
         <ArtistModal

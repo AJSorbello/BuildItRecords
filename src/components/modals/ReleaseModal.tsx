@@ -141,6 +141,31 @@ export const ReleaseModal = ({ open, onClose, release, onArtistClick }: ReleaseM
       if (fetchedRelease) {
         console.log(`[ReleaseModal] Fetched release data:`, fetchedRelease);
         
+        // Check if the fetched release has tracks
+        if (fetchedRelease.tracks && Array.isArray(fetchedRelease.tracks) && fetchedRelease.tracks.length > 0) {
+          console.log(`[ReleaseModal] Found ${fetchedRelease.tracks.length} tracks in fetched release`);
+          
+          // Process tracks to ensure they have proper Spotify URLs
+          const processedTracks = fetchedRelease.tracks.map((track: any) => {
+            const customTrack = { ...track } as CustomTrack;
+            
+            // Make sure there's always a spotify_url property
+            if (!customTrack.spotify_url && customTrack.external_urls && customTrack.external_urls.spotify) {
+              customTrack.spotify_url = customTrack.external_urls.spotify;
+            } else if (!customTrack.spotify_url && !customTrack.external_urls) {
+              // If no spotify_url or external_urls, try to construct one from the track ID
+              if (customTrack.id) {
+                customTrack.spotify_url = `https://open.spotify.com/track/${customTrack.id}`;
+              }
+            }
+            
+            // Ensure the track has the necessary properties
+            return customTrack;
+          });
+          
+          return processedTracks;
+        }
+        
         // Special case for "No More" EP by Kwal
         if (fetchedRelease.title === "No More" && 
             fetchedRelease.artists && 
@@ -231,12 +256,6 @@ export const ReleaseModal = ({ open, onClose, release, onArtistClick }: ReleaseM
         }
         
         // Check if the fetched release has tracks
-        if (fetchedRelease.tracks && fetchedRelease.tracks.length > 0) {
-          console.log(`[ReleaseModal] Found ${fetchedRelease.tracks.length} tracks in API response`);
-          return fetchedRelease.tracks as unknown as CustomTrack[];
-        }
-        
-        // Try to get tracks from the album property
         if ((fetchedRelease as any).album && (fetchedRelease as any).album.tracks && (fetchedRelease as any).album.tracks.length > 0) {
           console.log(`[ReleaseModal] Found ${(fetchedRelease as any).album.tracks.length} tracks in album property`);
           return (fetchedRelease as any).album.tracks as unknown as CustomTrack[];
@@ -318,7 +337,7 @@ export const ReleaseModal = ({ open, onClose, release, onArtistClick }: ReleaseM
           // Otherwise, try to extract remixer information from the track title
           const processedTrack = { ...track };
           
-          // Try to extract remixer name from the title
+          // Try to extract remixer name from title
           const title = track.title || track.name || '';
           const remixRegex = /\(([^)]+)\s+Remix\)/i;
           const remixMatch = title.match(remixRegex);
@@ -360,6 +379,88 @@ export const ReleaseModal = ({ open, onClose, release, onArtistClick }: ReleaseM
     
     loadTracks();
   }, [release]);
+
+  useEffect(() => {
+    if (open && release && release.id) {
+      console.log('[ReleaseModal] Modal opened with release:', release);
+      
+      // If we have cached artists from another release, clear them
+      setProcessedArtists([]);
+      setHasArtists(false);
+      setTracks([]);
+      
+      // Also reset currentTrack
+      setCurrentTrack(null);
+      
+      // Ensure all tracks have proper Spotify URLs before displaying
+      if (release.tracks && Array.isArray(release.tracks)) {
+        const enhancedTracks = release.tracks.map((track: any) => {
+          const enhancedTrack = { ...track };
+          
+          // Ensure spotify_url exists if external_urls.spotify exists
+          if (!enhancedTrack.spotify_url && enhancedTrack.external_urls && enhancedTrack.external_urls.spotify) {
+            enhancedTrack.spotify_url = enhancedTrack.external_urls.spotify;
+          }
+          
+          // Also add any preview_url as a fallback
+          if (!enhancedTrack.spotify_url && !enhancedTrack.preview_url && track.preview_url) {
+            enhancedTrack.preview_url = track.preview_url;
+          }
+          
+          return enhancedTrack;
+        });
+        
+        // Update the release object with enhanced tracks
+        const enhancedRelease = { ...release, tracks: enhancedTracks };
+        
+        // This will trigger loadTracks with the enhanced release
+        setTracks(enhancedTracks);
+      }
+      
+      // Fetch or extract tracks from the release
+      loadTracks();
+    }
+  }, [open, release]);
+
+  // Load all necessary data for the modal
+  const loadTracks = async () => {
+    if (!release) return;
+    
+    setLoading(true);
+    console.log('[ReleaseModal] Loading tracks for release:', release.id, release.title);
+    
+    try {
+      // First check if track data is already included with the release
+      if (release.tracks && Array.isArray(release.tracks) && release.tracks.length > 0) {
+        console.log(`[ReleaseModal] Release already has ${release.tracks.length} tracks`);
+        
+        // Process each track to make sure it has correct properties
+        const processedTracks = release.tracks.map((track: any) => {
+          // Process track using DatabaseService method
+          return databaseService.processTrackForPlayback(track);
+        });
+        
+        setTracks(processedTracks);
+      } else {
+        // Fetch tracks from API if not included
+        console.log(`[ReleaseModal] Fetching tracks from API for release: ${release.id}`);
+        const fetchedTracks = await fetchTracks(release.id);
+        
+        if (fetchedTracks && fetchedTracks.length > 0) {
+          console.log(`[ReleaseModal] Successfully fetched ${fetchedTracks.length} tracks`);
+          setTracks(fetchedTracks);
+        } else {
+          console.log('[ReleaseModal] No tracks found for release');
+          setTracks([]);
+        }
+      }
+    } catch (error) {
+      console.error('[ReleaseModal] Error loading tracks:', error);
+      setTracks([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Process artists data when release changes
   useEffect(() => {
@@ -590,32 +691,28 @@ export const ReleaseModal = ({ open, onClose, release, onArtistClick }: ReleaseM
       // Set the current track for the UI state (for highlighting in the UI)
       setCurrentTrack(track);
       
-      // Log the track details for debugging
-      console.log(`[ReleaseModal] Play button clicked for track:`, {
-        title: track.title,
-        id: track.id,
-        spotify_url: track.spotify_url,
-        external_urls: track.external_urls
-      });
+      // Log detailed track structure for debugging
+      console.log('[ReleaseModal] Play button clicked for track - FULL DATA:', JSON.stringify(track, null, 2));
       
-      // Get the Spotify URL with fallbacks
-      let spotifyUrl = null;
-      
-      // Check external_urls.spotify first (most common location)
-      if (track.external_urls && track.external_urls.spotify) {
-        spotifyUrl = track.external_urls.spotify;
-      } 
-      // Then check spotify_url (our custom field)
-      else if (track.spotify_url) {
-        spotifyUrl = track.spotify_url;
+      // Check if track is undefined or null
+      if (!track) {
+        console.error('[ReleaseModal] Track is undefined or null');
+        return;
       }
       
-      if (spotifyUrl) {
-        console.log(`[ReleaseModal] Opening Spotify URL: ${spotifyUrl}`);
-        // Force open in a new tab
-        window.open(spotifyUrl, '_blank', 'noopener,noreferrer');
+      // Process the track one more time to ensure spotify_url is available
+      const processedTrack = databaseService.processTrackForPlayback(track);
+      
+      // Get the URL directly
+      const url = processedTrack.spotify_url;
+      
+      // Log and open directly
+      console.log(`[ReleaseModal] Opening URL directly: ${url}`);
+      if (url) {
+        window.open(url, '_blank', 'noopener,noreferrer');
       } else {
-        console.error('[ReleaseModal] No Spotify URL available for this track');
+        console.error('No playable URL found for track:', track);
+        alert('No Spotify URL available for this track');
       }
     } catch (error) {
       console.error('[ReleaseModal] Error handling track play:', error);
@@ -933,10 +1030,26 @@ export const ReleaseModal = ({ open, onClose, release, onArtistClick }: ReleaseM
                                 color="primary"
                                 size="small"
                                 startIcon={<PlayArrowIcon />}
-                                href={(track.external_urls && track.external_urls.spotify) || track.spotify_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                disabled={!track.external_urls?.spotify && !track.spotify_url}
+                                onClick={(e) => {
+                                  e.stopPropagation(); // Prevent event bubbling
+                                  e.preventDefault();
+                                  
+                                  // Process the track one more time to ensure spotify_url is available
+                                  const processedTrack = databaseService.processTrackForPlayback(track);
+                                  
+                                  // Get the URL directly
+                                  const url = processedTrack.spotify_url;
+                                  
+                                  // Log and open directly
+                                  console.log(`[ReleaseModal] Opening URL directly: ${url}`);
+                                  if (url) {
+                                    window.open(url, '_blank', 'noopener,noreferrer');
+                                  } else {
+                                    console.error('No playable URL found for track:', track);
+                                    alert('No Spotify URL available for this track');
+                                  }
+                                }}
+                                disabled={!track.spotify_url && !track.external_urls?.spotify && !track.preview_url}
                                 sx={{ 
                                   fontSize: '0.7rem',
                                   padding: '2px 8px',

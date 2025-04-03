@@ -340,37 +340,70 @@ const ArtistModal = (props: ArtistModalProps) => {
   };
 
   // Load artist releases
-  const loadArtistReleases = async () => {
+  const loadArtistReleases = async (useCacheOnly = false) => {
     if (!artist || !artist.id) return;
     
     try {
-      setLoadingReleases(true);
-      console.log(`[ArtistModal] Loading releases for artist ${artist.id}`);
+      if (useCacheOnly) {
+        console.log(`[ArtistModal] Loading cached releases for artist ${artist.id}`);
+      } else {
+        setLoadingReleases(true);
+        console.log(`[ArtistModal] Loading fresh releases for artist ${artist.id}`);
+      }
       
       // Get artist releases from the database service
-      const artistReleases = await databaseService.getArtistReleases(artist.id);
+      // If useCacheOnly is true, we'll only get cached data if available
+      // This makes the initial display much faster
+      const artistReleases = await databaseService.getArtistReleases(
+        artist.id,
+        1,  // Page number
+        useCacheOnly ? 50 : 100  // Get more items when loading fresh data
+      );
+      
+      // If we're using cache only and didn't get any releases, don't update state
+      // as we'll be loading fresh data right after
+      if (useCacheOnly && artistReleases.length === 0) {
+        console.log('[ArtistModal] No cached releases found, waiting for fresh data');
+        return;
+      }
       
       console.log(`[ArtistModal] Loaded ${artistReleases.length} releases for artist ${artist.id}`);
       
-      // Debug log for inspection
-      console.log('[ArtistModal] All releases details:', artistReleases.map(r => ({
-        id: r.id,
-        title: r.title,
-        artistRole: (r as any).artistRole || 'Artist',
-        trackTitle: (r as any).artistTrackTitle || '',
-        trackCount: r.tracks?.length,
-        trackTitles: r.tracks?.map(t => t.title)
-      })));
+      // Group releases by type (artist, remixer, featured)
+      const groupedReleases = {
+        artist: artistReleases.filter(r => !r.artistRole || r.artistRole === 'Artist'),
+        remixer: artistReleases.filter(r => r.artistRole === 'Remixer'),
+        featured: artistReleases.filter(r => r.artistRole === 'Featured')
+      };
+      
+      console.log('[ArtistModal] Grouped releases:', {
+        artistReleases: groupedReleases.artist.length,
+        remixerReleases: groupedReleases.remixer.length,
+        featuredReleases: groupedReleases.featured.length
+      });
+      
+      // Pre-process releases to ensure they have Spotify URLs for playback
+      const processedReleases = artistReleases.map(release => {
+        // Process tracks to ensure they have proper Spotify URLs
+        if (release.tracks && Array.isArray(release.tracks)) {
+          release.tracks = release.tracks.map((track: any) => {
+            return databaseService.processTrackForPlayback(track);
+          });
+        }
+        return release;
+      });
       
       // Set state with releases (will trigger re-render)
-      setReleases(artistReleases);
-      setHasReleases(artistReleases.length > 0);
+      setReleases(processedReleases);
+      setHasReleases(processedReleases.length > 0);
     } catch (error) {
       console.error('[ArtistModal] Error loading artist releases:', error);
       setReleases([]);
       setHasReleases(false);
     } finally {
-      setLoadingReleases(false);
+      if (!useCacheOnly) {
+        setLoadingReleases(false);
+      }
     }
   };
 
@@ -397,7 +430,7 @@ const ArtistModal = (props: ArtistModalProps) => {
 
   // Render releases
   const renderReleases = () => {
-    if (loadingReleases) {
+    if (loadingReleases && releases.length === 0) {
       return (
         <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
           <CircularProgress />
@@ -892,8 +925,18 @@ const ArtistModal = (props: ArtistModalProps) => {
   // Fetch data when artist changes or modal opens
   useEffect(() => {
     if (open && artist?.id) {
-      console.log(`[ArtistModal] Modal opened for artist: ${artist.id} (${artist.name})`);
-      loadArtistReleases();
+      // Immediately show any cached releases to improve perceived performance
+      // while loading fresh data in the background
+      setLoadingReleases(true);
+      
+      // Attempt to immediately show cached data first
+      loadArtistReleases(true)
+        .then(() => {
+          // After showing cached data, fetch fresh data in the background
+          loadArtistReleases(false);
+        });
+      
+      // Load artist labels
       fetchArtistLabels();
     }
   }, [open, artist?.id]);
