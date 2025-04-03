@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardMedia, Typography, Box, CircularProgress } from '@mui/material';
 import { Artist } from '../types/artist';
 import { API_URL } from '../config';
+import { databaseService } from '../services/DatabaseService';
 
 interface ArtistCardProps {
   artist: Artist;
@@ -17,6 +18,18 @@ const ArtistCard: React.FC<ArtistCardProps> = ({ artist, onClick, background }) 
   const fetchArtistReleases = async (artistId: string) => {
     try {
       setIsLoading(true);
+      
+      // Use the new method that includes releases with the artist
+      const artistWithReleases = await databaseService.getArtistWithReleases(artistId);
+      
+      if (artistWithReleases && artistWithReleases.image_url && 
+          artistWithReleases.image_url !== '/images/placeholder-artist.jpg') {
+        console.log(`Using artist image for ${artist.name}: ${artistWithReleases.image_url}`);
+        setArtistImage(artistWithReleases.image_url);
+        return;
+      }
+      
+      // Fall back to the previous implementation if needed
       const response = await fetch(`${API_URL}/api/artist-releases/${artistId}?limit=1`);
       const data = await response.json();
       
@@ -75,10 +88,14 @@ const ArtistCard: React.FC<ArtistCardProps> = ({ artist, onClick, background }) 
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        background: background || undefined,
+        background: background || 'rgba(30, 30, 30, 0.85)',
+        boxShadow: '0 4px 8px rgba(0, 0, 0, 0.5)',
+        borderRadius: '8px',
+        backdropFilter: 'blur(10px)',
         '&:hover': onClick ? {
           transform: 'scale(1.02)',
-          transition: 'transform 0.2s ease-in-out'
+          transition: 'transform 0.2s ease-in-out',
+          boxShadow: '0 6px 12px rgba(0, 0, 0, 0.7)'
         } : {}
       }}
       onClick={handleClick}
@@ -116,7 +133,10 @@ const ArtistCard: React.FC<ArtistCardProps> = ({ artist, onClick, background }) 
           />
         )}
       </Box>
-      <CardContent sx={{ flexGrow: 1 }}>
+      <CardContent sx={{ 
+        flexGrow: 1,
+        borderTop: '1px solid rgba(255, 255, 255, 0.1)'
+      }}>
         <Typography gutterBottom variant="h6" component="div">
           {artist.name}
         </Typography>

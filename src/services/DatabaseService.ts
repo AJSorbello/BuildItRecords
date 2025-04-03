@@ -249,7 +249,8 @@ class DatabaseService {
             track.remixer = {
               id: remixerId,
               name: remixerName,
-              role: 'remixer'
+              role: 'remixer',
+              image_url: '/images/placeholder-artist.jpg' // Add placeholder image URL
             };
             console.log(`[DatabaseService] Created synthetic remixer for track "${track.title}": ${remixerName}`);
           }
@@ -259,7 +260,8 @@ class DatabaseService {
           track.remixer = {
             id: remixerId,
             name: remixerName,
-            role: 'remixer'
+            role: 'remixer',
+            image_url: '/images/placeholder-artist.jpg' // Add placeholder image URL
           };
           console.log(`[DatabaseService] Created synthetic remixer with no artists for track "${track.title}": ${remixerName}`);
         }
@@ -939,6 +941,27 @@ class DatabaseService {
           processedArtist.image_url = processedArtist.profile_image_url;
         } else if (processedArtist.profile_image_large_url) {
           processedArtist.image_url = processedArtist.profile_image_large_url;
+        } else if (processedArtist.releases && Array.isArray(processedArtist.releases) && processedArtist.releases.length > 0) {
+          // Use the most recent release's cover art if available
+          for (const release of processedArtist.releases) {
+            if (release.artwork_url) {
+              processedArtist.image_url = release.artwork_url;
+              console.log(`[DatabaseService] Using release artwork for artist ${processedArtist.name}: ${release.artwork_url}`);
+              break;
+            } else if (release.cover_url) {
+              processedArtist.image_url = release.cover_url;
+              console.log(`[DatabaseService] Using release cover for artist ${processedArtist.name}: ${release.cover_url}`);
+              break;
+            } else if (release.cover_image_url) {
+              processedArtist.image_url = release.cover_image_url;
+              console.log(`[DatabaseService] Using release cover image for artist ${processedArtist.name}: ${release.cover_image_url}`);
+              break;
+            } else if (release.images && Array.isArray(release.images) && release.images.length > 0) {
+              processedArtist.image_url = release.images[0].url;
+              console.log(`[DatabaseService] Using release image for artist ${processedArtist.name}: ${release.images[0].url}`);
+              break;
+            }
+          }
         } else {
           // Use a default placeholder image if nothing else is available
           processedArtist.image_url = '/images/placeholder-artist.jpg';
@@ -1939,6 +1962,44 @@ class DatabaseService {
     } catch (error) {
       console.error('[DatabaseService] Error checking VIP subscription status:', error);
       return { subscribed: false };
+    }
+  }
+
+  /**
+   * Fetch an artist with their releases included, ensuring image availability
+   * @param artistId The ID of the artist to fetch
+   * @returns Promise resolving to the artist with releases included
+   */
+  public async getArtistWithReleases(artistId: string): Promise<Artist | null> {
+    try {
+      console.log(`[DatabaseService] Fetching artist ${artistId} with releases`);
+      
+      // First, get the artist details
+      const response = await fetch(`${this.getBaseUrl()}/artists/${artistId}`);
+      if (!response.ok) {
+        console.error(`[DatabaseService] Error fetching artist ${artistId}:`, await response.text());
+        return null;
+      }
+      
+      const data = await response.json();
+      if (!data.success || !data.data) {
+        console.error(`[DatabaseService] Invalid artist data for ${artistId}:`, data);
+        return null;
+      }
+      
+      const artist = data.data;
+      
+      // Now get the artist's releases
+      const releases = await this.getArtistReleases(artistId, 1, 10);
+      artist.releases = releases;
+      
+      // Process the artist to ensure it has all required fields
+      const processedArtist = this.filterAndProcessArtists([artist], new Set([artistId]))[0];
+      
+      return processedArtist || null;
+    } catch (error) {
+      console.error(`[DatabaseService] Error fetching artist with releases ${artistId}:`, error);
+      return null;
     }
   }
 }
