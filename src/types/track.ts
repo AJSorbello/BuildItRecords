@@ -42,12 +42,7 @@ export type Track = {
   isrc: string;
   type: 'track';
   isRemix?: boolean;
-  remixer?: {
-    id: string;
-    name: string;
-    role: string;
-    image_url?: string;
-  };
+  remixer?: Artist;
   // Additional fields that might be present in the API response
   [key: string]: any;
 };

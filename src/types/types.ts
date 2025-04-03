@@ -72,6 +72,8 @@ export interface Track {
     [key: string]: string | undefined;
   };
   external_ids?: ExternalIds;
+  remixer?: Artist;
+  isRemix?: boolean;
 }
 
 export interface TrackResponse {

@@ -684,19 +684,63 @@ class DatabaseService {
       
       // Extract all artist IDs from releases
       const artistIdsWithReleases = new Set<string>();
+      const artistNamesWithIds = new Map<string, string>(); // For mapping names to IDs later
+      
       labelReleases.forEach(release => {
-        // Check for artists array (this is the primary way artists are associated with releases)
+        // 1. Check for main release artists
         if (release.artists && Array.isArray(release.artists)) {
           release.artists.forEach(artist => {
             if (artist && artist.id) {
               artistIdsWithReleases.add(artist.id);
+              if (artist.name) {
+                artistNamesWithIds.set(artist.name.toLowerCase(), artist.id);
+              }
             }
           });
         }
         
-        // Some releases might have a label_id property
-        if (release.label_id) {
-          console.log(`[DatabaseService] Release ${release.id} has label_id: ${release.label_id}`);
+        // 2. Check for artists on individual tracks (important for compilations)
+        if (release.tracks && Array.isArray(release.tracks)) {
+          release.tracks.forEach(track => {
+            // Use any type to handle different track formats from APIs
+            const trackItem = track as any;
+            
+            // Handle track artists
+            if (trackItem.artists && Array.isArray(trackItem.artists)) {
+              trackItem.artists.forEach(artist => {
+                if (artist && artist.id) {
+                  artistIdsWithReleases.add(artist.id);
+                  if (artist.name) {
+                    artistNamesWithIds.set(artist.name.toLowerCase(), artist.id);
+                  }
+                }
+              });
+            }
+            
+            // Handle remixers
+            if (trackItem.remixer && trackItem.remixer.id) {
+              artistIdsWithReleases.add(trackItem.remixer.id);
+              if (trackItem.remixer.name) {
+                artistNamesWithIds.set(trackItem.remixer.name.toLowerCase(), trackItem.remixer.id);
+              }
+            }
+            
+            // Check for remix info in track name if no explicit remixer info
+            const trackName = trackItem.name || trackItem.title;
+            if (trackName && typeof trackName === 'string' && 
+                trackName.toLowerCase().includes('remix') && 
+                (!trackItem.remixer || !trackItem.remixer.id)) {
+              // Extract potential remixer name from track title
+              const remixMatch = trackName.match(/\(([^)]+)\s+remix\)/i);
+              if (remixMatch && remixMatch[1]) {
+                const remixerName = remixMatch[1].trim().toLowerCase();
+                // Check if we have an ID for this remixer name
+                if (artistNamesWithIds.has(remixerName)) {
+                  artistIdsWithReleases.add(artistNamesWithIds.get(remixerName)!);
+                }
+              }
+            }
+          });
         }
       });
       
@@ -1462,7 +1506,8 @@ class DatabaseService {
           
           for (const track of release.tracks) {
             // Check if track is a remix by this artist
-            if (track.title && track.title.toLowerCase().includes('remix')) {
+            if (track.title && typeof track.title === 'string' && 
+                track.title.toLowerCase().includes('remix')) {
               const trackAny = track as any;
               
               // Check if artist is specifically the remixer
