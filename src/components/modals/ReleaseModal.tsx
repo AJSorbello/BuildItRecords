@@ -24,12 +24,14 @@ import {
   useTheme,
   useMediaQuery
 } from '@mui/material';
-import { Close as CloseIcon, PlayArrow as PlayArrowIcon } from '@mui/icons-material';
+import { Close as CloseIcon, PlayArrow as PlayArrowIcon, Login as LoginIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { Release } from '../../types/release';
 import { Artist } from '../../types/artist';
 import { Track } from '../../types/track';
 import { databaseService } from '../../services/DatabaseService';
+import { useSpotifyAuth } from '../../services/SpotifyAuthService';
+import SpotifyPlayer from '../../components/SpotifyPlayer';
 
 interface ReleaseModalProps {
   open: boolean;
@@ -46,29 +48,13 @@ interface ExtendedRelease extends Release {
   };
 }
 
-// Custom interface for tracks in the ReleaseModal
-interface CustomTrack {
-  id: string;
-  title?: string;
-  name?: string;
-  duration_ms?: number;
-  duration?: number;
-  track_number?: number;
-  disc_number?: number;
-  artists?: Artist[];
+// Define a custom track interface to handle remixer information
+interface CustomTrack extends Omit<Track, 'remixer'> {
   isRemix?: boolean;
-  remixer?: {
-    id: string;
-    name: string;
-    role: string;
-    image_url?: string;
+  remixer?: Partial<Artist> & {
+    role?: string;
   };
-  preview_url?: string;
-  external_urls?: {
-    spotify: string;
-    [key: string]: string;
-  };
-  spotify_url?: string;
+  isRemixProcessed?: boolean;
 }
 
 interface ArtistPreviewProps {
@@ -86,8 +72,8 @@ export const ArtistPreview = ({ artist, onClick }: ArtistPreviewProps) => {
   const getArtistImage = (artist: Artist): string => {
     return artist.image_url || 
            artist.profile_image_url || 
+           artist.profile_image_large_url || 
            artist.profile_image_small_url || 
-           artist.profile_image_large_url ||
            (artist.images && artist.images.length > 0 && artist.images[0].url) ||
            '/images/placeholder-artist.jpg';
   };
@@ -110,11 +96,14 @@ export const ArtistPreview = ({ artist, onClick }: ArtistPreviewProps) => {
       <Avatar 
         src={getArtistImage(artist)} 
         alt={artist.name}
+        variant="square"
         sx={{
           width: 80,
           height: 80,
           marginBottom: 1,
-          boxShadow: 1
+          boxShadow: 1,
+          borderRadius: '4px',
+          border: '1px solid rgba(255, 255, 255, 0.1)'
         }}
       />
       <Typography variant="subtitle1">{artist.name}</Typography>
@@ -130,6 +119,12 @@ export const ReleaseModal = ({ open, onClose, release, onArtistClick }: ReleaseM
   const [hasArtists, setHasArtists] = useState(false);
   const [tracks, setTracks] = useState<CustomTrack[]>([]);
   const [loading, setLoading] = useState(false);
+  const [allArtistsCache, setAllArtistsCache] = useState<Artist[]>([]);
+  const [currentTrack, setCurrentTrack] = useState<CustomTrack | null>(null);
+  const [playerError, setPlayerError] = useState<string | null>(null);
+  
+  // Spotify authentication
+  const { token, isPremium, login, logout } = useSpotifyAuth();
 
   // Format track duration
   const formatDuration = (ms: number): string => {
@@ -341,7 +336,7 @@ export const ReleaseModal = ({ open, onClose, release, onArtistClick }: ReleaseM
             if (track.artists && Array.isArray(track.artists) && track.artists.length > 0) {
               const remixer = track.artists.find((artist: any) => 
                 artist.name?.toLowerCase().includes(remixerName.toLowerCase()) || 
-                remixerName.toLowerCase().includes(artist.name?.toLowerCase()));
+                remixerName.toLowerCase().includes(artist.name.toLowerCase()));
               
               if (remixer) {
                 processedTrack.isRemix = true;
@@ -389,52 +384,273 @@ export const ReleaseModal = ({ open, onClose, release, onArtistClick }: ReleaseM
     
     setProcessedArtists(artists);
     setHasArtists(artistsFound);
+    
+    // Also build a cache of all artists from tracks for remixer lookup
+    const allArtistsMap = new Map<string, Artist>();
+    
+    // First add the main release artists
+    artists.forEach(artist => {
+      if (artist && artist.id) {
+        allArtistsMap.set(artist.id, artist);
+        // Also map by name for fuzzy matching
+        if (artist.name) {
+          allArtistsMap.set(artist.name.toLowerCase(), artist);
+        }
+      }
+    });
+    
+    // Then add all track artists and remixers
+    if (release.tracks && Array.isArray(release.tracks)) {
+      release.tracks.forEach((track: any) => {
+        // Add track artists
+        if (track.artists && Array.isArray(track.artists)) {
+          track.artists.forEach((artist: any) => {
+            if (artist && artist.id) {
+              allArtistsMap.set(artist.id, artist);
+              if (artist.name) {
+                allArtistsMap.set(artist.name.toLowerCase(), artist);
+              }
+            }
+          });
+        }
+        
+        // Add remixer if present
+        if (track.remixer && track.remixer.id) {
+          allArtistsMap.set(track.remixer.id, track.remixer);
+          if (track.remixer.name) {
+            allArtistsMap.set(track.remixer.name.toLowerCase(), track.remixer);
+          }
+        }
+      });
+    }
+    
+    // Store all artists in state for future lookups
+    setAllArtistsCache(Array.from(allArtistsMap.values()));
   }, [release]);
 
-  const handleArtistClick = (artist: Artist) => {
-    if (onArtistClick) {
-      onArtistClick(artist);
+  // Function to find an artist by name in our cache
+  const findArtistByName = (name: string): Artist | null => {
+    if (!name) return null;
+    const normalizedName = name.toLowerCase();
+    
+    // First try exact match
+    const exactMatch = allArtistsCache.find(artist => 
+      artist.name?.toLowerCase() === normalizedName);
+    if (exactMatch) return exactMatch;
+    
+    // Then try partial matches
+    const partialMatch = allArtistsCache.find(artist => 
+      artist.name?.toLowerCase().includes(normalizedName) || 
+      normalizedName.includes(artist.name?.toLowerCase() || ''));
+    if (partialMatch) return partialMatch;
+    
+    return null;
+  };
+
+  // Improved function to extract remixer from track title
+  const extractRemixerFromTitle = (title: string): string | null => {
+    if (!title) return null;
+    
+    // Handle various remix patterns
+    const remixPatterns = [
+      /\(([^)]+)\s+remix\)/i,     // (Artist Remix)
+      /\[([^\]]+)\s+remix\]/i,    // [Artist Remix]
+      /\(([^)]+)\s+rmx\)/i,       // (Artist Rmx)
+      /\-\s*([^-]+)\s+remix/i,    // - Artist Remix
+      /\"([^"]+)\s+remix\"/i      // "Artist Remix"
+    ];
+    
+    for (const pattern of remixPatterns) {
+      const match = title.match(pattern);
+      if (match && match[1]) {
+        return match[1].trim();
+      }
+    }
+    
+    return null;
+  };
+
+  // Get the appropriate artist to display for a track
+  const getTrackDisplayArtist = (track: CustomTrack) => {
+    // For remix tracks, prioritize the remixer
+    if (track.isRemix || track.title?.toLowerCase().includes('remix')) {
+      // If track has a remixer property with name and image
+      if (track.remixer?.name && track.remixer?.image_url) {
+        return track.remixer;
+      }
+      
+      // If track has remixer but no image, try to find it
+      if (track.remixer?.name && !track.remixer?.image_url) {
+        const fullRemixerData = findArtistByName(track.remixer.name);
+        if (fullRemixerData?.image_url) {
+          return {
+            ...track.remixer,
+            image_url: fullRemixerData.image_url
+          };
+        }
+      }
+      
+      // Try to extract remixer name from title
+      if (track.title) {
+        const remixerName = extractRemixerFromTitle(track.title);
+        if (remixerName) {
+          // Try to find this remixer in our artist cache
+          const remixerFromCache = findArtistByName(remixerName);
+          if (remixerFromCache) {
+            return remixerFromCache;
+          }
+          
+          // If remixer is in track's artists but not identified as remixer yet
+          if (track.artists && Array.isArray(track.artists)) {
+            const matchingArtist = track.artists.find(a => 
+              a.name?.toLowerCase() === remixerName.toLowerCase() ||
+              a.name?.toLowerCase().includes(remixerName.toLowerCase()) ||
+              remixerName.toLowerCase().includes(a.name?.toLowerCase() || '')
+            );
+            
+            if (matchingArtist) {
+              return {
+                ...matchingArtist,
+                role: 'remixer'
+              };
+            }
+          }
+        }
+      }
+    }
+    
+    // Default to the first artist for non-remix tracks
+    return track.artists && track.artists.length > 0 ? track.artists[0] : null;
+  };
+
+  // Handle artist click
+  const handleArtistClick = async (artist: Artist) => {
+    console.log(`[ReleaseModal] Artist clicked: ${artist.name}`, artist);
+    
+    if (!artist.id) {
+      console.error('[ReleaseModal] Cannot open artist modal: no artist ID', artist);
+      return;
+    }
+    
+    try {
+      // For remixers, we might need to fetch their full artist data first
+      if (artist.role === 'remixer' || artist.isRemixer || 
+          (artist.name && (tracks || []).some(t => 
+            t.title?.toLowerCase().includes('remix') && 
+            t.title.toLowerCase().includes(artist.name.toLowerCase())
+          ))) {
+        console.log(`[ReleaseModal] Attempting to fetch full artist data for remixer: ${artist.name}`);
+        
+        // Try to find this artist in all available labels
+        const labels = ['buildit-records', 'buildit-tech', 'buildit-deep']; 
+        let fullArtistData: Artist | null = null;
+        
+        // Try each label - note: we don't use getArtistsForLabel here as it's not needed
+        // Instead, if we need to access artist data, we can directly use the current artists list
+        if (processedArtists && processedArtists.length > 0) {
+          // First try to find by exact ID
+          fullArtistData = processedArtists.find(a => a.id === artist.id) || null;
+          
+          // Then try by name if ID match fails
+          if (!fullArtistData) {
+            fullArtistData = processedArtists.find(a => 
+              a.name?.toLowerCase() === artist.name.toLowerCase() ||
+              artist.name.toLowerCase().includes(a.name.toLowerCase()) ||
+              a.name?.toLowerCase().includes(artist.name.toLowerCase())
+            ) || null;
+          }
+          
+          if (fullArtistData) {
+            console.log(`[ReleaseModal] Found full artist data in processedArtists:`, fullArtistData);
+          }
+        }
+        
+        // If we still don't have the data and onArtistClick exists
+        if (!fullArtistData && onArtistClick) {
+          // We'll pass what we have and let the parent component handle the additional lookup
+          console.log(`[ReleaseModal] Passing remixer data to parent for further processing:`, artist);
+          onArtistClick(artist);
+          return;
+        }
+        
+        if (fullArtistData && onArtistClick) {
+          console.log(`[ReleaseModal] Opening artist modal with enhanced remixer data:`, fullArtistData);
+          onArtistClick(fullArtistData);
+          return;
+        }
+      }
+      
+      // Default behavior - just pass the artist data we have
+      if (onArtistClick) onArtistClick(artist);
+    } catch (error) {
+      console.error('[ReleaseModal] Error handling artist click:', error);
+      
+      // Fallback - try to open with what we have
+      if (onArtistClick) onArtistClick(artist);
     }
   };
 
   // Handle playing a track preview
   const handlePlayTrack = (track: CustomTrack) => {
     try {
+      // Set the current track for the player
+      setCurrentTrack(track);
+      
       // Get the preview URL from the track
       const previewUrl = track.preview_url || 
-                        (track.external_urls && track.external_urls.spotify) ||
-                        track.spotify_url;
+                      (track.external_urls && track.external_urls.spotify) ||
+                      track.spotify_url;
       
       console.log(`[ReleaseModal] Attempting to play track: ${track.title}`, {
         previewUrl,
-        track
+        track,
+        hasSpotifyAuth: !!token
       });
       
       if (!previewUrl) {
         console.error('[ReleaseModal] No preview URL available for track:', track);
+        setPlayerError('No preview available for this track');
         return;
       }
       
-      // Create an audio element
-      const audio = new Audio(previewUrl);
-      
-      // Play the audio
-      audio.play()
-        .then(() => {
-          console.log(`[ReleaseModal] Playing track: ${track.title}`);
-        })
-        .catch((error) => {
-          console.error('[ReleaseModal] Error playing track:', error);
-          
-          // If the preview URL is a Spotify URL, open it in a new tab
-          if (previewUrl.includes('spotify.com')) {
-            console.log(`[ReleaseModal] Opening Spotify URL: ${previewUrl}`);
-            window.open(previewUrl, '_blank');
-          }
-        });
+      // If we don't have Spotify authentication, use the old method
+      if (!token) {
+        // Create an audio element
+        const audio = new Audio(previewUrl);
+        
+        // Play the audio
+        audio.play()
+          .then(() => {
+            console.log(`[ReleaseModal] Playing track: ${track.title}`);
+          })
+          .catch((error) => {
+            console.error('[ReleaseModal] Error playing track:', error);
+            
+            // If the preview URL is a Spotify URL, open it in a new tab
+            if (previewUrl.includes('spotify.com')) {
+              console.log(`[ReleaseModal] Opening Spotify URL: ${previewUrl}`);
+              window.open(previewUrl, '_blank');
+            }
+          });
+      }
+      // If we have Spotify auth, the SpotifyPlayer component will handle playback
     } catch (error) {
       console.error('[ReleaseModal] Error playing track:', error);
+      setPlayerError('Error playing track. Please try again.');
     }
+  };
+
+  // Get artist image with robust fallbacks
+  const getArtistImageWithFallbacks = (artist: any): string => {
+    if (!artist) return '/images/placeholder-artist.jpg';
+    
+    // Try all possible image properties in order of preference
+    return artist.image_url || 
+      artist.profile_image_url || 
+      artist.profile_image_large_url || 
+      artist.profile_image_small_url || 
+      (artist.images && Array.isArray(artist.images) && artist.images.length > 0 ? artist.images[0].url : null) ||
+      '/images/placeholder-artist.jpg';
   };
 
   if (!release) return null;
@@ -445,124 +661,139 @@ export const ReleaseModal = ({ open, onClose, release, onArtistClick }: ReleaseM
                       release.images?.[0]?.url || 
                       '/images/placeholder-release.jpg';
 
-  // Get track artist image
-  const getTrackArtistImage = (artist: any): string => {
-    console.log('[ReleaseModal] Getting image for artist:', artist);
-    
-    // If this is a simple object with just name and image_url (like from remixer)
-    if (artist && typeof artist === 'object') {
-      if (artist.image_url) {
-        console.log('[ReleaseModal] Using artist.image_url:', artist.image_url);
-        return artist.image_url;
-      }
-    }
-    
-    // For regular artist objects
-    const imageUrl = artist.image_url || 
-      artist.profile_image_url || 
-      artist.profile_image_small_url || 
-      artist.profile_image_large_url || 
-      (artist.images && artist.images.length > 0 && artist.images[0].url) || 
-      '/images/placeholder-artist.jpg';
-    
-    console.log('[ReleaseModal] Selected image URL:', imageUrl);
-    return imageUrl;
-  };
-
   return (
     <Dialog
       open={open}
       onClose={onClose}
-      fullScreen={fullScreen}
-      maxWidth="md"
       fullWidth
-      aria-labelledby="release-modal-title"
+      maxWidth="md"
+      fullScreen={fullScreen}
+      PaperProps={{
+        sx: {
+          bgcolor: 'background.paper',
+          borderRadius: { xs: 0, sm: 1 },
+          backgroundImage: 'none'
+        }
+      }}
     >
-      <DialogTitle id="release-modal-title" sx={{ position: 'relative', pb: 0 }}>
-        <IconButton
-          aria-label="close"
-          onClick={onClose}
-          sx={{
-            position: 'absolute',
-            right: 8,
-            top: 8,
-          }}
-        >
-          <CloseIcon />
-        </IconButton>
+      <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
+        <Typography variant="h6">{release?.title}</Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          {/* Spotify Login/Logout Button */}
+          {token ? (
+            <Button 
+              variant="outlined" 
+              size="small" 
+              onClick={logout} 
+              startIcon={<LoginIcon />}
+              sx={{ mr: 1, height: 36 }}
+            >
+              Logout
+            </Button>
+          ) : (
+            <Button 
+              variant="outlined" 
+              color="primary" 
+              size="small" 
+              onClick={login} 
+              startIcon={<LoginIcon />}
+              sx={{ mr: 1, height: 36 }}
+            >
+              Connect Spotify
+            </Button>
+          )}
+          <IconButton aria-label="close" onClick={onClose} size="large">
+            <CloseIcon />
+          </IconButton>
+        </Box>
       </DialogTitle>
       <DialogContent>
         {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+          <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
             <CircularProgress />
           </Box>
         ) : (
-          <Grid container spacing={3}>
+          <Grid container spacing={2}>
             <Grid item xs={12} md={4}>
-              <Box sx={{ textAlign: 'center' }}>
-                <Box
-                  component="img"
-                  src={releaseImage}
-                  alt={release.title}
-                  sx={{
-                    width: '100%',
-                    maxWidth: 300,
-                    height: 'auto',
-                    borderRadius: 2,
-                    boxShadow: 3,
-                    mb: 2
-                  }}
-                />
-                <Typography variant="h5" gutterBottom>
-                  {release.title}
+              <Box
+                component="img"
+                src={release?.image_url || '/images/placeholder-release.jpg'}
+                alt={release?.title}
+                sx={{
+                  width: '100%',
+                  height: 'auto',
+                  borderRadius: 1,
+                  boxShadow: 3,
+                  mb: 2
+                }}
+              />
+              <Typography variant="h6" gutterBottom>
+                {release?.title}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                {release?.release_date && new Date(release.release_date).getFullYear()}
+              </Typography>
+              {release?.label && (
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                  {release.label}
                 </Typography>
-                
-                {release.release_date && (
-                  <Typography variant="body2" color="text.secondary" gutterBottom>
-                    Released: {new Date(release.release_date).toLocaleDateString()}
-                  </Typography>
-                )}
-                
-                {release.label && (
-                  <Chip 
-                    label={typeof release.label === 'string' ? release.label : release.label.name} 
-                    size="small" 
-                    sx={{ mb: 2 }} 
-                  />
-                )}
-                
-                <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, mb: 2 }}>
-                  {release.spotify_url && (
-                    <Button 
-                      variant="outlined" 
+              )}
+              {release?.genres && release.genres.length > 0 && (
+                <Box sx={{ mt: 2, mb: 2 }}>
+                  {release.genres.map((genre) => (
+                    <Chip
+                      key={genre}
+                      label={genre}
                       size="small"
-                      onClick={() => window.open(release.spotify_url, '_blank')}
-                    >
-                      Listen on Spotify
-                    </Button>
+                      sx={{ mr: 0.5, mb: 0.5 }}
+                    />
+                  ))}
+                </Box>
+              )}
+              
+              {/* Spotify Player */}
+              {currentTrack && (
+                <Box sx={{ mt: 3 }}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Now Playing
+                  </Typography>
+                  {playerError && (
+                    <Typography variant="body2" color="error" sx={{ mb: 1 }}>
+                      {playerError}
+                    </Typography>
                   )}
                   
-                  {release.purchase_url && (
-                    <Button 
-                      variant="outlined" 
-                      size="small"
-                      onClick={() => window.open(release.purchase_url, '_blank')}
-                    >
-                      Purchase
-                    </Button>
+                  {token ? (
+                    <SpotifyPlayer 
+                      token={token}
+                      trackUrl={currentTrack.external_urls?.spotify || currentTrack.spotify_url}
+                      isPremium={isPremium || false}
+                      onError={(msg) => setPlayerError(msg)}
+                    />
+                  ) : (
+                    <Paper sx={{ p: 2, bgcolor: 'background.paper', borderRadius: 1 }}>
+                      <Typography variant="body2" align="center" gutterBottom>
+                        {currentTrack.title}
+                      </Typography>
+                      <Button 
+                        variant="contained" 
+                        color="primary" 
+                        fullWidth 
+                        startIcon={<LoginIcon />}
+                        onClick={login}
+                        sx={{ mt: 1 }}
+                      >
+                        Connect to Spotify
+                      </Button>
+                    </Paper>
                   )}
                 </Box>
-              </Box>
+              )}
             </Grid>
-            
             <Grid item xs={12} md={8}>
-              <Typography variant="h6" gutterBottom>
-                Tracks
-              </Typography>
-              
-              {tracks.length > 0 ? (
-                <TableContainer component={Paper} sx={{ mb: 3 }}>
-                  <Table size="small">
+              {tracks && tracks.length > 0 ? (
+                <TableContainer component={Paper} sx={{ boxShadow: 0, bgcolor: 'transparent' }}>
+                  <Table sx={{ minWidth: 650 }} aria-label="track listing">
                     <TableHead>
                       <TableRow>
                         <TableCell>#</TableCell>
@@ -611,85 +842,152 @@ export const ReleaseModal = ({ open, onClose, release, onArtistClick }: ReleaseM
                             <TableCell>{track.track_number || index + 1}</TableCell>
                             <TableCell>{track.title || track.name}</TableCell>
                             <TableCell>
-                              {displayArtist && (
+                              {track.isRemix || track.title?.toLowerCase().includes('remix') ? (
+                                // For remix tracks, show the remixer avatar and info
                                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                  {combinedArtistName ? (
-                                    // For multiple artists, show an avatar group
-                                    <AvatarGroup 
-                                      max={2} 
-                                      sx={{ 
-                                        '& .MuiAvatar-root': { 
-                                          width: 24, 
-                                          height: 24 
-                                        }, 
-                                        mr: 1 
-                                      }}
-                                    >
-                                      {track.artists.map((artist, artistIndex) => (
+                                  {(() => {
+                                    // Find remixer information
+                                    const remixerArtist = getTrackDisplayArtist(track);
+                                    if (!remixerArtist) return null;
+                                    
+                                    let remixerName = remixerArtist.name;
+                                    // Extract from title if needed
+                                    if (!remixerName && track.title) {
+                                      const remixName = extractRemixerFromTitle(track.title);
+                                      if (remixName) remixerName = remixName;
+                                    }
+                                    
+                                    // Get the best image URL available
+                                    const imageUrl = getArtistImageWithFallbacks(remixerArtist);
+                                    
+                                    return (
+                                      <>
                                         <Avatar 
-                                          key={artist.id || `artist-${artistIndex}`}
-                                          src={getTrackArtistImage(artist)} 
-                                          alt={artist.name}
+                                          src={imageUrl}
+                                          alt={remixerName || 'Remixer'}
+                                          variant="square"
+                                          sx={{
+                                            width: 22,
+                                            height: 22,
+                                            fontSize: '0.8rem',
+                                            borderRadius: '2px',
+                                            marginRight: 1,
+                                            border: '1px solid rgba(255, 255, 255, 0.1)'
+                                          }}
                                         />
-                                      ))}
-                                    </AvatarGroup>
-                                  ) : (
-                                    // For a single artist, show single avatar
-                                    <Avatar 
-                                      src={getTrackArtistImage(displayArtist)} 
-                                      alt={displayArtist.name}
-                                      sx={{ width: 24, height: 24, mr: 1 }}
-                                    />
-                                  )}
-                                  
-                                  {combinedArtistName ? (
-                                    // If there are multiple artists, split and make each one clickable
-                                    <Box>
-                                      {track.artists.map((artist, artistIndex) => (
-                                        <Box component="span" key={artist.id || `artist-${artistIndex}`}>
-                                          <Typography
-                                            component="span"
-                                            variant="body2"
-                                            sx={{
-                                              cursor: 'pointer',
-                                              '&:hover': {
-                                                textDecoration: 'underline',
-                                                color: 'primary.main',
-                                              },
-                                            }}
-                                            onClick={() => {
-                                              console.log(`[ReleaseModal] Artist clicked: ${artist.name}`);
-                                              onArtistClick && onArtistClick(artist);
-                                            }}
-                                          >
-                                            {artist.name}
-                                          </Typography>
-                                          {artistIndex < track.artists.length - 1 && (
-                                            <Typography component="span" variant="body2"> & </Typography>
-                                          )}
-                                        </Box>
-                                      ))}
-                                    </Box>
-                                  ) : (
-                                    // If there's a single artist, make it clickable
-                                    <Typography
-                                      variant="body2"
-                                      sx={{
-                                        cursor: 'pointer',
-                                        '&:hover': {
-                                          textDecoration: 'underline',
-                                          color: 'primary.main',
-                                        },
-                                      }}
-                                      onClick={() => {
-                                        console.log(`[ReleaseModal] Artist clicked: ${displayArtist.name}`);
-                                        onArtistClick && onArtistClick(displayArtist);
-                                      }}
-                                    >
-                                      {displayArtist.name}
-                                    </Typography>
-                                  )}
+                                        <Typography
+                                          variant="body2"
+                                          sx={{
+                                            cursor: 'pointer',
+                                            '&:hover': {
+                                              textDecoration: 'underline',
+                                              color: 'primary.main',
+                                            },
+                                          }}
+                                          onClick={() => {
+                                            if (remixerArtist && onArtistClick) {
+                                              console.log(`[ReleaseModal] Remixer clicked: ${remixerArtist.name}`);
+                                              handleArtistClick(remixerArtist as Artist);
+                                            }
+                                          }}
+                                        >
+                                          {remixerName || 'Remixer'}
+                                        </Typography>
+                                      </>
+                                    );
+                                  })()}
                                 </Box>
+                              ) : (
+                                // For regular tracks, show the artist(s)
+                                track.artists && track.artists.length > 1 ? (
+                                  <AvatarGroup 
+                                    max={3} 
+                                    sx={{ 
+                                      display: 'inline-flex', 
+                                      mr: 1,
+                                      '& .MuiAvatar-root': { 
+                                        width: 22, 
+                                        height: 22,
+                                        fontSize: '0.8rem',
+                                        borderRadius: '2px'
+                                      }
+                                    }}
+                                  >
+                                    {track.artists.map(artist => (
+                                      <Avatar 
+                                        key={artist.id} 
+                                        alt={artist.name} 
+                                        src={getArtistImageWithFallbacks(artist)}
+                                        variant="square"
+                                        sx={{
+                                          border: '1px solid rgba(255, 255, 255, 0.1)'
+                                        }}
+                                      />
+                                    ))}
+                                  </AvatarGroup>
+                                ) : displayArtist ? (
+                                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                    <Avatar 
+                                      src={getArtistImageWithFallbacks(displayArtist)} 
+                                      alt={displayArtist.name}
+                                      variant="square"
+                                      sx={{
+                                        width: 22,
+                                        height: 22,
+                                        fontSize: '0.8rem',
+                                        borderRadius: '2px',
+                                        border: '1px solid rgba(255, 255, 255, 0.1)'
+                                      }}
+                                    />
+                                    <Box>
+                                      {combinedArtistName ? (
+                                        // If there are multiple artists, split and make each one clickable
+                                        track.artists.map((artist, artistIndex) => (
+                                          <Box component="span" key={artist.id || `artist-${artistIndex}`}>
+                                            <Typography
+                                              component="span"
+                                              variant="body2"
+                                              sx={{
+                                                cursor: 'pointer',
+                                                '&:hover': {
+                                                  textDecoration: 'underline',
+                                                  color: 'primary.main',
+                                                },
+                                              }}
+                                              onClick={() => {
+                                                console.log(`[ReleaseModal] Artist clicked from multi-artist track: ${artist.name}`);
+                                                handleArtistClick(artist);
+                                              }}
+                                            >
+                                              {artist.name}
+                                            </Typography>
+                                            {artistIndex < track.artists.length - 1 && (
+                                              <Typography component="span" variant="body2"> & </Typography>
+                                            )}
+                                          </Box>
+                                        ))
+                                      ) : (
+                                        // If there's a single artist, make it clickable
+                                        <Typography
+                                          variant="body2"
+                                          sx={{
+                                            cursor: 'pointer',
+                                            '&:hover': {
+                                              textDecoration: 'underline',
+                                              color: 'primary.main',
+                                            },
+                                          }}
+                                          onClick={() => {
+                                            console.log(`[ReleaseModal] Artist clicked from single-artist track: ${displayArtist.name}`);
+                                            handleArtistClick(displayArtist);
+                                          }}
+                                        >
+                                          {displayArtist.name}
+                                        </Typography>
+                                      )}
+                                    </Box>
+                                  </Box>
+                                ) : null
                               )}
                             </TableCell>
                             <TableCell align="right">
@@ -700,9 +998,9 @@ export const ReleaseModal = ({ open, onClose, release, onArtistClick }: ReleaseM
                                 size="small" 
                                 color="primary"
                                 onClick={() => handlePlayTrack(track)}
-                                disabled={false}
+                                disabled={!track.preview_url && !track.external_urls?.spotify && !track.spotify_url}
                                 sx={{ 
-                                  backgroundColor: 'rgba(0, 0, 0, 0.05)', 
+                                  backgroundColor: currentTrack?.id === track.id ? 'rgba(29, 185, 84, 0.1)' : 'rgba(0, 0, 0, 0.05)', 
                                   '&:hover': { 
                                     backgroundColor: 'rgba(0, 0, 0, 0.1)',
                                   },

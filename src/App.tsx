@@ -15,6 +15,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import { Layout } from './components/Layout';
 import DebugConsole from './components/DebugConsole';
 import SystemHealthMonitor from './components/SystemHealthMonitor';
+import SpotifyAuthCallback from './components/SpotifyAuthCallback';
 
 // Pages
 import HomePage from './pages/HomePage';
@@ -90,6 +91,7 @@ const router = createBrowserRouter(
 
         <Route path="vip" element={<VIPPage />} />
         <Route path="legal" element={<LegalPage />} />
+        <Route path="spotify-callback" element={<SpotifyAuthCallback />} />
         <Route path="*" element={<NotFoundPage />} />
         <Route index element={<Navigate to="/records" replace />} />
       </Route>
@@ -144,10 +146,10 @@ const App = () => {
         },
       })}>
         <SnackbarProvider maxSnack={3} anchorOrigin={{ vertical: 'top', horizontal: 'right' }}>
-          <>
+          <div>
             <AppRouter />
             <AppUI />
-          </>
+          </div>
         </SnackbarProvider>
       </ThemeProvider>
     </CustomThemeProvider>
